@@ -3,7 +3,6 @@ package com.tranphuc8a.gemini_proxy.domain.enums;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 @Getter
@@ -17,17 +16,20 @@ public enum Role {
     final int idx;
     final String value;
 
-    public static String getRole(String roleValue){
-        if (USER.value.equals(roleValue)){
-            return USER.value;
+    public static Role getRole(String roleValue) {
+        for (Role role : Role.values()) {
+            if (role.value.equals(roleValue)) {
+                return role;
+            }
         }
-        return ASSISTANT.value;
+        throw new IllegalArgumentException("Invalid role value: " + roleValue);
     }
-
-    public static String getRole(int idx){
-        if (USER.idx == idx){
-            return USER.value;
+    public static Role getRole(int idx) {
+        for (Role role : Role.values()) {
+            if (role.idx == idx) {
+                return role;
+            }
         }
-        return ASSISTANT.value;
+        throw new IllegalArgumentException("Invalid role index: " + idx);
     }
 }

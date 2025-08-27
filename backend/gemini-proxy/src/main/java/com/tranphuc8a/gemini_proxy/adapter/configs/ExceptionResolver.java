@@ -15,7 +15,7 @@ import java.util.Map;
 @ControllerAdvice
 public class ExceptionResolver {
 
-    // Xử lý lỗi chung (Exception)
+    // Handle general exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGlobalException(Exception ex, WebRequest request) {
         Map<String, Object> body = new HashMap<>();
@@ -27,7 +27,7 @@ public class ExceptionResolver {
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // Xử lý lỗi validate input
+    // Handle input validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
         Map<String, Object> body = new HashMap<>();
@@ -39,7 +39,7 @@ public class ExceptionResolver {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // Xử lý lỗi custom
+    // Handle custom exception
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Object> handleNotFound(ResourceNotFoundException ex, WebRequest request) {
         Map<String, Object> body = new HashMap<>();
