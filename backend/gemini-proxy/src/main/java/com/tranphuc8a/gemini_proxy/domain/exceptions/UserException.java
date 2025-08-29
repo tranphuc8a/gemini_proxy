@@ -1,6 +1,5 @@
 package com.tranphuc8a.gemini_proxy.domain.exceptions;
 
-import lombok.Data;
 import org.springframework.http.HttpStatus;
 
 
