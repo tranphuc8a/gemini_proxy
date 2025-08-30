@@ -1,0 +1,58 @@
+name: Backend CI / Test on Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+    types: [opened, synchronize, reopened, edited, ready_for_review, labeled]
+
+  workflow_dispatch:
+
+jobs:
+  backend-ci:
+    name: Backend PR CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Pull latest backend branch
+        run: git pull origin backend
+
+      - name: Maven Checkstyle (main + test)
+        run: mvn clean verify checkstyle:checkstyle checkstyle:checkstyle -Dcheckstyle.config.location=./config/checkstyle/checkstyle.xml
+
+      - name: Run tests with Jacoco
+        run: mvn test jacoco:report
+
+      - name: Upload Jacoco coverage artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: jacoco-report
+          path: target/site/jacoco
+
+      - name: Verify build status
+        run: echo "Build finished successfully"
+
