@@ -52,6 +52,7 @@ public class RoleTests {
         });
     }
 
+
     @Test
     public void testGetRoleAssistant() {
         Assertions.assertDoesNotThrow(() -> {
