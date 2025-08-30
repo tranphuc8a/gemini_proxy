@@ -43,11 +43,10 @@ jobs:
         run: git pull origin backend
 
       - name: Run Checkstyle (main + test)
-        run: mvn -B clean verify checkstyle:checkstyle \
-             -Dcheckstyle.config.location=./config/checkstyle/checkstyle.xml
+        run: mvn checkstyle:checkstyle@checkstyle-all
 
       - name: Run tests with Jacoco
-        run: mvn -B test jacoco:report
+        run: mvn clean test jacoco:report -f pom.xml
 
       - name: Upload Jacoco Report
         uses: actions/upload-artifact@v4
