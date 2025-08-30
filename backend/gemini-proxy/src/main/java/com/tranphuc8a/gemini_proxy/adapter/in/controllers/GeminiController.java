@@ -22,7 +22,7 @@ public class GeminiController {
             @ApiResponse(responseCode = "400", description = "Application is not running")
     })
     @GetMapping("/health")
-    public String healthCheck(){
+    public String healthCheck() {
         return "OK";
     }
 }

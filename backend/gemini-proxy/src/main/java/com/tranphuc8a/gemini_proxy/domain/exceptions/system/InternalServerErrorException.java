@@ -2,9 +2,9 @@ package com.tranphuc8a.gemini_proxy.domain.exceptions.system;
 
 import org.springframework.http.HttpStatus;
 
-public class InternalServerErrorException extends SystemException{
+public class InternalServerErrorException extends SystemException {
 
-    public InternalServerErrorException(){
+    public InternalServerErrorException() {
         super(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
