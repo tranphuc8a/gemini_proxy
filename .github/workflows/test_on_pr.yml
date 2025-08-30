@@ -14,9 +14,10 @@ jobs:
   backend-ci:
     name: Backend PR CI
     runs-on: ubuntu-latest
+
     defaults:
       run:
-        working-directory: ./backend
+        working-directory: ./backend/gemini-proxy
 
     steps:
       - name: Checkout code
@@ -41,22 +42,18 @@ jobs:
       - name: Pull latest backend branch
         run: git pull origin backend
 
-      - name: Run Maven tasks
-        run: mvn clean verify checkstyle:checkstyle checkstyle:checkstyle \
+      - name: Run Checkstyle (main + test)
+        run: mvn -B clean verify checkstyle:checkstyle \
              -Dcheckstyle.config.location=./config/checkstyle/checkstyle.xml
-        working-directory: ./backend/gemini-proxy
 
       - name: Run tests with Jacoco
-        run: mvn test jacoco:report
-        working-directory: ./backend/gemini-proxy
+        run: mvn -B test jacoco:report
 
       - name: Upload Jacoco Report
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
           path: target/site/jacoco
-        working-directory: ./backend/gemini-proxy
 
       - name: Verify build status
-        run: echo "Build finished successfully"
-
+        run: echo "✅ Backend PR CI completed successfully"
