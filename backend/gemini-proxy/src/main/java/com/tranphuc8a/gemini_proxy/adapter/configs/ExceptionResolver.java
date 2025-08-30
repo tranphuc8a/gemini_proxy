@@ -37,7 +37,7 @@ public class ExceptionResolver {
 
     // Handle input validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
+    public ResponseEntity<ResponseError<Object>> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
         BadRequestException exception = new BadRequestException(ex.getMessage());
         ResponseError<Object> responseError = ResponseError.from(exception);
 
@@ -50,8 +50,8 @@ public class ExceptionResolver {
 
     // Handle AppException
     @ExceptionHandler(AppException.class)
-    public ResponseEntity<Object> handleNotFound(AppException ex, WebRequest request) {
+    public ResponseEntity<ResponseError<Object>> handleAppException(AppException ex, WebRequest request) {
         ResponseError<Object> responseError = ResponseError.from(ex);
-        return new ResponseEntity<>(responseError, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(responseError, ex.getStatusCode());
     }
 }
