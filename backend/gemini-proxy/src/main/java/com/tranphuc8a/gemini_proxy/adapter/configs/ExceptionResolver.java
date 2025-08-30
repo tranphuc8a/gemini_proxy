@@ -1,8 +1,8 @@
 package com.tranphuc8a.gemini_proxy.adapter.configs;
 
 import com.tranphuc8a.gemini_proxy.domain.exceptions.AppException;
-import com.tranphuc8a.gemini_proxy.domain.exceptions.BadRequestException;
-import com.tranphuc8a.gemini_proxy.domain.exceptions.InternalServerErrorException;
+import com.tranphuc8a.gemini_proxy.domain.exceptions.user.BadRequestException;
+import com.tranphuc8a.gemini_proxy.domain.exceptions.system.InternalServerErrorException;
 import com.tranphuc8a.gemini_proxy.domain.vo.ResponseError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

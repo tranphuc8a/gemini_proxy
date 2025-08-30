@@ -1,8 +1,9 @@
-package com.tranphuc8a.gemini_proxy.domain.exceptions;
+package com.tranphuc8a.gemini_proxy.domain.exceptions.system;
 
+import com.tranphuc8a.gemini_proxy.domain.exceptions.AppException;
 import org.springframework.http.HttpStatus;
 
-public class SystemException extends AppException{
+public class SystemException extends AppException {
     public SystemException(HttpStatus statusCode) {
         super(statusCode);
     }

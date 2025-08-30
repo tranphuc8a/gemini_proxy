@@ -1,5 +1,6 @@
-package com.tranphuc8a.gemini_proxy.domain.exceptions;
+package com.tranphuc8a.gemini_proxy.domain.exceptions.user;
 
+import com.tranphuc8a.gemini_proxy.domain.exceptions.AppException;
 import org.springframework.http.HttpStatus;
 
 

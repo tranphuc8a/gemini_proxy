@@ -14,5 +14,5 @@ import java.io.Serializable;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class ResponseResult implements Serializable {
-
+    int statusCode;
 }
