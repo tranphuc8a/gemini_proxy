@@ -13,7 +13,7 @@ public class RoleTests {
 
     @ParameterizedTest
     @ValueSource(strings = {"user", "USER", "User", "uSeR"})
-    public void testGetRoleUser(String roleValue){
+    public void testGetRoleUser(String roleValue) {
         Assertions.assertDoesNotThrow(() -> {
             Role role = Role.getRole(roleValue);
             Assertions.assertNotNull(role);
@@ -24,7 +24,7 @@ public class RoleTests {
 
     @ParameterizedTest
     @ValueSource(strings = {"assistant", "ASSISTANT", "Assistant", "AsSiStAnT"})
-    public void testGetRoleAssistant(String roleValue){
+    public void testGetRoleAssistant(String roleValue) {
         Assertions.assertDoesNotThrow(() -> {
             Role role = Role.getRole(roleValue);
             Assertions.assertNotNull(role);
@@ -43,7 +43,7 @@ public class RoleTests {
     }
 
     @Test
-    public void testGetRoleUser(){
+    public void testGetRoleUser() {
         Assertions.assertDoesNotThrow(() -> {
             Role role = Role.getRole(Role.USER.getIdx());
             Assertions.assertNotNull(role);
@@ -53,7 +53,7 @@ public class RoleTests {
     }
 
     @Test
-    public void testGetRoleAssistant(){
+    public void testGetRoleAssistant() {
         Assertions.assertDoesNotThrow(() -> {
             Role role = Role.getRole(Role.ASSISTANT.getIdx());
             Assertions.assertNotNull(role);
