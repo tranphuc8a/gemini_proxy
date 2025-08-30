@@ -167,6 +167,7 @@
 							</sourceDirectories>
 							<configLocation>config/checkstyle/checkstyle.xml</configLocation>
 							<consoleOutput>true</consoleOutput>
+							<failsOnError>true</failsOnError>
 							<outputFile>${project.build.directory}/checkstyle-all.xml</outputFile>
 							<outputFileFormat>xml</outputFileFormat>
 						</configuration>
@@ -185,6 +186,7 @@
 							</sourceDirectories>
 							<configLocation>config/checkstyle/checkstyle.xml</configLocation>
 							<consoleOutput>true</consoleOutput>
+							<failsOnError>true</failsOnError>
 							<outputFile>${project.build.directory}/checkstyle-main.xml</outputFile>
 							<outputFileFormat>xml</outputFileFormat>
 						</configuration>
@@ -203,6 +205,7 @@
 							</sourceDirectories>
 							<configLocation>config/checkstyle/checkstyle.xml</configLocation>
 							<consoleOutput>true</consoleOutput>
+							<failsOnError>true</failsOnError>
 							<outputFile>${project.build.directory}/checkstyle-test.xml</outputFile>
 							<outputFileFormat>xml</outputFileFormat>
 						</configuration>
