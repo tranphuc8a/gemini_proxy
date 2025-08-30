@@ -153,11 +153,59 @@
 					<outputFileFormat>xml</outputFileFormat>
 				</configuration>
 				<executions>
+					<!-- Check the main source and test source -->
 					<execution>
+						<id>checkstyle-all</id>
 						<phase>verify</phase>
 						<goals>
 							<goal>check</goal>
 						</goals>
+						<configuration>
+							<sourceDirectories>
+								<sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+								<sourceDirectory>${project.basedir}/src/test/java</sourceDirectory>
+							</sourceDirectories>
+							<configLocation>config/checkstyle/checkstyle.xml</configLocation>
+							<consoleOutput>true</consoleOutput>
+							<outputFile>${project.build.directory}/checkstyle-all.xml</outputFile>
+							<outputFileFormat>xml</outputFileFormat>
+						</configuration>
+					</execution>
+
+					<!-- Check the main source -->
+					<execution>
+						<id>checkstyle-main</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<sourceDirectories>
+								<sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+							</sourceDirectories>
+							<configLocation>config/checkstyle/checkstyle.xml</configLocation>
+							<consoleOutput>true</consoleOutput>
+							<outputFile>${project.build.directory}/checkstyle-main.xml</outputFile>
+							<outputFileFormat>xml</outputFileFormat>
+						</configuration>
+					</execution>
+
+					<!-- Check the test source -->
+					<execution>
+						<id>checkstyle-test</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<sourceDirectories>
+								<sourceDirectory>${project.basedir}/src/test/java</sourceDirectory>
+							</sourceDirectories>
+							<configLocation>config/checkstyle/checkstyle.xml</configLocation>
+							<consoleOutput>true</consoleOutput>
+							<outputFile>${project.build.directory}/checkstyle-test.xml</outputFile>
+							<outputFileFormat>xml</outputFileFormat>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
