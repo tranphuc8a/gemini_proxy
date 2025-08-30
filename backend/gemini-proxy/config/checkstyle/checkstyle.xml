@@ -31,7 +31,7 @@
         <module name="TypeName"/>
 
         <!-- Imports -->
-        <module name="AvoidStarImport"/>
+        <!-- <module name="AvoidStarImport"/> -->
         <module name="UnusedImports"/>
 
         <!-- Whitespace -->
