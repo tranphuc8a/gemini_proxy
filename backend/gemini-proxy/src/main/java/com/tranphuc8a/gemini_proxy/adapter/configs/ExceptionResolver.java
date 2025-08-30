@@ -1,6 +1,9 @@
 package com.tranphuc8a.gemini_proxy.adapter.configs;
 
-import com.tranphuc8a.gemini_proxy.domain.exceptions.ResourceNotFoundException;
+import com.tranphuc8a.gemini_proxy.domain.exceptions.AppException;
+import com.tranphuc8a.gemini_proxy.domain.exceptions.user.BadRequestException;
+import com.tranphuc8a.gemini_proxy.domain.exceptions.system.InternalServerErrorException;
+import com.tranphuc8a.gemini_proxy.domain.vo.ResponseError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -8,46 +11,47 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @ControllerAdvice
 public class ExceptionResolver {
 
+    private final String pathKey = "path";
+    private final String messageKey = "messages";
+
+
+    protected String getUri(WebRequest webRequest) {
+        return webRequest.getDescription(false)
+                .replaceAll("uri=", "");
+    }
+
     // Handle general exceptions
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleGlobalException(Exception ex, WebRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", "Internal Server Error");
-        body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).replace("uri=", ""));
-        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ResponseError<Object>> handleGlobalException(Exception ex, WebRequest request) {
+        InternalServerErrorException exception = new InternalServerErrorException(ex.getMessage());
+        ResponseError<Object> responseError = ResponseError.from(exception);
+        responseError.setData(Map.of(pathKey, getUri(request)));
+        return new ResponseEntity<>(responseError, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // Handle input validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Bad Request");
-        body.put("message", ex.getBindingResult().getAllErrors().get(0).getDefaultMessage());
-        body.put("path", request.getDescription(false).replace("uri=", ""));
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ResponseError<Object>> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
+        BadRequestException exception = new BadRequestException(ex.getMessage());
+        ResponseError<Object> responseError = ResponseError.from(exception);
+
+        HashMap<String, Object> data = new HashMap<>();
+        data.put(messageKey, ex.getBindingResult().getAllErrors());
+        data.put(pathKey, getUri(request));
+        responseError.setData(data);
+        return new ResponseEntity<>(responseError, HttpStatus.BAD_REQUEST);
     }
 
-    // Handle custom exception
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Object> handleNotFound(ResourceNotFoundException ex, WebRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.NOT_FOUND.value());
-        body.put("error", "Not Found");
-        body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).replace("uri=", ""));
-        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    // Handle AppException
+    @ExceptionHandler(AppException.class)
+    public ResponseEntity<ResponseError<Object>> handleAppException(AppException ex, WebRequest request) {
+        ResponseError<Object> responseError = ResponseError.from(ex);
+        return new ResponseEntity<>(responseError, ex.getStatusCode());
     }
 }
