@@ -1,0 +1,9 @@
+version: "1.0.0"
+services:
+  spring-app:
+    build: .
+    container_name: gemini-proxy
+    ports:
+      - "6789:6789"
+    env_file:
+      - .env
