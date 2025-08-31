@@ -1,4 +1,4 @@
-package com.tranphuc8a.gemini_proxy.domain.vo;
+package com.tranphuc8a.gemini_proxy.domain.vo.response;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
