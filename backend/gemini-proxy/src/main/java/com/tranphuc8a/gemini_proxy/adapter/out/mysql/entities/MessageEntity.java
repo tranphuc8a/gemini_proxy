@@ -1,14 +1,25 @@
 package com.tranphuc8a.gemini_proxy.adapter.out.mysql.entities;
 
 import com.tranphuc8a.gemini_proxy.domain.enums.Role;
-import com.tranphuc8a.gemini_proxy.domain.models.Conversation;
 import com.tranphuc8a.gemini_proxy.domain.models.Message;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Column;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PrePersist;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.Builder;
+import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -38,15 +49,21 @@ public class MessageEntity implements TableEntity<Message> {
 
 
     @PrePersist
-    public void preInsert(){
+    public void preInsert() {
         createdAt = LocalDateTime.now();
     }
 
     @PostLoad
-    public  void postLoad(){
-        if (role == null) role = Role.USER;
-        if (content == null) content = "";
-        if (createdAt == null) createdAt = LocalDateTime.now();
+    public void postLoad() {
+        if (role == null) {
+            role = Role.USER;
+        }
+        if (content == null) {
+            content = "";
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 
 
@@ -73,7 +90,9 @@ public class MessageEntity implements TableEntity<Message> {
 
     @Override
     public MessageEntity fromDomain(Message domain) {
-        if (domain == null) return this;
+        if (domain == null) {
+            return this;
+        }
         fromDomainLight(domain);
         conversation = new ConversationEntity().fromDomainLight(domain.getConversation());
         return this;
@@ -81,7 +100,9 @@ public class MessageEntity implements TableEntity<Message> {
 
     @Override
     public MessageEntity fromDomainLight(Message domain) {
-        if (domain == null) return this;
+        if (domain == null) {
+            return this;
+        }
         id = domain.getId();
         role = domain.getRole();
         content = domain.getContent();

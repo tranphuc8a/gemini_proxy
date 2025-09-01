@@ -19,7 +19,9 @@ public class ConversationMySQLOutputPort implements ConversationOutputPort {
     public Conversation getById(String conversationId) {
         ConversationEntity conversationEntity =
                 conversationMySQLRepository.findById(conversationId).orElse(null);
-        if (conversationEntity == null) return null;
+        if (conversationEntity == null) {
+            return null;
+        }
         return conversationEntity.toDomain();
     }
 

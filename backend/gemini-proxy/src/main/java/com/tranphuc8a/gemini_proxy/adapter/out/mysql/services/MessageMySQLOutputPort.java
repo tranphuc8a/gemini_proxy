@@ -18,7 +18,9 @@ public class MessageMySQLOutputPort implements MessageOutputPort {
     @Override
     public Message getById(Integer messageId) {
         MessageEntity messageEntity = messageMySQLRepository.findById(messageId).orElse(null);
-        if (messageEntity == null) return null;
+        if (messageEntity == null) {
+            return null;
+        }
         return messageEntity.toDomain();
     }
 

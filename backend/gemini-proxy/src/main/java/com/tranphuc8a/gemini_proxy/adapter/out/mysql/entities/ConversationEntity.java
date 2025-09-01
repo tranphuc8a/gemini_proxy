@@ -1,8 +1,23 @@
 package com.tranphuc8a.gemini_proxy.adapter.out.mysql.entities;
 
 import com.tranphuc8a.gemini_proxy.domain.models.Conversation;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Column;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.PreUpdate;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.Builder;
+import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
@@ -34,22 +49,30 @@ public class ConversationEntity implements TableEntity<Conversation> {
     List<MessageEntity> messages;
 
     @PrePersist
-    public void preInsert(){
+    public void preInsert() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    public void preUpdate(){
+    public void preUpdate() {
         updatedAt = LocalDateTime.now();
     }
 
     @PostLoad
-    public void postLoad(){
-        if (name == null) name = "";
-        if (messages == null) messages = List.of();
-        if (createdAt == null) createdAt = LocalDateTime.now();
-        if (updatedAt == null) updatedAt = LocalDateTime.now();
+    public void postLoad() {
+        if (name == null) {
+            name = "";
+        }
+        if (messages == null) {
+            messages = List.of();
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
     }
 
 
@@ -76,7 +99,9 @@ public class ConversationEntity implements TableEntity<Conversation> {
 
     @Override
     public ConversationEntity fromDomain(Conversation domain) {
-        if (domain == null) return this;
+        if (domain == null) {
+            return this;
+        }
         fromDomainLight(domain);
         messages = domain.getMessages().stream().map(
                 message -> new MessageEntity().fromDomainLight(message)).toList();
@@ -85,7 +110,9 @@ public class ConversationEntity implements TableEntity<Conversation> {
 
     @Override
     public ConversationEntity fromDomainLight(Conversation domain) {
-        if (domain == null) return this;
+        if (domain == null) {
+            return this;
+        }
         id = domain.getId();
         name = domain.getName();
         createdAt = domain.getCreatedAt();
