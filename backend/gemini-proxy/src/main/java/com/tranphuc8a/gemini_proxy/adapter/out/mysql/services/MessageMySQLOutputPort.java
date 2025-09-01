@@ -31,9 +31,17 @@ public class MessageMySQLOutputPort implements MessageOutputPort {
     }
 
     @Override
-    public void save(Message message) {
+    public Page<Message> getListByConversation(String conversationId, Pageable pageable) {
+        Page<MessageEntity> messageEntityPage
+                = messageMySQLRepository.getByConversationId(conversationId, pageable);
+        return messageEntityPage.map(MessageEntity::toDomain);
+    }
+
+    @Override
+    public Message save(Message message) {
         MessageEntity messageEntity = new MessageEntity().fromDomain(message);
-        messageMySQLRepository.save(messageEntity);
+        messageEntity = messageMySQLRepository.save(messageEntity);
+        return messageEntity.toDomain();
     }
 
     @Override

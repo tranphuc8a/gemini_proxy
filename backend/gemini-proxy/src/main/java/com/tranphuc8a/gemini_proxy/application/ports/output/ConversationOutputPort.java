@@ -10,7 +10,7 @@ public interface ConversationOutputPort {
 
     Page<Conversation> getAll(Pageable pageable);
 
-    void save(Conversation conversation);
+    Conversation save(Conversation conversation);
 
     void delete(Conversation conversation);
 
