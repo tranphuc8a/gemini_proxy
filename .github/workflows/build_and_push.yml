@@ -1,0 +1,142 @@
+name: Build and Push Backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - backend
+      - cicd
+
+jobs:
+  check-style-and-test:
+    name: Check style & run tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/gemini-proxy
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Run Checkstyle (main + test)
+        run: mvn checkstyle:checkstyle@checkstyle-all
+
+      - name: Run tests with Jacoco
+        run: mvn clean test jacoco:report -f pom.xml
+
+      - name: Archive jacoco report
+        run: zip -r jacoco-report.zip target/site/jacoco
+      
+      - name: Upload jacoco report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/gemini-proxy/jacoco-report.zip
+
+  build-jar:
+    name: Build JAR
+    runs-on: ubuntu-latest
+    needs: check-style-and-test
+    defaults:
+      run:
+        working-directory: backend/gemini-proxy
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build jar
+        run: mvn -B package -DskipTests
+
+      - name: Upload jar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-proxy-jar
+          path: backend/gemini-proxy/target/*.jar
+
+  build-image:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [check-style-and-test, build-jar]
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Download jar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gemini-proxy-jar
+          path: backend/gemini-proxy/target
+
+      - name: Get short commit hash
+        run: echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build docker image
+        working-directory: backend/gemini-proxy/.docker
+        run: docker build -t gemini-proxy:latest .
+
+      - name: Save docker image artifact
+        working-directory: backend/gemini-proxy/.docker
+        run: docker save gemini-proxy:latest -o gemini-proxy-image.tar
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gemini-proxy-image
+          path: backend/gemini-proxy/.docker/gemini-proxy-image.tar
+
+
+  push-image:
+    name: Push Docker Image to DockerHub
+    runs-on: ubuntu-latest
+    needs: [check-style-and-test, build-jar, build-image]
+    defaults:
+      run:
+        working-directory: backend/gemini-proxy/.docker
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Get short commit hash
+        working-directory: ../..   # quay về root repo từ .docker
+        run: echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Download docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gemini-proxy-image
+          path: backend/gemini-proxy/.docker
+
+      - name: Load docker image
+        run: docker load -i gemini-proxy-image.tar
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag & Push image
+        run: |
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/gemini-proxy"
+          docker tag gemini-proxy:latest $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:latest
