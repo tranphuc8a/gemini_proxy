@@ -24,8 +24,8 @@ public class SecurityConfig {
     private final AuthenticationEntryPoint authenticationEntryPoint;
 
     public static final String[] publicEndpoints = {
-            "/health",
-            "/swagger/**", "/swagger-ui/**"
+            "/gemini/health",
+            "/swagger/**", "/swagger-ui/**", "/v3/api-docs/**"
     };
 
     @Bean
