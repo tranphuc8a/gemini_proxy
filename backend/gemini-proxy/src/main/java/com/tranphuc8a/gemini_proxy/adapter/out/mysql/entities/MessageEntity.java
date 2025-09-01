@@ -3,6 +3,8 @@ package com.tranphuc8a.gemini_proxy.adapter.out.mysql.entities;
 import com.tranphuc8a.gemini_proxy.domain.enums.Role;
 import com.tranphuc8a.gemini_proxy.domain.models.Message;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -35,6 +37,7 @@ public class MessageEntity implements TableEntity<Message> {
     Integer id;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     Role role;
 
     @Column(nullable = false)

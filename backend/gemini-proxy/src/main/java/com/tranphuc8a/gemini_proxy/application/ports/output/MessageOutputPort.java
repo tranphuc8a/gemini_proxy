@@ -10,7 +10,9 @@ public interface MessageOutputPort {
 
     Page<Message> getAll(Pageable pageable);
 
-    void save(Message message);
+    Page<Message> getListByConversation(String conversationId, Pageable pageable);
+
+    Message save(Message message);
 
     void delete(Message message);
 

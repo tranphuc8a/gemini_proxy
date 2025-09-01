@@ -5,7 +5,6 @@ import com.tranphuc8a.gemini_proxy.domain.exceptions.user.UnauthorizedException;
 import com.tranphuc8a.gemini_proxy.domain.vo.response.ResponseError;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -27,9 +26,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         UnauthorizedException unauthorizedException =
                 new UnauthorizedException(authException.getMessage());
-        ResponseError<Object> responseError = ResponseError.from(unauthorizedException);
-        ResponseEntity<ResponseError<Object>> body =
-                new ResponseEntity<>(responseError, unauthorizedException.getStatusCode());
+        ResponseError<Object> body = ResponseError.from(unauthorizedException);
 
         response.getWriter().write(objectMapper.writeValueAsString(body));
 

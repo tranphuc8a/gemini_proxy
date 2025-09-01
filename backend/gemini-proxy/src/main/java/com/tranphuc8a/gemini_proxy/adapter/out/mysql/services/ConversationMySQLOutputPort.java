@@ -32,9 +32,10 @@ public class ConversationMySQLOutputPort implements ConversationOutputPort {
     }
 
     @Override
-    public void save(Conversation conversation) {
+    public Conversation save(Conversation conversation) {
         ConversationEntity conversationEntity = new ConversationEntity().fromDomain(conversation);
-        conversationMySQLRepository.save(conversationEntity);
+        conversationEntity = conversationMySQLRepository.save(conversationEntity);
+        return conversationEntity.toDomain();
     }
 
     @Override

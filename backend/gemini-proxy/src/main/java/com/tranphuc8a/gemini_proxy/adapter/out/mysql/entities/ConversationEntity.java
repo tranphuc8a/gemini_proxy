@@ -103,8 +103,10 @@ public class ConversationEntity implements TableEntity<Conversation> {
             return this;
         }
         fromDomainLight(domain);
-        messages = domain.getMessages().stream().map(
-                message -> new MessageEntity().fromDomainLight(message)).toList();
+        if (domain.getMessages() != null) {
+            messages = domain.getMessages().stream().map(
+                    message -> new MessageEntity().fromDomainLight(message)).toList();
+        }
         return this;
     }
 
