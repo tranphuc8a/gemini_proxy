@@ -9,13 +9,13 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")  // áp dụng cho tất cả API bắt đầu bằng /**
-                .allowedOrigins("*") // Cho phép tất cả các nguồn (có thể thay bằng domain cụ thể)
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Cho phép các phương thức HTTP
-                .allowedHeaders("*") // Cho phép tất cả các header
-                .exposedHeaders("Authorization") // Cho phép FE đọc header này
-                .allowCredentials(true)          // Cho phép gửi cookie/session
-                .maxAge(3600);                   // Cache preflight request 1h
+        registry.addMapping("/**")  // Apply to all APIs starting with /**
+                .allowedOrigins("*") // Allow all origins (can be replaced with specific domains)
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allow HTTP methods
+                .allowedHeaders("*") // Allow all headers
+                .exposedHeaders("Authorization") // Allow FE to read this header
+                .allowCredentials(true)          // Allow sending cookies/session
+                .maxAge(3600);                   // Cache preflight request for 1h
     }
 }
 
