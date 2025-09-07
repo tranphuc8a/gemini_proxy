@@ -46,9 +46,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Pull latest backend branch
-        run: git pull origin backend
-
       - name: Run Checkstyle (main + test)
         run: mvn checkstyle:checkstyle@checkstyle-all
 

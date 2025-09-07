@@ -1,6 +1,6 @@
 ### Changes
 
-- In _module xyz_:
+- In `module xyz`:
   - Add…
   - Remove…
   - Edit…
@@ -15,4 +15,4 @@
 
 ### Documents
 
-- Confluence: _link_
+- Confluence: [Confluence](https://github.com/tranphuc8a)
