@@ -52,11 +52,17 @@ jobs:
       - name: Run tests with Jacoco
         run: mvn clean test jacoco:report -f pom.xml
 
-      - name: Upload Jacoco Report
+
+      - name: Archive jacoco report
+        run: zip -r jacoco-report.zip target/site/jacoco
+      
+      
+      - name: Upload jacoco report artifact
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
-          path: target/site/jacoco
+          path: backend/gemini-proxy/jacoco-report.zip
+
 
       - name: Verify build status
         run: echo "✅ Backend PR CI completed successfully"
