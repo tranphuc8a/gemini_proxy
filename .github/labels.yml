@@ -1,0 +1,99 @@
+# Labels for issue and PR management
+# You can use https://github.com/marketplace/actions/github-labeler to sync these labels
+
+# Type labels
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "security"
+  color: "d93f0b"
+  description: "Security-related issues"
+
+# Status labels
+- name: "triage"
+  color: "fbca04"
+  description: "Needs to be triaged"
+
+- name: "in progress"
+  color: "0e8a16"
+  description: "Currently being worked on"
+
+- name: "blocked"
+  color: "b60205"
+  description: "Blocked by another issue or external dependency"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+# Component labels
+- name: "backend"
+  color: "1d76db"
+  description: "Related to backend (Java/Spring Boot)"
+
+- name: "frontend"
+  color: "5319e7"
+  description: "Related to frontend (React.js)"
+
+- name: "database"
+  color: "c5def5"
+  description: "Related to database (MariaDB)"
+
+- name: "ci/cd"
+  color: "fef2c0"
+  description: "Related to CI/CD workflows"
+
+# Priority labels
+- name: "priority: critical"
+  color: "b60205"
+  description: "Critical priority"
+
+- name: "priority: high"
+  color: "d93f0b"
+  description: "High priority"
+
+- name: "priority: medium"
+  color: "fbca04"
+  description: "Medium priority"
+
+- name: "priority: low"
+  color: "0e8a16"
+  description: "Low priority"
+
+# Dependencies
+- name: "dependencies"
+  color: "0366d6"
+  description: "Pull requests that update a dependency file"
+
+- name: "java"
+  color: "b07219"
+  description: "Java dependencies"
+
+- name: "github-actions"
+  color: "000000"
+  description: "GitHub Actions dependencies"
+
+- name: "docker"
+  color: "0db7ed"
+  description: "Docker dependencies"

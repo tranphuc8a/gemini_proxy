@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Discussion Forum
+    url: https://github.com/tranphuc8a/gemini_proxy/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📖 Documentation
+    url: https://github.com/tranphuc8a/gemini_proxy/blob/main/README.md
+    about: Read the project documentation

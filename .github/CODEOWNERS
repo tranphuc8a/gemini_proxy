@@ -1,1 +1,16 @@
-* tranphuc8a@gmail.com
+# Default code owners for the entire repository
+# These users will be requested for review when someone opens a pull request
+
+* @tranphuc8a
+
+# Backend specific ownership
+/backend/ @tranphuc8a
+
+# Frontend specific ownership (when added)
+# /frontend/ @tranphuc8a
+
+# Database specific ownership
+/db/ @tranphuc8a
+
+# GitHub workflows and configuration
+/.github/ @tranphuc8a
