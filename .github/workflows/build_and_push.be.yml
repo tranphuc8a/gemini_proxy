@@ -8,6 +8,10 @@ on:
       - backend
       - cicd
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   check-style-and-test:
     name: Check style & run tests
@@ -26,7 +30,7 @@ jobs:
           java-version: 21
 
       - name: Cache Maven dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
