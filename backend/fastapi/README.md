@@ -17,7 +17,10 @@ Quick start (PowerShell):
 cd 'c:\Users\tranphuc8a\Desktop\gemini_proxy\backend\fastapi'
 python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-# $env:DB_HOST='localhost'; $env:DB_PORT='3306'; $env:DB_DATABASE='gemini_proxy_db'; $env:DB_USERNAME='user'; $env:DB_PASSWORD='pass'
+# copy and edit the example env file, then activate it
+# copy .env.example to .env and set your secrets (or set env vars directly)
+# cp .env.example .env  (on PowerShell: Copy-Item .env.example .env)
+# then uvicorn will pick up values via pydantic BaseSettings
 uvicorn app.main:app --host 0.0.0.0 --port 6789 --reload
 ```
 

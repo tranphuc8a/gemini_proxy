@@ -1,33 +1,31 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 from src.domain.vo.conversation_update_request import ConversationUpdateRequest
-from src.domain.models.conversation_domain import ConversationDomain
+from src.domain.vo.conversation_response import ConversationResponse
+from src.domain.vo.message_response import MessageResponse
+from src.domain.vo.list_response import ListResponse
 
 class ConversationInputPort(ABC):
     @abstractmethod
-    async def get_conversation_detail(self, conversation_id: str) -> ConversationDomain:
+    async def get_conversation_detail(self, conversation_id: str) -> ConversationResponse:
         pass
 
     @abstractmethod
-    async def get_conversation_list(self, limit: int = 10, after: Optional[str] = None, offset: int = 0, order: str = "desc"):
+    async def get_conversation_list(self, after: Optional[str] = None, limit: int = 10, order: Optional[str] = "desc") -> ListResponse[ConversationResponse]:
         pass
 
     @abstractmethod
-    async def get_conversation_messages(self, conversation_id: str, page: int = 0, size: int = 10):
+    async def get_conversation_messages(self, conversation_id: str, after: Optional[str] = None, limit: int = 10, order: Optional[str] = "desc") -> ListResponse[MessageResponse]:
         pass
 
     @abstractmethod
-    async def create_conversation(self):
+    async def create_conversation(self) -> ConversationResponse:
         pass
 
     @abstractmethod
-    async def update_conversation(self, request: ConversationUpdateRequest):
+    async def update_conversation(self, request: ConversationUpdateRequest) -> ConversationResponse:
         pass
 
     @abstractmethod
-    async def delete_conversation(self, conversation_id: str):
-        pass
-
-    @abstractmethod
-    async def send_message(self, conversation_id: str, content: str, role: str = "user") -> object:
+    async def delete_conversation(self, conversation_id: str) -> bool:
         pass

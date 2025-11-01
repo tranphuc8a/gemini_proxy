@@ -1,14 +1,17 @@
+from ast import List
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from backend.fastapi.src.application.ports.input.conversation_input_port import ConversationInputPort
-from backend.fastapi.src.application.ports.output.conversation_output_port import ConversationOutputPort, MessageOutputPort
+from backend.fastapi.src.application.ports.output.conversation_output_port import ConversationOutputPort
+from backend.fastapi.src.application.ports.output.message_output_port import MessageOutputPort
+from domain.utils.utils import generate_unique_id, get_current_timestamp
+from domain.vo.message_response import MessageResponse
 from src.domain.vo.conversation_update_request import ConversationUpdateRequest
 from src.domain.vo.conversation_response import ConversationResponse
-from src.domain.vo.response_list import ResponseList
-from src.domain.models import ConversationDomain as Conversation, MessageDomain as Message
+from domain.vo.list_response import ListResponse
+from src.domain.models.message_domain import MessageDomain
+from src.domain.models.conversation_domain import ConversationDomain
 from uuid import uuid4
 from fastapi import HTTPException
-import asyncio
 
 
 class ConversationUseCase(ConversationInputPort):
@@ -19,97 +22,76 @@ class ConversationUseCase(ConversationInputPort):
         self.conversation_repo = conversation_repo
         self.message_repo = message_repo
 
-    async def get_conversation_detail(self, conversation_id: str):
+    async def get_conversation_detail(self, conversation_id: str) -> ConversationResponse:
         conv = await self.conversation_repo.get_by_id(conversation_id)
         if conv is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
+        
         # fetch latest messages explicitly to avoid async lazy-loading issues
-        messages = await self.message_repo.get_list_by_conversation(conversation_id, offset=0, limit=self.LATEST_MESSAGE_COUNT)
+        messages, _ = await self.message_repo.get_list_by_conversation(conversation_id, limit=self.LATEST_MESSAGE_COUNT, after=None, order="desc")
         conv.messages = messages
-        return conv
+        return ConversationResponse.from_domain(conv)
 
-    async def get_conversation_list(self, limit: int = 10, after: Optional[str] = None, offset: int = 0, order: str = "desc"):
-        """Return a paginated ResponseList of conversations.
+    async def get_conversation_list(self, 
+                                    after: Optional[str] = None, 
+                                    limit: int = 10, 
+                                    order: Optional[str] = "desc") -> ListResponse[ConversationResponse]:
+        """Return a paginated ListResponse of conversations.
 
         - order: 'asc' or 'desc' (by created_at)
         - after: id cursor (optional)
         - offset: number of items to skip after the cursor
         - limit: max items to return
         """
-        items, has_more = await self.conversation_repo.get_all(limit=limit, after=after, offset=offset, order=order)
+        items, has_more = await self.conversation_repo.get_all(limit=limit, after=after, order=order if order else "desc")
         # convert to response VO list
         data = [ConversationResponse.from_domain(c) for c in items]
         first_id = data[0].id if data else None
         last_id = data[-1].id if data else None
-        return ResponseList[ConversationResponse](data=data, first_id=first_id, last_id=last_id, has_more=has_more)
+        return ListResponse[ConversationResponse](data=data, first_id=first_id, last_id=last_id, has_more=has_more)
 
-    async def get_conversation_messages(self, conversation_id: str, page: int = 0, size: int = 10):
+    async def get_conversation_messages(self, 
+                                        conversation_id: str, 
+                                        after: Optional[str] = None, 
+                                        limit: int = 10, 
+                                        order: Optional[str] = "desc") -> ListResponse[MessageResponse]:
         conv = await self.conversation_repo.get_by_id(conversation_id)
         if conv is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        offset = page * size
-        return await self.message_repo.get_list_by_conversation(conversation_id, offset=offset, limit=size)
+        messageList, has_more = await self.message_repo\
+            .get_list_by_conversation(conversation_id, after=after, limit=limit, order=order if order else "desc")
+        data = [MessageResponse.from_domain(m) for m in messageList]
+        first_id = data[0].id if data else None
+        last_id = data[-1].id if data else None
+        return ListResponse[MessageResponse](
+            data=data, 
+            first_id=first_id, 
+            last_id=last_id, 
+            has_more=has_more
+        )
 
-    async def create_conversation(self):
-        conv = Conversation(id=str(uuid4()), name=self.CONVERSATION_NEW_NAME)
+    async def create_conversation(self) -> ConversationResponse:
+        conv = ConversationDomain(
+            id=generate_unique_id("conv"), 
+            name=self.CONVERSATION_NEW_NAME,
+            created_at=get_current_timestamp(),
+            updated_at=None
+        )
         saved = await self.conversation_repo.save(conv)
-        return saved
+        return ConversationResponse.from_domain(saved)
 
-    async def update_conversation(self, request: ConversationUpdateRequest):
-        conv = await self.conversation_repo.get_by_id(request.conversation_id)
+    async def update_conversation(self, request: ConversationUpdateRequest) -> ConversationResponse:
+        conv = await self.conversation_repo.get_by_id(request.id)
         if conv is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
         conv.name = request.name
-        return await self.conversation_repo.save(conv)
+        conv.updated_at = get_current_timestamp()
+        updated = await self.conversation_repo.save(conv)
+        return ConversationResponse.from_domain(updated)
 
-    async def delete_conversation(self, conversation_id: str):
+    async def delete_conversation(self, conversation_id: str) -> bool:
         conv = await self.conversation_repo.get_by_id(conversation_id)
         if conv is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
         await self.conversation_repo.delete(conv)
-        return conv
-
-    async def send_message(self, conversation_id: str, content: str, role: str = "user"):
-        """Persist a user message, call Gemini, persist assistant reply and return both."""
-        conv = await self.conversation_repo.get_by_id(conversation_id)
-        if conv is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-        # create user message
-        from src.adapter.output.mysql.entities import MessageEntity
-        from src.domain.models import MessageDomain
-
-        user_domain = MessageDomain(id=None, conversation_id=conversation_id, role=role, content=content)
-        ent = MessageEntity.from_domain(user_domain)
-        db.add(ent)
-        await db.commit()
-        await db.refresh(ent)
-        user_msg = ent.to_domain()
-
-        assistant_msg = None
-        if role == "user":
-            # Gemini client is synchronous; run in thread to avoid blocking event loop
-            from src.adapter.gemini.gemini_client import GeminiClient, GeminiClientError
-
-            client = GeminiClient()
-            try:
-                gen_resp = await asyncio.to_thread(client.generate, content)
-                text = None
-                if isinstance(gen_resp, dict):
-                    if "candidates" in gen_resp and isinstance(gen_resp["candidates"], list):
-                        first = gen_resp["candidates"][0]
-                        text = first.get("output") or first.get("content") or first.get("text")
-                    text = text or gen_resp.get("text") or gen_resp.get("output")
-                if text is None:
-                    text = str(gen_resp)
-            except GeminiClientError as ex:
-                text = f"[gemini error] {ex}"
-
-            assistant_domain = MessageDomain(id=None, conversation_id=conversation_id, role="assistant", content=text)
-            assistant_ent = MessageEntity.from_domain(assistant_domain)
-            db.add(assistant_ent)
-            await db.commit()
-            await db.refresh(assistant_ent)
-            assistant_msg = assistant_ent.to_domain()
-
-        return {"user": user_msg, "assistant": assistant_msg}
+        return True

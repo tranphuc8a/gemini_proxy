@@ -4,7 +4,7 @@ from pydantic.generics import GenericModel
 T = TypeVar("T")
 
 
-class ResponseList(GenericModel, Generic[T]):
+class ListResponse(GenericModel, Generic[T]):
     data: List[T]
     first_id: Optional[str]
     last_id: Optional[str]

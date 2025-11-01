@@ -1,12 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
-from datetime import datetime
-
 
 @dataclass
 class MessageDomain:
-    id: Optional[int]
+    id: str
     conversation_id: str
     role: str
     content: str
-    created_at: Optional[datetime] = None
+    created_at: int

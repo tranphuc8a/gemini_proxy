@@ -5,7 +5,7 @@ from src.adapter.repositories.conversation_repository import ConversationReposit
 from src.adapter.repositories.message_repository import MessageRepository
 from src.domain.vo.conversation_response import ConversationResponse
 from src.domain.vo.conversation_update_request import ConversationUpdateRequest
-from src.domain.vo.response_list import ResponseList
+from domain.vo.list_response import ListResponse
 from src.adapter.db.base import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +19,7 @@ message_repo = MessageRepository()
 usecase = ConversationUseCase(conversation_repo, message_repo)
 
 
-@router.get("/", response_model=ResponseList[ConversationResponse])
+@router.get("/", response_model=ListResponse[ConversationResponse])
 async def list_conversations(
     after: Optional[str] = Query(None),
     offset: int = Query(0, ge=0),
