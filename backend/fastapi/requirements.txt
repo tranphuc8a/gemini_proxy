@@ -1,0 +1,38 @@
+fastapi>=0.95.0
+uvicorn[standard]>=0.22.0
+
+# Core ORM (SQLAlchemy v2) with asyncio support
+SQLAlchemy[asyncio]>=2.0
+
+# Pydantic v2 and settings integration
+pydantic>=2.0
+pydantic-settings>=2.0
+
+# Async DB drivers
+# - aiosqlite is used as the test/dev fallback (pure-Python, Windows-friendly)
+aiosqlite>=0.18
+
+# If you need async MySQL in production, install an async driver separately on systems
+# that support building native extensions (e.g. asyncmy). We keep it OUT of the
+# top-level requirements to avoid Windows build issues. Example (optional):
+#   pip install asyncmy
+
+# MySQL sync fallback driver (if the code uses synchronous connections anywhere)
+pymysql>=1.0
+
+# Environment / extras
+python-dotenv>=1.0
+typing-extensions>=4.0
+
+# HTTP client and retry helpers
+httpx>=0.24
+tenacity>=8.2
+
+# Testing
+pytest>=7.0
+pytest-asyncio>=0.22
+respx>=0.20
+pytest-cov>=4.0
+
+# Migrations
+alembic>=1.10
