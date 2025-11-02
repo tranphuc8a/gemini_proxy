@@ -18,3 +18,30 @@ buildNumber.properties
 
 design/
 .env
+
+# Python venvs and common artifacts for backend/fastapi
+backend/fastapi/.venv/
+backend/fastapi/__pycache__/
+backend/fastapi/.pytest_cache/
+backend/fastapi/htmlcov/
+
+# VSCode workspace settings
+.vscode/
+
+# General Python / tooling ignores
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+env/
+venv/
+.venv/
+.coverage
+coverage.xml
+htmlcov/
+.ropeproject
+
+# OS files
+.DS_Store
+Thumbs.db
