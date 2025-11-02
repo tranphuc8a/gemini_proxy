@@ -29,7 +29,7 @@ class GeminiOutputPort(ABC):
         Sinh phản hồi theo luồng (streaming). Trả về iterator async yield các phần text dần dần.
         Adapter nên đảm bảo đóng luồng khi kết thúc.
         """
-        pass
+        yield ""
 
     @abstractmethod
     async def stop(self) -> None:

@@ -116,7 +116,7 @@ class GeminiUseCase(GeminiInputPort):
         history: List[MessageDomain] = []
         if user_msg.conversation_id:
             try:
-                history = await self.message_output_port.get_latest_by_conversation(user_msg.conversation_id, 10)
+                history = await self.message_output_port.get_latest_by_conversation(user_msg.conversation_id, 100)
             except Exception:
                 logger.debug("Could not load history for conversation %s", user_msg.conversation_id)
 
@@ -130,12 +130,6 @@ class GeminiUseCase(GeminiInputPort):
         parts: List[str] = []
         async for part in stream_iter:
             parts.append(part)
-            # best-effort append partials (adapter may implement append_streaming_response)
-            try:
-                if hasattr(self.message_output_port, "append_streaming_response"):
-                    await self.message_output_port.append_streaming_response(part, conversation_id=user_msg.conversation_id)
-            except Exception:
-                logger.debug("Failed to append streaming part")
             yield part
 
         full = "".join(parts)

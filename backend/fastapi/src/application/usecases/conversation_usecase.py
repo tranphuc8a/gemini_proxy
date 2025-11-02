@@ -1,4 +1,3 @@
-from ast import List
 from typing import Optional
 from backend.fastapi.src.application.ports.input.conversation_input_port import ConversationInputPort
 from backend.fastapi.src.application.ports.output.conversation_output_port import ConversationOutputPort
@@ -8,9 +7,7 @@ from domain.vo.message_response import MessageResponse
 from src.domain.vo.conversation_update_request import ConversationUpdateRequest
 from src.domain.vo.conversation_response import ConversationResponse
 from domain.vo.list_response import ListResponse
-from src.domain.models.message_domain import MessageDomain
 from src.domain.models.conversation_domain import ConversationDomain
-from uuid import uuid4
 from fastapi import HTTPException
 
 
