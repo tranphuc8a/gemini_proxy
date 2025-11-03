@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from domain.models.message_domain import MessageDomain
+from src.domain.models.message_domain import MessageDomain
 
 
 class MessageResponse(BaseModel):

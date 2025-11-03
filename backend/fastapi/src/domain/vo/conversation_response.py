@@ -1,7 +1,6 @@
-from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from domain.models.conversation_domain import ConversationDomain
+from src.domain.models.conversation_domain import ConversationDomain
 from src.domain.vo.message_response import MessageResponse
 
 

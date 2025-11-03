@@ -1,12 +1,14 @@
 from typing import Optional
-from backend.fastapi.src.application.ports.input.conversation_input_port import ConversationInputPort
-from backend.fastapi.src.application.ports.output.conversation_output_port import ConversationOutputPort
-from backend.fastapi.src.application.ports.output.message_output_port import MessageOutputPort
-from domain.utils.utils import generate_unique_id, get_current_timestamp
-from domain.vo.message_response import MessageResponse
+from src.domain.enums.enums import ERole
+from src.domain.models.message_domain import MessageDomain
+from src.application.ports.input.conversation_input_port import ConversationInputPort
+from src.application.ports.output.conversation_output_port import ConversationOutputPort
+from src.application.ports.output.message_output_port import MessageOutputPort
+from src.domain.utils.utils import generate_unique_id, get_current_timestamp
+from src.domain.vo.message_response import MessageResponse
 from src.domain.vo.conversation_update_request import ConversationUpdateRequest
 from src.domain.vo.conversation_response import ConversationResponse
-from domain.vo.list_response import ListResponse
+from src.domain.vo.list_response import ListResponse
 from src.domain.models.conversation_domain import ConversationDomain
 from fastapi import HTTPException
 
@@ -92,3 +94,19 @@ class ConversationUseCase(ConversationInputPort):
             raise HTTPException(status_code=404, detail="Conversation not found")
         await self.conversation_repo.delete(conv)
         return True
+
+    async def post_message(self, conversation_id: str, content: str) -> MessageResponse:
+        conv = await self.conversation_repo.get_by_id(conversation_id)
+        if conv is None:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        message = MessageDomain(
+            id=generate_unique_id("msg"),
+            conversation_id=conversation_id,
+            role=ERole.USER,
+            content=content,
+            created_at=get_current_timestamp(),
+        )
+        saved_message = await self.message_repo.save(message)
+        return MessageResponse.from_domain(saved_message)
+    
