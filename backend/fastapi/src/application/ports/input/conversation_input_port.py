@@ -29,3 +29,7 @@ class ConversationInputPort(ABC):
     @abstractmethod
     async def delete_conversation(self, conversation_id: str) -> bool:
         pass
+    
+    @abstractmethod
+    async def post_message(self, conversation_id: str, content: str) -> MessageResponse:
+        pass

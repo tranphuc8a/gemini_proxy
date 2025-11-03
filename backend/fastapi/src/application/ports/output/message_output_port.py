@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from domain.models.message_domain import MessageDomain
+from src.domain.models.message_domain import MessageDomain
 
 
 class MessageOutputPort(ABC):

@@ -1,10 +1,10 @@
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime
+from typing import cast
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
-from src.adapter.db.base import Base
-from src.domain.models import ConversationDomain, MessageDomain
+from src.adapter.output.mysql.db.base import Base
+from src.domain.models.conversation_domain import ConversationDomain
 from .abstract_entity import AbstractEntity
-from typing import List
 
 
 class ConversationEntity(Base, AbstractEntity[ConversationDomain]):
@@ -12,8 +12,8 @@ class ConversationEntity(Base, AbstractEntity[ConversationDomain]):
 
     id = Column(String(64), primary_key=True)
     name = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(Integer, nullable=False, default=datetime.utcnow)
+    updated_at = Column(Integer, nullable=True, default=datetime.utcnow)
 
     messages = relationship("MessageEntity", back_populates="conversation", cascade="all, delete-orphan")
 
@@ -26,4 +26,10 @@ class ConversationEntity(Base, AbstractEntity[ConversationDomain]):
     def to_domain(self) -> ConversationDomain:
         # convert messages if loaded
         msgs = [m.to_domain() for m in self.messages] if self.messages is not None else []
-        return ConversationDomain(id=self.id, name=self.name, created_at=self.created_at, updated_at=self.updated_at, messages=msgs)
+        return ConversationDomain(
+            id=cast(str, self.id), 
+            name=cast(str, self.name), 
+            created_at=cast(int, self.created_at), 
+            updated_at=cast(int, self.updated_at) if self.updated_at is not None else None, 
+            messages=msgs
+        )
