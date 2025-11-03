@@ -3,6 +3,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from src.application.config.config import settings
 import asyncio
+import time
 
 
 class GeminiClientError(RuntimeError):
@@ -14,12 +15,23 @@ class GeminiClient:
 
     Uses httpx.AsyncClient under the hood and retries transient network errors.
     """
-
-    def __init__(self, url: Optional[str] = None, api_key: Optional[str] = None, timeout: Optional[int] = None):
+    def __init__(
+        self,
+        url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        timeout: Optional[int] = None,
+        oauth_token: Optional[str] = None,
+        service_account_file: Optional[str] = None,
+    ):
         self.url = url or settings.GEMINI_URL
         self.api_key = api_key or settings.GEMINI_API_KEY
         self.timeout = timeout or settings.GEMINI_TIMEOUT_SECONDS
+        # explicit OAuth token (string) or service account JSON file path to obtain tokens
+        self._oauth_token = oauth_token or getattr(settings, "GEMINI_OAUTH_TOKEN", None)
+        self._service_account_file = service_account_file or getattr(settings, "GEMINI_SERVICE_ACCOUNT_FILE", None)
         self._client: Optional[httpx.AsyncClient] = None
+        # token cache (value, expiry_ts)
+        self._token_cache: Optional[tuple[str, float]] = None
 
     def _is_google_style(self) -> bool:
         if not self.url:
@@ -28,8 +40,6 @@ class GeminiClient:
 
     def _prepare_headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -64,13 +74,33 @@ class GeminiClient:
 
         headers = self._prepare_headers()
 
+        # If an OAuth token or service account is configured, prefer sending
+        # an Authorization: Bearer <token> header. Otherwise for Google-style
+        # endpoints send x-goog-api-key if available.
+        final_url = self.url
+        token = await self._get_bearer_token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        elif self._is_google_style() and self.api_key:
+            headers["x-goog-api-key"] = self.api_key
+
         try:
-            return await self._post(self.url, payload, headers)
+            return await self._post(final_url, payload, headers)
         except httpx.RequestError as exc:
             raise GeminiClientError(f"Request error while calling Gemini API: {exc}") from exc
         except httpx.HTTPStatusError as exc:
             body = exc.response.text if exc.response is not None else ""
-            raise GeminiClientError(f"Gemini API returned HTTP {exc.response.status_code}: {body}") from exc
+            status = exc.response.status_code if exc.response is not None else "?"
+            if status == 401:
+                # Provide a more actionable error message for auth failures
+                hint = (
+                    "Request had invalid authentication credentials.\n"
+                    "If you're calling Google's Generative Language API, you likely need an OAuth2 access token (service account) rather than an API key, or enable the API and use a valid API key.\n"
+                    "Set GEMINI_API_KEY to a valid key, or configure an OAuth2 access token (service account). You can set GEMINI_SERVICE_ACCOUNT_FILE to a service account JSON file and the client will obtain a token automatically.\n"
+                    "See https://developers.google.com/identity for details."
+                )
+                raise GeminiClientError(f"Gemini API returned HTTP 401: {body}\n{hint}") from exc
+            raise GeminiClientError(f"Gemini API returned HTTP {status}: {body}") from exc
 
     async def stream_generate(self, prompt: Any, model: Optional[str] = None, extra: Optional[Dict[str, Any]] = None) -> AsyncIterator[str]:
         """A simple streaming wrapper which yields parts from a non-streaming response.
@@ -105,3 +135,59 @@ class GeminiClient:
         if self._client is not None:
             await self._client.aclose()
             self._client = None
+
+    async def _get_bearer_token(self) -> Optional[str]:
+        """Return an OAuth2 bearer token, preferring an explicit token, then a cached
+        service-account token obtained from a JSON key file. Returns None if no
+        credentials are configured.
+        """
+        # 1) explicit token
+        if self._oauth_token:
+            return self._oauth_token
+
+        # 2) cached token
+        if self._token_cache is not None:
+            token, expiry = self._token_cache
+            if time.time() < expiry - 30:
+                return token
+
+        # 3) service account file -> obtain token
+        if not self._service_account_file:
+            return None
+
+        # Try to import google-auth libraries lazily
+        try:
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request as GoogleRequest
+        except Exception:
+            raise GeminiClientError(
+                "google-auth is required to use service account credentials. Install 'google-auth' package."
+            )
+
+        # Create credentials and refresh in a thread to avoid blocking the event loop
+        scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+        def _refresh_credentials():
+            creds = service_account.Credentials.from_service_account_file(self._service_account_file, scopes=scopes)
+            # refresh will set token and expiry
+            creds.refresh(GoogleRequest())
+            return creds.token, getattr(creds, "expiry", None)
+
+        try:
+            token, expiry_dt = await asyncio.to_thread(_refresh_credentials)
+        except Exception as exc:
+            raise GeminiClientError(f"Failed to obtain OAuth token from service account: {exc}") from exc
+
+        if token is None:
+            return None
+
+        # convert expiry to timestamp
+        expiry_ts = time.time() + 300
+        if expiry_dt is not None:
+            try:
+                expiry_ts = expiry_dt.timestamp()
+            except Exception:
+                expiry_ts = time.time() + 300
+
+        self._token_cache = (token, expiry_ts)
+        return token

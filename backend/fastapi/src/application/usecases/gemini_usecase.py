@@ -3,16 +3,17 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import AsyncIterator, List, Optional
+from fastapi import HTTPException
 
-from application.ports.output.conversation_output_port import ConversationOutputPort
-from application.ports.output.gemini_output_port import GeminiOutputPort
-from application.ports.output.message_output_port import MessageOutputPort
-from domain.vo.message_request import MessageRequest
+from src.application.ports.output.conversation_output_port import ConversationOutputPort
+from src.application.ports.output.gemini_output_port import GeminiOutputPort
+from src.application.ports.output.message_output_port import MessageOutputPort
+from src.domain.vo.message_request import MessageRequest
 from src.application.ports.input.gemini_input_port import GeminiInputPort
 from src.domain.utils.validators import validate_message_content, validate_model_name
 from src.domain.utils.utils import generate_unique_id, get_current_timestamp
 from src.application.config.config import settings
-from domain.models.message_domain import MessageDomain
+from src.domain.models.message_domain import MessageDomain
 from src.domain.enums.enums import EModel
 
 logger = logging.getLogger(__name__)
@@ -93,10 +94,11 @@ class GeminiUseCase(GeminiInputPort):
             )
         except asyncio.TimeoutError:
             logger.exception("Gemini generate timed out")
-            raise
-        except Exception:
-            logger.exception("Gemini generate failed")
-            raise
+            raise HTTPException(status_code=504, detail="Gemini request timed out")
+        except Exception as exc:
+            logger.exception("Gemini generate failed: %s", exc)
+            # Map adapter failures to a 502 Bad Gateway so callers know it's an upstream problem
+            raise HTTPException(status_code=502, detail=f"Gemini service error: {exc}")
 
         # persist assistant message and update conversation
         await self._persist_assistant_message(user_msg.conversation_id, resp)
@@ -122,15 +124,24 @@ class GeminiUseCase(GeminiInputPort):
 
         # get stream iterator
         try:
-            stream_iter = await self.gemini_output_port.stream_generate(model_name, user_msg, history)
-        except Exception:
-            logger.exception("Gemini stream_generate not available or failed to start")
-            raise
+            # stream_generate returns an async iterator (async generator); do not await it
+            stream_iter = self.gemini_output_port.stream_generate(model_name, user_msg, history)
+        except Exception as exc:
+            logger.exception("Gemini stream_generate not available or failed to start: %s", exc)
+            raise HTTPException(status_code=502, detail=f"Gemini stream error: {exc}")
 
         parts: List[str] = []
-        async for part in stream_iter:
-            parts.append(part)
-            yield part
+        try:
+            async for part in stream_iter:
+                parts.append(part)
+                yield part
+        except asyncio.CancelledError:
+            logger.info("Streaming to client cancelled")
+            raise
+        except Exception as exc:
+            logger.exception("Error while streaming from Gemini: %s", exc)
+            # Stop iteration; downstream StreamingResponse will close the connection.
+            return
 
         full = "".join(parts)
         await self._persist_assistant_message(user_msg.conversation_id, full)

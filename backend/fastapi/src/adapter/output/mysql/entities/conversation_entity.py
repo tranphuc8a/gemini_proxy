@@ -24,12 +24,40 @@ class ConversationEntity(Base, AbstractEntity[ConversationDomain]):
         return ent
 
     def to_domain(self) -> ConversationDomain:
-        # convert messages if loaded
-        msgs = [m.to_domain() for m in self.messages] if self.messages is not None else []
+        # convert messages only if they are already loaded on the instance to avoid triggering
+        # a lazy load (which can fail in async contexts if not run within greenlet_spawn)
+        msgs = []
+        if "messages" in self.__dict__ and self.messages is not None:
+            msgs = [m.to_domain() for m in self.messages]
+
+        # normalize timestamps if stored as datetime or string
+        def _normalize_ts(val):
+            if val is None:
+                return None
+            if isinstance(val, int):
+                return val
+            if isinstance(val, datetime):
+                return int(val.timestamp())
+            if isinstance(val, str):
+                # try ISO format first
+                try:
+                    dt = datetime.fromisoformat(val)
+                    return int(dt.timestamp())
+                except Exception:
+                    pass
+                # try numeric string
+                try:
+                    return int(float(val))
+                except Exception:
+                    raise ValueError(f"Cannot parse timestamp value: {val}")
+
+        created = _normalize_ts(self.created_at)
+        updated = _normalize_ts(self.updated_at)
+
         return ConversationDomain(
-            id=cast(str, self.id), 
-            name=cast(str, self.name), 
-            created_at=cast(int, self.created_at), 
-            updated_at=cast(int, self.updated_at) if self.updated_at is not None else None, 
-            messages=msgs
+            id=cast(str, self.id),
+            name=cast(str, self.name),
+            created_at=cast(int, created),
+            updated_at=cast(int, updated) if updated is not None else None,
+            messages=msgs,
         )

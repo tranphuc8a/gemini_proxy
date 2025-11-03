@@ -3,8 +3,8 @@ from fastapi.utils import generate_unique_id
 from pydantic import BaseModel
 from fastapi import Body
 
-from domain.models.message_domain import MessageDomain
-from domain.utils.utils import get_current_timestamp, generate_unique_id
+from src.domain.models.message_domain import MessageDomain
+from src.domain.utils.utils import get_current_timestamp, generate_unique_id
 
 
 class MessageRequest(BaseModel):

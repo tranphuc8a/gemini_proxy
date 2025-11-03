@@ -26,10 +26,16 @@ class MessageEntity(Base, AbstractEntity[MessageDomain]):
         return ent
     
     def to_domain(self) -> MessageDomain:
+        # normalize role to a plain string and created_at to an int timestamp
+        role_val = self.role.value if hasattr(self.role, "value") else str(self.role)
+        created = self.created_at
+        if isinstance(created, datetime):
+            created = int(created.timestamp())
+
         return MessageDomain(
-            id=cast(str, self.id), 
-            conversation_id=cast(str, self.conversation_id), 
-            role=cast(ERole, self.role), 
-            content=cast(str, self.content), 
-            created_at=cast(int, self.created_at)
+            id=cast(str, self.id),
+            conversation_id=cast(str, self.conversation_id),
+            role=cast(str, role_val),
+            content=cast(str, self.content),
+            created_at=cast(int, created),
         )
