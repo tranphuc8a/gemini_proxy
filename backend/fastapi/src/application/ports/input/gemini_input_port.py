@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from domain.vo.message_request import MessageRequest
+from src.domain.vo.message_request import MessageRequest
 
 class GeminiInputPort(ABC):
     """

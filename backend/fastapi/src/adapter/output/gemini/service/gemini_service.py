@@ -4,8 +4,8 @@ from typing import AsyncIterator, List, Optional
 
 from src.adapter.output.gemini.helper.gemini_client import GeminiClient, GeminiClientError
 from src.application.ports.output.gemini_output_port import GeminiOutputPort
-from adapter.output.gemini.dto.response.response import GeminiResponse
-from domain.models.message_domain import MessageDomain
+from src.adapter.output.gemini.dto.response.response import GeminiResponse
+from src.domain.models.message_domain import MessageDomain
 
 
 class GeminiService(GeminiOutputPort):
