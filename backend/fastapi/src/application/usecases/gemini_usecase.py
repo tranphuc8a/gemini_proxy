@@ -51,7 +51,7 @@ class GeminiUseCase(GeminiInputPort):
         msg = MessageDomain(
             id=generate_unique_id("msg"),
             conversation_id=conversation_id,
-            role="bot",
+            role="model",
             content=text,
             created_at=get_current_timestamp(),
         )

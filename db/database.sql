@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TABLE IF NOT EXISTS messages (
     id CHAR(255) NOT NULL PRIMARY KEY,
     conversation_id CHAR(255) NOT NULL,
-    role ENUM('user','bot') NOT NULL,
+  role ENUM('user','model') NOT NULL,
     content LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, -- Nội dung lớn, hỗ trợ emoji, HTML, markdown
     created_at INT DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_conversation_id (conversation_id),
