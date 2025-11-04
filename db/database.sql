@@ -7,20 +7,20 @@ USE gemini_proxy;
 
 -- Bảng conversations
 CREATE TABLE IF NOT EXISTS conversations (
-    id CHAR(36) NOT NULL PRIMARY KEY,        -- UUID (GUID)
+    id CHAR(255) NOT NULL PRIMARY KEY,        -- UUID (GUID)
     name VARCHAR(255) NOT NULL,              -- Tên conversation
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at INT DEFAULT CURRENT_TIMESTAMP,
+    updated_at INT DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Bảng messages
 CREATE TABLE IF NOT EXISTS messages (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    conversation_id CHAR(36) NOT NULL,
-    role ENUM('USER','ASSISTANT') NOT NULL,
+    id CHAR(255) NOT NULL PRIMARY KEY,
+    conversation_id CHAR(255) NOT NULL,
+    role ENUM('user','bot') NOT NULL,
     content LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, -- Nội dung lớn, hỗ trợ emoji, HTML, markdown
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at INT DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_conversation_id (conversation_id),
     INDEX idx_created_at (created_at),
     CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE

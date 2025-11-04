@@ -11,6 +11,8 @@ pydantic-settings>=2.0
 # Async DB drivers
 # - aiosqlite is used as the test/dev fallback (pure-Python, Windows-friendly)
 aiosqlite>=0.18
+# Use aiomysql as the async MySQL driver for better Windows wheel availability
+aiomysql>=0.0.21
 
 # If you need async MySQL in production, install an async driver separately on systems
 # that support building native extensions (e.g. asyncmy). We keep it OUT of the
@@ -36,3 +38,4 @@ pytest-cov>=4.0
 
 # Migrations
 alembic>=1.10
+google-auth>=2.20.0

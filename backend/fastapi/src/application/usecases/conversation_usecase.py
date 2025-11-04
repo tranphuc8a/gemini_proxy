@@ -74,7 +74,8 @@ class ConversationUseCase(ConversationInputPort):
             id=generate_unique_id("conv"), 
             name=self.CONVERSATION_NEW_NAME,
             created_at=get_current_timestamp(),
-            updated_at=None
+            updated_at=None,
+            messages=[]
         )
         saved = await self.conversation_repo.save(conv)
         return ConversationResponse.from_domain(saved)

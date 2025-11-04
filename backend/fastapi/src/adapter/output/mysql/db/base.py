@@ -13,8 +13,10 @@ Base = declarative_base()
 
 def _mysql_async_url() -> str:
     # using asyncmy driver for MySQL async support
+    # Use aiomysql as the async DBAPI (preferred for better Windows wheel support).
+    # Note: connection URL dialect is `mysql+aiomysql://` for SQLAlchemy async.
     return (
-        f"mysql+asyncmy://{settings.DB_USERNAME}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_DATABASE}"
+        f"mysql+aiomysql://{settings.DB_USERNAME}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_DATABASE}"
     )
 
 
@@ -48,16 +50,17 @@ def _create_engine_and_session() -> None:
         else:
             # attempt to create MySQL async engine; may raise ModuleNotFoundError if driver missing
             _async_engine = create_async_engine(_mysql_async_url(), echo=False, future=True)
-    except ModuleNotFoundError:
-        # Fallback: if the async mysql driver isn't installed, fall back to an on-disk sqlite to allow local runs
-        # (This avoids crashing on import; for production install the proper async driver.)
-        _async_engine = create_async_engine(
-            "sqlite+aiosqlite:///:memory:",
-            echo=False,
-            poolclass=StaticPool,
-            connect_args={"check_same_thread": False},
-            future=True,
-        )
+    except ModuleNotFoundError as exc:
+        # Fail fast in non-testing environments: do not silently fall back to in-memory sqlite.
+        raise RuntimeError(
+            "Async MySQL driver is not installed or not available.\n"
+            "Install an async MySQL driver (for example: 'pip install asyncmy') and ensure your DB settings are correct,\n"
+            "or set TESTING=True / run under pytest to use the in-memory sqlite fallback for tests.\n"
+            f"Original error: {exc}"
+        ) from exc
+    except Exception as exc:
+        # Any other failure creating the engine should also surface immediately so the application fails fast
+        raise RuntimeError(f"Failed to create async DB engine: {exc}") from exc
 
     _AsyncSessionLocal = async_sessionmaker(_async_engine, class_=AsyncSession, expire_on_commit=False, future=True)
 

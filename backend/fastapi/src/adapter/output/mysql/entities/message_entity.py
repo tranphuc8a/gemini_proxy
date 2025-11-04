@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import cast
+import uuid
 from sqlalchemy import Column, Integer, String, ForeignKey, Text, Enum
 from sqlalchemy.orm import relationship
 from src.domain.enums.enums import ERole
@@ -10,19 +11,23 @@ from src.adapter.output.mysql.entities.abstract_entity import AbstractEntity
 
 class MessageEntity(Base, AbstractEntity[MessageDomain]):
     __tablename__ = "messages"
-
-    id = Column(String(64), primary_key=True)
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
     conversation_id = Column(String(64), ForeignKey("conversations.id"), nullable=False)
     role = Column(Enum(ERole), nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(Integer, nullable=False, default=datetime.utcnow)
+    created_at = Column(Integer, nullable=False)
 
     conversation = relationship("ConversationEntity", back_populates="messages")
 
     @classmethod
     def from_domain(cls, domain_obj: MessageDomain) -> "MessageEntity":
-        ent = cls(conversation_id=domain_obj.conversation_id, role=domain_obj.role, content=domain_obj.content)
-        # id and created_at are handled by DB
+        ent = cls(
+            id=domain_obj.id,
+            conversation_id=domain_obj.conversation_id, 
+            role=domain_obj.role, 
+            content=domain_obj.content,
+            created_at=domain_obj.created_at
+        )
         return ent
     
     def to_domain(self) -> MessageDomain:

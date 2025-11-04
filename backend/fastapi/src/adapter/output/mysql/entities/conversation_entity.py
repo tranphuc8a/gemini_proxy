@@ -12,15 +12,19 @@ class ConversationEntity(Base, AbstractEntity[ConversationDomain]):
 
     id = Column(String(64), primary_key=True)
     name = Column(String(255), nullable=False)
-    created_at = Column(Integer, nullable=False, default=datetime.utcnow)
-    updated_at = Column(Integer, nullable=True, default=datetime.utcnow)
+    created_at = Column(Integer, nullable=False)
+    updated_at = Column(Integer, nullable=True)
 
     messages = relationship("MessageEntity", back_populates="conversation", cascade="all, delete-orphan")
 
     @classmethod
     def from_domain(cls, domain_obj: ConversationDomain) -> "ConversationEntity":
-        ent = cls(id=domain_obj.id, name=domain_obj.name)
-        # don't set created_at/updated_at here; DB defaults will apply if None
+        ent = cls(
+            id=domain_obj.id, 
+            name=domain_obj.name,
+            created_at=domain_obj.created_at,
+            updated_at=domain_obj.updated_at
+        )
         return ent
 
     def to_domain(self) -> ConversationDomain:
