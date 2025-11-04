@@ -38,7 +38,7 @@ class ESortOrder(str, Enum):
 
 class ERole(str, Enum):
     USER = "user"
-    BOT = "bot"
+    MODEL = "model"
 
     @classmethod
     def from_str(cls, value: Any) -> "ERole":
