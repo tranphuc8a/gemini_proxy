@@ -17,32 +17,46 @@ from src.adapter.output.gemini.service.gemini_service import GeminiService
 from src.application.usecases.gemini_usecase import GeminiUseCase
 
 
-db: AsyncSession = get_async_session()
-default_conversation_output_port: ConversationOutputPort = ConversationRepository(db)
-default_message_output_port: MessageOutputPort = MessageRepository(db)
-default_conversation_input_port: ConversationInputPort = ConversationUseCase(default_conversation_output_port, default_message_output_port)
-# default_message_input_port: MessageInputPort = MessageUsecase(default_conversation_output_port)
-default_health_input_port: HealthInputPort = HealthUsecase([default_conversation_output_port, default_message_output_port])
+_cached_ports = {}
 
-# Gemini wiring (client -> output port/service -> input usecase)
-_default_gemini_client = GeminiClient()
-_default_gemini_output_port = GeminiService(_default_gemini_client)
-default_gemini_input_port: GeminiInputPort = GeminiUseCase(_default_gemini_output_port, default_message_output_port, default_conversation_output_port)
+
+def _make_repos_and_ports() -> tuple[ConversationOutputPort, MessageOutputPort, ConversationInputPort, HealthInputPort]:
+    """Create fresh DB-backed repositories and usecases. This is created lazily
+    per-call to avoid binding AsyncSession/engine to a different event loop at import time.
+    """
+    db: AsyncSession = get_async_session()
+    conv_repo: ConversationOutputPort = ConversationRepository(db)
+    msg_repo: MessageOutputPort = MessageRepository(db)
+    conv_input: ConversationInputPort = ConversationUseCase(conv_repo, msg_repo)
+    health_input: HealthInputPort = HealthUsecase([conv_repo, msg_repo])
+    return conv_repo, msg_repo, conv_input, health_input
+
+
+def _make_gemini_input_port(msg_repo: MessageOutputPort, conv_repo: ConversationOutputPort) -> GeminiInputPort:
+    # instantiate GeminiClient/Service lazily to avoid any async client being
+    # created at import time (which can bind to an unrelated event loop).
+    client = GeminiClient()
+    svc = GeminiService(client)
+    return GeminiUseCase(svc, msg_repo, conv_repo)
 
 class ServiceFactory:
     
     @staticmethod
     def get_conversation_input_port() -> ConversationInputPort:
-        return default_conversation_input_port
+        _, _, conv_input, _ = _make_repos_and_ports()
+        return conv_input
     
     @staticmethod
     def get_conversation_output_port() -> ConversationOutputPort:
-        return default_conversation_output_port
+        conv_repo, _, _, _ = _make_repos_and_ports()
+        return conv_repo
 
     @staticmethod
     def get_health_input_port() -> HealthInputPort:
-        return default_health_input_port
+        _, _, _, health_input = _make_repos_and_ports()
+        return health_input
 
     @staticmethod
     def get_gemini_input_port() -> GeminiInputPort:
-        return default_gemini_input_port
+        conv_repo, msg_repo, _, _ = _make_repos_and_ports()
+        return _make_gemini_input_port(msg_repo, conv_repo)
