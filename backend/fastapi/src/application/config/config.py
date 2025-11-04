@@ -20,7 +20,7 @@ class Settings(BaseSettings): # type: ignore
     # Gemini API
     GEMINI_URL: str | None = None
     GEMINI_API_KEY: str | None = None
-    GEMINI_TIMEOUT_SECONDS: int = 30
+    GEMINI_TIMEOUT_SECONDS: int = 300
     
     # Testing
     TESTING: bool = False
