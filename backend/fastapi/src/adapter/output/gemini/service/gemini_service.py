@@ -12,13 +12,14 @@ class GeminiService(GeminiOutputPort):
     def __init__(self, gemini_client: GeminiClient):
         self.gemini_client = gemini_client
 
-    async def generate(self, model: str, message: MessageDomain, history: List[MessageDomain]) -> str:
+    async def generate(self, model: str, history: List[MessageDomain]) -> str:
         """Call the Gemini client and return the assistant text as a single string."""
-        # Prepare prompt: convert history + message into contents list expected by the client
+        # Prepare prompt: convert history into contents list expected by the client
         contents = []
+        history.sort(key=lambda x: x.created_at)
         for m in history:
-            contents.append({"role": m.role, "parts": [{"text": m.content}]})
-        contents.append({"role": message.role, "parts": [{"text": message.content}]})
+            role = m.role.value if hasattr(m.role, "value") else str(m.role)
+            contents.append({"role": role, "parts": [{"text": m.content}]})
 
         try:
             raw = await self.gemini_client.generate(contents, model=model)
@@ -47,11 +48,12 @@ class GeminiService(GeminiOutputPort):
                 return "".join(texts)
             return str(raw)
 
-    async def stream_generate(self, model: str, message: MessageDomain, history: List[MessageDomain]) -> AsyncIterator[str]:
+    async def stream_generate(self, model: str, history: List[MessageDomain]) -> AsyncIterator[str]:
         contents = []
+        history.sort(key=lambda x: x.created_at) 
         for m in history:
-            contents.append({"role": m.role, "parts": [{"text": m.content}]})
-        contents.append({"role": message.role, "parts": [{"text": message.content}]})
+            role = m.role.value if hasattr(m.role, "value") else str(m.role)
+            contents.append({"role": role, "parts": [{"text": m.content}]})
 
         async for part in self.gemini_client.stream_generate(contents, model=model):
             yield part

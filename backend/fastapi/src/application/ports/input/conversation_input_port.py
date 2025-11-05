@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
+from typing import List
 from src.domain.vo.conversation_update_request import ConversationUpdateRequest
 from src.domain.vo.conversation_response import ConversationResponse
 from src.domain.vo.message_response import MessageResponse
@@ -16,6 +17,10 @@ class ConversationInputPort(ABC):
 
     @abstractmethod
     async def get_conversation_messages(self, conversation_id: str, after: Optional[str] = None, limit: int = 10, order: Optional[str] = "desc") -> ListResponse[MessageResponse]:
+        pass
+
+    @abstractmethod
+    async def get_recent_messages(self, conversation_id: str, k: int = 5) -> List[MessageResponse]:
         pass
 
     @abstractmethod

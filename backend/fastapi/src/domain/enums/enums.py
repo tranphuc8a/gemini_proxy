@@ -46,13 +46,12 @@ class ERole(str, Enum):
 
 
 class EModel(str, Enum):
-    # A small set of example model identifiers. Add more as needed.
-    GPT_4 = "gpt-4"
-    GPT_4O = "gpt-4o"
-    GPT_4O_MINI = "gpt-4o-mini"
-    GPT_3_5_TURBO = "gpt-3.5-turbo"
-    GEMINI_1_0 = "gemini-1.0"
-    GEMINI_1_5 = "gemini-1.5"
+    GEMINI_2_5_PRO = "gemini-2.5-pro"
+    GEMINI_2_5_FLASH = "gemini-2.5-flash"
+    GEMINI_2_5_FLASH_LITE = "gemini-2.5-flash-lite"
+    GEMINI_2_0_FLASH = "gemini-2.0-flash"
+    GEMINI_2_0_FLASH_LITE = "gemini-2.0-flash-lite"
+    GEMINI_FLASH_LATEST = "gemini-flash-latest"
 
     @classmethod
     def from_str(cls, value: Any) -> "EModel":

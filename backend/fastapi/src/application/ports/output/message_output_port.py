@@ -34,7 +34,8 @@ class MessageOutputPort(ABC):
         pass
     
     @abstractmethod
-    async def get_by_id(self, message_id: int) -> MessageDomain:
+    async def get_by_id(self, message_id: str) -> MessageDomain:
+        """Fetch a message by id. Implementations may accept numeric or string PKs; pass the raw id as string."""
         pass
     
     @abstractmethod

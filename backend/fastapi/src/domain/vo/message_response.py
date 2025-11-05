@@ -1,17 +1,18 @@
 from pydantic import BaseModel
 
 from src.domain.models.message_domain import MessageDomain
+from src.domain.enums.enums import ERole
 
 
 class MessageResponse(BaseModel):
     id: str
     conversation_id: str
-    role: str
+    role: ERole
     content: str
     created_at: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
     @classmethod
     def from_domain(cls, domain_obj: MessageDomain):
