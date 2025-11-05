@@ -11,7 +11,7 @@ class GeminiOutputPort(ABC):
 
     @abstractmethod
     async def generate(
-        self, model: str, message: MessageDomain, history: List[MessageDomain]
+        self, model: str, history: List[MessageDomain]
     ) -> str:
         """
         Sinh một phản hồi hoàn chỉnh từ Gemini.
@@ -23,7 +23,7 @@ class GeminiOutputPort(ABC):
 
     @abstractmethod
     async def stream_generate(
-        self, model: str, message: MessageDomain, history: List[MessageDomain]
+        self, model: str, history: List[MessageDomain]
     ) -> AsyncIterator[str]:
         """
         Sinh phản hồi theo luồng (streaming). Trả về iterator async yield các phần text dần dần.

@@ -1,9 +1,13 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
+from src.domain.enums.enums import ERole
 
-@dataclass
-class MessageDomain:
+
+class MessageDomain(BaseModel):
     id: str
     conversation_id: str
-    role: str
+    role: ERole
     content: str
     created_at: int
+
+    class Config:
+        from_attributes = True

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from src.domain.enums.enums import ERole
 from src.domain.models.message_domain import MessageDomain
 from src.application.ports.input.conversation_input_port import ConversationInputPort
@@ -10,7 +10,7 @@ from src.domain.vo.conversation_update_request import ConversationUpdateRequest
 from src.domain.vo.conversation_response import ConversationResponse
 from src.domain.vo.list_response import ListResponse
 from src.domain.models.conversation_domain import ConversationDomain
-from fastapi import HTTPException
+from src.application.exceptions.exceptions import NotFoundError
 
 
 class ConversationUseCase(ConversationInputPort):
@@ -20,16 +20,42 @@ class ConversationUseCase(ConversationInputPort):
     def __init__(self, conversation_repo: ConversationOutputPort, message_repo: MessageOutputPort):
         self.conversation_repo = conversation_repo
         self.message_repo = message_repo
+    
+    # produce truncated summary for each message to keep conversation detail lightweight
+    def _truncate(self, text: str, limit: int = 120) -> str:
+        if text is None:
+            return ""
+        if len(text) <= limit:
+            return text
+        return text[:limit].rstrip() + "..."
 
     async def get_conversation_detail(self, conversation_id: str) -> ConversationResponse:
         conv = await self.conversation_repo.get_by_id(conversation_id)
         if conv is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-        
-        # fetch latest messages explicitly to avoid async lazy-loading issues
+            raise NotFoundError("Conversation not found")
+
         messages, _ = await self.message_repo.get_list_by_conversation(conversation_id, limit=self.LATEST_MESSAGE_COUNT, after=None, order="desc")
-        conv.messages = messages
-        return ConversationResponse.from_domain(conv)
+        total_count = await self.message_repo.count_by_conversation(conversation_id)
+
+        truncated_msgs = [
+            MessageResponse(
+                id=m.id,
+                conversation_id=m.conversation_id,
+                role=m.role,
+                content=self._truncate(m.content, limit=120),
+                created_at=m.created_at,
+            )
+            for m in messages
+        ]
+        
+        return ConversationResponse(
+            id=conv.id,
+            name=conv.name,
+            created_at=conv.created_at,
+            updated_at=conv.updated_at,
+            messages=truncated_msgs,
+            messages_count=total_count,
+        )
 
     async def get_conversation_list(self, 
                                     after: Optional[str] = None, 
@@ -56,7 +82,7 @@ class ConversationUseCase(ConversationInputPort):
                                         order: Optional[str] = "desc") -> ListResponse[MessageResponse]:
         conv = await self.conversation_repo.get_by_id(conversation_id)
         if conv is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            raise NotFoundError("Conversation not found")
         messageList, has_more = await self.message_repo\
             .get_list_by_conversation(conversation_id, after=after, limit=limit, order=order if order else "desc")
         data = [MessageResponse.from_domain(m) for m in messageList]
@@ -68,6 +94,14 @@ class ConversationUseCase(ConversationInputPort):
             last_id=last_id, 
             has_more=has_more
         )
+
+    async def get_recent_messages(self, conversation_id: str, k: int = 5) -> List[MessageResponse]:
+        conv = await self.conversation_repo.get_by_id(conversation_id)
+        if conv is None:
+            raise NotFoundError("Conversation not found")
+
+        msgs = await self.message_repo.get_latest_by_conversation(conversation_id, k)
+        return [MessageResponse.from_domain(m) for m in msgs]
 
     async def create_conversation(self) -> ConversationResponse:
         conv = ConversationDomain(
@@ -83,7 +117,7 @@ class ConversationUseCase(ConversationInputPort):
     async def update_conversation(self, request: ConversationUpdateRequest) -> ConversationResponse:
         conv = await self.conversation_repo.get_by_id(request.id)
         if conv is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            raise NotFoundError("Conversation not found")
         conv.name = request.name
         conv.updated_at = get_current_timestamp()
         updated = await self.conversation_repo.save(conv)
@@ -92,14 +126,14 @@ class ConversationUseCase(ConversationInputPort):
     async def delete_conversation(self, conversation_id: str) -> bool:
         conv = await self.conversation_repo.get_by_id(conversation_id)
         if conv is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            raise NotFoundError("Conversation not found")
         await self.conversation_repo.delete(conv)
         return True
 
     async def post_message(self, conversation_id: str, content: str) -> MessageResponse:
         conv = await self.conversation_repo.get_by_id(conversation_id)
         if conv is None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            raise NotFoundError("Conversation not found")
         
         message = MessageDomain(
             id=generate_unique_id("msg"),

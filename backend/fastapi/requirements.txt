@@ -28,6 +28,8 @@ typing-extensions>=4.0
 
 # HTTP client and retry helpers
 httpx>=0.24
+# Enable HTTP/2 support for httpx when available
+h2>=4.1
 tenacity>=8.2
 
 # Testing

@@ -1,9 +1,13 @@
 from typing import Any, Dict, Optional, AsyncIterator
-from httpx import AsyncClient, HTTPStatusError, RequestError
+from httpx import AsyncClient, HTTPStatusError, RequestError, Timeout, Limits
+import logging
+from urllib.parse import urlparse, urlunparse
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from src.application.config.config import settings
+from src.domain.enums.enums import ERole
 import asyncio
 import json
+import re
 
 
 class GeminiClientError(RuntimeError):
@@ -24,15 +28,35 @@ class GeminiClient:
         self.url = url or settings.GEMINI_URL
         self.api_key = api_key or settings.GEMINI_API_KEY or ""
         self.timeout = timeout or settings.GEMINI_TIMEOUT_SECONDS
-        self.client: AsyncClient = AsyncClient(timeout=self.timeout)
+        # Enable HTTP/2 when available and set modest connection limits for better throughput.
+        # Keep a single shared client to reuse connections.
+        self.client: AsyncClient = AsyncClient(
+            timeout=self.timeout,
+            http2=True,
+            limits=Limits(max_connections=100, max_keepalive_connections=20, keepalive_expiry=60.0),
+        )
         self.headers: Dict[str, str] = {
             "Content-Type": "application/json",
-            "x-goog-api-key": self.api_key
+            # Prefer JSON streaming as returned by Google for streamGenerateContent
+            "Accept": "application/json",
+            "x-goog-api-key": self.api_key,
         }
     
     async def stop(self) -> None:
         if self.client is not None:
             await self.client.aclose()
+            
+    async def health_check(self) -> bool:
+        """Perform a simple health check by sending a request to the base URL."""
+        if not self.url:
+            raise GeminiClientError("GEMINI_URL is not configured")
+        try:
+            resp = await self.client.get(self.url, headers=self.headers)
+            resp.raise_for_status()
+            return True
+        except Exception as exc:
+            logging.error(f"GeminiClient health check failed: {exc}")
+            return False
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10),
            retry=retry_if_exception_type(RequestError))
@@ -45,13 +69,55 @@ class GeminiClient:
                      prompt: Any, 
                      model: Optional[str] = None, 
                      extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        content: Any = prompt if isinstance(prompt, list) else [{"role": "user", "parts": [{"text": prompt}]}]
+        content: Any = (
+            prompt
+            if isinstance(prompt, list)
+            else [{"role": ERole.USER.value, "parts": [{"text": prompt}]}]
+        )
         payload: Dict[str, Any] = {"contents": content}
         if model:
             payload["model"] = model
         if extra:
             payload.update(extra)
         return payload
+
+    def _apply_model_to_url(self, base_url: str, model: Optional[str]) -> str:
+        """Replace the model segment in `.../models/<model>:<method>` with the provided model.
+
+        If model is falsy or the URL doesn't match the expected format, return the original URL.
+        """
+        if not model:
+            return base_url
+        try:
+            parsed = urlparse(base_url)
+            path = parsed.path or ""
+            marker = "/models/"
+            idx = path.find(marker)
+            if idx == -1:
+                return base_url
+            start = idx + len(marker)
+            colon = path.find(":", start)
+            if colon == -1:
+                return base_url
+            # substitute model between start and colon
+            new_path = path[:start] + str(model) + path[colon:]
+            return urlunparse((parsed.scheme, parsed.netloc, new_path, parsed.params, parsed.query, parsed.fragment))
+        except Exception:
+            return base_url
+
+    def _to_stream_url(self, base_url: str) -> str:
+        """Convert a non-stream generate URL to its streaming variant when applicable.
+
+        Example:
+        .../models/gemini-2.5-flash:generateContent?key=... ->
+        .../models/gemini-2.5-flash:streamGenerateContent?key=...
+        """
+        if ":streamGenerateContent" in base_url:
+            return base_url
+        if ":generateContent" in base_url:
+            return base_url.replace(":generateContent", ":streamGenerateContent")
+        # If method not present, assume caller already set a streaming-capable URL
+        return base_url
 
     async def generate(self, 
                        prompt: Any, 
@@ -60,9 +126,10 @@ class GeminiClient:
         if not self.url:
             raise GeminiClientError("GEMINI_URL is not configured")
         payload: Dict[str, Any] = self._get_payload(prompt, model, extra)
+        url_to_use = self._apply_model_to_url(self.url, model)
         
         try:
-            return await self._post(self.url, payload, self.headers)
+            return await self._post(url_to_use, payload, self.headers)
         except RequestError as exc:
             raise GeminiClientError(f"Request error while calling Gemini API: {exc}") from exc
         except HTTPStatusError as exc:
@@ -87,68 +154,82 @@ class GeminiClient:
 
         payload: Dict[str, Any] = self._get_payload(prompt, model, extra)
         headers = self.headers.copy()
-        headers.setdefault("Accept", "text/event-stream")
 
         try:
-            async with self.client.stream("POST", self.url, json=payload, headers=headers, timeout=self.timeout) as resp:
+            # For long-lived streams, disable read timeout to avoid premature disconnects.
+            stream_timeout = Timeout(connect=self.timeout, read=None, write=self.timeout, pool=self.timeout)
+            # Apply model override into URL first, then convert to streaming method
+            stream_url = self._to_stream_url(self._apply_model_to_url(self.url, model))
+            async with self.client.stream("POST", stream_url, json=payload, headers=headers, timeout=stream_timeout) as resp:
                 resp.raise_for_status()
 
-                event_lines: list[str] = []
-                async for line in resp.aiter_lines():
-                    if not line:
-                        # empty line = end of an SSE event; flush if we have buffered data
-                        if not event_lines:
-                            continue
-                        data = "\n".join(event_lines).strip()
-                        event_lines = []
-                    else:
-                        line = line.strip()
-                        if line.startswith("data:"):
-                            event_lines.append(line[len("data:"):].lstrip())
-                            continue
-                        # not an SSE "data:" line — treat the line itself as a unit
-                        data = line
+                # Google streamGenerateContent may return NDJSON or SSE. Some providers split a single
+                # JSON object/array across multiple SSE events. We therefore accumulate SSE payloads
+                # and greedily extract any completed "text": "..." fields without echoing raw JSON.
+                sse_mode = False
+                json_buf: str = ""
+                processed_idx: int = 0
+                text_pattern = re.compile(r'"text"\s*:\s*"((?:\\.|[^"\\])*)"')
 
-                    if not data:
+                async for line in resp.aiter_lines():
+                    if line is None:
+                        continue
+                    raw = line.rstrip("\n")
+
+                    # Detect SSE markers
+                    if raw.startswith(":"):
+                        # SSE comment/keepalive
+                        continue
+                    if raw.startswith("data:"):
+                        sse_mode = True
+                        sse_payload = raw[len("data:"):].lstrip()
+                        if sse_payload == "[DONE]":
+                            return
+                        # Accumulate payload fragments; many providers split JSON across events
+                        json_buf += (sse_payload + "\n")
+
+                        # Greedily extract any complete text fields from the rolling buffer
+                        for m in text_pattern.finditer(json_buf, processed_idx):
+                            raw_text = m.group(1)
+                            try:
+                                # Use json.loads on a quoted string to unescape sequences
+                                decoded = json.loads(f'"{raw_text}"')
+                            except Exception:
+                                decoded = raw_text
+                            if decoded:
+                                yield decoded
+                            processed_idx = m.end()
+                        # Optionally trim buffer to keep memory bounded
+                        if processed_idx > 0 and processed_idx > len(json_buf) // 2:
+                            json_buf = json_buf[processed_idx:]
+                            processed_idx = 0
                         continue
 
-                    # termination sentinel used by many streaming APIs
+                    # Blank line between SSE events — ignore; we accumulate across events
+                    if raw.strip() == "" and sse_mode:
+                        continue
+
+                    # NDJSON or multi-line JSON fallback:
+                    # Accumulate raw lines into the rolling buffer and extract text fields with regex
+                    data = raw.strip()
+                    if not data:
+                        continue
                     if data == "[DONE]":
                         return
 
-                    # Try to parse JSON payloads, then extract text parts if present
-                    try:
-                        obj = json.loads(data)
-                    except Exception:
-                        # not JSON — yield raw chunk
-                        yield data
-                        continue
-
-                    # try common Gemini-like shapes: top-level "candidates" -> candidate.content.parts[].text
-                    candidates = obj.get("candidates") or []
-                    emitted = False
-                    for cand in candidates:
-                        content = cand.get("content", {}) if isinstance(cand, dict) else {}
-                        parts = content.get("parts", []) if isinstance(content, dict) else []
-                        for part in parts:
-                            if not isinstance(part, dict):
-                                continue
-                            text = part.get("text")
-                            if text:
-                                emitted = True
-                                yield text
-
-                    # fallback: sometimes text may be at top-level fields like "text" or "message"
-                    if not emitted:
-                        fallback_text = None
-                        if isinstance(obj, dict):
-                            for k in ("text", "message", "content"):
-                                v = obj.get(k)
-                                if isinstance(v, str) and v:
-                                    fallback_text = v
-                                    break
-                        if fallback_text:
-                            yield fallback_text
+                    json_buf += (data + "\n")
+                    for m in text_pattern.finditer(json_buf, processed_idx):
+                        raw_text = m.group(1)
+                        try:
+                            decoded = json.loads(f'"{raw_text}"')
+                        except Exception:
+                            decoded = raw_text
+                        if decoded:
+                            yield decoded
+                        processed_idx = m.end()
+                    if processed_idx > 0 and processed_idx > len(json_buf) // 2:
+                        json_buf = json_buf[processed_idx:]
+                        processed_idx = 0
 
         except RequestError as exc:
             raise GeminiClientError(f"Request error while streaming from Gemini API: {exc}") from exc

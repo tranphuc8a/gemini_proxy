@@ -3,6 +3,7 @@ from sqlalchemy import and_, or_, asc, desc, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.application.ports.output.health_check_output_port import HealthCheckOutputPort
 from src.adapter.output.mysql.entities import ConversationEntity
+from src.adapter.output.mysql.entities.message_entity import MessageEntity
 from src.domain.models.conversation_domain import ConversationDomain
 from src.application.ports.output.conversation_output_port import ConversationOutputPort
 
@@ -58,6 +59,24 @@ class ConversationRepository(ConversationOutputPort, HealthCheckOutputPort):
         items = rows[:limit]
         # map to domain
         domains = [r.to_domain() for r in items]
+
+        # Fetch message counts for all returned conversations in one query to
+        # avoid N+1 queries. If there are no conversations, skip the query.
+        if domains:
+            convo_ids = [d.id for d in domains]
+            count_stmt = (
+                select(MessageEntity.conversation_id, func.count())
+                .where(MessageEntity.conversation_id.in_(convo_ids))
+                .group_by(MessageEntity.conversation_id)
+            )
+            res = await self.db.execute(count_stmt)
+            rows = res.all()
+            # rows are tuples (conversation_id, count)
+            counts = {r[0]: int(r[1]) for r in rows}
+            # attach counts to domains (use 0 as default)
+            for d in domains:
+                d.messages_count = counts.get(d.id, 0)
+
         return domains, has_more
 
     async def save(self, conversation: ConversationDomain) -> ConversationDomain:

@@ -52,6 +52,11 @@ class ServiceFactory:
         return conv_repo
 
     @staticmethod
+    def get_message_output_port() -> MessageOutputPort:
+        _, msg_repo, _, _ = _make_repos_and_ports()
+        return msg_repo
+
+    @staticmethod
     def get_health_input_port() -> HealthInputPort:
         _, _, _, health_input = _make_repos_and_ports()
         return health_input

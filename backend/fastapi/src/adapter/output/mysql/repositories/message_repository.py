@@ -74,7 +74,7 @@ class MessageRepository(MessageOutputPort, HealthCheckOutputPort):
         ent = None
         try:
             # message.id may be numeric-like or generated; try numeric primary-key lookup first
-            ent = await self.db.get(MessageEntity, int(message.id))
+            ent = await self.db.get(MessageEntity, message.id)
         except Exception:
             ent = None
 
@@ -96,7 +96,7 @@ class MessageRepository(MessageOutputPort, HealthCheckOutputPort):
         # find by PK
         ent = None
         try:
-            ent = await self.db.get(MessageEntity, int(message.id))
+            ent = await self.db.get(MessageEntity, message.id)
         except Exception:
             # fallback: query by id equality
             stmt = select(MessageEntity).where(MessageEntity.id == message.id)
@@ -126,7 +126,7 @@ class MessageRepository(MessageOutputPort, HealthCheckOutputPort):
         rows = res.scalars().all()
         return [r.to_domain() for r in rows]
 
-    async def get_by_id(self, message_id: int) -> MessageDomain:
+    async def get_by_id(self, message_id: str) -> MessageDomain:
         ent = await self.db.get(MessageEntity, message_id)
         if ent is None:
             raise ValueError(f"Message not found: {message_id}")
@@ -136,7 +136,7 @@ class MessageRepository(MessageOutputPort, HealthCheckOutputPort):
         # update by PK
         ent = None
         try:
-            ent = await self.db.get(MessageEntity, int(message.id))
+            ent = await self.db.get(MessageEntity, message.id)
         except Exception:
             # fallback to query
             stmt = select(MessageEntity).where(MessageEntity.id == message.id)
