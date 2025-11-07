@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Markdown Studio — Editor • Preview • Mermaid</title>
+
+  <!-- CodeMirror 5 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+
+  <!-- Highlight.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0f1724; --accent:#00d4ff; --muted:#9aa6b2; --card:#111827;
+      --light-bg:#f6f8fa; --light-panel:#fff; --light-text:#0b1220;
+    }
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body.dark{background:linear-gradient(180deg,#081024,#0b1220);color:#dbeafe}
+    body.light{background:var(--light-bg);color:var(--light-text)}
+    .app{display:flex;flex-direction:column;height:100vh}
+    header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);box-shadow:0 1px 0 rgba(255,255,255,0.02);z-index:3}
+    body.light header{background:var(--light-panel)}
+    .brand{font-weight:700;letter-spacing:0.2px}
+    .toolbar{display:flex;gap:8px;align-items:center;margin-left:12px}
+    .btn{background:#0b1320;color:var(--accent);border:1px solid rgba(255,255,255,0.03);padding:6px 10px;border-radius:8px;cursor:pointer}
+    body.light .btn{background:#fff;color:#0b1220;border:1px solid #e6e6e6}
+    .btn.primary{background:var(--accent);color:#012; font-weight:600}
+    .switch{display:flex;gap:6px;align-items:center;margin-left:auto}
+    .select{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .main{display:flex;flex:1;overflow:hidden;padding:12px;gap:12px}
+    .pane{flex:1;display:flex;flex-direction:column;border-radius:8px;overflow:hidden;background:var(--card);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    body.light .pane{background:#fff;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+    .pane .title{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center}
+    .editor-wrap{flex:1;display:flex;min-width:300px}
+    .CodeMirror{height:100%;width:100%}
+  /* Fallback textarea when CodeMirror isn't available */
+  .editor-wrap textarea{flex:1;width:100%;height:100%;resize:none;border:none;outline:none;padding:12px;background:var(--card);color:inherit;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    .preview{padding:16px;overflow:auto}
+    pre code{display:block;padding:12px;border-radius:6px;overflow:auto}
+    img{max-width:100%}
+    .mode-toggle{display:flex;gap:6px}
+    .kbd{background:rgba(0,0,0,0.35);padding:2px 6px;border-radius:4px;font-size:12px;color:#fff}
+    .statusbar{padding:6px 12px;border-top:1px solid rgba(255,255,255,0.02);display:flex;align-items:center;gap:12px}
+    .hidden{display:none}
+    .file-controls{display:flex;gap:8px;align-items:center}
+    input[type="file"]{display:none}
+    /* Responsive */
+    @media (max-width:900px){.main{flex-direction:column}.pane{height:45vh}}
+    /* Nice markdown styles for preview */
+    .preview h1{font-size:1.6rem;margin:0.6rem 0}
+    .preview h2{font-size:1.3rem;margin:0.5rem 0}
+    .preview p{line-height:1.6;color:var(--muted)}
+    .preview table{border-collapse:collapse;width:100%;margin:8px 0}
+    .preview table th, .preview table td{border:1px solid rgba(255,255,255,0.06);padding:6px}
+    /* light adjustments */
+    body.light .preview p{color:#333}
+    .note{font-size:13px;color:var(--muted)}
+  </style>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/markdown/markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/continuelist.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/selection/active-line.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/comment/comment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/dialog/dialog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.4.12/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.4.0/mermaid.min.js"></script>
+</head>
+<body class="dark">
+  <div class="app">
+    <header>
+      <div class="brand">Markdown Studio</div>
+      <div class="note">Editor • Preview • Mermaid • Code Highlight</div>
+
+      <div class="toolbar">
+        <div class="file-controls">
+          <button class="btn" id="newBtn" title="New (Ctrl/Cmd+N)">New</button>
+          <label class="btn" for="importFile">Import</label><input id="importFile" type="file" accept=".md,text/markdown,text/plain"/>
+          <button class="btn" id="exportBtn" title="Export .md (Ctrl/Cmd+E)">Export</button>
+          <button class="btn" id="downloadHtml">Download HTML</button>
+        </div>
+
+        <div style="width:8px"></div>
+
+        <div class="mode-toggle">
+          <button class="btn" id="undoBtn">Undo</button>
+          <button class="btn" id="redoBtn">Redo</button>
+        </div>
+
+        <div style="width:8px"></div>
+
+        <select id="viewMode" class="select" title="View mode">
+          <option value="parallel">Parallel</option>
+          <option value="edit">Edit only</option>
+          <option value="preview">Preview only</option>
+        </select>
+
+        <select id="themeSelect" class="select" title="Theme">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+
+      </div>
+
+    </header>
+
+    <div class="main">
+      <section class="pane" id="editorPane">
+        <div class="title"><div>Editor <span class="note" id="charCount"></span></div><div class="note">Shortcuts: <span class="kbd">Ctrl/Cmd+S</span> save • <span class="kbd">Ctrl/Cmd+B</span> bold</div></div>
+        <div class="editor-wrap">
+          <textarea id="editor" placeholder="Start writing Markdown..."># Welcome to Markdown Studio
+
+- Supports **images**, tables, embedded HTML, video, code highlight, mermaid diagrams.
+- Try a mermaid block:
+
+```mermaid
+graph LR
+  A-->B
+  B-->C
+  C-->A
+```
+
+</textarea>
+        </div>
+        <div class="statusbar">
+          <div class="note" id="statusInfo">Ready</div>
+          <div style="margin-left:auto" class="note">Rendered with <strong>marked.js</strong> + <strong>highlight.js</strong> + <strong>mermaid</strong></div>
+        </div>
+      </section>
+
+      <section class="pane" id="previewPane">
+        <div class="title"><div>Preview</div><div class="note">Auto-render preview; scroll synced</div></div>
+        <div id="preview" class="preview"></div>
+      </section>
+    </div>
+
+  </div>
+
+<script>
+/* -------------------------
+  Initialization
+--------------------------*/
+// Feature detection for external CDNs
+const hasCodeMirror = typeof window.CodeMirror !== 'undefined';
+const hasMarked = typeof window.marked !== 'undefined';
+const hasHLJS = typeof window.hljs !== 'undefined';
+const hasMermaid = typeof window.mermaid !== 'undefined';
+const editorTextarea = document.getElementById('editor');
+const previewEl = document.getElementById('preview');
+const importFile = document.getElementById('importFile');
+const viewMode = document.getElementById('viewMode');
+const themeSelect = document.getElementById('themeSelect');
+const newBtn = document.getElementById('newBtn');
+const exportBtn = document.getElementById('exportBtn');
+const downloadHtml = document.getElementById('downloadHtml');
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+const charCount = document.getElementById('charCount');
+const statusInfo = document.getElementById('statusInfo');
+
+function createTextAreaShim(textarea){
+  const shim = {
+    _el: textarea,
+    setSize: ()=>{},
+    focus: ()=> textarea.focus(),
+    on: (evt, cb)=> { if(evt==='change') textarea.addEventListener('input', cb); },
+    getValue: ()=> textarea.value,
+    setValue: (v)=> { textarea.value = v; textarea.dispatchEvent(new Event('input')); },
+    getSelection: ()=> textarea.value.substring(textarea.selectionStart, textarea.selectionEnd),
+    replaceSelection: (text)=> {
+      const start = textarea.selectionStart, end = textarea.selectionEnd;
+      const val = textarea.value;
+      textarea.value = val.slice(0,start) + text + val.slice(end);
+      const pos = start + text.length;
+      textarea.selectionStart = textarea.selectionEnd = pos;
+      textarea.dispatchEvent(new Event('input'));
+    },
+    getCursor: ()=> ({ line: 0, ch: textarea.selectionStart || 0 }),
+    replaceRange: (text, pos)=> {
+      const ch = pos && typeof pos.ch==='number' ? pos.ch : (textarea.selectionStart||0);
+      const val = textarea.value;
+      textarea.value = val.slice(0,ch) + text + val.slice(ch);
+      textarea.selectionStart = textarea.selectionEnd = ch + text.length;
+      textarea.dispatchEvent(new Event('input'));
+    },
+    setCursor: ({line, ch})=> { textarea.selectionStart = textarea.selectionEnd = ch; },
+    undo: ()=>{},
+    redo: ()=>{},
+    getWrapperElement: ()=> textarea,
+    getScrollerElement: ()=> textarea,
+    getScrollInfo: ()=> ({ height: textarea.scrollHeight, clientHeight: textarea.clientHeight, top: textarea.scrollTop }),
+    charCoords: ()=> ({ top: 0 }),
+    scrollTo: (_x, y)=> { textarea.scrollTop = y; },
+    refresh: ()=>{}
+  };
+  return shim;
+}
+
+let editor;
+if (hasCodeMirror) {
+  editor = CodeMirror.fromTextArea(editorTextarea, {
+    mode: 'markdown',
+    lineWrapping: true,
+    theme: 'monokai',
+    styleActiveLine: true,
+    extraKeys: {
+      'Enter': 'newlineAndIndentContinueMarkdownList',
+      'Ctrl-S': saveMarkdown,
+      'Cmd-S': saveMarkdown,
+      'Ctrl-B': toggleBold,
+      'Cmd-B': toggleBold,
+      'Ctrl-I': toggleItalic,
+      'Cmd-I': toggleItalic,
+      'Ctrl-Z': ()=>editor.undo(),
+      'Cmd-Z': ()=>editor.undo(),
+      'Ctrl-Y': ()=>editor.redo(),
+      'Cmd-Y': ()=>editor.redo(),
+      'Ctrl-N': ()=>newFile(),
+      'Cmd-N': ()=>newFile(),
+      'Ctrl-E': exportCurrent,
+      'Cmd-E': exportCurrent
+    }
+  });
+  editor.setSize('100%','100%');
+  editor.focus();
+} else {
+  console.warn('CodeMirror not available — falling back to native textarea');
+  editor = createTextAreaShim(editorTextarea);
+}
+
+/* marked config */
+if (hasMarked) {
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    smartLists: true,
+    headerIds: true,
+    mangle: false,
+    // highlight code
+    highlight: function(code, lang) {
+      if (hasHLJS && lang && hljs.getLanguage(lang)) {
+        return hljs.highlight(code, {language: lang}).value;
+      }
+      return hasHLJS ? hljs.highlightAuto(code).value : code;
+    }
+  });
+}
+
+/* mermaid init */
+if (hasMermaid) {
+  mermaid.initialize({startOnLoad:false, securityLevel:'loose'});
+}
+
+/* initial render */
+renderPreview();
+
+/* -------------------------
+  Events and helpers
+--------------------------*/
+
+editor.on('change', ()=> {
+  renderPreviewDebounced();
+  charCount.textContent = `${editor.getValue().length} chars`;
+});
+
+/* debounce */
+let renderTimer = null;
+function renderPreviewDebounced(){
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(renderPreview, 250);
+}
+
+function renderPreview(){
+  const md = editor.getValue();
+  statusInfo.textContent = 'Rendering...';
+  try{
+    // First convert markdown -> HTML using marked (or basic fallback)
+    let html;
+    if (hasMarked) {
+      html = marked.parse(md);
+      // Post-process standard markdown for better styling
+      // Add table wrapper and code block classes
+      html = html.replace(/<table>/g,'<table class="md-table">');
+      // Ensure paragraphs wrap inline code nicely
+      html = html.replace(/<code>([^<\n]+)<\/code>/g, '<code class="inline-code">$1<\/code>');
+    } else {
+      // very basic fallback: escape and wrap paragraphs
+      const esc = (s)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      html = '<pre style="white-space:pre-wrap">' + esc(md) + '</pre>';
+    }
+
+    // Special: handle mermaid code blocks: marked already produces <pre><code class="language-mermaid">...</code></pre>
+
+    // We'll replace those with <div class="mermaid">...</div> and init mermaid.
+    html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g, function(m, code){
+      // unescape HTML entities
+      const text = code.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+      return `<div class="mermaid">${text}</div>`;
+    });
+
+    previewEl.innerHTML = html;
+
+    // syntax highlight: already done by marked + highlight.js
+
+  // render mermaid elements
+  const mermaidEls = previewEl.querySelectorAll('.mermaid');
+  if(mermaidEls.length && hasMermaid) {
+      mermaidEls.forEach(async (el, idx) => {
+        try {
+          // Mermaid v10 returns a promise from mermaid.render; fallback to callback if available
+          const id = 'mermaid-'+idx;
+          const code = el.textContent;
+          if (typeof mermaid.render === 'function') {
+            const result = mermaid.render(id, code);
+            if (result && typeof result.then === 'function') {
+              const out = await result; // { svg, bindFunctions }
+              el.innerHTML = out.svg || out;
+            } else if (typeof result === 'string') {
+              el.innerHTML = result;
+            } else if (typeof result === 'object' && result.svg) {
+              el.innerHTML = result.svg;
+            } else {
+              // older signature with callback (unlikely on v10 CDN)
+              mermaid.render(id, code, (svgCode)=>{ el.innerHTML = svgCode; });
+            }
+          }
+        } catch(e){
+          console.warn('mermaid render error', e);
+        }
+      });
+    }
+
+    statusInfo.textContent = 'Rendered';
+
+} catch(e){
+  previewEl.textContent = 'Render error: ' + e.message;
+  statusInfo.textContent = 'Error';
+}
+syncScrollMapping(); // compute mapping for sync
+}
+
+/* -------------------------
+Sync scroll editor <-> preview
+--------------------------*/
+let isSyncingEditorScroll = false;
+let isSyncingPreviewScroll = false;
+let mapping = []; // array of {editorTop, previewTop}
+
+function syncScrollMapping(){
+// Create mapping from editor lines to preview positions (approx)
+try{
+  if (!hasCodeMirror) return; // skip heavy mapping without CM
+  const totalLines = editor.lineCount();
+  mapping = [];
+  const editorScrollInfo = editor.getScrollInfo();
+  for(let i=0;i<totalLines;i+=Math.max(1, Math.floor(totalLines/100))){
+    const linePos = editor.charCoords({line:i,ch:0}, 'local').top;
+    const editorRatio = linePos / (editorScrollInfo.height - editorScrollInfo.clientHeight);
+    const previewHeight = previewEl.scrollHeight - previewEl.clientHeight;
+    mapping.push({ratio: Math.max(0,Math.min(1,editorRatio)), previewTop: Math.max(0, previewHeight * Math.max(0,Math.min(1,editorRatio)))});
+  }
+}catch{}
+}
+
+if (hasCodeMirror) {
+  editor.getScrollerElement().addEventListener('scroll', ()=> {
+    if(isSyncingPreviewScroll) { isSyncingPreviewScroll=false; return; }
+    isSyncingEditorScroll = true;
+    const info = editor.getScrollInfo();
+    const ratio = info.top / (info.height - info.clientHeight || 1);
+    previewEl.scrollTop = Math.floor((previewEl.scrollHeight - previewEl.clientHeight) * ratio);
+    setTimeout(()=>{ isSyncingEditorScroll = false; }, 50);
+  });
+
+  previewEl.addEventListener('scroll', ()=>{
+    if(isSyncingEditorScroll) { isSyncingEditorScroll=false; return; }
+    isSyncingPreviewScroll = true;
+    const ratio = previewEl.scrollTop / (previewEl.scrollHeight - previewEl.clientHeight || 1);
+    const editorTop = (editor.getScrollInfo().height - editor.getScrollInfo().clientHeight) * ratio;
+    editor.scrollTo(null, editorTop);
+    setTimeout(()=>{ isSyncingPreviewScroll = false; }, 50);
+  });
+}
+
+/* -------------------------
+File management
+--------------------------*/
+function newFile(){
+if(!confirm('New file — discard current content?')) return;
+editor.setValue('');
+renderPreview();
+}
+newBtn.addEventListener('click', newFile);
+
+importFile.addEventListener('change', async (e)=>{
+const f = e.target.files[0];
+if(!f) return;
+const txt = await f.text();
+editor.setValue(txt);
+renderPreview();
+e.target.value = '';
+});
+
+function exportCurrent(){
+const content = editor.getValue();
+const blob = new Blob([content], {type:'text/markdown;charset=utf-8'});
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'document.md';
+document.body.appendChild(a); a.click(); a.remove();
+URL.revokeObjectURL(url);
+}
+exportBtn.addEventListener('click', exportCurrent);
+
+function downloadRenderedHTML(){
+const fullHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Preview</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+  <style>body{font-family:system-ui;padding:24px;background:#0b1220;color:#e6eef6} pre{background:#0b1220;padding:12px;border-radius:6px;overflow:auto}</style>
+  </head><body>${previewEl.innerHTML}</body></html>`;
+  const blob = new Blob([fullHtml], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='preview.html'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+downloadHtml.addEventListener('click', downloadRenderedHTML);
+
+/* -------------------------
+Editor toolbar helpers
+--------------------------*/
+function toggleBold(){
+const sel = editor.getSelection();
+if(sel) editor.replaceSelection(`**${sel}**`);
+else {
+const pos = editor.getCursor();
+editor.replaceRange('****', pos);
+editor.setCursor({line:pos.line,ch:pos.ch+2});
+}
+}
+function toggleItalic(){
+const sel = editor.getSelection();
+if(sel) editor.replaceSelection(`*${sel}*`);
+else {
+const pos = editor.getCursor();
+editor.replaceRange('**', pos);
+editor.setCursor({line:pos.line,ch:pos.ch+1});
+}
+}
+
+undoBtn.addEventListener('click', ()=>editor.undo());
+redoBtn.addEventListener('click', ()=>editor.redo());
+
+/* -------------------------
+Images: drag-drop and insert
+--------------------------*/
+previewEl.addEventListener('dragover', (e)=> e.preventDefault());
+previewEl.addEventListener('drop', async (e)=>{
+e.preventDefault();
+const file = e.dataTransfer.files[0];
+if(!file) return;
+const url = await toDataURL(file);
+insertAtCursor(`![${file.name}](${url})\n`);
+});
+editor.getWrapperElement().addEventListener('drop', async (e)=>{
+e.preventDefault();
+const file = e.dataTransfer.files[0];
+if(!file) return;
+const url = await toDataURL(file);
+insertAtCursor(`![${file.name}](${url})\n`);
+});
+async function toDataURL(file){
+return new Promise((res,rej)=>{
+const reader = new FileReader();
+reader.onload = ()=>res(reader.result);
+reader.onerror = ()=>rej();
+reader.readAsDataURL(file);
+});
+}
+function insertAtCursor(text){
+const pos = editor.getCursor();
+editor.replaceRange(text,pos);
+editor.focus();
+}
+
+/* -------------------------
+Theme & View mode
+--------------------------*/
+viewMode.addEventListener('change', ()=>{
+const v = viewMode.value;
+document.getElementById('editorPane').style.display = v==='preview' ? 'none' : 'flex';
+document.getElementById('previewPane').style.display = v==='edit' ? 'none' : 'flex';
+editor.refresh();
+});
+themeSelect.addEventListener('change', ()=>{
+const t = themeSelect.value;
+document.body.className = t==='light' ? 'light':'dark';
+editor.setOption('theme', t==='light' ? 'default' : 'monokai');
+});
+
+/* -------------------------
+Keyboard shortcuts: Ctrl/Cmd+S -> export; Ctrl/Cmd+E -> download html
+--------------------------*/
+window.addEventListener('keydown', (e)=>{
+if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); exportCurrent(); statusInfo.textContent='Saved (.md downloaded)'; setTimeout(()=>statusInfo.textContent='Ready',1200); }
+if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='e'){ e.preventDefault(); downloadRenderedHTML(); statusInfo.textContent='HTML downloaded'; setTimeout(()=>statusInfo.textContent='Ready',1200); }
+});
+
+/* -------------------------
+Utilities
+--------------------------*/
+function saveMarkdown(){ exportCurrent(); statusInfo.textContent='Saved (.md downloaded)'; setTimeout(()=>statusInfo.textContent='Ready',1200); }
+
+</script>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Postman Lite 🚀</title>
+  <style>
+    * { box-sizing: border-box; font-family: "Fira Code", monospace; }
+    body {
+      margin: 0; padding: 0;
+      background: #0f2027; color: #eee;
+      display: flex; flex-direction: column; height: 100vh;
+    }
+    header {
+      background: #1b2838; padding: 10px 20px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      border-bottom: 1px solid #333;
+    }
+    select, input, textarea {
+      background: #1e2a36; color: #fff;
+      border: 1px solid #333; border-radius: 4px;
+      padding: 6px 8px; font-size: 14px;
+    }
+    select:focus, input:focus, textarea:focus { outline: none; border-color: #00bcd4; }
+    #method { width: 100px; }
+    #url { flex: 1; }
+    #sendBtn, #copyCurlBtn {
+      background: #00bcd4; border: none; padding: 8px 16px;
+      color: white; border-radius: 4px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 4px;
+    }
+    #sendBtn:hover, #copyCurlBtn:hover { background: #0097a7; }
+    main { display: flex; flex: 1; overflow: hidden; }
+    .panel {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 10px; overflow: hidden;
+    }
+  .tabs { display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .tab {
+      cursor: pointer; padding: 6px 10px; border-radius: 4px;
+      background: #1b2838; color: #ccc; transition: 0.2s;
+    }
+    .tab.active { background: #00bcd4; color: #fff; }
+    textarea {
+      flex: 1; resize: vertical; width: 100%; border-radius: 6px;
+      font-family: "Fira Code", monospace; line-height: 1.5; font-size: 14px;
+      min-height: 120px; max-height: 70vh;
+    }
+    .response-area {
+      background: #101820; color: #b0e0e6; flex: 1;
+      padding: 10px; border-radius: 6px; overflow: auto; white-space: pre-wrap;
+    }
+    #responseBody, #responseHeaders { display: none; }
+    #responseTabs { display: flex; gap: 8px; margin-bottom: 6px; }
+    .resp-tab { cursor: pointer; padding: 4px 8px; border-radius: 4px; background:#1b2838; color:#ccc; }
+    .resp-tab.active { background:#00bcd4; color:#fff; }
+    #status {
+      padding: 6px 10px; background: #1b2838; color: #fff; border-radius: 4px;
+      display: inline-block; margin-bottom: 6px;
+    }
+    .kv-container { display: flex; flex-direction: column; gap: 4px; }
+  .kv-pair { display: flex; gap: 4px; align-items: center; }
+    .kv-pair input { flex: 1; }
+  .kv-pair button.rm { background: #3a2626; border: 1px solid #552a2a; color: #ffb3b3; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+  .kv-pair button.rm:hover { background: #7d2e2e; color: #fff; }
+    button.add { background: #2e3a47; border: none; color: #fff; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    button.add:hover { background: #00bcd4; }
+    .bottom-bar {
+      text-align: center; padding: 5px; font-size: 13px; color: #888;
+      border-top: 1px solid #222; background: #141a20;
+    }
+    .auth-section { display:none; margin-top:8px; padding:8px; background:#18242f; border:1px solid #23323f; border-radius:6px; }
+    .auth-section h4 { margin:4px 0 6px; font-weight:600; }
+    .inline { display:flex; gap:6px; flex-wrap:wrap; }
+    .inline input { flex:1; }
+    .tag { display:inline-block; background:#23323f; padding:2px 6px; border-radius:4px; font-size:12px; margin-right:4px; }
+    #curlPreview { margin-top:6px; font-size:12px; white-space:pre-wrap; background:#121e26; padding:8px; border:1px solid #23323f; border-radius:6px; max-height:140px; overflow:auto; }
+    @media (max-width: 800px){
+      main { flex-direction: column; }
+      .panel { flex:unset; min-height:280px; }
+      textarea { min-height:100px; }
+      #method { width:80px; }
+      #sendBtn, #copyCurlBtn { flex:1; justify-content:center; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <select id="method">
+      <option>GET</option>
+      <option>POST</option>
+      <option>PUT</option>
+      <option>PATCH</option>
+      <option>DELETE</option>
+    </select>
+    <input id="url" placeholder="https://api.example.com/data" />
+    <button id="sendBtn">Gửi 🚀</button>
+    <button id="copyCurlBtn" title="Copy lệnh curl">Copy cURL 📋</button>
+  </header>
+
+  <main>
+    <div class="panel" style="flex:1">
+      <div class="tabs">
+        <div class="tab active" data-tab="params">Params</div>
+        <div class="tab" data-tab="headers">Headers</div>
+        <div class="tab" data-tab="auth">Auth</div>
+        <div class="tab" data-tab="body">Body</div>
+        <div class="tab" data-tab="cookies">Cookies</div>
+        <div class="tab" data-tab="curl">From cURL</div>
+      </div>
+
+      <div id="params" class="tab-content">
+        <div class="kv-container" id="paramsContainer"></div>
+        <button class="add" onclick="addKV('paramsContainer')">+ Thêm query</button>
+      </div>
+      <div id="headers" class="tab-content" style="display:none">
+        <div class="kv-container" id="headersContainer"></div>
+        <button class="add" onclick="addKV('headersContainer')">+ Thêm header</button>
+      </div>
+      <div id="auth" class="tab-content" style="display:none">
+        <label>Loại Auth:
+          <select id="authType">
+            <option value="none">None</option>
+            <option value="basic">Basic</option>
+            <option value="bearer">Bearer Token</option>
+            <option value="apikey">API Key</option>
+          </select>
+        </label>
+        <div id="auth-basic" class="auth-section">
+          <h4>Basic Auth</h4>
+          <div class="inline">
+            <input id="basicUser" placeholder="Username" />
+            <input id="basicPass" placeholder="Password" type="password" />
+          </div>
+        </div>
+        <div id="auth-bearer" class="auth-section">
+          <h4>Bearer Token</h4>
+          <input id="bearerToken" placeholder="Token" />
+        </div>
+        <div id="auth-apikey" class="auth-section">
+          <h4>API Key</h4>
+          <div class="inline">
+            <input id="apiKeyName" placeholder="Key name (e.g. X-API-Key)" />
+            <input id="apiKeyValue" placeholder="Key value" />
+          </div>
+          <label style="margin-top:6px;display:block">Vị trí:
+            <select id="apiKeyLocation">
+              <option value="header">Header</option>
+              <option value="query">Query</option>
+            </select>
+          </label>
+        </div>
+        <div id="curlPreview" style="display:none"></div>
+      </div>
+      <div id="cookies" class="tab-content" style="display:none">
+        <div class="kv-container" id="cookiesContainer"></div>
+        <button class="add" onclick="addKV('cookiesContainer')">+ Thêm cookie</button>
+      </div>
+      <div id="body" class="tab-content" style="display:none">
+        <label>Content-Type:
+          <select id="contentType">
+            <option value="application/json">application/json</option>
+            <option value="text/plain">text/plain</option>
+            <option value="application/x-www-form-urlencoded">form-urlencoded</option>
+            <option value="multipart/form-data">multipart/form-data</option>
+          </select>
+        </label>
+        <textarea id="bodyContent" placeholder='{"key": "value"}'></textarea>
+        <input type="file" id="fileInput" style="margin-top:5px;display:none" multiple>
+      </div>
+      <div id="curl" class="tab-content" style="display:none">
+        <textarea id="curlInput" placeholder="curl -X POST 'https://api.example.com/items?limit=10' -H 'Authorization: Bearer xxx' -H 'Content-Type: application/json' -d '{\n  \"name\": \"foo\"\n}'"></textarea>
+        <div class="inline" style="margin-top:6px;">
+          <button class="add" id="parseCurlBtn">Parse & Fill ⤵️</button>
+          <span style="color:#9ab; font-size:12px;">Hỗ trợ: -X/--request, -H/--header, -d/--data(-raw|-binary|-urlencode), -F/--form, -b/--cookie, -u/--user</span>
+        </div>
+        <div id="curlExplain" style="margin-top:6px; font-size:12px; color:#9ab; display:none"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1.2">
+      <div id="status"></div>
+      <div id="responseTabs">
+        <div class="resp-tab active" data-rtab="responseBody">Body</div>
+        <div class="resp-tab" data-rtab="responseHeaders">Headers</div>
+      </div>
+      <div id="responseBody" class="response-area">Response sẽ hiển thị ở đây...</div>
+      <div id="responseHeaders" class="response-area"></div>
+    </div>
+  </main>
+
+  <div class="bottom-bar">🌙 Postman Lite by GPT-5</div>
+
+  <script>
+    const tabs = document.querySelectorAll(".tab");
+    const contents = document.querySelectorAll(".tab-content");
+    tabs.forEach(tab => tab.onclick = () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      contents.forEach(c => c.style.display = c.id === tab.dataset.tab ? "block" : "none");
+    });
+
+    function addKV(containerId){
+      const c=document.getElementById(containerId);
+      const row=document.createElement("div");
+      row.className="kv-pair";
+      row.innerHTML=`<input placeholder="Key"><input placeholder="Value"><button type="button" class="rm" title="Xóa" onclick="this.parentElement.remove()">🗑</button>`;
+      c.appendChild(row);
+    }
+    function addKVWithValue(containerId, key, value){
+      const c=document.getElementById(containerId);
+      const row=document.createElement('div');
+      row.className='kv-pair';
+      row.innerHTML=`<input placeholder="Key" value="${key.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"><input placeholder="Value" value="${String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"><button type="button" class="rm" title="Xóa" onclick="this.parentElement.remove()">🗑</button>`;
+      c.appendChild(row);
+    }
+    function clearKV(containerId){
+      const c=document.getElementById(containerId); while(c.firstChild) c.removeChild(c.firstChild);
+    }
+    function setKV(containerId, obj){
+      clearKV(containerId);
+      const entries = Object.entries(obj||{});
+      if(entries.length===0){ addKV(containerId); return; }
+      entries.forEach(([k,v])=>addKVWithValue(containerId,k,v));
+    }
+    ["paramsContainer","headersContainer","cookiesContainer"].forEach(addKV);
+
+    // Auth type switching
+    const authTypeSelect = document.getElementById("authType");
+    const authSections = {
+      basic: document.getElementById("auth-basic"),
+      bearer: document.getElementById("auth-bearer"),
+      apikey: document.getElementById("auth-apikey")
+    };
+    authTypeSelect.addEventListener("change", () => {
+      Object.values(authSections).forEach(sec => sec.style.display = "none");
+      const val = authTypeSelect.value;
+      if(val!=="none" && authSections[val]) authSections[val].style.display = "block";
+    });
+
+    // Response tabs
+    const respTabs = document.querySelectorAll('.resp-tab');
+    const respAreas = { responseBody: document.getElementById('responseBody'), responseHeaders: document.getElementById('responseHeaders') };
+    respTabs.forEach(rt => rt.onclick = () => {
+      respTabs.forEach(x => x.classList.remove('active'));
+      rt.classList.add('active');
+      Object.entries(respAreas).forEach(([k,el]) => el.style.display = (k===rt.dataset.rtab)?'block':'none');
+    });
+    respAreas.responseBody.style.display='block';
+
+    const contentTypeSelect = document.getElementById("contentType");
+    contentTypeSelect.addEventListener("change", () => {
+      document.getElementById("fileInput").style.display = contentTypeSelect.value==="multipart/form-data" ? "block" : "none";
+    });
+
+    let lastCurl = "";
+    document.getElementById("sendBtn").onclick = async function() {
+      const method = document.getElementById("method").value;
+      let url = document.getElementById("url").value.trim();
+      const params = readKV("paramsContainer");
+      const headers = readKV("headersContainer");
+      const cookies = readKV("cookiesContainer");
+      const contentType = document.getElementById("contentType").value;
+      const bodyInput = document.getElementById("bodyContent").value;
+      const fileInput = document.getElementById("fileInput");
+
+      // Apply auth
+      const authType = authTypeSelect.value;
+      if(authType === 'basic'){
+        const u=document.getElementById('basicUser').value; const p=document.getElementById('basicPass').value;
+        if(u) headers['Authorization'] = 'Basic ' + btoa(`${u}:${p}`);
+      } else if(authType === 'bearer') {
+        const t=document.getElementById('bearerToken').value.trim(); if(t) headers['Authorization'] = 'Bearer ' + t;
+      } else if(authType === 'apikey') {
+        const kName=document.getElementById('apiKeyName').value.trim(); const kVal=document.getElementById('apiKeyValue').value.trim(); const loc=document.getElementById('apiKeyLocation').value;
+        if(kName && kVal){
+          if(loc==='header') headers[kName]=kVal; else params[kName]=kVal;
+        }
+      }
+
+      if(Object.keys(params).length){
+        const queryString = new URLSearchParams(params).toString();
+        url += (url.includes("?")?"&":"?")+queryString;
+      }
+
+      let body;
+      if(method!=="GET" && method!=="HEAD"){
+        if(contentType==="application/json"){
+          try { body=JSON.parse(bodyInput); body=JSON.stringify(body); }
+          catch { body=bodyInput; }
+          headers["Content-Type"]="application/json";
+        }else if(contentType==="application/x-www-form-urlencoded"){
+          body=new URLSearchParams(JSON.parse(bodyInput||"{}")).toString();
+          headers["Content-Type"]=contentType;
+        }else if(contentType==="multipart/form-data"){
+          body=new FormData();
+          try {
+            const json = JSON.parse(bodyInput||"{}");
+            Object.entries(json).forEach(([k,v])=>body.append(k,v));
+          }catch{}
+          for(const file of fileInput.files) body.append(file.name,file);
+        }else {
+          body=bodyInput;
+          headers["Content-Type"]=contentType;
+        }
+      }
+
+      if(Object.keys(cookies).length){
+        headers["Cookie"]=Object.entries(cookies).map(([k,v])=>`${k}=${v}`).join("; ");
+      }
+
+      const opts = { method, headers };
+      if(body) opts.body = body;
+
+      const respBodyBox=document.getElementById("responseBody");
+      const respHeadersBox=document.getElementById("responseHeaders");
+      const statusBox=document.getElementById("status");
+      respBodyBox.textContent="⏳ Đang gửi request...";
+      respHeadersBox.textContent="";
+      try {
+        const res = await fetch(url, opts);
+        const text = await res.text();
+        statusBox.textContent=`Status: ${res.status} ${res.statusText}`;
+        let pretty;
+        try { pretty = JSON.stringify(JSON.parse(text), null, 2); }
+        catch {
+          if(text.trim().startsWith("<")) pretty=text; else pretty=text;
+        }
+        if(text.trim().startsWith("<")) {
+          respBodyBox.innerHTML=syntaxHighlightHTML(text);
+        } else {
+          respBodyBox.textContent=pretty;
+        }
+        // Headers display
+        const headerEntries = Array.from(res.headers.entries());
+        respHeadersBox.innerHTML = headerEntries.length ? headerEntries.map(([k,v])=>`<div><span class="tag">${k}</span> ${v}</div>`).join("") : '<em>Không có header</em>';
+      } catch (err){
+        statusBox.textContent="❌ Lỗi gửi request!";
+        respBodyBox.textContent=err.message;
+      }
+
+      lastCurl = buildCurl({ method, finalUrl: url, params, headers, bodyInput, contentType, fileInput, rawBody: bodyInput });
+      const curlPrev = document.getElementById('curlPreview');
+      curlPrev.style.display='block';
+      curlPrev.textContent=lastCurl;
+    };
+
+    // From cURL parsing
+    document.getElementById('parseCurlBtn').onclick = () => {
+      const cmd = document.getElementById('curlInput').value.trim();
+      if(!cmd){ return; }
+      try{
+        const parsed = parseCurl(cmd);
+        // URL and query params
+        document.getElementById('method').value = parsed.method || 'GET';
+        const baseUrl = parsed.baseUrl || parsed.url || '';
+        document.getElementById('url').value = baseUrl;
+        setKV('paramsContainer', parsed.params);
+        // Headers (remove Authorization/Cookie if mapped to dedicated tabs)
+        const headers = { ...(parsed.headers||{}) };
+        // Map Authorization -> Auth tab
+        if(headers['authorization'] || headers['Authorization']){
+          const authVal = headers['authorization']||headers['Authorization'];
+          delete headers['authorization']; delete headers['Authorization'];
+          if(/^Basic\s+/i.test(authVal)){
+            const b64 = authVal.replace(/^Basic\s+/i,'').trim();
+            try{
+              const dec = atob(b64);
+              const idx = dec.indexOf(':');
+              const u = idx>=0?dec.slice(0,idx):dec; const p = idx>=0?dec.slice(idx+1):'';
+              authTypeSelect.value='basic'; authTypeSelect.dispatchEvent(new Event('change'));
+              document.getElementById('basicUser').value=u; document.getElementById('basicPass').value=p;
+            }catch{}
+          } else if(/^Bearer\s+/i.test(authVal)){
+            const token = authVal.replace(/^Bearer\s+/i,'').trim();
+            authTypeSelect.value='bearer'; authTypeSelect.dispatchEvent(new Event('change'));
+            document.getElementById('bearerToken').value=token;
+          }
+        }
+        // API Key heuristic
+        const apiKeyHeader = Object.keys(headers).find(k=>/^x-api-key$|^api-key$/i.test(k));
+        if(apiKeyHeader){
+          authTypeSelect.value='apikey'; authTypeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('apiKeyName').value=apiKeyHeader;
+          document.getElementById('apiKeyValue').value=headers[apiKeyHeader];
+          document.getElementById('apiKeyLocation').value='header';
+          delete headers[apiKeyHeader];
+        }
+        // Cookies
+        let cookiesObj = parsed.cookies || {};
+        if(headers['cookie']||headers['Cookie']){
+          const cookieStr = headers['cookie']||headers['Cookie'];
+          delete headers['cookie']; delete headers['Cookie'];
+          cookiesObj = { ...cookiesObj, ...parseCookieString(cookieStr) };
+        }
+        setKV('cookiesContainer', cookiesObj);
+        // Set headers
+        setKV('headersContainer', headers);
+        // Body & content type
+        const ct = parsed.contentType || guessContentType(parsed);
+        document.getElementById('contentType').value = ct;
+        if(parsed.isMultipart && parsed.formFields){
+          document.getElementById('bodyContent').value = JSON.stringify(parsed.formFields, null, 2);
+        } else if(parsed.data!=null){
+          document.getElementById('bodyContent').value = parsed.data;
+        } else {
+          document.getElementById('bodyContent').value = '';
+        }
+        // Show small explanation
+        const exp = document.getElementById('curlExplain');
+        exp.style.display='block';
+        exp.innerHTML = `Đã parse: <span class="tag">${parsed.method}</span> <span class="tag">${baseUrl}</span> ${parsed.isMultipart?'<span class="tag">multipart</span>':''} ${parsed.files && parsed.files.length?`<span class="tag">files:${parsed.files.length}</span>`:''}`;
+      }catch(err){
+        alert('Lỗi parse cURL: '+ err.message);
+      }
+    };
+
+    function parseCookieString(s){
+      const out={};
+      s.split(';').forEach(part=>{ const [k,...rest]=part.split('='); if(!k) return; out[k.trim()]=(rest.join('=')||'').trim(); });
+      return out;
+    }
+
+    function shellSplit(str){
+      const out=[]; let i=0; let cur=''; let q=null; // q: ' or "
+      while(i<str.length){
+        const ch=str[i];
+        if(q){
+          if(ch===q){ q=null; i++; continue; }
+          if(q==='"' && ch==='\\' && i+1<str.length){ cur+=str[i+1]; i+=2; continue; }
+          cur+=ch; i++; continue;
+        }
+        if(ch==="'"||ch==='"'){ q=ch; i++; continue; }
+        if(/\s/.test(ch)){
+          if(cur.length){ out.push(cur); cur=''; }
+          i++; while(i<str.length && /\s/.test(str[i])) i++; continue;
+        }
+        if(ch==='\\' && i+1<str.length){ cur+=str[i+1]; i+=2; continue; }
+        cur+=ch; i++;
+      }
+      if(cur.length) out.push(cur);
+      return out;
+    }
+
+    function parseCurl(cmd){
+      const tokens = shellSplit(cmd);
+      if(tokens.length===0) throw new Error('Empty command');
+      if(tokens[0].toLowerCase()!=='curl') throw new Error("Phải bắt đầu bằng 'curl'");
+      let method='GET';
+      let url=null; const headers={}; let data=null; let isMultipart=false; const formFields={}; const files=[]; let cookies={}; let contentType=null;
+      for(let i=1;i<tokens.length;i++){
+        const t=tokens[i];
+        const next = (j=1)=> (i+j<tokens.length?tokens[i+j]:null);
+        if(t==='-X'||t==='--request'){ method=(next()||method).toUpperCase(); i++; continue; }
+        if(t==='-H'||t==='--header'){
+          const h=next(); i++;
+          if(h){ const idx=h.indexOf(':'); if(idx>-1){ const k=h.slice(0,idx).trim(); const v=h.slice(idx+1).trim(); headers[k]=v; if(/^content-type$/i.test(k)) contentType=v; } }
+          continue;
+        }
+        if(t==='-d'||t==='--data'||t==='--data-raw'||t==='--data-binary'||t==='--data-urlencode'){
+          const d=next()||''; i++;
+          data = data? (data + '&' + d) : d; // combine
+          if(method==='GET') method='POST';
+          continue;
+        }
+        if(t==='-F'||t==='--form'){
+          const f=next()||''; i++;
+          isMultipart=true;
+          const eq=f.indexOf('='); if(eq>-1){ const k=f.slice(0,eq); const v=f.slice(eq+1);
+            if(v.startsWith('@')){ files.push(v.slice(1)); } else { formFields[k]=v; }
+          }
+          if(method==='GET') method='POST';
+          continue;
+        }
+        if(t==='-b'||t==='--cookie'){
+          const c=next()||''; i++;
+          cookies = { ...cookies, ...parseCookieString(c) };
+          continue;
+        }
+        if(t==='-u'||t==='--user'){
+          const u=next()||''; i++;
+          headers['Authorization'] = 'Basic ' + btoa(u);
+          continue;
+        }
+        if(t==='--url'){
+          url = next(); i++; continue;
+        }
+        if(t.startsWith('-')){ continue; }
+        url = t; // first non-flag token assumed url
+      }
+      let baseUrl=url||''; const params={};
+      try{
+        const u=new URL(url);
+        baseUrl = `${u.origin}${u.pathname}`;
+        for(const [k,v] of u.searchParams.entries()) params[k]=v;
+      }catch{}
+      // Heuristic content type
+      if(!contentType){
+        if(isMultipart) contentType='multipart/form-data';
+        else if(data!=null){
+          const t=data.trim();
+          if(t.startsWith('{')||t.startsWith('[')) contentType='application/json';
+          else contentType='application/x-www-form-urlencoded';
+        }
+      }
+      return { method, url, baseUrl, params, headers, data, isMultipart, formFields, files, cookies, contentType };
+    }
+
+    function guessContentType(parsed){
+      if(parsed.contentType) return parsed.contentType;
+      if(parsed.isMultipart) return 'multipart/form-data';
+      if(parsed.data!=null){ const t=parsed.data.trim(); if(t.startsWith('{')||t.startsWith('[')) return 'application/json'; }
+      return 'text/plain';
+    }
+
+    document.getElementById('copyCurlBtn').onclick = () => {
+      if(!lastCurl) {
+        lastCurl = buildCurl({ method: document.getElementById('method').value, finalUrl: document.getElementById('url').value.trim(), params: readKV('paramsContainer'), headers: readKV('headersContainer'), bodyInput: document.getElementById('bodyContent').value, contentType: document.getElementById('contentType').value, fileInput: document.getElementById('fileInput'), rawBody: document.getElementById('bodyContent').value });
+      }
+      navigator.clipboard.writeText(lastCurl).then(()=>{
+        document.getElementById('copyCurlBtn').textContent='Đã copy ✅';
+        setTimeout(()=>document.getElementById('copyCurlBtn').textContent='Copy cURL 📋',1500);
+      });
+    };
+
+    function readKV(containerId){
+      const obj={};
+      document.querySelectorAll(`#${containerId} .kv-pair`).forEach(r=>{
+        const k=r.children[0].value.trim();
+        const v=r.children[1].value.trim();
+        if(k) obj[k]=v;
+      });
+      return obj;
+    }
+
+    function syntaxHighlightHTML(html){
+      return `<pre style="color:#b0e0e6;white-space:pre-wrap;">${html.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</pre>`;
+    }
+
+    function shEscape(str){
+      return str.replace(/'/g, "'\\''");
+    }
+    function buildCurl({ method, finalUrl, headers, bodyInput, contentType, fileInput }){
+      let cmd = `curl -X ${method.toUpperCase()} '${shEscape(finalUrl)}'`;
+      Object.entries(headers||{}).forEach(([k,v])=>{ cmd += ` \n  -H '${shEscape(k)}: ${shEscape(v)}'`; });
+      if(method!=="GET" && method!=="HEAD"){
+        if(contentType==="application/json"){
+          let bodyStr = bodyInput.trim();
+          cmd += ` \n  -H 'Content-Type: application/json' \n  -d '${shEscape(bodyStr)}'`;
+        } else if(contentType==="application/x-www-form-urlencoded"){
+          cmd += ` \n  -H 'Content-Type: application/x-www-form-urlencoded' \n  -d '${shEscape(bodyInput.trim())}'`;
+        } else if(contentType==="multipart/form-data"){
+          // approximate: cannot embed actual file objects; show placeholders
+          if(fileInput && fileInput.files.length){
+            Array.from(fileInput.files).forEach(f=>{ cmd += ` \n  -F '${shEscape(f.name)}=@${shEscape(f.name)}'`; });
+          }
+          try {
+            const json = JSON.parse(bodyInput||"{}");
+            Object.entries(json).forEach(([k,v])=>{ cmd += ` \n  -F '${shEscape(k)}=${shEscape(v)}'`; });
+          }catch{}
+        } else {
+          if(bodyInput.trim()) cmd += ` \n  -H 'Content-Type: ${shEscape(contentType)}' \n  -d '${shEscape(bodyInput.trim())}'`;
+        }
+      }
+      return cmd;
+    }
+  </script>
+</body>
+</html>

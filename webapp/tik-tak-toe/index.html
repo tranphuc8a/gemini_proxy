@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tic Tac Toe</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: "Poppins", sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 3em;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #00e6ff;
+      }
+
+      .mode-select {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .mode-btn {
+        padding: 12px 25px;
+        font-size: 1.2em;
+        background-color: #00bcd4;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      .mode-btn:hover {
+        background-color: #008c9e;
+        transform: scale(1.05);
+      }
+
+      .game {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(3, 100px);
+        grid-gap: 10px;
+        margin-top: 20px;
+      }
+
+      .cell {
+        width: 100px;
+        height: 100px;
+        background: #222;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #00e6ff;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      .cell:hover {
+        background: #333;
+      }
+
+      .cell.win {
+        background: #00bcd4;
+        color: #fff;
+      }
+
+      .status {
+        margin-top: 20px;
+        font-size: 1.5em;
+      }
+
+      .controls {
+        margin-top: 15px;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        background: #ff9800;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        cursor: pointer;
+        font-size: 1em;
+        transition: 0.3s;
+      }
+
+      .btn:hover {
+        background: #e68900;
+        transform: scale(1.05);
+      }
+
+      @media (max-width: 500px) {
+        .board {
+          grid-template-columns: repeat(3, 80px);
+          grid-gap: 8px;
+        }
+        .cell {
+          width: 80px;
+          height: 80px;
+          font-size: 2em;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎮 Tic Tac Toe</h1>
+
+    <div class="mode-select" id="modeSelect">
+      <button class="mode-btn" onclick="startGame('pvp')">👥 Người vs Người</button>
+      <button class="mode-btn" onclick="startGame('ai')">🤖 Người vs Máy</button>
+    </div>
+
+    <div class="game" id="game">
+      <div class="status" id="status">Lượt của X</div>
+      <div class="board" id="board"></div>
+      <div class="controls">
+        <button class="btn" onclick="resetGame()">🔄 Chơi lại</button>
+        <button class="btn" onclick="backToMenu()">⬅️ Thoát</button>
+      </div>
+    </div>
+
+    <script>
+      const boardEl = document.getElementById("board");
+      const statusEl = document.getElementById("status");
+      const gameEl = document.getElementById("game");
+      const modeSelect = document.getElementById("modeSelect");
+
+      let board = Array(9).fill(null);
+      let currentPlayer = "X";
+      let mode = null;
+      let gameOver = false;
+
+      function startGame(selectedMode) {
+        mode = selectedMode;
+        modeSelect.style.display = "none";
+        gameEl.style.display = "flex";
+        renderBoard();
+        updateStatus();
+      }
+
+      function renderBoard() {
+        boardEl.innerHTML = "";
+        board.forEach((value, i) => {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.textContent = value || "";
+          cell.onclick = () => handleMove(i);
+          boardEl.appendChild(cell);
+        });
+      }
+
+      function handleMove(index) {
+        if (board[index] || gameOver) return;
+        board[index] = currentPlayer;
+        renderBoard();
+
+        const winner = checkWinner();
+        if (winner) {
+          endGame(winner);
+          return;
+        }
+
+        if (board.every((c) => c)) {
+          endGame("draw");
+          return;
+        }
+
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        updateStatus();
+
+        if (mode === "ai" && currentPlayer === "O" && !gameOver) {
+          setTimeout(aiMove, 500);
+        }
+      }
+
+      function aiMove() {
+        const emptyCells = board
+          .map((v, i) => (v ? null : i))
+          .filter((v) => v !== null);
+        const randomIndex =
+          emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        handleMove(randomIndex);
+      }
+
+      function checkWinner() {
+        const lines = [
+          [0, 1, 2],
+          [3, 4, 5],
+          [6, 7, 8],
+          [0, 3, 6],
+          [1, 4, 7],
+          [2, 5, 8],
+          [0, 4, 8],
+          [2, 4, 6],
+        ];
+        for (let [a, b, c] of lines) {
+          if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+            highlightCells([a, b, c]);
+            return board[a];
+          }
+        }
+        return null;
+      }
+
+      function highlightCells(indices) {
+        const cells = document.querySelectorAll(".cell");
+        indices.forEach((i) => cells[i].classList.add("win"));
+      }
+
+      function updateStatus() {
+        statusEl.textContent = `Lượt của ${currentPlayer}`;
+      }
+
+      function endGame(result) {
+        gameOver = true;
+        if (result === "draw") {
+          statusEl.textContent = "😐 Hòa rồi!";
+        } else {
+          statusEl.textContent = `🎉 ${result} thắng!`;
+        }
+      }
+
+      function resetGame() {
+        board = Array(9).fill(null);
+        currentPlayer = "X";
+        gameOver = false;
+        renderBoard();
+        updateStatus();
+      }
+
+      function backToMenu() {
+        resetGame();
+        gameEl.style.display = "none";
+        modeSelect.style.display = "flex";
+      }
+    </script>
+  </body>
+</html>

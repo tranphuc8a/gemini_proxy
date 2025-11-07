@@ -1,0 +1,133 @@
+<html>
+  
+  <head>
+
+<title>Casio-Web Calculator</title>
+
+    <link href='https://fonts.googleapis.com/css?family=Russo+One|Play' rel='stylesheet' type='text/css'>
+    
+    <link href='https://fonts.googleapis.com/css?family=Black+Ops+One|Audiowide' rel='stylesheet' type='text/css'>
+    
+    <link href='https://fonts.googleapis.com/css?family=Orbitron:400,500,700,900' rel='stylesheet' type='text/css'>
+
+<link rel="stylesheet" type="text/css" href="css/style.css">
+
+  </head>
+  
+  <body>
+  
+      <script type="text/javascript">
+function showTime(){
+      var time = new Date();
+      var hour= time.getHours();
+
+      var minutes = time.getMinutes();
+      var seconds = time.getSeconds();
+        var completeTime = hour+":"+minutes+":"+seconds;
+      document.getElementById("timer").innerHTML= completeTime;
+
+    }
+setInterval("showTime()",1000);
+
+</script>
+      
+      
+      <div id="calculator" class="text-center">
+        
+       <div>        
+          
+          <span class="casio">CASIO</span>
+          <span class="fx">fx-350MS</span> 
+      
+        </div>
+         
+         <h3 id ="timer" class="tag">S-V.P.A.M</h3>
+
+
+        <form class="form-control">
+          <input type="text" id="display-box" disabled><br>
+          
+          <div>
+            <input type="button" value="log" class="trigo-keys" onClick="calc('logx');">
+            
+             <button type="button" class="trigo-keys" onClick="calc('exponential');">e<sup>x</sup></button>
+            
+             <button type="button" class="trigo-keys" onClick="calc('power2');" > x<sup>2</sup></button>
+                
+            <button type="button" class="trigo-keys" onClick="calc('power3');">x<sup>3</sup></button>
+            <button type="button" class="trigo-keys" onClick="calc('sqrt');">&radic;</button>
+            
+             <button type="button" class="trigo-keys" onClick="calc('fact');">x!</button>
+           
+          
+            
+          </div>
+          <div>
+              <button type="button" class="trigo-keys" onClick="calc('sin');">sin</button>
+            <button type="button" class="trigo-keys" onClick="calc('cos');">cos</button>
+            
+            <button type="button" class="trigo-keys" onClick="calc('tan');">tan</button>
+              
+              
+            
+            <button type="button" class="trigo-keys" onClick="calc('asin');">sin<sup>-1</sup></button>
+               
+            
+            <button type="button" class="trigo-keys" onClick="calc('acos');">cos<sup>-1</sup></button>
+            
+            
+            <button type="button" class="trigo-keys" onClick="calc('atan');">tan<sup>-1</sup></button>
+            
+            
+          </div>
+          
+          
+          
+          
+          <div>
+            <input type="button" value="7" class="keys" onClick="addToScreen('7')">
+         <input type="button" value="8" class="keys" onClick="addToScreen('8')">
+          <input type="button" value="9" class="keys" onClick="addToScreen('9')">
+             <input type="button" value="DEL" class="keys del-ac" onClick="backspace();">
+            <input  type="button" value="AC" class="keys del-ac" onClick="addToScreen('C')">         
+          </div>
+          
+          <div>
+              <input type="button" value="4" class="keys" onClick="addToScreen('4')">
+              <input type="button" value="5" class="keys" onClick="addToScreen('5')">
+        <input type="button" value="6" class="keys" onClick="addToScreen('6')">
+                <input type="button" value="x" class="keys" onClick="addToScreen('*')">
+              <input  type="button" value="/" class="keys" onClick="addToScreen('/')">    
+            
+          </div>
+          
+          <div>
+               <input type="button" value="1" class="keys" onClick="addToScreen('1')">
+             <input type="button" value="2" class="keys" onClick="addToScreen('2')">
+             <input type="button" value="3" class="keys" onClick="addToScreen('3')">
+            <input type="button" value="+" class="keys" onClick="addToScreen('+')">
+    <input type="button" value="-" class="keys" onClick="addToScreen('-')">
+          </div>
+          
+          <div>
+              <input type="button" value="0" class="keys" onClick="addToScreen('0')">
+            <input type="button" value="." class="keys" onClick="addToScreen('.')">                 
+            <input  type="button" value="%" class="keys" onClick="addToScreen('%')">
+            <input type="button" value="=" class="equal keys" onClick="answer();">    
+          </div>
+             
+          <div>   
+           
+      
+        
+  
+          
+          </div>
+        </form>
+      </div>
+ <a target="_blank"href="http://abhishekraj.info">Abhishek Raj</a>
+      <script type="text/javascript" src="js/logic.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    </body>
+  
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "chinese-chess-project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack",
+    "dev": "webpack serve"
+  },
+  "repository": "https://github.com/michaelwlu/chinesechessproject.git",
+  "author": "michaelwlu <michael.lu@stern.nyu.edu>",
+  "license": "MIT",
+  "devDependencies": {
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.1.0"
+  }
+}

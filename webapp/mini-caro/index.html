@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tic Tac Toe Plus</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: "Poppins", sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 2.5em;
+        text-shadow: 0 0 10px #00e6ff;
+        margin-bottom: 20px;
+      }
+
+      .menu {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+
+      select, input {
+        padding: 8px 10px;
+        font-size: 1em;
+        border-radius: 6px;
+        border: none;
+        outline: none;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        background: #00bcd4;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 1em;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      .btn:hover {
+        background: #008c9e;
+        transform: scale(1.05);
+      }
+
+      .board {
+        display: grid;
+        margin-top: 20px;
+      }
+
+      .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #222;
+        font-size: 2em;
+        color: #00e6ff;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .cell:hover {
+        background: #333;
+      }
+      .cell.win {
+        background: #00bcd4;
+        color: #fff;
+      }
+
+      .status {
+        margin-top: 20px;
+        font-size: 1.3em;
+      }
+
+      .controls {
+        margin-top: 15px;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎮 Tic Tac Toe Plus</h1>
+
+    <div id="menu" class="menu">
+      <label>
+        👥 Chế độ chơi:
+        <select id="mode">
+          <option value="pvp">Người vs Người</option>
+          <option value="ai">Người vs Máy</option>
+        </select>
+      </label>
+
+      <label id="aiOptions">
+        🤖 Độ khó:
+        <select id="difficulty">
+          <option value="easy">Dễ (Ngẫu nhiên)</option>
+          <option value="medium">Trung bình (Heuristic)</option>
+          <option value="hard">Khó (AI Minimax)</option>
+        </select>
+      </label>
+
+      <label>
+        🧩 Kích thước bàn:
+        <input type="number" id="boardSize" value="3" min="3" max="5" />
+      </label>
+
+      <label>
+        🎯 Số quân để thắng:
+        <input type="number" id="winLength" value="3" min="3" max="5" />
+      </label>
+
+      <button class="btn" onclick="startGame()">Bắt đầu</button>
+    </div>
+
+    <div id="game" class="hidden">
+      <div id="status" class="status"></div>
+      <div id="board" class="board"></div>
+      <div class="controls">
+        <button class="btn" onclick="resetGame()">🔄 Chơi lại</button>
+        <button class="btn" onclick="backMenu()">⬅️ Menu</button>
+      </div>
+    </div>
+
+    <script>
+      const menu = document.getElementById("menu");
+      const aiOptions = document.getElementById("aiOptions");
+      const gameEl = document.getElementById("game");
+      const boardEl = document.getElementById("board");
+      const statusEl = document.getElementById("status");
+
+      let board = [];
+      let currentPlayer = "X";
+      let mode = "pvp";
+      let difficulty = "easy";
+      let boardSize = 3;
+      let winLength = 3;
+      let gameOver = false;
+
+      document.getElementById("mode").addEventListener("change", (e) => {
+        aiOptions.style.display = e.target.value === "ai" ? "block" : "none";
+      });
+
+      function startGame() {
+        mode = document.getElementById("mode").value;
+        difficulty = document.getElementById("difficulty").value;
+        boardSize = parseInt(document.getElementById("boardSize").value);
+        winLength = parseInt(document.getElementById("winLength").value);
+        if (winLength > boardSize) winLength = boardSize;
+
+        menu.classList.add("hidden");
+        gameEl.classList.remove("hidden");
+        initBoard();
+      }
+
+      function initBoard() {
+        board = Array(boardSize * boardSize).fill(null);
+        boardEl.style.gridTemplateColumns = `repeat(${boardSize}, 80px)`;
+        boardEl.style.gridGap = "8px";
+        renderBoard();
+        currentPlayer = "X";
+        gameOver = false;
+        updateStatus();
+      }
+
+      function renderBoard() {
+        boardEl.innerHTML = "";
+        board.forEach((value, i) => {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.style.width = "80px";
+          cell.style.height = "80px";
+          cell.textContent = value || "";
+          cell.onclick = () => handleMove(i);
+          boardEl.appendChild(cell);
+        });
+      }
+
+      function handleMove(i) {
+        if (board[i] || gameOver) return;
+        board[i] = currentPlayer;
+        renderBoard();
+
+        const winner = checkWinner();
+        if (winner) return endGame(winner);
+        if (board.every((v) => v)) return endGame("draw");
+
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        updateStatus();
+
+        if (mode === "ai" && currentPlayer === "O" && !gameOver) {
+          setTimeout(aiMove, 400);
+        }
+      }
+
+      // ---- AI Logic ----
+      function aiMove() {
+        let move;
+        if (difficulty === "easy") {
+          move = randomMove();
+        } else if (difficulty === "medium") {
+          move = heuristicMove();
+        } else {
+          move = minimaxMove();
+        }
+        handleMove(move);
+      }
+
+      function randomMove() {
+        const empty = board.map((v, i) => (v ? null : i)).filter((v) => v !== null);
+        return empty[Math.floor(Math.random() * empty.length)];
+      }
+
+      function heuristicMove() {
+        // Ưu tiên thắng hoặc chặn thua
+        for (let i = 0; i < board.length; i++) {
+          if (!board[i]) {
+            board[i] = "O";
+            if (checkWinner() === "O") {
+              board[i] = null;
+              return i;
+            }
+            board[i] = null;
+          }
+        }
+        for (let i = 0; i < board.length; i++) {
+          if (!board[i]) {
+            board[i] = "X";
+            if (checkWinner() === "X") {
+              board[i] = null;
+              return i;
+            }
+            board[i] = null;
+          }
+        }
+        return randomMove();
+      }
+
+      function minimaxMove() {
+        let bestScore = -Infinity;
+        let move;
+        for (let i = 0; i < board.length; i++) {
+          if (!board[i]) {
+            board[i] = "O";
+            let score = minimax(board, 0, false);
+            board[i] = null;
+            if (score > bestScore) {
+              bestScore = score;
+              move = i;
+            }
+          }
+        }
+        return move;
+      }
+
+      function minimax(board, depth, isMaximizing) {
+        const winner = checkWinner();
+        if (winner === "O") return 10 - depth;
+        if (winner === "X") return depth - 10;
+        if (board.every((v) => v)) return 0;
+
+        if (isMaximizing) {
+          let best = -Infinity;
+          for (let i = 0; i < board.length; i++) {
+            if (!board[i]) {
+              board[i] = "O";
+              best = Math.max(best, minimax(board, depth + 1, false));
+              board[i] = null;
+            }
+          }
+          return best;
+        } else {
+          let best = Infinity;
+          for (let i = 0; i < board.length; i++) {
+            if (!board[i]) {
+              board[i] = "X";
+              best = Math.min(best, minimax(board, depth + 1, true));
+              board[i] = null;
+            }
+          }
+          return best;
+        }
+      }
+
+      // ---- Winner check ----
+      function checkWinner() {
+        const lines = [];
+
+        // hàng
+        for (let r = 0; r < boardSize; r++) {
+          for (let c = 0; c <= boardSize - winLength; c++) {
+            const seq = [];
+            for (let k = 0; k < winLength; k++) seq.push(r * boardSize + c + k);
+            lines.push(seq);
+          }
+        }
+
+        // cột
+        for (let c = 0; c < boardSize; c++) {
+          for (let r = 0; r <= boardSize - winLength; r++) {
+            const seq = [];
+            for (let k = 0; k < winLength; k++) seq.push((r + k) * boardSize + c);
+            lines.push(seq);
+          }
+        }
+
+        // chéo chính
+        for (let r = 0; r <= boardSize - winLength; r++) {
+          for (let c = 0; c <= boardSize - winLength; c++) {
+            const seq = [];
+            for (let k = 0; k < winLength; k++)
+              seq.push((r + k) * boardSize + (c + k));
+            lines.push(seq);
+          }
+        }
+
+        // chéo phụ
+        for (let r = 0; r <= boardSize - winLength; r++) {
+          for (let c = winLength - 1; c < boardSize; c++) {
+            const seq = [];
+            for (let k = 0; k < winLength; k++)
+              seq.push((r + k) * boardSize + (c - k));
+            lines.push(seq);
+          }
+        }
+
+        for (let line of lines) {
+          const [a, ...rest] = line;
+          if (board[a] && rest.every((i) => board[i] === board[a])) {
+            highlight(line);
+            return board[a];
+          }
+        }
+        return null;
+      }
+
+      function highlight(indices) {
+        const cells = document.querySelectorAll(".cell");
+        indices.forEach((i) => cells[i].classList.add("win"));
+      }
+
+      function updateStatus() {
+        statusEl.textContent = `Lượt của ${currentPlayer}`;
+      }
+
+      function endGame(result) {
+        gameOver = true;
+        if (result === "draw") statusEl.textContent = "😐 Hòa!";
+        else statusEl.textContent = `🎉 ${result} thắng!`;
+      }
+
+      function resetGame() {
+        initBoard();
+      }
+
+      function backMenu() {
+        gameEl.classList.add("hidden");
+        menu.classList.remove("hidden");
+      }
+    </script>
+  </body>
+</html>
