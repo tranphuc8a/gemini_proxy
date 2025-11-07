@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advanced Scientific Calculator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+</head>
+<body>
+  <div class="container">
+    <div class="calculator">
+      <div class="display" id="display">0</div>
+      <div class="buttons" id="buttons"></div>
+    </div>
+
+    <aside class="sidebar">
+      <section class="history">
+        <h2>Calculation History</h2>
+        <ul id="historyList"></ul>
+        <button id="clearHistoryBtn">Clear History</button>
+      </section>
+
+      <section class="timer">
+        <h2>Stopwatch Timer</h2>
+        <div id="timerDisplay">00:00:00</div>
+        <div class="timer-buttons">
+          <button id="startStopBtn">Start</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

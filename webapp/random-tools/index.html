@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Random Studio — Bộ công cụ random (static)</title>
+  <style>
+    :root{
+      --bg:#0f1724; --panel:#0b1220; --muted:#94a3b8; --accent:#7c3aed; --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.02);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,'Helvetica Neue',Arial; background:linear-gradient(180deg,#071021 0%, #071322 50%, #08111a 100%); color:#e6eef8}
+    .app{display:flex;min-height:100vh}
+    /* Sidebar */
+    .sidebar{width:280px;padding:20px;background:linear-gradient(180deg,var(--panel),#071424);border-right:1px solid rgba(255,255,255,0.03);}
+    .logo{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .logo .mark{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#2dd4bf);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(124,58,237,0.18)}
+    .logo h1{font-size:16px;margin:0}
+    .menu{display:flex;flex-direction:column;gap:8px}
+    .menu button{background:transparent;border:0;color:var(--muted);padding:10px 12px;border-radius:8px;text-align:left;cursor:pointer;font-weight:600}
+    .menu button.active{color:#fff;background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(45,212,191,0.03));box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+    .menu .small{font-size:12px;color:var(--muted);font-weight:500}
+    .content{flex:1;padding:28px;display:flex;flex-direction:column;gap:18px}
+    .panel{background:linear-gradient(180deg,var(--glass), var(--glass-2));border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .title{display:flex;flex-direction:column}
+    .title h2{margin:0;font-size:18px}
+    .title p{margin:0;color:var(--muted);font-size:13px}
+    .layout{display:flex;gap:18px}
+    .left{flex:1}
+    .right{width:380px}
+    .controls{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+    label{font-size:13px;color:var(--muted)}
+    input[type='number'], input[type='text'], textarea, select{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:8px;color:#e6eef8}
+    .row{display:flex;gap:10px}
+    .row > *{flex:1}
+    .btn{background:linear-gradient(90deg,var(--accent),#06b6d4);border:0;padding:10px 14px;border-radius:10px;color:#051225;font-weight:700;cursor:pointer}
+    .result{margin-top:12px;padding:14px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));font-size:20px;display:flex;align-items:center;gap:12px}
+    .art{display:flex;align-items:center;justify-content:center;height:260px}
+    /* animations */
+    .coin{width:120px;height:120px;border-radius:50%;background:linear-gradient(180deg,#ffd166,#f97316);display:flex;align-items:center;justify-content:center;font-weight:800;color:#071225;box-shadow:0 10px 30px rgba(249,115,22,0.25)}
+    .coin.flip{animation:flip 1s ease-in-out}
+    @keyframes flip{0%{transform:rotateY(0) translateY(0)}50%{transform:rotateY(720deg) translateY(-18px)}100%{transform:rotateY(1440deg) translateY(0)}}
+    .dice{width:120px;height:120px;border-radius:18px;background:linear-gradient(180deg,#fff,#e6e6e6);display:flex;align-items:center;justify-content:center;font-size:34px;color:#051225;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+    .dice.roll{animation:roll 800ms cubic-bezier(.2,.8,.2,1)}
+    @keyframes roll{0%{transform:rotate(0) scale(1)}50%{transform:rotate(720deg) scale(1.06)}100%{transform:rotate(1080deg) scale(1)}}
+    .spinner{width:220px;height:220px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .pointer{position:absolute;top:6px;width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:28px solid #fffb;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5))}
+    .wheel{transform-origin:center center;transition:transform 3s cubic-bezier(.2,.8,.2,1);}
+    .slice{position:absolute;width:50%;height:50%;left:50%;top:0;transform-origin:0 100%;overflow:hidden}
+    .slice .label{position:absolute;right:-40px;top:50%;transform:rotate(90deg) translateY(-50%);transform-origin:center;font-weight:700}
+    /* card */
+    .card-stack{position:relative;width:140px;height:200px}
+    .card{position:absolute;width:100%;height:100%;border-radius:10px;backface-visibility:hidden;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 14px 40px rgba(2,6,23,0.6)}
+    .card.back{background:linear-gradient(180deg,#0f1724,#0b1220);color:#fff}
+    .small-muted{font-size:12px;color:var(--muted)}
+    .history{max-height:220px;overflow:auto;padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);}
+    .chip{display:inline-block;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03);margin:4px;font-size:13px}
+    footer{color:var(--muted);font-size:12px;margin-top:8px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar panel">
+    <div class="logo">
+      <div class="mark">R</div>
+      <div>
+        <h1>Random Studio</h1>
+        <div class="small-muted">Bộ công cụ random - static</div>
+      </div>
+    </div>
+    <nav class="menu" id="menu">
+      <button data-mode="int" class="active">Số nguyên</button>
+      <button data-mode="range">Số nguyên trong khoảng</button>
+      <button data-mode="float">Số thực</button>
+      <button data-mode="coin">Tung đồng xu</button>
+      <button data-mode="dice">Tung xúc xắc</button>
+      <button data-mode="cards">Rút thẻ bài</button>
+      <button data-mode="spinner">Quay số (từ list)</button>
+      <button data-mode="rps">Kéo - Búa - Bao</button>
+    </nav>
+    <div style="margin-top:18px">
+      <div class="small-muted">Gợi ý</div>
+      <div class="small-muted">Chọn chế độ, thiết lập tham số, nhấn RUN.</div>
+    </div>
+    <footer>Made with ❤️ — Static HTML/CSS/JS</footer>
+  </aside>
+
+  <main class="content">
+    <div class="header panel">
+      <div class="title">
+        <h2 id="modeTitle">Số nguyên</h2>
+        <p id="modeDesc">Sinh số nguyên ngẫu nhiên (toàn dương, âm được hỗ trợ)</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="small-muted">Last result:</div>
+        <div id="lastResult" style="font-weight:800">—</div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="left panel">
+        <div id="controlsArea" class="controls">
+          <!-- controls injected by JS -->
+        </div>
+
+        <div>
+          <button id="runBtn" class="btn">RUN</button>
+          <button id="resetBtn" class="btn" style="background:transparent;color:var(--muted);margin-left:8px">Reset</button>
+        </div>
+
+        <div id="result" class="result" style="display:none"></div>
+
+        <div style="margin-top:14px" class="panel small-muted">
+          <div><strong>Lịch sử</strong></div>
+          <div id="history" class="history"></div>
+        </div>
+      </div>
+
+      <aside class="right panel">
+        <div class="art" id="artArea">
+          <!-- art injected -->
+        </div>
+        <div style="margin-top:12px">
+          <div class="small-muted">Thông tin / Mẹo</div>
+          <div id="infoText" class="small-muted">Chọn chế độ để xem hướng dẫn.</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script>
+// Utilities
+const q = (s, el=document)=> el.querySelector(s)
+const qa = (s, el=document)=> Array.from(el.querySelectorAll(s))
+let state = {mode:'int', history:[], deck:null, spinnerList:[], spinnerDiscard: false}
+
+// Mode metadata
+const modes = {
+  int: {title:'Số nguyên', desc:'Sinh số nguyên ngẫu nhiên (toàn dương hoặc âm).'},
+  range: {title:'Số nguyên trong khoảng', desc:'Sinh số nguyên giữa min và max (bao gồm).'},
+  float: {title:'Số thực', desc:'Sinh số thực trong khoảng, có độ chính xác tùy chọn.'},
+  coin: {title:'Tung đồng xu', desc:'Tung đồng xu; có thể chọn số lần.'},
+  dice: {title:'Tung xúc xắc', desc:'Tung xúc xắc tiêu chuẩn 6 mặt; có thể tùy chọn số mặt.'},
+  cards: {title:'Rút thẻ bài', desc:'Rút thẻ bài từ bộ 52; chọn số lượng và rút có/không độc lập.'},
+  spinner: {title:'Quay số (từ danh sách)', desc:'Nhập danh sách giá trị, quay để chọn ngẫu nhiên; có thể loại bỏ giá trị sau khi chọn.'},
+  rps: {title:'Kéo - Búa - Bao', desc:'Chơi kéo-búa-bao với máy; có hiển thị animation.'}
+}
+
+function setMode(mode){
+  state.mode = mode
+  qa('.menu button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode))
+  q('#modeTitle').textContent = modes[mode].title
+  q('#modeDesc').textContent = modes[mode].desc
+  renderControls(mode)
+  renderArt(mode)
+}
+
+// Controls generator
+function renderControls(mode){
+  const area = q('#controlsArea'); area.innerHTML=''
+  if(mode==='int'){
+    area.innerHTML = `
+      <label>Min</label><input id="min" type="number" value="0">
+      <label>Max</label><input id="max" type="number" value="100">
+      <label>Số lượng (count)</label><input id="count" type="number" value="1" min="1">
+    `
+  } else if(mode==='range'){
+    area.innerHTML = `
+      <label>Min</label><input id="min" type="number" value="1">
+      <label>Max</label><input id="max" type="number" value="6">
+      <label>Số lượng (count)</label><input id="count" type="number" value="1" min="1">
+    `
+  } else if(mode==='float'){
+    area.innerHTML = `
+      <label>Min</label><input id="min" type="number" step="any" value="0">
+      <label>Max</label><input id="max" type="number" step="any" value="1">
+      <label>Precision (số chữ số thập phân)</label><input id="precision" type="number" value="4" min="0">
+      <label>Số lượng (count)</label><input id="count" type="number" value="1" min="1">
+    `
+  } else if(mode==='coin'){
+    area.innerHTML = `
+      <label>Số lần tung</label><input id="count" type="number" value="1" min="1">
+      <label>Tùy chọn mặt (Heads/Tails) — chỉ để hiển thị</label>
+    `
+  } else if(mode==='dice'){
+    area.innerHTML = `
+      <label>Số mặt (mặt xúc xắc)</label><input id="sides" type="number" value="6" min="2">
+      <label>Số lần tung</label><input id="count" type="number" value="1" min="1">
+    `
+  } else if(mode==='cards'){
+    area.innerHTML = `
+      <label>Số lá rút</label><input id="count" type="number" value="1" min="1">
+      <label><input id="independent" type="checkbox"> Rút độc lập (có trả lại lá vào bộ)</label>
+      <div class="small-muted">Bộ bài: tiêu chuẩn 52 lá. Khi không độc lập, lá đã rút sẽ bị loại.</div>
+    `
+  } else if(mode==='spinner'){
+    area.innerHTML = `
+      <label>Danh sách (mỗi giá trị xuống dòng)</label><textarea id="list" rows="4" placeholder="ví dụ:\nApple\nBanana\nCherry">Apple
+Banana
+Cherry</textarea>
+      <label>Sau khi chọn, loại bỏ giá trị (discard)? <input id="discard" type="checkbox"></label>
+    `
+  } else if(mode==='rps'){
+    area.innerHTML = `
+      <label>Chọn (hãy bấm RUN để chơi)</label>
+      <div class="row"><button data-choice="rock" class="btn">Kéo</button><button data-choice="paper" class="btn">Búa</button><button data-choice="scissors" class="btn">Bao</button></div>
+    `
+    // attach
+    qa('[data-choice]').forEach(b=>b.addEventListener('click',()=>{playRPS(b.dataset.choice)}))
+  }
+}
+
+// Art renderer
+function renderArt(mode){
+  const art = q('#artArea'); art.innerHTML = ''
+  if(mode==='coin'){
+    const c = document.createElement('div'); c.className='coin'; c.id='coinEl'; c.textContent='H'; art.appendChild(c)
+  } else if(mode==='dice'){
+    const d = document.createElement('div'); d.className='dice'; d.id='diceEl'; d.textContent='1'; art.appendChild(d)
+  } else if(mode==='cards'){
+    const s = document.createElement('div'); s.className='card-stack'; s.innerHTML = '<div class="card back">🂠</div><div class="card" style="transform:translate(8px,8px)">A♠</div>';
+    art.appendChild(s)
+  } else if(mode==='spinner'){
+    const wrap = document.createElement('div'); wrap.className='spinner'; wrap.innerHTML = '<div class="pointer"></div><svg class="wheel" width="220" height="220" viewBox="0 0 220 220"></svg>'
+    art.appendChild(wrap)
+    renderWheel()
+  } else if(mode==='rps'){
+    const box = document.createElement('div'); box.style.display='flex'; box.style.gap='10px'; box.style.alignItems='center';
+    ['✊','✋','✌️'].forEach(s=>{const e=document.createElement('div');e.style.fontSize='42px';e.textContent=s;box.appendChild(e)})
+    art.appendChild(box)
+  } else {
+    art.innerHTML = '<svg width="160" height="160" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><rect x="8" y="8" width="84" height="84" rx="14" fill="url(#g)" opacity="0.25"/><text x="50" y="56" font-size="26" text-anchor="middle" fill="#fff">R</text></svg>'
+  }
+}
+
+// Event wiring
+qa('.menu button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)))
+q('#runBtn').addEventListener('click',run)
+q('#resetBtn').addEventListener('click',()=>{state.history=[];state.deck=null;state.spinnerList=[];q('#history').innerHTML='';q('#result').style.display='none';q('#lastResult').textContent='—'})
+
+// Random helpers
+function randInt(min,max){ min = Math.ceil(min); max = Math.floor(max); return Math.floor(Math.random()*(max-min+1))+min }
+function randFloat(min,max,precision){return Number((Math.random()*(max-min)+min).toFixed(precision))}
+
+// Run handler
+function run(){
+  const mode = state.mode
+  if(mode==='int'){
+    const min=Number(q('#min').value||0); const max=Number(q('#max').value||100); const count=Number(q('#count').value||1)
+    const out=[]; for(let i=0;i<count;i++) out.push(randInt(min,max))
+    showResult(out)
+  } else if(mode==='range'){
+    const min=Number(q('#min').value||1); const max=Number(q('#max').value||6); const count=Number(q('#count').value||1)
+    const out=[]; for(let i=0;i<count;i++) out.push(randInt(min,max))
+    showResult(out)
+  } else if(mode==='float'){
+    const min=Number(q('#min').value||0); const max=Number(q('#max').value||1); const precision=Number(q('#precision').value||4); const count=Number(q('#count').value||1)
+    const out=[]; for(let i=0;i<count;i++) out.push(randFloat(min,max,precision))
+    showResult(out)
+  } else if(mode==='coin'){
+    const count=Number(q('#count').value||1)
+    const out=[]; const coinEl=q('#coinEl')
+    for(let i=0;i<count;i++){
+      const r = Math.random()<0.5? 'Heads':'Tails'; out.push(r)
+    }
+    if(coinEl){ coinEl.classList.remove('flip'); void coinEl.offsetWidth; coinEl.classList.add('flip'); coinEl.textContent = out[0][0] }
+    showResult(out)
+  } else if(mode==='dice'){
+    const sides = Number(q('#sides').value||6); const count=Number(q('#count').value||1)
+    const out=[]; const diceEl=q('#diceEl')
+    for(let i=0;i<count;i++){ out.push(randInt(1,sides)) }
+    if(diceEl){ diceEl.classList.remove('roll'); void diceEl.offsetWidth; diceEl.classList.add('roll'); diceEl.textContent = out[0] }
+    showResult(out)
+  } else if(mode==='cards'){
+    const count=Number(q('#count').value||1); const independent = q('#independent')?.checked
+    // init deck if not exists or independent
+    if(!state.deck || independent){ state.deck = makeDeck(); }
+    const out=[];
+    for(let i=0;i<count;i++){
+      if(state.deck.length===0) break
+      const idx = randInt(0,state.deck.length-1); const card = state.deck[idx]; out.push(card)
+      if(!independent) state.deck.splice(idx,1)
+    }
+    showResult(out)
+    renderDeckPreview()
+  } else if(mode==='spinner'){
+    const raw = q('#list').value || '';
+    let list = raw.split('\n').map(s=>s.trim()).filter(Boolean)
+    if(list.length===0){ alert('Nhập ít nhất 1 giá trị'); return }
+    const discard = q('#discard').checked
+    // persist list in state
+    if(state.spinnerList.length===0) state.spinnerList = list.slice()
+    if(state.spinnerList.length===0){ alert('Danh sách trống — không còn mục để quay'); return }
+    // spin
+    const idx = randInt(0,state.spinnerList.length-1)
+    const picked = state.spinnerList[idx]
+    if(discard) state.spinnerList.splice(idx,1)
+    animateWheel(picked, idx, state.spinnerList.length)
+    showResult([picked])
+  } else if(mode==='rps'){
+    // do nothing, user clicks a choice
+    playRPS()
+  }
+}
+
+function showResult(arr){
+  const res = q('#result'); res.style.display='flex'; res.innerHTML = '<div style="font-size:16px;color:var(--muted)">Kết quả</div><div style="font-weight:900;font-size:20px">'+arr.join(', ')+'</div>'
+  state.history.unshift({mode:state.mode, value:arr, time:Date.now()})
+  q('#lastResult').textContent = arr.join(', ')
+  renderHistory()
+}
+
+function renderHistory(){
+  const h = q('#history'); h.innerHTML = '';
+  state.history.slice(0,50).forEach(it=>{
+    const d = document.createElement('div'); d.innerHTML = `<div class="chip">${new Date(it.time).toLocaleTimeString()} — <strong>${it.value.join(', ')}</strong></div>`; h.appendChild(d)
+  })
+}
+
+function makeDeck(){
+  const suits = ['♠','♥','♦','♣'];
+  const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const deck = [];
+  for(const s of suits){ for(const r of ranks) deck.push(r+s) }
+  return deck
+}
+
+function renderDeckPreview(){
+  const right = q('#artArea'); if(state.mode!=='cards') return
+  const stack = q('.card-stack'); if(!stack) return
+  stack.innerHTML = '';
+  const top = state.deck && state.deck.length? state.deck[0] : null
+  const back = document.createElement('div'); back.className='card back'; back.textContent='🂠'; stack.appendChild(back)
+  if(top){ const c = document.createElement('div'); c.className='card'; c.style.transform='translate(8px,8px)'; c.textContent=top; stack.appendChild(c) }
+}
+
+// Spinner wheel rendering & animation
+function renderWheel(){
+  const svg = q('.wheel'); if(!svg) return
+  const raw = q('#list')?.value || 'Apple\nBanana\nCherry'
+  let list = raw.split('\n').map(s=>s.trim()).filter(Boolean)
+  const N = list.length
+  svg.innerHTML=''
+  if(N===0) return
+  const cx=110, cy=110, r=100
+  for(let i=0;i<N;i++){
+    const angle = 360/N
+    const start = -90 + i*angle
+    const slice = document.createElementNS('http://www.w3.org/2000/svg','g')
+    slice.setAttribute('transform',`rotate(${start} ${cx} ${cy})`)
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path')
+    const large = angle>180?1:0
+    const rad = Math.PI/180
+    const x1 = cx + r*Math.cos((-90)*rad)
+    const y1 = cy + r*Math.sin((-90)*rad)
+    const x2 = cx + r*Math.cos((start+angle)*rad)
+    const y2 = cy + r*Math.sin((start+angle)*rad)
+    const d = `M ${cx} ${cy} L ${cx} ${cy-r} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
+    path.setAttribute('d',d)
+    path.setAttribute('fill',i%2? '#153243':'#0d2430')
+    slice.appendChild(path)
+    const text = document.createElementNS('http://www.w3.org/2000/svg','text')
+    text.setAttribute('x', cx+10)
+    text.setAttribute('y', cy - r/2)
+    text.setAttribute('transform',`rotate(${90})`) // simple
+    text.setAttribute('font-size','12')
+    text.setAttribute('fill','#fff')
+    text.textContent = list[i]
+    slice.appendChild(text)
+    svg.appendChild(slice)
+  }
+}
+
+function animateWheel(picked, idx, remaining){
+  const wheel = q('.wheel'); if(!wheel) return
+  const N = (q('#list').value.split('\n').map(s=>s.trim()).filter(Boolean)).length
+  const anglePer = 360 / N
+  const targetAngle = (360 - (idx*anglePer) + (anglePer/2)) + (360*3) // spin several rounds
+  wheel.style.transition = 'transform 3s cubic-bezier(.2,.8,.2,1)'
+  wheel.style.transform = `rotate(${targetAngle}deg)`
+  setTimeout(()=>{
+    // reset rotation for smooth future spins
+    wheel.style.transition = 'none'
+    const final = (targetAngle % 360)
+    wheel.style.transform = `rotate(${final}deg)`
+  }, 3200)
+}
+
+// RPS
+function playRPS(choice){
+  if(!choice){ alert('Hãy chọn kéo, búa, hoặc bao bằng các nút bên dưới.'); return }
+  const comps = ['rock','paper','scissors']; const comp = comps[randInt(0,comps.length-1)]
+  const winner = decideRPS(choice, comp)
+  showResult([`Bạn: ${choice}`, `Máy: ${comp}`, `Kết quả: ${winner}`])
+}
+function decideRPS(a,b){
+  if(a===b) return 'Hòa'
+  if(a==='rock' && b==='scissors') return 'Bạn thắng'
+  if(a==='scissors' && b==='paper') return 'Bạn thắng'
+  if(a==='paper' && b==='rock') return 'Bạn thắng'
+  return 'Máy thắng'
+}
+
+// initial
+setMode('int')
+</script>
+</body>
+</html>

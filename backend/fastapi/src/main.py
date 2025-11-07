@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller
+from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from src.application.exceptions.exceptions import AppException
@@ -21,6 +21,7 @@ app.include_router(gemini_controller.router, prefix=settings.API_PREFIX)
 app.include_router(conversation_controller.router, prefix=settings.API_PREFIX)
 app.include_router(messages_controller.router, prefix=settings.API_PREFIX)
 app.include_router(health_controller.router, prefix=settings.API_PREFIX)
+app.include_router(webapp_controller.router, prefix=settings.API_PREFIX)
 
 
 # also expose health at root for backward compatibility (/health and /health/ready)

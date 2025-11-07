@@ -1,0 +1,215 @@
+/* Reset & base */
+* {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #eee;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  
+  .container {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    max-width: 1000px;
+    width: 100%;
+  }
+  
+  /* Calculator */
+  .calculator {
+    background: linear-gradient(145deg, #b71c1c, #7f0000);
+    border-radius: 25px;
+    box-shadow: 0 0 30px #b71c1caa;
+    padding: 25px;
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .display {
+    background: #2a0000;
+    border-radius: 15px;
+    padding: 20px;
+    font-size: 2.5rem;
+    color: #ffebee;
+    text-align: right;
+    min-height: 60px;
+    overflow-x: auto;
+    font-weight: 700;
+    user-select: none;
+    margin-bottom: 25px;
+  }
+  
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 15px;
+  }
+  
+  button {
+    background: linear-gradient(145deg, #e53935, #b71c1c);
+    border: none;
+    border-radius: 15px;
+    padding: 18px 0;
+    font-size: 1.1rem;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 5px 10px #7f0000cc;
+    transition: all 0.25s ease;
+    user-select: none;
+  }
+  
+  button:hover {
+    background: linear-gradient(145deg, #ffeb3b, #fbc02d);
+    color: #121212;
+    box-shadow: 0 6px 15px #ffeb3bcc;
+    transform: scale(1.1);
+  }
+  
+  button:active {
+    transform: scale(0.95);
+  }
+  
+  button.equal {
+    grid-column: span 6;
+    background: linear-gradient(145deg, #ffb300, #ff6f00);
+    font-weight: 700;
+    color: #121212;
+    box-shadow: 0 5px 15px #ff6f00cc;
+  }
+  
+  button.equal:hover {
+    background: linear-gradient(145deg, #fff176, #ffca28);
+    box-shadow: 0 6px 18px #fff176cc;
+  }
+  
+  /* Sidebar */
+  .sidebar {
+    background: #1b1b1b;
+    border-radius: 25px;
+    padding: 25px;
+    width: 280px;
+    box-shadow: 0 0 30px #b71c1caa;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    user-select: none;
+  }
+  
+  .sidebar h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-weight: 700;
+    color: #ff5252;
+    text-align: center;
+  }
+  
+  /* History */
+  .history {
+    max-height: 280px;
+    overflow-y: scroll;
+  }
+  
+  #historyList {
+    list-style: none;
+    padding-left: 0;
+    margin: 0 0 15px 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #7f0000;
+    border-radius: 10px;
+    background: #2a0000;
+  }
+  
+  #historyList li {
+    padding: 8px 12px;
+    border-bottom: 1px solid #7f0000;
+    font-size: 0.95rem;
+    color: #f44336;
+  }
+  
+  #historyList li:last-child {
+    border-bottom: none;
+  }
+  
+  #clearHistoryBtn {
+    width: 100%;
+    background: #b71c1c;
+    border: none;
+    border-radius: 12px;
+    padding: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.25s ease;
+  }
+  
+  #clearHistoryBtn:hover {
+    background: #ffeb3b;
+    color: #121212;
+  }
+  
+  /* Timer */
+  .timer {
+    text-align: center;
+  }
+  
+  #timerDisplay {
+    font-size: 2rem;
+    font-weight: 700;
+    background: #2a0000;
+    border-radius: 15px;
+    padding: 15px 0;
+    color: #ffeb3b;
+    margin-bottom: 15px;
+    user-select: none;
+  }
+  
+  .timer-buttons button {
+    background: #b71c1c;
+    border: none;
+    color: white;
+    font-weight: 700;
+    padding: 10px 18px;
+    margin: 0 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    min-width: 80px;
+  }
+  
+  .timer-buttons button:hover {
+    background: #ffeb3b;
+    color: #121212;
+  }
+  
+  .timer-buttons button:active {
+    transform: scale(0.95);
+  }
+  
+  /* Responsive */
+  @media (max-width: 800px) {
+    .container {
+      flex-direction: column;
+      align-items: center;
+    }
+    .calculator, .sidebar {
+      width: 100%;
+      max-width: 400px;
+    }
+    .buttons {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    button.equal {
+      grid-column: span 4;
+    }
+  }
+  

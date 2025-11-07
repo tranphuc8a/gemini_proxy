@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Advanced Calculator — MultiExpr • Bases • Fractions • Trig • GCD/LCM</title>
+
+<!-- math.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.8.0/math.min.js"></script>
+
+<style>
+  :root{
+    --bg:#071021; --panel:#0f1724; --muted:#9fb0c2; --accent:#00d4ff; --card:#0b1220;
+    --surface:#0f1724; --success:#28c76f; --danger:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color:#e6f0f4;background:linear-gradient(180deg,#041225,#071021)}
+  .app{max-width:1100px;margin:20px auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+  header{display:flex;align-items:center;gap:12px}
+  h1{margin:0;font-size:20px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,input[type="number"],input[type="text"]{background:transparent;border:1px solid rgba(255,255,255,0.05);padding:8px;border-radius:8px;color:var(--muted)}
+  button.btn{background:linear-gradient(90deg,var(--accent),#15aabf);border:none;color:#021;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.05);color:var(--muted);padding:8px 10px;border-radius:8px}
+  .main{display:grid;grid-template-columns:1fr 420px;gap:12px}
+  @media (max-width:1000px){.main{grid-template-columns:1fr}}
+  .editor{background:var(--panel);padding:12px;border-radius:10px;min-height:220px;display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  textarea.expr{width:100%;min-height:120px;background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:8px;color:#e6f0f4;font-size:14px;resize:vertical}
+  .resultCard{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:12px;border-radius:10px;min-height:80px}
+  .label{font-size:13px;color:var(--muted)}
+  .small{font-size:13px;color:var(--muted)}
+  .output{font-family:monospace;background:rgba(0,0,0,0.18);padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all}
+  .history{background:var(--panel);padding:12px;border-radius:10px;min-height:200px;overflow:auto}
+  .hist-item{padding:8px;border-radius:6px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.02);cursor:pointer}
+  .hist-item:hover{background:rgba(255,255,255,0.02)}
+  .error{color:var(--danger);font-weight:700}
+  .success{color:var(--success);font-weight:700}
+  footer{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Advanced Calculator</h1>
+    <div class="label">Supports fractions, factorial, gcd/lcm, int div/mod, trig, inverse, hyperbolic, log, power, parentheses</div>
+  </header>
+
+  <div class="controls">
+    <div>
+      <label class="label">Input base</label><br>
+      <select id="inputBase">
+        <option value="10">Base 10</option>
+        <option value="2">Base 2</option>
+        <option value="8">Base 8</option>
+        <option value="16">Base 16</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="label">Output base</label><br>
+      <select id="outputBase">
+        <option value="10">Base 10</option>
+        <option value="2">Base 2</option>
+        <option value="8">Base 8</option>
+        <option value="16">Base 16</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="label">Angle unit</label><br>
+      <select id="angleUnit">
+        <option value="rad">Radians</option>
+        <option value="deg">Degrees</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="label">Precision (decimals)</label><br>
+      <input id="precision" type="number" value="8" min="0" max="20" style="width:80px">
+    </div>
+
+    <div>
+      <label class="label">Mode</label><br>
+      <select id="modeEval">
+        <option value="float">Float (decimal)</option>
+        <option value="fraction">Fraction (rational)</option>
+      </select>
+    </div>
+
+    <div style="margin-left:auto">
+      <button class="btn" id="evalBtn">Evaluate</button>
+      <button class="ghost" id="clearHistory">Clear History</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div>
+      <div class="editor">
+        <div class="row">
+          <div style="flex:1">
+            <label class="label">Expression(s)</label>
+            <div class="small">You may enter multiple expressions separated by semicolon `;` — each will be evaluated in order.</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="ghost" id="helpBtn">Help</button>
+            <button class="ghost" id="copyExpr">Copy</button>
+          </div>
+        </div>
+
+        <textarea id="expr" class="expr" placeholder="e.g. 2^10; 5!; gcd(48,180); lcm(12,18); 7/3 + 2.5; intdiv(17,5); 17 % 5; sin(pi/6)"></textarea>
+
+        <div class="row" style="gap:12px">
+          <div style="flex:1">
+            <div class="label">Result</div>
+            <div class="resultCard">
+              <div id="statusLine" class="small">Ready</div>
+              <div id="out" class="output" style="margin-top:8px">—</div>
+            </div>
+          </div>
+
+          <div style="width:220px">
+            <div class="label">Tools</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+              <button class="ghost" id="toFraction">Convert last to fraction</button>
+              <button class="ghost" id="simplifyBtn">Simplify last</button>
+              <button class="ghost" id="copyResult">Copy result</button>
+              <button class="ghost" id="exportBtn2">Export (.txt)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:8px">
+        <div class="label">Extra functions (usable in expression)</div>
+        <div class="small">
+          <pre style="margin:6px 0;opacity:0.9">
+Functions available:
+  gcd(a,b,...), lcm(a,b,...), factorial(n) or n!, intdiv(a,b), mod(a,b) or a % b,
+  floor, ceil, round, abs, sqrt, pow(x,y) or x^y,
+  log(x) (natural), log(x,base), ln(x) alias log,
+  sin, cos, tan, asin, acos, atan,
+  sinh, cosh, tanh,
+  pi, e
+Examples:
+  gcd(48,180)
+  5!
+  7/3 + 2.5
+  sin(30 deg)    (if angle unit = deg you can also use 'deg' suffix)
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="history">
+        <div class="label">History</div>
+        <div id="historyList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div>Advanced Calculator • Client-side (math.js)</div>
+    <div class="small">Responsive • Dark theme • Local history</div>
+  </footer>
+</div>
+
+<script>
+/* ---------- Setup math.js with custom functions ---------- */
+// Configure global math.js (CDN exposes 'math' not 'mathjs'). If create API isn't present, use config().
+const mathConfig = { number: 'BigNumber', precision: 64 };
+if (window.math && typeof math.config === 'function') {
+  math.config(mathConfig);
+}
+// Preserve original references so we can restore after temporary overrides (trig degree handling)
+const ORIGINAL_MATH = {
+  sin: math.sin,
+  cos: math.cos,
+  tan: math.tan,
+  asin: math.asin,
+  acos: math.acos,
+  atan: math.atan,
+  sinh: math.sinh,
+  cosh: math.cosh,
+  tanh: math.tanh,
+  log: math.log,
+  gcd: math.gcd,
+  lcm: math.lcm,
+  mod: math.mod,
+  intdiv: (a,b)=> math.floor(math.divide(a,b)),
+};
+
+// Add aliases & helpers
+math.import({
+  gcd: function(...args){ return args.reduce((a,b)=>math.gcd(a,b)); },
+  lcm: function(...args){ return args.reduce((a,b)=>math.lcm(a,b)); },
+  intdiv: function(a,b){ a=math.bignumber(a); b=math.bignumber(b); return math.floor(math.divide(a,b)); },
+  mod: function(a,b){ return math.mod(a,b); },
+  factorial: function(n){ return math.factorial(n); },
+}, {override: true});
+
+// add percent operator alias: a % b handled by parser; math.js already supports mod via '%'
+
+// Convenience
+const $ = id => document.getElementById(id);
+const exprEl = $('expr'), outEl = $('out'), statusLine = $('statusLine');
+const historyList = $('historyList');
+
+let history = JSON.parse(localStorage.getItem('calc_history_v1')||'[]');
+
+/* ---------- Utility: base conversion for integers ---------- */
+function tokenReplaceInputBases(s, inputBase){
+  // If inputBase == 10 -> return s unchanged
+  if(inputBase===10) return s;
+  // We replace integer tokens (sequence of digits/letters) with their base10 equivalents.
+  // Note: fractional numbers (with '.') not supported in non-decimal bases — user warned.
+  // We'll match tokens that look like numbers: \b[0-9A-Fa-f]+\b
+  return s.replace(/\b[0-9A-Fa-f]+\b/g, (tok)=>{
+    // but avoid function names like 'sin' etc (they have letters but not purely hex digits? sin contains 's' 'i' 'n' -> not match)
+    // check if token contains letters beyond hex? no.
+    // parse with given base
+    try {
+      return String(parseInt(tok, inputBase));
+    } catch(e){ return tok; }
+  });
+}
+
+function convertOutput(value, outputBase, precision){
+  // For BigNumber, Fraction, etc, convert to string
+  if(outputBase===10){
+    // format with precision if numeric
+    if(math.typeOf(value) === 'BigNumber'){
+      return value.toFixed(precision);
+    }
+    return String(value);
+  }
+  // For non-decimal bases: only handle integers
+  try{
+    if(typeof value === 'string') value = JSON.parse(value);
+  }catch(e){}
+  // If value is BigNumber, try toInteger
+  if(math.isBigNumber(value)){
+    try{
+      const intVal = math.bignumber(value).toFixed(0);
+      const bi = BigInt(intVal);
+      return bi.toString(outputBase).toUpperCase();
+    }catch(e){
+      return String(value);
+    }
+  } else if(typeof value === 'number' && Number.isInteger(value)){
+    return value.toString(outputBase).toUpperCase();
+  } else if(math.typeOf(value)==='Fraction'){
+    // fraction: if numerator & denominator integers -> convert each
+    const n = value.s * value.n; const d = value.d;
+    if(Number.isInteger(n) && Number.isInteger(d)){
+      return `${(n).toString(outputBase).toUpperCase()}/${(d).toString(outputBase).toUpperCase()}`;
+    }
+  }
+  // fallback to decimal string
+  return String(value);
+}
+
+/* ---------- Evaluate pipeline ---------- */
+function evaluateAll(){
+  const raw = exprEl.value.trim();
+  if(!raw){ statusLine.textContent='Empty expression'; outEl.textContent='—'; return; }
+  const inputBase = parseInt($('inputBase').value);
+  const outputBase = parseInt($('outputBase').value);
+  const precision = parseInt($('precision').value) || 8;
+  const angleUnit = $('angleUnit').value;
+  const mode = $('modeEval').value;
+
+  // prepare math scope: angle unit conversions
+  const scope = {
+    pi: math.pi,
+    e: math.e,
+  };
+
+  // wrap trig to consider degrees if needed
+  function maybeConvertAngleToRad(x){
+    if(angleUnit==='deg') return math.multiply(x, math.pi/180);
+    return x;
+  }
+  // override trig function names in math parser by injecting helper functions
+  const localImports = {
+    sin: (x)=> math.sin(angleUnit==='deg' ? math.multiply(x, math.pi/180) : x),
+    cos: (x)=> math.cos(angleUnit==='deg' ? math.multiply(x, math.pi/180) : x),
+    tan: (x)=> math.tan(angleUnit==='deg' ? math.multiply(x, math.pi/180) : x),
+    asin: (x)=> {
+      const r = math.asin(x);
+      return angleUnit==='deg' ? math.multiply(r, 180/math.pi) : r;
+    },
+    acos: (x)=> {
+      const r = math.acos(x);
+      return angleUnit==='deg' ? math.multiply(r, 180/math.pi) : r;
+    },
+    atan: (x)=> {
+      const r = math.atan(x);
+      return angleUnit==='deg' ? math.multiply(r, 180/math.pi) : r;
+    },
+    sinh: (x)=> math.sinh(x),
+    cosh: (x)=> math.cosh(x),
+    tanh: (x)=> math.tanh(x),
+    ln: (x)=> math.log(x),
+    log: (x, base)=> base ? math.log(x, base) : math.log(x),
+    gcd: (...args)=> math.gcd(...args),
+    lcm: (...args)=> math.lcm(...args),
+    // Support intdiv and mod
+    intdiv: (a,b)=> math.floor(math.divide(a,b)),
+    mod: (a,b)=> math.mod(a,b),
+  };
+  // import these into math temporarily
+  math.import(localImports, {override: true});
+
+  // Preprocess: when inputBase !=10, convert integer tokens from that base to decimal.
+  // Also allow use of hex notation 0x... if base 10 but user writes 0x...
+  let source = raw;
+  if(inputBase !== 10){
+    // warn if user uses decimal point or fraction
+    if(/[.\-\/]/.test(source)) {
+      // fractions contain '/', decimals contain '.', we only support integer token conversion for bases !=10
+      // We'll not convert tokens with '.' or '/' — user warned in UI
+    }
+    source = tokenReplaceInputBases(source, inputBase);
+  }
+
+  // Support multiple expressions separated by semicolon ;
+  const parts = source.split(';').map(s=>s.trim()).filter(Boolean);
+  const results = [];
+  statusLine.textContent = 'Compiling...';
+
+  try{
+    for(const p of parts){
+      // parse to check syntax
+      const node = math.parse(p);
+      const code = node.compile();
+      // evaluation mode: fraction or float
+      let res;
+      if(mode === 'fraction'){
+        // try evaluate as fraction where possible by replacing numbers with fraction(...)?
+        // Simpler: evaluate then convert to Fraction
+        const val = code.evaluate();
+        try{
+          res = math.fraction(val);
+        }catch(e){
+          res = val;
+        }
+      } else {
+        // float / BigNumber
+        res = code.evaluate();
+      }
+      results.push(res);
+    }
+
+    // format results
+    const outLines = results.map(r=> convertOutput(r, outputBase, precision));
+    outEl.textContent = outLines.join('\\n');
+    statusLine.textContent = 'OK';
+    addHistory(raw, outLines.join('\\n'));
+  } catch(err){
+    // show meaningful error
+    statusLine.innerHTML = '<span class="error">Error: </span> ' + (err && err.message ? err.message : String(err));
+    outEl.textContent = 'Error evaluating expression';
+    return;
+  } finally {
+    // Restore original math functions to avoid stacking custom overrides
+    math.import(ORIGINAL_MATH, {override: true});
+  }
+}
+
+/* ---------- History management ---------- */
+function addHistory(input, output){
+  const item = {t: Date.now(), in: input, out: output};
+  history.unshift(item);
+  if(history.length>200) history.length=200;
+  localStorage.setItem('calc_history_v1', JSON.stringify(history));
+  renderHistory();
+}
+function renderHistory(){
+  historyList.innerHTML='';
+  history.forEach((h,idx)=>{
+    const d = new Date(h.t);
+    const el = document.createElement('div');
+    el.className='hist-item';
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted)">${d.toLocaleString()}</div>
+      <div style="font-family:monospace;margin-top:6px">${h.in}</div>
+      <div style="margin-top:6px;color:#a9f6ff;font-weight:700">${h.out}</div>`;
+    el.onclick = ()=>{ exprEl.value = h.in; outEl.textContent = h.out; statusLine.textContent='Loaded from history'; };
+    historyList.appendChild(el);
+  });
+}
+renderHistory();
+
+/* ---------- Buttons ---------- */
+$('evalBtn').addEventListener('click', evaluateAll);
+$('clearHistory').addEventListener('click', ()=>{
+  if(!confirm('Clear history?')) return;
+  history=[];
+  localStorage.removeItem('calc_history_v1');
+  renderHistory();
+  statusLine.textContent='History cleared';
+});
+$('helpBtn').addEventListener('click', ()=>{
+  alert('Examples:\\n- 2^10; 5!; gcd(48,180); lcm(12,18); 7/3 + 2.5; intdiv(17,5); 17 % 5; sin(pi/6)\\nNotes:\\n- For non-decimal input base, fractional numbers are not converted; use base 10 for decimals.\\n- Use ; to separate multiple expressions.');
+});
+$('copyExpr').addEventListener('click', ()=>{ navigator.clipboard.writeText(exprEl.value); statusLine.textContent='Expression copied'; });
+$('copyResult').addEventListener('click', ()=>{ navigator.clipboard.writeText(outEl.textContent); statusLine.textContent='Result copied'; });
+$('exportBtn2').addEventListener('click', ()=> {
+  const blob = new Blob([exprEl.value], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='calc_expressions.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  statusLine.textContent='Exported to calc_expressions.txt';
+});
+$('toFraction').addEventListener('click', ()=>{
+  try{
+    const last = outEl.textContent.split('\\n').slice(-1)[0];
+    const v = math.fraction(last);
+    outEl.textContent += '\\n(as fraction) ' + v.toString();
+    statusLine.textContent='Converted to fraction';
+  }catch(e){ statusLine.textContent='Cannot convert to fraction'; }
+});
+$('simplifyBtn').addEventListener('click', ()=>{
+  try{
+    const last = outEl.textContent.split('\\n').slice(-1)[0];
+    const s = math.simplify(last);
+    outEl.textContent += '\\n(simplified) ' + s.toString();
+    statusLine.textContent='Simplified';
+  }catch(e){ statusLine.textContent='Simplify failed'; }
+});
+
+/* support Enter key + Ctrl/Cmd+Enter to evaluate quickly */
+exprEl.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); evaluateAll(); }
+});
+
+/* initial sample */
+exprEl.value = "2^10; 5!; gcd(48,180); lcm(12,18); 7/3 + 2.5; intdiv(17,5); 17 % 5; sin(pi/6)";
+evaluateAll();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Caro AI 15x15</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+    body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--fg);
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      min-height: 100vh; transition: background 0.3s, color 0.3s;
+    }
+    :root {
+      --bg: #0f2027;
+      --fg: #fff;
+      --cell-bg: #222;
+      --cell-hover: #333;
+      --cell-win: #00bcd4;
+    }
+    .light {
+      --bg: #f2f2f2;
+      --fg: #111;
+      --cell-bg: #fff;
+      --cell-hover: #ddd;
+      --cell-win: #4caf50;
+    }
+    h1 { margin: 20px 0; font-size: 2em; text-shadow: 0 0 10px #00e6ff; }
+    .menu, .controls { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    select, input { padding: 6px 8px; border-radius: 6px; border: none; }
+    .btn {
+      padding: 8px 14px; background: #00bcd4; color: #fff;
+      border: none; border-radius: 6px; cursor: pointer; transition: 0.3s;
+    }
+    .btn:hover { background: #008c9e; transform: scale(1.05); }
+    .board {
+      display: grid; margin-top: 20px;
+      border: 2px solid var(--fg);
+      background: var(--cell-bg);
+    }
+    .cell {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2em; color: #00e6ff;
+      border: 1px solid #444;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .cell:hover { background: var(--cell-hover); }
+    .cell.win { background: var(--cell-win); color: #fff; }
+    .status { margin-top: 10px; font-size: 1.2em; }
+    .toggle-theme { position: absolute; top: 10px; right: 10px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <button class="btn toggle-theme" onclick="toggleTheme()">🌙</button>
+  <h1>🎮 Caro AI 15x15</h1>
+
+  <div id="menu" class="menu">
+    <label>👥 Chế độ: 
+      <select id="mode">
+        <option value="pvp">Người vs Người</option>
+        <option value="ai">Người vs Máy</option>
+      </select>
+    </label>
+    <label id="aiOptions">🤖 Độ khó:
+      <select id="difficulty">
+        <option value="easy">Dễ</option>
+        <option value="medium">Trung bình</option>
+        <option value="hard">Khó (AI)</option>
+      </select>
+    </label>
+    <label>📏 Kích thước bàn:
+      <input id="boardSize" type="number" value="15" min="3" max="15">
+    </label>
+    <label>🎯 Số quân để thắng:
+      <input id="winLength" type="number" value="5" min="3" max="5">
+    </label>
+    <button class="btn" onclick="startGame()">Bắt đầu</button>
+  </div>
+
+  <div id="game" class="hidden">
+    <div id="status" class="status"></div>
+    <div id="board" class="board"></div>
+    <div class="controls">
+      <button class="btn" onclick="resetGame()">🔄 Chơi lại</button>
+      <button class="btn" onclick="backMenu()">⬅️ Menu</button>
+    </div>
+  </div>
+
+  <audio id="clickSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+  <audio id="winSound" src="https://actions.google.com/sounds/v1/cartoon/congratulations.ogg"></audio>
+  <audio id="drawSound" src="https://actions.google.com/sounds/v1/cartoon/wood_tap_double.ogg"></audio>
+
+  <script>
+    const menu = document.getElementById("menu");
+    const aiOptions = document.getElementById("aiOptions");
+    const gameEl = document.getElementById("game");
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const clickSound = document.getElementById("clickSound");
+    const winSound = document.getElementById("winSound");
+    const drawSound = document.getElementById("drawSound");
+
+    let board = [], boardSize = 15, winLength = 5, mode = "pvp", difficulty = "easy";
+    let currentPlayer = "X", gameOver = false;
+
+    document.getElementById("mode").addEventListener("change", (e)=>{
+      aiOptions.style.display = e.target.value === "ai" ? "block" : "none";
+    });
+
+    function startGame(){
+      boardSize = +document.getElementById("boardSize").value;
+      winLength = +document.getElementById("winLength").value;
+      mode = document.getElementById("mode").value;
+      difficulty = document.getElementById("difficulty").value;
+      menu.classList.add("hidden");
+      gameEl.classList.remove("hidden");
+      initBoard();
+    }
+
+    function initBoard(){
+      board = Array(boardSize*boardSize).fill(null);
+      boardEl.style.gridTemplateColumns = `repeat(${boardSize}, 30px)`;
+      boardEl.innerHTML = "";
+      for(let i=0;i<board.length;i++){
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.style.width="30px";cell.style.height="30px";
+        cell.onclick = ()=>handleMove(i);
+        boardEl.appendChild(cell);
+      }
+      currentPlayer="X"; gameOver=false; updateStatus();
+    }
+
+    function handleMove(i){
+      if(gameOver || board[i]) return;
+      clickSound.play();
+      board[i]=currentPlayer;
+      renderBoard();
+      const winner = checkWinner();
+      if(winner) return endGame(winner);
+      if(board.every(v=>v)) return endGame("draw");
+      currentPlayer=currentPlayer==="X"?"O":"X";
+      updateStatus();
+      if(mode==="ai" && currentPlayer==="O" && !gameOver){
+        setTimeout(aiMove,300);
+      }
+    }
+
+    function renderBoard(){
+      const cells=document.querySelectorAll(".cell");
+      board.forEach((v,i)=>cells[i].textContent=v?v:"");
+    }
+
+    function aiMove(){
+      let move;
+      const start=Date.now();
+      if(difficulty==="easy") move=randomMove();
+      else if(difficulty==="medium") move=heuristicMove();
+      else move=minimaxMove(start);
+      handleMove(move);
+    }
+
+    function randomMove(){
+      const empty=board.map((v,i)=>v?null:i).filter(v=>v!==null);
+      return empty[Math.floor(Math.random()*empty.length)];
+    }
+
+    function heuristicMove(){
+      for(let i=0;i<board.length;i++){
+        if(!board[i]){
+          board[i]="O"; if(checkWinner()==="O"){board[i]=null;return i;} board[i]=null;
+        }
+      }
+      for(let i=0;i<board.length;i++){
+        if(!board[i]){
+          board[i]="X"; if(checkWinner()==="X"){board[i]=null;return i;} board[i]=null;
+        }
+      }
+      return randomMove();
+    }
+
+    function minimaxMove(start){
+      let best=-Infinity,move;
+      for(let i=0;i<board.length;i++){
+        if(!board[i]){
+          board[i]="O";
+          const score=minimax(board,0,false,start);
+          board[i]=null;
+          if(score>best){best=score;move=i;}
+        }
+      }
+      return move??randomMove();
+    }
+
+    function minimax(b,depth,isMax,start){
+      if(Date.now()-start>5000) return 0; // limit 5s
+      const w=checkWinner();
+      if(w==="O") return 10-depth;
+      if(w==="X") return depth-10;
+      if(b.every(v=>v)) return 0;
+      let best=isMax?-Infinity:Infinity;
+      for(let i=0;i<b.length;i++){
+        if(!b[i]){
+          b[i]=isMax?"O":"X";
+          const val=minimax(b,depth+1,!isMax,start);
+          b[i]=null;
+          best=isMax?Math.max(best,val):Math.min(best,val);
+        }
+      }
+      return best;
+    }
+
+    function checkWinner(){
+      const dirs=[[1,0],[0,1],[1,1],[1,-1]];
+      for(let r=0;r<boardSize;r++){
+        for(let c=0;c<boardSize;c++){
+          const idx=r*boardSize+c;
+          if(!board[idx]) continue;
+          for(const [dr,dc] of dirs){
+            let seq=[idx];
+            for(let k=1;k<winLength;k++){
+              const nr=r+dr*k,nc=c+dc*k;
+              if(nr<0||nc<0||nr>=boardSize||nc>=boardSize) break;
+              const ni=nr*boardSize+nc;
+              if(board[ni]===board[idx]) seq.push(ni); else break;
+            }
+            if(seq.length===winLength){
+              highlight(seq);
+              return board[idx];
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    function highlight(seq){
+      const cells=document.querySelectorAll(".cell");
+      seq.forEach(i=>cells[i].classList.add("win"));
+    }
+
+    function updateStatus(){
+      statusEl.textContent=`Lượt của ${currentPlayer}`;
+    }
+
+    function endGame(res){
+      gameOver=true;
+      if(res==="draw"){drawSound.play();statusEl.textContent="😐 Hòa!";}
+      else{winSound.play();statusEl.textContent=`🎉 ${res} thắng!`;}
+    }
+
+    function resetGame(){initBoard();}
+    function backMenu(){gameEl.classList.add("hidden");menu.classList.remove("hidden");}
+
+    function toggleTheme(){
+      document.body.classList.toggle("light");
+    }
+  </script>
+</body>
+</html>
