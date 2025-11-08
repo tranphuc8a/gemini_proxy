@@ -4,10 +4,17 @@
     <meta charset="utf-8" />
     <title>Git Diff HTML Viewer</title>
 
-    <!-- Highlight.js CSS -->
+    <!-- Highlight.js CSS (light + dark, we'll toggle via JS) -->
     <link
+      id="hljs-theme-light"
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/github.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+    />
+    <link
+      id="hljs-theme-dark"
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
+      disabled
     />
 
     <!-- Diff2Html CSS -->
@@ -17,109 +24,55 @@
       href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"
     />
 
+    <!-- App CSS -->
+    <link rel="stylesheet" href="./style.css" />
+
     <!-- Diff2Html JS -->
     <script
       type="text/javascript"
       src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"
+      defer
     ></script>
 
-    <style>
-      body {
-        font-family: system-ui, sans-serif;
-        background: #f5f5f5;
-        color: #111;
-        padding: 2rem;
-      }
-      #myDiffElement {
-        margin-top: 1.5rem;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: white;
-        overflow: auto;
-        max-height: 80vh;
-      }
-      .controls {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-        margin-bottom: 1rem;
-      }
-      button,
-      label {
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-      }
-      input[type="file"] {
-        display: none;
-      }
-      button:hover,
-      label:hover {
-        background: #1e40af;
-      }
-      select {
-        padding: 0.4rem 0.6rem;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-      }
-    </style>
+    <!-- App JS -->
+    <script src="./app.js" type="module" defer></script>
   </head>
 
   <body>
-    <h1>🔍 Git Diff HTML Viewer</h1>
+    <header class="app-header">
+      <h1>🔍 Git Diff Viewer</h1>
+      <div class="controls">
+        <label for="diffFile" class="btn primary">📂 Open .diff / .patch</label>
+        <input type="file" id="diffFile" accept=".diff,.patch,.txt" />
 
-    <div class="controls">
-      <!-- Chọn file -->
-      <label for="diffFile">📂 Choose .diff / .patch file</label>
-      <input type="file" id="diffFile" accept=".diff,.patch,.txt" />
+        <select id="viewMode" title="View mode">
+          <option value="side-by-side" selected>Side-by-side</option>
+          <option value="line-by-line">Line-by-line</option>
+        </select>
 
-      <!-- Chọn kiểu view -->
-      <select id="viewMode">
-        <option value="side-by-side" selected>Side by side</option>
-        <option value="line-by-line">Line by line</option>
-      </select>
-    </div>
+        <label class="switch" title="Syntax highlight">
+          <input type="checkbox" id="toggleHighlight" checked />
+          <span>Highlight</span>
+        </label>
 
-    <div id="myDiffElement"></div>
+        <label class="switch" title="Dark theme">
+          <input type="checkbox" id="toggleTheme" />
+          <span>Dark</span>
+        </label>
 
-    <script>
-      const fileInput = document.getElementById("diffFile");
-      const viewMode = document.getElementById("viewMode");
-      const diffContainer = document.getElementById("myDiffElement");
+        <button id="renderAll" class="btn">Render all</button>
+        <button id="clear" class="btn subtle">Clear</button>
+      </div>
+    </header>
 
-      let diffText = "";
-
-      fileInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        diffText = await file.text();
-        renderDiff();
-      });
-
-      viewMode.addEventListener("change", () => {
-        if (diffText) renderDiff();
-      });
-
-      function renderDiff() {
-        diffContainer.innerHTML = "";
-        const config = {
-          drawFileList: true,
-          fileListToggle: false,
-          fileListStartVisible: false,
-          fileContentToggle: false,
-          matching: "lines",
-          outputFormat: viewMode.value,
-          synchronisedScroll: true,
-          highlight: true,
-          renderNothingWhenEmpty: false,
-        };
-        const diff2htmlUi = new Diff2HtmlUI(diffContainer, diffText, config);
-        diff2htmlUi.draw();
-        diff2htmlUi.highlightCode();
-      }
-    </script>
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="search">
+          <input id="fileSearch" placeholder="Filter files (Ctrl+K)" />
+        </div>
+        <ul id="fileList" class="file-list"></ul>
+      </aside>
+      <section id="diffHost" class="diff-host" aria-live="polite"></section>
+    </main>
   </body>
 </html>

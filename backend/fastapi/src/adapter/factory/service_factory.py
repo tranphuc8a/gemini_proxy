@@ -1,10 +1,11 @@
 
 
 from typing import Optional
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.application.ports.input.health_input_port import HealthInputPort
 from src.application.usecases.health_usecase import HealthUsecase
-from src.adapter.output.mysql.db.base import get_async_session
+from src.adapter.output.mysql.db.base import get_async_session_dependency
 from src.adapter.output.mysql.repositories.conversation_repository import ConversationRepository
 from src.adapter.output.mysql.repositories.message_repository import MessageRepository
 from src.application.ports.input.conversation_input_port import ConversationInputPort
@@ -17,14 +18,8 @@ from src.adapter.output.gemini.service.gemini_service import GeminiService
 from src.application.usecases.gemini_usecase import GeminiUseCase
 
 
-_cached_ports = {}
-
-
-def _make_repos_and_ports() -> tuple[ConversationOutputPort, MessageOutputPort, ConversationInputPort, HealthInputPort]:
-    """Create fresh DB-backed repositories and usecases. This is created lazily
-    per-call to avoid binding AsyncSession/engine to a different event loop at import time.
-    """
-    db: AsyncSession = get_async_session()
+def _make_repos_and_ports(db: AsyncSession) -> tuple[ConversationOutputPort, MessageOutputPort, ConversationInputPort, HealthInputPort]:
+    """Create DB-backed repositories and usecases using provided session."""
     conv_repo: ConversationOutputPort = ConversationRepository(db)
     msg_repo: MessageOutputPort = MessageRepository(db)
     conv_input: ConversationInputPort = ConversationUseCase(conv_repo, msg_repo)
@@ -33,35 +28,45 @@ def _make_repos_and_ports() -> tuple[ConversationOutputPort, MessageOutputPort, 
 
 
 def _make_gemini_input_port(msg_repo: MessageOutputPort, conv_repo: ConversationOutputPort) -> GeminiInputPort:
-    # instantiate GeminiClient/Service lazily to avoid any async client being
-    # created at import time (which can bind to an unrelated event loop).
+    """Create Gemini input port with provided repositories."""
     client = GeminiClient()
     svc = GeminiService(client)
     return GeminiUseCase(svc, msg_repo, conv_repo)
 
 class ServiceFactory:
+    """Factory for creating services with proper dependency injection."""
     
     @staticmethod
-    def get_conversation_input_port() -> ConversationInputPort:
-        _, _, conv_input, _ = _make_repos_and_ports()
+    def get_conversation_input_port(
+        db: AsyncSession = Depends(get_async_session_dependency)
+    ) -> ConversationInputPort:
+        _, _, conv_input, _ = _make_repos_and_ports(db)
         return conv_input
     
     @staticmethod
-    def get_conversation_output_port() -> ConversationOutputPort:
-        conv_repo, _, _, _ = _make_repos_and_ports()
+    def get_conversation_output_port(
+        db: AsyncSession = Depends(get_async_session_dependency)
+    ) -> ConversationOutputPort:
+        conv_repo, _, _, _ = _make_repos_and_ports(db)
         return conv_repo
 
     @staticmethod
-    def get_message_output_port() -> MessageOutputPort:
-        _, msg_repo, _, _ = _make_repos_and_ports()
+    def get_message_output_port(
+        db: AsyncSession = Depends(get_async_session_dependency)
+    ) -> MessageOutputPort:
+        _, msg_repo, _, _ = _make_repos_and_ports(db)
         return msg_repo
 
     @staticmethod
-    def get_health_input_port() -> HealthInputPort:
-        _, _, _, health_input = _make_repos_and_ports()
+    def get_health_input_port(
+        db: AsyncSession = Depends(get_async_session_dependency)
+    ) -> HealthInputPort:
+        _, _, _, health_input = _make_repos_and_ports(db)
         return health_input
 
     @staticmethod
-    def get_gemini_input_port() -> GeminiInputPort:
-        conv_repo, msg_repo, _, _ = _make_repos_and_ports()
+    def get_gemini_input_port(
+        db: AsyncSession = Depends(get_async_session_dependency)
+    ) -> GeminiInputPort:
+        conv_repo, msg_repo, _, _ = _make_repos_and_ports(db)
         return _make_gemini_input_port(msg_repo, conv_repo)

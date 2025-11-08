@@ -49,7 +49,16 @@ def _create_engine_and_session() -> None:
             )
         else:
             # attempt to create MySQL async engine; may raise ModuleNotFoundError if driver missing
-            _async_engine = create_async_engine(_mysql_async_url(), echo=False, future=True)
+            _async_engine = create_async_engine(
+                _mysql_async_url(),
+                echo=False,
+                future=True,
+                pool_size=20,           # Increase pool size from default 5
+                max_overflow=40,        # Increase overflow from default 10
+                pool_timeout=30,        # Connection timeout in seconds
+                pool_recycle=3600,      # Recycle connections after 1 hour
+                pool_pre_ping=True,     # Verify connections before using
+            )
     except ModuleNotFoundError as exc:
         # Fail fast in non-testing environments: do not silently fall back to in-memory sqlite.
         raise RuntimeError(
@@ -89,6 +98,18 @@ def init_db():
 
 
 def get_async_session() -> AsyncSession:
+    """Create a new AsyncSession. IMPORTANT: Caller must close the session when done."""
     _create_engine_and_session()
     assert _AsyncSessionLocal is not None, "Async sessionmaker was not initialized"
     return _AsyncSessionLocal()
+
+
+async def get_async_session_dependency():
+    """FastAPI dependency that yields a session and ensures it's closed after use."""
+    _create_engine_and_session()
+    assert _AsyncSessionLocal is not None, "Async sessionmaker was not initialized"
+    session: AsyncSession = _AsyncSessionLocal()
+    try:
+        yield session
+    finally:
+        await session.close()

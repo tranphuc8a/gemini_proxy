@@ -51,7 +51,7 @@ async def update_conversation(
     return success_response(data=data, message="updated", status_code=200)
 
 
-@router.delete("/{conversation_id}", response_model=ConversationResponse)
+@router.delete("/{conversation_id}")
 async def delete_conversation(
     conversation_id: str,
     conversation_service: ConversationInputPort = Depends(ServiceFactory.get_conversation_input_port)

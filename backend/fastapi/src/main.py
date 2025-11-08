@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -14,6 +15,22 @@ app = FastAPI(
     version="1.0.0",
     docs_url=f"{settings.API_PREFIX}/docs",
     redoc_url=f"{settings.API_PREFIX}/redoc"
+)
+
+# Add CORS middleware for frontend
+# Configure CORS origins from settings (supports comma-separated env value or "*")
+_raw_origins = getattr(settings, "FRONTEND_ALLOWED_ORIGINS", "*") or "*"
+if isinstance(_raw_origins, str) and _raw_origins.strip() == "*":
+    _origins = ["*"]
+else:
+    _origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # include routers under a API prefix
