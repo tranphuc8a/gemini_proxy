@@ -21,6 +21,10 @@ class Settings(BaseSettings): # type: ignore
     GEMINI_URL: str | None = None
     GEMINI_API_KEY: str | None = None
     GEMINI_TIMEOUT_SECONDS: int = 300
+    # CORS
+    # Comma-separated list of allowed origins, or '*' to allow all origins.
+    # Example: "http://localhost:5173,http://127.0.0.1:5173"
+    FRONTEND_ALLOWED_ORIGINS: str = "*"
     
     # Testing
     TESTING: bool = False
