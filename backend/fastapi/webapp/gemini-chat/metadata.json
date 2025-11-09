@@ -1,0 +1,6 @@
+{
+  "title": "Gemini Chat",
+  "description": "AI-powered chat interface with Gemini AI. Supports markdown, code syntax highlighting, and real-time streaming.",
+  "tags": ["chat", "ai", "gemini", "markdown"],
+  "icon": "💬"
+}

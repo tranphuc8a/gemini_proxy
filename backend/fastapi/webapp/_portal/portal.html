@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Apps Portal</title>
+    <link rel="stylesheet" href="./portal.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🚀 Web Apps Portal</h1>
+            <p class="subtitle">Browse and launch your web applications</p>
+        </header>
+
+        <div class="search-section">
+            <div class="search-box">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search apps by name, tags, or description..." autocomplete="off">
+                <button id="clearBtn" class="clear-btn" style="display: none;">✕</button>
+            </div>
+            <div class="filter-tags" id="filterTags"></div>
+        </div>
+
+        <div id="searchResults" class="search-results" style="display: none;"></div>
+
+        <div class="stats">
+            <span id="statsText">Loading apps...</span>
+        </div>
+
+        <!-- Standalone Apps -->
+        <section class="apps-section" id="standaloneSection" style="display: none;">
+            <h2 class="section-title">📱 Apps</h2>
+            <div class="apps-grid" id="standaloneApps"></div>
+        </section>
+
+        <!-- Collections -->
+        <div id="collectionsContainer"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📂</div>
+            <h3>No apps found</h3>
+            <p>Add your web apps to the <code>webapp/</code> folder to get started.</p>
+            <div class="help-box">
+                <strong>Quick Start:</strong>
+                <ol>
+                    <li>Create a folder in <code>webapp/</code></li>
+                    <li>Add an <code>index.html</code> file</li>
+                    <li>Optionally add <code>metadata.json</code> for description and tags</li>
+                    <li>Refresh this page</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script src="./portal.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "title": "2048 Game",
+  "description": "Classic 2048 puzzle game. Slide tiles to combine numbers and reach 2048!",
+  "tags": ["game", "puzzle", "2048"],
+  "icon": "🎮"
+}
