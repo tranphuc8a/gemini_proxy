@@ -1,0 +1,6 @@
+{
+  "title": "Git Diff Viewer",
+  "description": "Visualize git diffs with syntax highlighting. Paste your diff output and view changes in a beautiful interface.",
+  "tags": ["git", "diff", "developer", "tools"],
+  "icon": "🔀"
+}

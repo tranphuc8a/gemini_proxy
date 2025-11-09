@@ -1,0 +1,6 @@
+{
+  "title": "Gomoku",
+  "description": "Five in a row strategy game. Be the first to get 5 pieces in a row to win!",
+  "tags": ["game", "gomoku", "strategy", "board-game"],
+  "icon": "⚫"
+}

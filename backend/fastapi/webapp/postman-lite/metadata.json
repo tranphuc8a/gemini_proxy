@@ -1,0 +1,6 @@
+{
+  "title": "Postman Lite",
+  "description": "Lightweight API testing tool. Send HTTP requests and view responses directly in your browser.",
+  "tags": ["api", "http", "testing", "developer", "tools"],
+  "icon": "📡"
+}

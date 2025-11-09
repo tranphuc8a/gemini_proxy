@@ -1,8 +1,10 @@
 import os
+import json
 from pathlib import Path
-from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, FileResponse, Response, RedirectResponse
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi.responses import HTMLResponse, FileResponse, Response, RedirectResponse, JSONResponse
+from pydantic import BaseModel
 import mimetypes
 from src.application.config.config import settings
 
@@ -94,9 +96,169 @@ def _render_directory_listing(base_href: str, folder: Path, rel: str = "") -> HT
 
 DEFAULT_REDIRECT_APP = "gemini-proxy"
 
+
+class AppMetadata(BaseModel):
+    """Metadata for a web app."""
+    name: str
+    path: str  # relative path from WEBAPP_ROOT
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tags: List[str] = []
+    icon: Optional[str] = None
+    collection: Optional[str] = None  # parent folder name if in a collection
+    has_index: bool = False
+
+
+def _load_app_metadata(app_path: Path, relative_path: str) -> Dict[str, Any]:
+    """Load metadata.json if exists, otherwise return defaults."""
+    metadata_file = app_path / "metadata.json"
+    metadata = {
+        "title": app_path.name,
+        "description": "",
+        "tags": [],
+        "icon": None
+    }
+    if metadata_file.exists():
+        try:
+            with open(metadata_file, "r", encoding="utf-8") as f:
+                custom = json.load(f)
+                metadata.update(custom)
+        except Exception:
+            pass
+    return metadata
+
+
+def _scan_apps_recursive(base: Path, current: Path, collection: Optional[str] = None, depth: int = 0) -> List[AppMetadata]:
+    """Recursively scan for apps (folders with index.html or subdirectories).
+    
+    Logic:
+    - If folder has index.html -> it's an app, add it and STOP (don't scan deeper)
+    - If folder has no index.html but has subdirs -> it's a collection, scan subdirs (only 1 level)
+    - Max depth is 1 (only scan webapp/ and webapp/collection/, not deeper)
+    """
+    apps = []
+    
+    # Limit depth to prevent scanning too deep into app folders
+    if depth > 1:
+        return apps
+    
+    try:
+        for child in sorted(current.iterdir(), key=lambda p: p.name.lower()):
+            if not child.is_dir():
+                continue
+            # Skip special folders
+            if child.name.startswith("_"):
+                continue
+            
+            relative_path = str(child.relative_to(base)).replace("\\", "/")
+            index_file = _find_index_file(child)
+            has_index = index_file is not None
+            
+            if has_index:
+                # This is an app - add it and STOP (don't scan its subdirectories)
+                metadata = _load_app_metadata(child, relative_path)
+                apps.append(AppMetadata(
+                    name=child.name,
+                    path=relative_path,
+                    title=metadata.get("title", child.name),
+                    description=metadata.get("description", ""),
+                    tags=metadata.get("tags", []),
+                    icon=metadata.get("icon"),
+                    collection=collection,
+                    has_index=True
+                ))
+                # DON'T scan deeper - this is a complete app
+            else:
+                # No index.html - check if it has subdirs (potential collection)
+                subdirs = [x for x in child.iterdir() if x.is_dir() and not x.name.startswith("_")]
+                if subdirs and depth == 0:
+                    # This is a collection folder at root level, scan its children
+                    collection_name = child.name
+                    apps.extend(_scan_apps_recursive(base, child, collection_name, depth + 1))
+                # If depth > 0, don't scan further (already in a collection)
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to scan {current}: {e}")
+    return apps
+
+
+@router.get("/_api/list")
+async def list_apps_with_metadata():
+    """Return JSON list of all apps with metadata, supporting collections."""
+    if not WEBAPP_ROOT.exists():
+        return JSONResponse({"apps": [], "collections": [], "error": f"WEBAPP_ROOT not found: {WEBAPP_ROOT}"})
+    
+    apps = _scan_apps_recursive(WEBAPP_ROOT, WEBAPP_ROOT)
+    
+    # Group by collection
+    collections_map: Dict[str, List[AppMetadata]] = {}
+    standalone_apps = []
+    
+    for app in apps:
+        if app.collection:
+            if app.collection not in collections_map:
+                collections_map[app.collection] = []
+            collections_map[app.collection].append(app)
+        else:
+            standalone_apps.append(app)
+    
+    collections = [
+        {
+            "name": name,
+            "apps": [app.dict() for app in apps_list]
+        }
+        for name, apps_list in collections_map.items()
+    ]
+    
+    return JSONResponse({
+        "apps": [app.dict() for app in standalone_apps],
+        "collections": collections,
+        "total": len(apps)
+    })
+
+
+@router.get("/_api/search")
+async def search_apps(q: str = Query("", description="Search query")):
+    """Search apps by name, title, description, or tags."""
+    if not q.strip():
+        return JSONResponse({"results": []})
+    
+    query = q.lower().strip()
+    apps = _scan_apps_recursive(WEBAPP_ROOT, WEBAPP_ROOT)
+    
+    results = []
+    for app in apps:
+        score = 0
+        # Name match (highest priority)
+        if query in app.name.lower():
+            score += 10
+        # Title match
+        if app.title and query in app.title.lower():
+            score += 8
+        # Description match
+        if app.description and query in app.description.lower():
+            score += 5
+        # Tag match
+        for tag in app.tags:
+            if query in tag.lower():
+                score += 6
+        
+        if score > 0:
+            results.append({"app": app.dict(), "score": score})
+    
+    # Sort by score descending
+    results.sort(key=lambda x: x["score"], reverse=True)
+    
+    return JSONResponse({
+        "query": q,
+        "results": [r["app"] for r in results],
+        "count": len(results)
+    })
+
+
 @router.get("/_list", response_model=list)
 async def list_apps_json():
-    """Return JSON list of available app names (subdirectories with index.html)."""
+    """Return JSON list of available app names (subdirectories with index.html). Legacy endpoint."""
     if not WEBAPP_ROOT.exists():
         return []
     apps = []
@@ -113,28 +275,8 @@ async def list_apps_json():
 
 @router.get("/", response_class=HTMLResponse)
 async def list_apps_root():
-    """Serve the repository-level webapp/index.html if present; else render a dynamic listing."""
-    index = WEBAPP_ROOT / "index.html"
-    if index.exists():
-        try:
-            return HTMLResponse(index.read_text(encoding="utf-8"))
-        except Exception:
-            raise HTTPException(status_code=500, detail="Failed to read root webapp index.html")
-    # Fallback dynamic HTML
-    apps = []
-    if WEBAPP_ROOT.exists():
-        try:
-            for child in WEBAPP_ROOT.iterdir():
-                if child.is_dir() and (child / "index.html").exists():
-                    apps.append(child.name)
-        except Exception:
-            apps = []
-    items = "".join(f'<li><a href="./{a}/">{a}</a></li>' for a in apps) or '<li><em>No apps found</em></li>'
-    html = f"""
-    <!DOCTYPE html><html><head><meta charset='utf-8'><title>Webapps</title></head>
-    <body><h1>Webapps</h1><ul>{items}</ul></body></html>
-    """.strip()
-    return HTMLResponse(html)
+    """Redirect to the portal page."""
+    return RedirectResponse(url="/webapp/_portal/portal.html", status_code=302)
 
 
 @router.get("/{app_name}")

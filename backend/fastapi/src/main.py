@@ -38,8 +38,9 @@ app.include_router(gemini_controller.router, prefix=settings.API_PREFIX)
 app.include_router(conversation_controller.router, prefix=settings.API_PREFIX)
 app.include_router(messages_controller.router, prefix=settings.API_PREFIX)
 app.include_router(health_controller.router, prefix=settings.API_PREFIX)
-app.include_router(webapp_controller.router, prefix=settings.API_PREFIX)
 
+# Mount webapp controller at root level (static content, not API)
+app.include_router(webapp_controller.router)
 
 # also expose health at root for backward compatibility (/health and /health/ready)
 app.include_router(health_controller.router)
