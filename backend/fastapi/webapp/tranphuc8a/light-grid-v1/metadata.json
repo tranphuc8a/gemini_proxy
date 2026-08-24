@@ -1,0 +1,16 @@
+{
+  "title": "Light Grid Version 1",
+  "description": "Ứng dụng mô phỏng lưới đèn cơ bản. Cho phép tạo lưới kích thước tùy ý, bật/tắt đèn theo nhiều quy tắc tác động khác nhau như Self, Cross, X, 8 Neighbors, Whole Row, Whole Column, Row + Column, Checkerboard, Knight Move, Manhattan Radius và Square Radius. Hỗ trợ thay đổi màu sắc đèn, tạo trạng thái ngẫu nhiên, đặt lại lưới và hoàn tác thao tác.",
+  "tags": [
+    "lights-out",
+    "grid",
+    "cellular-automata",
+    "mathematics",
+    "game",
+    "simulation",
+    "html",
+    "css",
+    "javascript"
+  ],
+  "icon": "💡"
+}
