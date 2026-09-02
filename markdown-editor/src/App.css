@@ -1,0 +1,37 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background-color: #ffffff;
+  color: #24292e;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.app.dark-mode {
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+.app-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-preview-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
+
+@media (max-width: 768px) {
+  .editor-preview-container {
+    flex-direction: column;
+  }
+
+  .app-container {
+    flex-direction: column;
+  }
+}
