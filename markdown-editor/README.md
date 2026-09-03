@@ -267,6 +267,24 @@ graph TD
   4. Enable HTTPS
   5. Implement rate limiting
 
+## Backend Storage
+
+Enable `BE On` in the toolbar and choose `BE JSON` or `BE MySQL` to synchronize the file tree with FastAPI. Run FastAPI from `backend/fastapi` and configure:
+
+```env
+MARKDOWN_STORAGE_BACKEND=json
+MARKDOWN_JSON_FILE=data/markdown-files.json
+MARKDOWN_ADMIN_KEY=markdown-editor-admin-2024
+```
+
+For MySQL, set `MARKDOWN_STORAGE_BACKEND=mysql` and configure the existing `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` values. The backend creates `markdown_files` on first save. Reads are public; saves require `X-Admin-Key`.
+
+The frontend defaults to `http://localhost:6789/api/v1/markdown/files`; override it with `VITE_MARKDOWN_API_URL`.
+
+## Import and Export
+
+Use `Import` to load a `.md` or `.markdown` file into the active editor. Use `Export` to download the current content as `document.md`.
+
 ## 🐛 Troubleshooting
 
 ### Port Already in Use

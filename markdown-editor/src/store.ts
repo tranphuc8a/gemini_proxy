@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { FileNode, EditorState } from './types'
+import { loadMarkdownFiles, saveMarkdownFiles } from './services/markdownStorage'
 
 const ADMIN_KEY = 'markdown-editor-admin-2024'
 const STORAGE_KEY = 'markdown-editor-data'
@@ -25,6 +26,12 @@ interface StoreState extends EditorState {
   // Settings
   toggleDarkMode: () => void
   toggleScrollSync: () => void
+  setViewMode: (viewMode: EditorState['viewMode']) => void
+  setEditorWidth: (editorWidth: number) => void
+  toggleBackendStorage: () => void
+  setBackendStorageType: (storageType: EditorState['backendStorageType']) => void
+  loadBackendStorage: () => Promise<void>
+  saveBackendStorage: () => Promise<void>
   
   // Load/Save
   loadFromStorage: () => void
@@ -54,7 +61,11 @@ const initialState: EditorState = {
   historyIndex: 0,
   isAdmin: false,
   isDarkMode: false,
-  scrollSync: true
+  scrollSync: true,
+  viewMode: 'split',
+  editorWidth: 50,
+  backendStorage: false,
+  backendStorageType: 'json'
 }
 
 export const useEditorStore = create<StoreState>((set, get) => ({
@@ -198,6 +209,23 @@ export const useEditorStore = create<StoreState>((set, get) => ({
 
   toggleScrollSync: () => {
     set((state) => ({ scrollSync: !state.scrollSync }))
+  },
+
+  setViewMode: (viewMode) => set({ viewMode }),
+
+  setEditorWidth: (editorWidth) => set({ editorWidth: Math.min(80, Math.max(20, editorWidth)) }),
+
+  toggleBackendStorage: () => set((state) => ({ backendStorage: !state.backendStorage })),
+
+  setBackendStorageType: (backendStorageType) => set({ backendStorageType }),
+
+  loadBackendStorage: async () => {
+    const files = await loadMarkdownFiles(get().backendStorageType)
+    if (files.length) set({ files })
+  },
+
+  saveBackendStorage: async () => {
+    await saveMarkdownFiles(get().files, get().backendStorageType)
   },
 
   loadFromStorage: () => {

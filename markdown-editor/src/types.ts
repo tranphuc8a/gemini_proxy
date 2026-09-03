@@ -16,6 +16,10 @@ export interface EditorState {
   isAdmin: boolean;
   isDarkMode: boolean;
   scrollSync: boolean;
+  viewMode: 'split' | 'editor' | 'preview';
+  editorWidth: number;
+  backendStorage: boolean;
+  backendStorageType: 'json' | 'mysql';
 }
 
 export interface ActionHistory {

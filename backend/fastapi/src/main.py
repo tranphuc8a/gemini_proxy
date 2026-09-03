@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller
+from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from src.application.exceptions.exceptions import AppException
@@ -38,6 +38,7 @@ app.include_router(gemini_controller.router, prefix=settings.API_PREFIX)
 app.include_router(conversation_controller.router, prefix=settings.API_PREFIX)
 app.include_router(messages_controller.router, prefix=settings.API_PREFIX)
 app.include_router(health_controller.router, prefix=settings.API_PREFIX)
+app.include_router(markdown_storage_controller.router, prefix=settings.API_PREFIX)
 
 # Mount webapp controller at root level (static content, not API)
 app.include_router(webapp_controller.router)
