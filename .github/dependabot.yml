@@ -1,0 +1,57 @@
+version: 2
+updates:
+  # Enable version updates for Maven (Java backend)
+  - package-ecosystem: "maven"
+    directory: "/backend/gemini-proxy"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "java"
+      - "backend"
+    reviewers:
+      - "tranphuc8a"
+    commit-message:
+      prefix: "build(deps)"
+      include: "scope"
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+      testing:
+        patterns:
+          - "org.junit.jupiter:*"
+          - "org.mockito:*"
+          - "org.assertj:*"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    reviewers:
+      - "tranphuc8a"
+    commit-message:
+      prefix: "ci"
+
+  # Enable version updates for Docker (if frontend is added later)
+  - package-ecosystem: "docker"
+    directory: "/backend/gemini-proxy/.docker"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+    reviewers:
+      - "tranphuc8a"
+    commit-message:
+      prefix: "build(docker)"
