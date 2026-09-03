@@ -1,0 +1,171 @@
+.help-floating-actions {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 1100;
+}
+
+.help-floating-button,
+.exit-fullscreen-floating-button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.help-floating-button {
+  background: #0969da;
+}
+
+.help-floating-button:hover {
+  background: #0555b5;
+}
+
+.exit-fullscreen-floating-button {
+  background: #238636;
+}
+
+.exit-fullscreen-floating-button:hover {
+  background: #2ea043;
+}
+
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.56);
+}
+
+.help-modal {
+  width: min(680px, 100%);
+  max-height: min(760px, 90vh);
+  overflow: auto;
+  color: #24292e;
+  background: #fff;
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.help-modal.dark-mode {
+  color: #c9d1d9;
+  background: #161b22;
+  border-color: #30363d;
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid #d0d7de;
+}
+
+.help-modal.dark-mode .help-modal-header {
+  border-color: #30363d;
+}
+
+.help-eyebrow {
+  margin: 0 0 4px;
+  color: #57606a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.help-modal.dark-mode .help-eyebrow {
+  color: #8b949e;
+}
+
+.help-modal h2,
+.help-modal h3 {
+  margin: 0;
+}
+
+.help-modal h2 {
+  font-size: 1.55rem;
+}
+
+.help-modal h3 {
+  margin-top: 22px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.help-modal-content {
+  padding: 20px 28px 28px;
+  line-height: 1.6;
+}
+
+.help-modal-content p {
+  margin: 0 0 12px;
+}
+
+.help-modal-content ul {
+  margin: 0;
+  padding-left: 1.35rem;
+}
+
+.help-modal-content li + li {
+  margin-top: 6px;
+}
+
+.help-close-button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.help-close-button:hover {
+  background: #eaeef2;
+}
+
+.help-modal.dark-mode .help-close-button:hover {
+  background: #30363d;
+}
+
+.help-modal kbd {
+  padding: 2px 6px;
+  border: 1px solid #d0d7de;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #f6f8fa;
+  font-family: inherit;
+  font-size: 0.85em;
+}
+
+.help-modal.dark-mode kbd {
+  border-color: #484f58;
+  background: #21262d;
+}
+
+@media (max-width: 640px) {
+  .help-floating-actions {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .help-modal-header,
+  .help-modal-content {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}

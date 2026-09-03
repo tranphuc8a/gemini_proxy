@@ -3,7 +3,6 @@
   "description": "Phiên bản nâng cấp với giao diện hiện đại hơn và khả năng lưu trữ trạng thái cục bộ. Hỗ trợ tạo, chỉnh sửa và thử nghiệm nhiều biến thể của bài toán Lights Out. Bổ sung LocalStorage, import/export trạng thái dưới định dạng JSON, thống kê số bước và số đèn đang bật, cùng các chế độ tác động phổ biến phục vụ học tập và nghiên cứu.",
   "tags": [
     "lights-out",
-    "grid",
     "localstorage",
     "json",
     "simulation",
@@ -12,7 +11,11 @@
     "interactive",
     "html",
     "css",
-    "javascript"
+    "javascript", 
+    "light-grid",
+    "light",
+    "grid",
+    "tranphuc8a"
   ],
   "icon": "⚡"
 }

@@ -1,0 +1,85 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background-color: #ffffff;
+  color: #24292e;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.app.fullscreen .header {
+  display: none;
+}
+
+.app.fullscreen .app-container {
+  height: 100vh;
+}
+
+.app.dark-mode {
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+.app-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-preview-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
+
+.editor-preview-container.view-split .editor-wrapper {
+  flex: 0 0 var(--editor-width, 50%);
+}
+
+.pane-divider {
+  width: 8px;
+  flex: 0 0 8px;
+  cursor: col-resize;
+  background: #d0d7de;
+  border-left: 1px solid #b6bec8;
+  border-right: 1px solid #b6bec8;
+  touch-action: none;
+}
+
+.pane-divider:hover,
+.pane-divider:active {
+  background: #0969da;
+}
+
+.app.dark-mode .pane-divider {
+  background: #30363d;
+  border-color: #484f58;
+}
+
+.app.dark-mode .pane-divider:hover,
+.app.dark-mode .pane-divider:active {
+  background: #58a6ff;
+}
+
+@media (max-width: 768px) {
+  .editor-preview-container {
+    flex-direction: column;
+  }
+
+  .editor-preview-container.view-split .editor-wrapper {
+    flex-basis: 50%;
+  }
+
+  .pane-divider {
+    width: 100%;
+    height: 8px;
+    flex-basis: 8px;
+    cursor: row-resize;
+  }
+
+  .app-container {
+    flex-direction: column;
+  }
+}

@@ -25,6 +25,9 @@ class Settings(BaseSettings): # type: ignore
     # Comma-separated list of allowed origins, or '*' to allow all origins.
     # Example: "http://localhost:5173,http://127.0.0.1:5173"
     FRONTEND_ALLOWED_ORIGINS: str = "*"
+    MARKDOWN_STORAGE_BACKEND: str = "json"
+    MARKDOWN_JSON_FILE: str = "data/markdown-files.json"
+    MARKDOWN_ADMIN_KEY: str = "markdown-editor-admin-2024"
     
     # Testing
     TESTING: bool = False

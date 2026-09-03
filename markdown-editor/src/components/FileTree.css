@@ -1,0 +1,137 @@
+.file-tree {
+  padding: 8px 0;
+}
+
+.file-tree-item {
+  user-select: none;
+}
+
+.file-tree-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  gap: 4px;
+  position: relative;
+}
+
+.file-tree-row:hover {
+  background-color: #e1e4e8;
+}
+
+.app.dark-mode .file-tree-row:hover {
+  background-color: #30363d;
+}
+
+.file-tree-row.selected {
+  background-color: #ddf4ff;
+}
+
+.app.dark-mode .file-tree-row.selected {
+  background-color: #0d47a1;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  color: #57606a;
+}
+
+.app.dark-mode .expand-btn {
+  color: #8b949e;
+}
+
+.file-icon,
+.folder-icon {
+  font-size: 0.875em;
+  width: 16px;
+  display: inline-block;
+  text-align: center;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 0.875em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rename-input {
+  flex: 1;
+  padding: 2px 4px;
+  border: 1px solid #0969da;
+  border-radius: 2px;
+  font-size: 0.875em;
+  background-color: #ffffff;
+  color: #24292e;
+}
+
+.app.dark-mode .rename-input {
+  background-color: #0d1117;
+  color: #c9d1d9;
+  border-color: #58a6ff;
+}
+
+.file-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.file-tree-row:hover .file-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  font-size: 0.75em;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+.action-btn:hover {
+  background-color: #d0d7de;
+}
+
+.app.dark-mode .action-btn:hover {
+  background-color: #483f5e;
+}
+
+.action-btn.delete:hover {
+  background-color: #f85149;
+}
+
+.file-tree-children {
+  padding-left: 12px;
+}
+
+@media (max-width: 768px) {
+  .file-tree-row {
+    padding: 3px 4px;
+  }
+
+  .file-actions {
+    opacity: 1;
+  }
+}

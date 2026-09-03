@@ -1,0 +1,388 @@
+.preview-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+.app.dark-mode .preview-wrapper {
+  background-color: #0d1117;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #d0d7de;
+  background-color: #f6f8fa;
+  height: 44px;
+}
+
+.app.dark-mode .preview-header {
+  background-color: #161b22;
+  border-bottom-color: #30363d;
+}
+
+.preview-header h3 {
+  margin: 0;
+  font-size: 0.95em;
+  font-weight: 600;
+}
+
+.preview-hint {
+  font-size: 0.75em;
+  padding: 2px 6px;
+  background-color: #e1e4e8;
+  border-radius: 3px;
+  color: #57606a;
+}
+
+.app.dark-mode .preview-hint {
+  background-color: #30363d;
+  color: #8b949e;
+}
+
+.preview-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 16px;
+  background-color: #ffffff;
+  color: #24292e;
+}
+
+.app.dark-mode .preview-content {
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+.preview-content::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.preview-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.preview-content::-webkit-scrollbar-thumb {
+  background: #d0d7de;
+  border-radius: 5px;
+}
+
+.preview-content::-webkit-scrollbar-thumb:hover {
+  background: #a71930;
+}
+
+.app.dark-mode .preview-content::-webkit-scrollbar-thumb {
+  background: #30363d;
+}
+
+.app.dark-mode .preview-content::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* GitHub Markdown Body Styles */
+.markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #24292e;
+  word-wrap: break-word;
+}
+
+.app.dark-mode .markdown-body {
+  color: #c9d1d9;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0 !important;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body del {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* Math blocks */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+  padding: 8px;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.app.dark-mode .mermaid {
+  background-color: #161b22;
+}
+
+.mermaid svg {
+  max-width: 100%;
+}
+
+.code-block-wrapper {
+  position: relative;
+  margin: 16px 0;
+}
+
+.code-block-wrapper pre {
+  margin: 0;
+  padding-top: 38px;
+}
+
+.copy-code-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 4px 8px;
+  border: 1px solid #57606a;
+  border-radius: 4px;
+  background: #21262d;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.copy-code-btn:hover {
+  background: #30363d;
+}
+
+/* Inline code */
+.markdown-body code {
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+}
+
+.app.dark-mode .markdown-body code {
+  background-color: #161b22;
+  color: #79c0ff;
+}
+
+/* Code blocks */
+.markdown-body pre {
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  padding: 16px;
+  overflow: auto;
+  line-height: 1.45;
+  margin: 16px 0;
+}
+
+.app.dark-mode .markdown-body pre {
+  background-color: #161b22;
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  color: inherit;
+}
+
+/* Links */
+.markdown-body a {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.app.dark-mode .markdown-body a {
+  color: #58a6ff;
+}
+
+/* Headings */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #d0d7de;
+  padding-bottom: 0.3em;
+}
+
+.app.dark-mode .markdown-body h1 {
+  border-bottom-color: #30363d;
+}
+
+.markdown-body h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #d0d7de;
+  padding-bottom: 0.3em;
+}
+
+.app.dark-mode .markdown-body h2 {
+  border-bottom-color: #30363d;
+}
+
+.markdown-body h3 {
+  font-size: 1.25em;
+}
+
+.markdown-body h4 {
+  font-size: 1em;
+}
+
+.markdown-body h5 {
+  font-size: 0.875em;
+}
+
+.markdown-body h6 {
+  font-size: 0.85em;
+  color: #57606a;
+}
+
+.app.dark-mode .markdown-body h6 {
+  color: #8b949e;
+}
+
+/* Lists */
+.markdown-body ul,
+.markdown-body ol {
+  margin-bottom: 16px;
+  padding-left: 2em;
+}
+
+.markdown-body li {
+  margin-bottom: 4px;
+}
+
+.markdown-body ul ul,
+.markdown-body ul ol,
+.markdown-body ol ul,
+.markdown-body ol ol {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+/* Blockquotes */
+.markdown-body blockquote {
+  border-left: 4px solid #d0d7de;
+  padding: 0 15px;
+  color: #57606a;
+  margin: 0 0 16px 0;
+}
+
+.app.dark-mode .markdown-body blockquote {
+  border-left-color: #30363d;
+  color: #8b949e;
+}
+
+/* Images */
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  display: block;
+  margin: 16px 0;
+}
+
+.app.dark-mode .markdown-body img {
+  background-color: #161b22;
+}
+
+/* Horizontal rule */
+.markdown-body hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #d0d7de;
+  border: 0;
+}
+
+.app.dark-mode .markdown-body hr {
+  background-color: #21262d;
+}
+
+/* Tables */
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #d0d7de;
+  padding: 6px 13px;
+  text-align: left;
+}
+
+.markdown-body th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+.app.dark-mode .markdown-body th,
+.app.dark-mode .markdown-body td {
+  border-color: #30363d;
+}
+
+.app.dark-mode .markdown-body th {
+  background-color: #161b22;
+}
+
+/* Task lists */
+.markdown-body .task-list-item {
+  list-style-type: none;
+  padding-left: 1.5em;
+}
+
+.markdown-body .task-list-item input[type='checkbox'] {
+  margin-right: 0.5em;
+}
+
+@media (max-width: 768px) {
+  .preview-wrapper {
+    border-top: 1px solid #d0d7de;
+  }
+
+  .preview-content {
+    padding: 12px;
+  }
+
+  .markdown-body {
+    font-size: 14px;
+  }
+}
