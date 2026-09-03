@@ -14,7 +14,12 @@
     "interactive",
     "html",
     "css",
-    "javascript"
+    "javascript",
+    "light-grid",
+    "light",
+    "grid",
+    "puzzle",
+    "tranphuc8a"
   ],
   "icon": "🧩"
 }
