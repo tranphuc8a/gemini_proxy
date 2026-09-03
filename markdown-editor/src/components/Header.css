@@ -8,6 +8,7 @@
   gap: 20px;
   flex-wrap: wrap;
   min-height: 60px;
+  overflow: auto;
 }
 
 .app.dark-mode .header {
@@ -169,6 +170,11 @@
 
   .header-title {
     font-size: 1em;
+  }
+
+  .header-center,
+  .header-right {
+    flex-wrap: wrap;
   }
 
   .header-btn {

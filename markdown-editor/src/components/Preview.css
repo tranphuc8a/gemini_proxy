@@ -143,6 +143,34 @@
   max-width: 100%;
 }
 
+.code-block-wrapper {
+  position: relative;
+  margin: 16px 0;
+}
+
+.code-block-wrapper pre {
+  margin: 0;
+  padding-top: 38px;
+}
+
+.copy-code-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 4px 8px;
+  border: 1px solid #57606a;
+  border-radius: 4px;
+  background: #21262d;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.copy-code-btn:hover {
+  background: #30363d;
+}
+
 /* Inline code */
 .markdown-body code {
   background-color: #f6f8fa;

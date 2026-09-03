@@ -10,13 +10,14 @@ function Sidebar() {
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const createFile = useEditorStore((state) => state.createFile)
   const createFolder = useEditorStore((state) => state.createFolder)
+  const selectedFolderId = useEditorStore((state) => state.selectedFolderId)
 
   const handleCreate = () => {
     if (newFileName.trim()) {
       if (isFolder) {
-        createFolder(null, newFileName)
+        createFolder(selectedFolderId, newFileName)
       } else {
-        createFile(null, newFileName)
+        createFile(selectedFolderId, newFileName)
       }
       setNewFileName('')
       setShowNewFile(false)

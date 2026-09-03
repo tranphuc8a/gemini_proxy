@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar'
 import Editor from './components/Editor'
 import Preview from './components/Preview'
 import AuthModal from './components/AuthModal'
+import HelpModal from './components/HelpModal'
 import './App.css'
 
 function App() {
@@ -15,6 +16,8 @@ function App() {
   const editorWidth = useEditorStore((state) => state.editorWidth)
   const setEditorWidth = useEditorStore((state) => state.setEditorWidth)
   const draggingRef = useRef(false)
+  const sidebarCollapsed = useEditorStore((state) => state.sidebarCollapsed)
+  const fullscreen = useEditorStore((state) => state.fullscreen)
 
   useEffect(() => {
     loadFromStorage()
@@ -46,11 +49,12 @@ function App() {
   }, [])
 
   return (
-    <div className={`app ${isDarkMode ? 'dark-mode' : ''}`}>
+    <div className={`app ${isDarkMode ? 'dark-mode' : ''} ${fullscreen ? 'fullscreen' : ''}`}>
       <AuthModal />
+      <HelpModal />
       <Header />
       <div className="app-container">
-        <Sidebar />
+        {!sidebarCollapsed && <Sidebar />}
         <div className={`editor-preview-container view-${viewMode}`} style={{ '--editor-width': `${editorWidth}%` } as React.CSSProperties}>
           {(viewMode === 'split' || viewMode === 'editor') && <Editor />}
           {viewMode === 'split' && (

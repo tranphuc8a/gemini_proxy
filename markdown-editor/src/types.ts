@@ -10,6 +10,7 @@ export interface FileNode {
 export interface EditorState {
   currentContent: string;
   currentFileId: string | null;
+  selectedFolderId: string | null;
   files: FileNode[];
   history: string[];
   historyIndex: number;
@@ -20,6 +21,8 @@ export interface EditorState {
   editorWidth: number;
   backendStorage: boolean;
   backendStorageType: 'json' | 'mysql';
+  sidebarCollapsed: boolean;
+  fullscreen: boolean;
 }
 
 export interface ActionHistory {

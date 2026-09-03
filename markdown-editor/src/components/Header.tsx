@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { ChangeEvent } from 'react'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 import { useEditorStore } from '../store'
 import './Header.css'
 
@@ -25,6 +27,10 @@ function Header() {
   const setBackendStorageType = useEditorStore((state) => state.setBackendStorageType)
   const loadBackendStorage = useEditorStore((state) => state.loadBackendStorage)
   const saveBackendStorage = useEditorStore((state) => state.saveBackendStorage)
+  const sidebarCollapsed = useEditorStore((state) => state.sidebarCollapsed)
+  const fullscreen = useEditorStore((state) => state.fullscreen)
+  const toggleSidebar = useEditorStore((state) => state.toggleSidebar)
+  const toggleFullscreen = useEditorStore((state) => state.toggleFullscreen)
 
   const exportMarkdown = () => {
     const blob = new Blob([currentContent], { type: 'text/markdown;charset=utf-8' })
@@ -45,6 +51,32 @@ function Header() {
     event.target.value = ''
   }
 
+  const exportPreviewImage = async (format: 'png' | 'jpeg') => {
+    const preview = document.querySelector('.markdown-body') as HTMLElement | null
+    if (!preview) return
+    const canvas = await html2canvas(preview, { backgroundColor: isDarkMode ? '#0d1117' : '#ffffff', scale: 2 })
+    const link = document.createElement('a')
+    link.download = `document.${format === 'jpeg' ? 'jpg' : 'png'}`
+    link.href = canvas.toDataURL(`image/${format}`, 0.95)
+    link.click()
+  }
+
+  const exportPreviewPdf = async () => {
+    const preview = document.querySelector('.markdown-body') as HTMLElement | null
+    if (!preview) return
+    const canvas = await html2canvas(preview, { backgroundColor: isDarkMode ? '#0d1117' : '#ffffff', scale: 2 })
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const width = 190
+    const height = (canvas.height * width) / canvas.width
+    let offset = 0
+    while (offset < height) {
+      if (offset) pdf.addPage()
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, -offset + 10, width, height)
+      offset += 277
+    }
+    pdf.save('document.pdf')
+  }
+
   const syncBackend = async (action: 'load' | 'save') => {
     try {
       if (action === 'load') await loadBackendStorage()
@@ -58,6 +90,7 @@ function Header() {
   return (
     <header className="header">
       <div className="header-left">
+        <button className="header-btn" onClick={toggleSidebar} title="Collapse or expand file sidebar">{sidebarCollapsed ? 'Show files' : 'Hide files'}</button>
         <h1 className="header-title">📝 Markdown Editor</h1>
       </div>
 
@@ -91,6 +124,10 @@ function Header() {
           <input type="file" accept=".md,.markdown,text/markdown" onChange={importMarkdown} />
         </label>
         <button className="header-btn" onClick={exportMarkdown} title="Export Markdown file">Export</button>
+        <button className="header-btn" onClick={() => void exportPreviewPdf()} title="Export rendered preview as PDF">PDF</button>
+        <button className="header-btn" onClick={() => void exportPreviewImage('png')} title="Export rendered preview as PNG">PNG</button>
+        <button className="header-btn" onClick={() => void exportPreviewImage('jpeg')} title="Export rendered preview as JPG">JPG</button>
+        <button className="header-btn" onClick={toggleFullscreen} title="Toggle fullscreen">{fullscreen ? 'Exit full screen' : 'Full screen'}</button>
         <select
           className="storage-select"
           value={backendStorageType}

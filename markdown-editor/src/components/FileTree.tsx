@@ -14,6 +14,10 @@ function FileTreeItem({ file }: FileTreeItemProps) {
   const setCurrentFile = useEditorStore((state) => state.setCurrentFile)
   const deleteFile = useEditorStore((state) => state.deleteFile)
   const renameFile = useEditorStore((state) => state.renameFile)
+  const setSelectedFolder = useEditorStore((state) => state.setSelectedFolder)
+  const moveNode = useEditorStore((state) => state.moveNode)
+  const copyNode = useEditorStore((state) => state.copyNode)
+  const selectedFolderId = useEditorStore((state) => state.selectedFolderId)
 
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(file.name)
@@ -65,6 +69,7 @@ function FileTreeItem({ file }: FileTreeItemProps) {
                 setCurrentFile(file.id, file.content)
               } else {
                 setExpanded(!expanded)
+                setSelectedFolder(file.id)
               }
             }}
           >
@@ -81,6 +86,10 @@ function FileTreeItem({ file }: FileTreeItemProps) {
             >
               ✏️
             </button>
+            <button className="action-btn" onClick={() => copyNode(file.id, selectedFolderId)} title="Copy into selected folder">⧉</button>
+            <button className="action-btn" onClick={() => {
+              moveNode(file.id, selectedFolderId)
+            }} title="Move into selected folder">↪</button>
             <button
               className="action-btn delete"
               onClick={() => {

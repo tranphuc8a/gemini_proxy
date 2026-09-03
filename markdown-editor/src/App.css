@@ -8,6 +8,14 @@
   transition: background-color 0.3s, color 0.3s;
 }
 
+.app.fullscreen .header {
+  display: none;
+}
+
+.app.fullscreen .app-container {
+  height: 100vh;
+}
+
 .app.dark-mode {
   background-color: #0d1117;
   color: #c9d1d9;

@@ -13,11 +13,14 @@ interface StoreState extends EditorState {
   
   // File actions
   setCurrentFile: (fileId: string | null, content?: string) => void
+  setSelectedFolder: (folderId: string | null) => void
   createFile: (parentId: string | null, name: string) => void
   createFolder: (parentId: string | null, name: string) => void
   deleteFile: (fileId: string) => void
   renameFile: (fileId: string, newName: string) => void
   saveFile: (fileId: string, content: string) => void
+  moveNode: (nodeId: string, parentId: string | null) => void
+  copyNode: (nodeId: string, parentId: string | null) => void
   
   // Auth actions
   loginAdmin: (key: string) => boolean
@@ -30,6 +33,8 @@ interface StoreState extends EditorState {
   setEditorWidth: (editorWidth: number) => void
   toggleBackendStorage: () => void
   setBackendStorageType: (storageType: EditorState['backendStorageType']) => void
+  toggleSidebar: () => void
+  toggleFullscreen: () => void
   loadBackendStorage: () => Promise<void>
   saveBackendStorage: () => Promise<void>
   
@@ -41,6 +46,7 @@ interface StoreState extends EditorState {
 const initialState: EditorState = {
   currentContent: '# Welcome to Markdown Editor\n\nStart typing markdown here...',
   currentFileId: null,
+  selectedFolderId: 'root',
   files: [
     {
       id: 'root',
@@ -65,7 +71,9 @@ const initialState: EditorState = {
   viewMode: 'split',
   editorWidth: 50,
   backendStorage: false,
-  backendStorageType: 'json'
+  backendStorageType: 'json',
+  sidebarCollapsed: false,
+  fullscreen: false
 }
 
 export const useEditorStore = create<StoreState>((set, get) => ({
@@ -130,6 +138,8 @@ export const useEditorStore = create<StoreState>((set, get) => ({
     }
   },
 
+  setSelectedFolder: (selectedFolderId) => set({ selectedFolderId }),
+
   createFile: (parentId: string | null, name: string) => {
     if (!get().isAdmin) return
 
@@ -191,6 +201,21 @@ export const useEditorStore = create<StoreState>((set, get) => ({
     })
   },
 
+  moveNode: (nodeId, parentId) => {
+    if (!get().isAdmin || nodeId === parentId || isDescendant(get().files, nodeId, parentId)) return
+    const node = findFileById(get().files, nodeId)
+    if (!node) return
+    const withoutNode = deleteFileFromTree(get().files, nodeId)
+    set({ files: addFileToTree(withoutNode, { ...node, parentId: parentId || undefined }, parentId) })
+  },
+
+  copyNode: (nodeId, parentId) => {
+    if (!get().isAdmin) return
+    const node = findFileById(get().files, nodeId)
+    if (!node || (parentId && isDescendant(get().files, nodeId, parentId))) return
+    set({ files: addFileToTree(get().files, cloneNode(node, parentId || undefined), parentId) })
+  },
+
   loginAdmin: (key: string) => {
     if (key === ADMIN_KEY) {
       set({ isAdmin: true })
@@ -219,6 +244,9 @@ export const useEditorStore = create<StoreState>((set, get) => ({
 
   setBackendStorageType: (backendStorageType) => set({ backendStorageType }),
 
+  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  toggleFullscreen: () => set((state) => ({ fullscreen: !state.fullscreen })),
+
   loadBackendStorage: async () => {
     const files = await loadMarkdownFiles(get().backendStorageType)
     if (files.length) set({ files })
@@ -233,7 +261,7 @@ export const useEditorStore = create<StoreState>((set, get) => ({
     if (saved) {
       try {
         const data = JSON.parse(saved)
-        set(data)
+        set({ ...initialState, ...data })
       } catch (e) {
         console.error('Failed to load from storage', e)
       }
@@ -323,4 +351,21 @@ function updateFileContent(files: FileNode[], fileId: string, content: string): 
     }
     return file
   })
+}
+
+function isDescendant(files: FileNode[], nodeId: string, possibleParentId: string | null): boolean {
+  if (!possibleParentId) return false
+  const node = findFileById(files, nodeId)
+  return Boolean(node?.children && findFileById(node.children, possibleParentId))
+}
+
+function cloneNode(node: FileNode, parentId?: string): FileNode {
+  const copyId = `${node.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return {
+    ...node,
+    id: copyId,
+    name: node.type === 'file' ? node.name.replace(/(\.md)?$/, '-copy$1') : `${node.name} copy`,
+    parentId,
+    children: node.children?.map((child) => cloneNode(child, copyId))
+  }
 }
