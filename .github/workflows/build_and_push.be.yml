@@ -21,7 +21,7 @@ jobs:
         working-directory: backend/gemini-proxy
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -61,7 +61,7 @@ jobs:
         working-directory: backend/gemini-proxy
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -84,7 +84,7 @@ jobs:
     needs: [check-style-and-test, build-jar]
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download jar artifact
         uses: actions/download-artifact@v4
@@ -118,7 +118,7 @@ jobs:
         working-directory: backend/gemini-proxy/.docker
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Get short commit hash
         working-directory: ../..   # quay về root repo từ .docker
@@ -134,7 +134,7 @@ jobs:
         run: docker load -i gemini-proxy-image.tar
 
       - name: Log in to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
