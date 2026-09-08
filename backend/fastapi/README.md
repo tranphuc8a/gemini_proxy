@@ -27,3 +27,5 @@ uvicorn app.main:app --host 0.0.0.0 --port 6789 --reload
 Notes:
 - The gemini client is a stub; integrate the real Gemini API where indicated.
 - The repositories use SQLAlchemy and expect a MariaDB/MySQL-compatible URL.
+- The SQLAdmin interface is available at `/admin/` and requires `ADMIN_USERNAME` and
+	`ADMIN_PASSWORD` credentials. Set `ADMIN_SECRET_KEY` to a strong value outside local development.

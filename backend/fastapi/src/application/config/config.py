@@ -16,6 +16,9 @@ class Settings(BaseSettings): # type: ignore
     APP_PORT: int = 6789
     API_PREFIX: str = "/api/v1"
     JWT_SECRET: str | None = None
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "change-me"
+    ADMIN_SECRET_KEY: str = "change-me-before-production"
     
     # Gemini API
     GEMINI_URL: str | None = None

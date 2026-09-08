@@ -7,6 +7,7 @@ from src.application.exceptions.exceptions import AppException
 from src.adapter.input.controllers.response_utils import error_response
 from fastapi import HTTPException
 from src.adapter.output.mysql.db.base import init_db
+from src.adapter.input.admin import setup_admin
 from src.application.config.config import settings
 
 app = FastAPI(
@@ -32,6 +33,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+admin = setup_admin(app)
 
 # include routers under a API prefix
 app.include_router(gemini_controller.router, prefix=settings.API_PREFIX)
