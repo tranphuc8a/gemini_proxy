@@ -1,5 +1,6 @@
 import React, { Component, type ReactNode } from 'react';
 import { Result, Button } from 'antd';
+import i18n from '../i18n';
 
 interface Props {
   children: ReactNode;
@@ -31,21 +32,18 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // A class component cannot use the useTranslation hook, and this renders
+      // outside the provider anyway, so read from the i18n instance directly.
+      const t = i18n.t.bind(i18n);
       return (
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          minHeight: '100vh',
-          padding: '24px' 
-        }}>
+        <div className="error-boundary">
           <Result
             status="error"
-            title="Oops! Something went wrong"
-            subTitle={this.state.error?.message || 'An unexpected error occurred'}
+            title={t('common.error')}
+            subTitle={this.state.error?.message || t('errors.unexpected')}
             extra={
               <Button type="primary" onClick={this.handleReset}>
-                Reload Page
+                {t('errors.reload')}
               </Button>
             }
           />

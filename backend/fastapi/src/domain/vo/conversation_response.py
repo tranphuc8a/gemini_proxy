@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from src.domain.models.conversation_domain import ConversationDomain
 from src.domain.vo.message_response import MessageResponse
 
@@ -12,8 +12,7 @@ class ConversationResponse(BaseModel):
     messages: List[MessageResponse] = Field(default_factory=list)
     messages_count: int = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_domain(cls, domain_obj: ConversationDomain):

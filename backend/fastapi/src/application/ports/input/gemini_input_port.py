@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
 from src.domain.vo.message_request import MessageRequest
+from src.domain.vo.stream_event import StreamEvent
 
 class GeminiInputPort(ABC):
     """
@@ -13,7 +14,12 @@ class GeminiInputPort(ABC):
     @abstractmethod
     async def query(self, message_request: MessageRequest) -> str:
         pass
-    
+
     @abstractmethod
-    async def query_stream(self, message_request: MessageRequest) -> AsyncIterator[str]:
-        yield ""
+    async def query_stream(self, message_request: MessageRequest) -> AsyncIterator[StreamEvent]:
+        """Yield the answer as StreamEvent frames.
+
+        The sequence is zero or more DELTA frames followed by exactly one
+        terminal frame: DONE when the answer completed, ERROR when it did not.
+        """
+        yield StreamEvent.delta("")

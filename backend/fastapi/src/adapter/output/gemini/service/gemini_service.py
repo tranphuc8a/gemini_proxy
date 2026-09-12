@@ -16,7 +16,9 @@ class GeminiService(GeminiOutputPort):
         """Call the Gemini client and return the assistant text as a single string."""
         # Prepare prompt: convert history into contents list expected by the client
         contents = []
-        history.sort(key=lambda x: x.created_at)
+        # Tie-break on id: created_at is only second-resolution, and ids are
+        # time-ordered, so this keeps a same-second exchange in the order it happened.
+        history.sort(key=lambda x: (x.created_at, x.id))
         for m in history:
             role = m.role.value if hasattr(m.role, "value") else str(m.role)
             contents.append({"role": role, "parts": [{"text": m.content}]})
@@ -50,7 +52,9 @@ class GeminiService(GeminiOutputPort):
 
     async def stream_generate(self, model: str, history: List[MessageDomain]) -> AsyncIterator[str]:
         contents = []
-        history.sort(key=lambda x: x.created_at) 
+        # Tie-break on id: created_at is only second-resolution, and ids are
+        # time-ordered, so this keeps a same-second exchange in the order it happened.
+        history.sort(key=lambda x: (x.created_at, x.id)) 
         for m in history:
             role = m.role.value if hasattr(m.role, "value") else str(m.role)
             contents.append({"role": role, "parts": [{"text": m.content}]})

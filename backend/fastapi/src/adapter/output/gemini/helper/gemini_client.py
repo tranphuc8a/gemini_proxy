@@ -14,6 +14,27 @@ class GeminiClientError(RuntimeError):
     pass
 
 
+async def _read_error_body(exc: HTTPStatusError) -> str:
+    """Best-effort text of the response that carried an error status.
+
+    On a streamed request the body has not been fetched yet, so reading `.text`
+    straight away raises ResponseNotRead and buries the real upstream error — a
+    401, or a quota 429 — under a confusing one. aread() pulls it first.
+    """
+    resp = exc.response
+    if resp is None:
+        return ""
+    try:
+        return resp.text
+    except Exception:
+        pass
+    try:
+        await resp.aread()
+        return resp.text
+    except Exception:
+        return ""
+
+
 class GeminiClient:
     """Async HTTP client for calling Gemini-like LLM endpoints.
 
@@ -133,7 +154,7 @@ class GeminiClient:
         except RequestError as exc:
             raise GeminiClientError(f"Request error while calling Gemini API: {exc}") from exc
         except HTTPStatusError as exc:
-            body = exc.response.text if exc.response is not None else ""
+            body = await _read_error_body(exc)
             status = exc.response.status_code if exc.response is not None else "?"
             if status == 401:
                 # More actionable error message for auth failures when using API keys
@@ -234,7 +255,7 @@ class GeminiClient:
         except RequestError as exc:
             raise GeminiClientError(f"Request error while streaming from Gemini API: {exc}") from exc
         except HTTPStatusError as exc:
-            body = exc.response.text if exc.response is not None else ""
+            body = await _read_error_body(exc)
             status = exc.response.status_code if exc.response is not None else "?"
             if status == 401:
                 hint = (

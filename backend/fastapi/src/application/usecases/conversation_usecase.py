@@ -15,7 +15,7 @@ from src.application.exceptions.exceptions import NotFoundError
 
 class ConversationUseCase(ConversationInputPort):
     LATEST_MESSAGE_COUNT = 10
-    CONVERSATION_NEW_NAME = "New Conversation"
+    CONVERSATION_NEW_NAME = ConversationDomain.DEFAULT_NAME
 
     def __init__(self, conversation_repo: ConversationOutputPort, message_repo: MessageOutputPort):
         self.conversation_repo = conversation_repo

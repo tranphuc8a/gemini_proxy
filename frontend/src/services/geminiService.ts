@@ -1,5 +1,51 @@
-import { apiClient } from './apiClient';
-import type { MessageRequest, ApiResponse } from '../types';
+import { apiClient, BASE_URL } from './apiClient';
+import type { MessageRequest, ApiResponse, StreamCompletion, StreamFailure } from '../types';
+
+/** Callbacks a caller supplies to follow a streaming answer. */
+export interface StreamHandlers {
+  /** Next fragment of the answer. */
+  onChunk: (chunk: string) => void;
+  /** The answer finished. `completion` carries the ids it was persisted under. */
+  onComplete: (completion: StreamCompletion) => void;
+  /**
+   * The answer failed, or the request could not be made at all. `failure` is
+   * present only when the server reported it, and names the record the question
+   * was stored under.
+   */
+  onError: (error: Error, failure?: StreamFailure) => void;
+  /** The caller aborted the request; nothing further will arrive. */
+  onAbort?: () => void;
+}
+
+/**
+ * One frame of the SSE body.
+ *
+ * The server sends answer fragments as anonymous frames carrying a bare JSON
+ * string, and terminal outcomes as named `done` / `error` events carrying a JSON
+ * object.
+ */
+interface SseFrame {
+  event: string | null;
+  data: string;
+}
+
+const parseFrame = (raw: string): SseFrame | null => {
+  let event: string | null = null;
+  const dataLines: string[] = [];
+
+  for (const line of raw.split('\n')) {
+    // A line starting with ':' is a keepalive comment.
+    if (!line || line.startsWith(':')) continue;
+    if (line.startsWith('event:')) {
+      event = line.slice('event:'.length).trim();
+    } else if (line.startsWith('data:')) {
+      dataLines.push(line.slice('data:'.length).replace(/^ /, ''));
+    }
+  }
+
+  if (dataLines.length === 0) return null;
+  return { event, data: dataLines.join('\n') };
+};
 
 export const geminiService = {
   // Non-streaming query
@@ -8,24 +54,42 @@ export const geminiService = {
     return response.data.data;
   },
 
-  // Streaming query using SSE (Server-Sent Events)
+  /**
+   * Stream an answer over Server-Sent Events.
+   *
+   * Exactly one of `onComplete`, `onError` or `onAbort` runs. A stream that ends
+   * without a terminal frame is treated as an error rather than a success: the
+   * connection dropped mid-answer, and reporting it as complete is what used to
+   * leave an empty bubble with no explanation.
+   *
+   * Pass `signal` to cancel; the browser tears down the request and the server
+   * keeps whatever text had arrived.
+   */
   async queryStream(
     request: MessageRequest,
-    onChunk: (chunk: string) => void,
-    onComplete: () => void,
-    onError: (error: Error) => void
+    handlers: StreamHandlers,
+    signal?: AbortSignal
   ): Promise<void> {
+    const { onChunk, onComplete, onError, onAbort } = handlers;
+    let terminated = false;
+
     try {
-      const response = await fetch(`${apiClient.defaults.baseURL}/gemini/stream`, {
+      const response = await fetch(`${BASE_URL}/gemini/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(request),
+        signal,
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // An error before the stream opens still arrives as our JSON envelope.
+        const detail = await response
+          .json()
+          .then((body: { message?: string }) => body?.message)
+          .catch(() => undefined);
+        throw new Error(detail || `HTTP error! status: ${response.status}`);
       }
 
       const reader = response.body?.getReader();
@@ -37,33 +101,47 @@ export const geminiService = {
 
       let buffer = '';
 
-      while (true) {
+      for (;;) {
         const { done, value } = await reader.read();
-        
-        if (done) {
-          onComplete();
-          break;
-        }
+
+        if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        
-        // Split by SSE format: "data: {...}\n\n"
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const jsonStr = line.slice(6); // Remove "data: " prefix
-              const chunk = JSON.parse(jsonStr);
-              onChunk(chunk);
-            } catch (e) {
-              console.error('Failed to parse SSE data:', e);
-            }
+        // Frames are separated by a blank line; keep any partial tail.
+        const rawFrames = buffer.split('\n\n');
+        buffer = rawFrames.pop() || '';
+
+        for (const raw of rawFrames) {
+          const frame = parseFrame(raw);
+          if (!frame) continue;
+
+          if (frame.event === 'error') {
+            terminated = true;
+            const payload = JSON.parse(frame.data) as StreamFailure;
+            onError(new Error(payload.message || 'Streaming failed'), payload);
+            return;
           }
+
+          if (frame.event === 'done') {
+            terminated = true;
+            onComplete(JSON.parse(frame.data) as StreamCompletion);
+            return;
+          }
+
+          onChunk(JSON.parse(frame.data) as string);
         }
       }
+
+      if (!terminated) {
+        throw new Error('Connection closed before the answer finished');
+      }
     } catch (error) {
+      if (terminated) return;
+      if (signal?.aborted || (error as Error)?.name === 'AbortError') {
+        onAbort?.();
+        return;
+      }
       onError(error as Error);
     }
   },

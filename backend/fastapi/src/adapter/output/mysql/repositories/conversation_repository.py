@@ -11,7 +11,12 @@ class ConversationRepository(ConversationOutputPort, HealthCheckOutputPort):
     
     def __init__(self, db: AsyncSession):
         self.db = db
-    
+
+    @staticmethod
+    def _last_activity_expr():
+        """Timestamp a conversation was last touched, for ordering the list."""
+        return func.coalesce(ConversationEntity.updated_at, ConversationEntity.created_at)
+
     async def get_by_id(self, conversation_id: str) -> Optional[ConversationDomain]:
         ent = await self.db.get(ConversationEntity, conversation_id)
         return ent.to_domain() if ent is not None else None
@@ -26,7 +31,11 @@ class ConversationRepository(ConversationOutputPort, HealthCheckOutputPort):
         if order not in ("asc", "desc"):
             order = "desc"
 
-        order_col = ConversationEntity.created_at.asc() if order == "asc" else ConversationEntity.created_at.desc()
+        # Sort by last activity so a conversation you just replied to rises to the
+        # top of the sidebar. updated_at is null until a conversation is first
+        # touched, hence the coalesce onto created_at.
+        activity = self._last_activity_expr()
+        order_col = activity.asc() if order == "asc" else activity.desc()
         tie_order = ConversationEntity.id.asc() if order == "asc" else ConversationEntity.id.desc()
 
         stmt = select(ConversationEntity)
@@ -35,18 +44,19 @@ class ConversationRepository(ConversationOutputPort, HealthCheckOutputPort):
             # find anchor
             anchor = await self.db.get(ConversationEntity, after)
             if anchor:
+                anchor_activity = anchor.updated_at if anchor.updated_at is not None else anchor.created_at
                 if order == "desc":
                     stmt = stmt.where(
                         or_(
-                            ConversationEntity.created_at < anchor.created_at,
-                            and_(ConversationEntity.created_at == anchor.created_at, ConversationEntity.id < anchor.id),
+                            activity < anchor_activity,
+                            and_(activity == anchor_activity, ConversationEntity.id < anchor.id),
                         )
                     )
                 else:
                     stmt = stmt.where(
                         or_(
-                            ConversationEntity.created_at > anchor.created_at,
-                            and_(ConversationEntity.created_at == anchor.created_at, ConversationEntity.id > anchor.id),
+                            activity > anchor_activity,
+                            and_(activity == anchor_activity, ConversationEntity.id > anchor.id),
                         )
                     )
 
@@ -89,6 +99,7 @@ class ConversationRepository(ConversationOutputPort, HealthCheckOutputPort):
             return ent.to_domain()
         # update fields
         setattr(existing, "name", conversation.name)
+        setattr(existing, "updated_at", conversation.updated_at)
         await self.db.commit()
         await self.db.refresh(existing)
         return existing.to_domain()

@@ -1,25 +1,28 @@
 """Smart validators and sanitizers for domain inputs.
 
 Goals:
-- Allow diverse message content (markdown, code blocks, URLs, emoji) while
-  protecting against obvious XSS/JS execution and large abusive inputs.
-- Provide flexible length/token checks and lightweight sanitization without
-  adding heavy dependencies.
+- Store what the user actually typed. Message content is prose bound for an LLM,
+  so rewriting it here corrupts both the stored record and the prompt we send
+  upstream: `if (a < b)` must not become `if (a &lt; b)`.
+- Reject only what is genuinely invalid as text (control characters) or abusive
+  in size (length / token ceilings).
+- Escaping is the *renderer's* job, not the store's. The web client renders
+  message content as Markdown with raw HTML disabled, so untrusted angle
+  brackets are inert at the point they are displayed.
 """
 
 from __future__ import annotations
 
 import re
-import html
 from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 from src.domain.enums.enums import EModel, ERole, ESortOrder
 
+# Used when a caller names a model this enum does not know about yet.
+DEFAULT_MODEL = EModel.GEMINI_2_5_FLASH
 
-_SCRIPT_RE = re.compile(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", re.IGNORECASE | re.DOTALL)
-_ON_ATTR_RE = re.compile(r"on\w+\s*=", re.IGNORECASE)
-_JS_URI_RE = re.compile(r"javascript:\s*", re.IGNORECASE)
+
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f]")
 
 
@@ -62,6 +65,12 @@ def validate_role(value: str) -> ERole:
 
 
 def validate_model_name(value: str) -> EModel:
+    """Resolve a model name to an EModel member.
+
+    An unrecognised but well-formed name falls back to DEFAULT_MODEL rather than
+    failing, so a client asking for a model id newer than this enum still gets an
+    answer.
+    """
     try:
         return EModel.from_str(value)
     except ValueError:
@@ -69,7 +78,7 @@ def validate_model_name(value: str) -> EModel:
         s = validate_non_empty_string(value, "model")
         if _CONTROL_CHARS_RE.search(s):
             raise ValueError("Model name contains invalid control characters")
-        return EModel.GPT_4 if not s else EModel.from_str(s) if s.lower() in {m.value for m in EModel} else EModel.GPT_4
+        return DEFAULT_MODEL
 
 
 def validate_order(value: str) -> ESortOrder:
@@ -95,48 +104,20 @@ def validate_timestamp(value: int, field_name: str) -> int:
     return value
 
 
-def _basic_sql_like_check(s: str) -> bool:
-    # detect likely SQL with keywords and semicolon; but allow SQL-like text in codeblocks
-    upper = s.upper()
-    keywords = ["DROP ", "DELETE ", "INSERT ", "UPDATE ", "SELECT ", "ALTER ", "TRUNCATE "]
-    if ";" in s and any(k in upper for k in keywords):
-        return True
-    return False
-
-
 def sanitize_message_content(s: str) -> str:
-    """Lightweight sanitization that removes executable HTML/JS vectors but
-    preserves user content (markdown, code fences, URLs, emoji).
+    """Strip characters that are not legal text, and nothing else.
 
-    This is intentionally conservative — it's not a full HTML sanitizer like
-    `bleach`, but removes the most common attack vectors:
-    - <script>...</script>
-    - event handler attributes like onClick=
-    - javascript: URIs
-    - control characters and null bytes
+    Only C0/C1 control characters (minus tab, newline and carriage return) are
+    removed: they have no meaning in a chat message, break JSON transport and can
+    confuse the upstream model. Everything a user can actually type — angle
+    brackets, ampersands, quotes, code fences, URLs, emoji — is preserved
+    verbatim, because this value is both the stored record and the prompt sent to
+    Gemini. See the module docstring for why escaping does not belong here.
     """
     if s is None:
         return s
 
-    # Remove script blocks
-    s = _SCRIPT_RE.sub("", s)
-
-    # Remove event handler attributes (onXYZ=)
-    s = _ON_ATTR_RE.sub("", s)
-
-    # Neutralize javascript: URIs
-    s = _JS_URI_RE.sub("", s)
-
-    # Remove control characters (except newline, tab)
-    s = _CONTROL_CHARS_RE.sub("", s)
-
-    # Escape any remaining angle brackets so they render as text
-    s = html.escape(s)
-
-    # But allow common markdown code fences to remain readable (unescape backticks)
-    s = s.replace("&lt;`","<`").replace("`&gt;","`>")
-
-    return s
+    return _CONTROL_CHARS_RE.sub("", s)
 
 
 def estimate_tokens(text: str) -> int:
@@ -156,14 +137,14 @@ def validate_message_content(value: str,
                              field_name: str = "message",
                              min_length: int = 1,
                              max_length: int = 20000,
-                             max_tokens: int = 20000,
-                             allow_sql_snippets: bool = False) -> str:
-    """Validate and sanitize a user-supplied message.
+                             max_tokens: int = 20000) -> str:
+    """Validate a user-supplied message and return it unchanged apart from
+    trimming and control-character removal.
 
-    - Allows diverse content (markdown, URLs, code) but strips executable HTML/JS.
-    - Optionally rejects likely SQL that contains keywords + semicolon unless
-      `allow_sql_snippets=True`.
-    - Enforces length and token-based upper bounds.
+    Content is *not* rewritten: a question about SQL, HTML or JavaScript is a
+    legitimate thing to ask a chat model, and the previous keyword-based
+    rejection turned "how do I write SELECT ...; ?" into an error. Only length
+    and token ceilings can reject a message here.
     """
     s = validate_non_empty_string(value, field_name)
     s = s.strip()
@@ -177,10 +158,6 @@ def validate_message_content(value: str,
     if tokens > max_tokens:
         raise ValueError(f"{field_name} is too large: ~{tokens} tokens (max {max_tokens}).")
 
-    # SQL-like content: be permissive by default but allow opt-out
-    if not allow_sql_snippets and _basic_sql_like_check(value):
-        raise ValueError(f"{field_name} looks like SQL and is not allowed in this context.")
-
     return s
 
 
@@ -188,7 +165,6 @@ def validate_conversation_name(value: str, field_name: str = "conversation_name"
     s = validate_non_empty_string(value, field_name)
     s = s.strip()
     validate_string_length(s, field_name, min_length=1, max_length=200)
-    # sanitize title lightly
     return sanitize_message_content(s)
 
 
