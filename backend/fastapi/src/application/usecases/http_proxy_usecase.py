@@ -136,7 +136,7 @@ async def forward(request: ProxyRequest) -> ProxyResponse:
     if method not in ALLOWED_METHODS:
         raise BadRequestError(f"Method '{method}' không được hỗ trợ")
 
-    validate_target(request.url)
+    target_url = validate_target(request.url)
 
     headers = _clean_request_headers(request.headers)
     content = _decode_request_body(request)
@@ -157,7 +157,7 @@ async def forward(request: ProxyRequest) -> ProxyResponse:
         ) as client:
             upstream = await client.request(
                 method,
-                request.url,
+                target_url,
                 headers=headers or None,
                 content=content,
             )
@@ -188,6 +188,6 @@ async def forward(request: ProxyRequest) -> ProxyResponse:
         size_bytes=size_bytes,
         elapsed_ms=elapsed_ms,
         final_url=str(upstream.url),
-        redirected=str(upstream.url) != request.url,
+        redirected=str(upstream.url) != target_url,
         truncated=truncated,
     )
