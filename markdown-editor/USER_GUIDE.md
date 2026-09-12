@@ -1,87 +1,132 @@
 # Markdown Editor User Guide
 
-## Quick Start
+## Quick start
 
-1. Run `npm install` once.
-2. Start the app with `npm run dev`.
-3. Open the local URL shown by Vite.
-4. Click the lock button and enter the admin key when editing is required.
-
-Anonymous users can browse files and preview Markdown. Admin users can create, edit, rename, copy, move, and delete files.
-
-## The Main Workspace
-
-- **Editor**: Write Markdown in the text area.
-- **Preview**: See the rendered document.
-- **Both**: Show the editor and preview side by side.
-- **Divider**: Drag the bar between panes to change their widths.
-- **Hide files / Show files**: Collapse or reopen the file sidebar.
-- **Full screen**: Hide the top toolbar for a larger writing area.
-- **Exit full screen**: When fullscreen is active, click the green arrow button at the bottom-right. Press `Escape` also exits the usage guide; the green button is the direct fullscreen exit.
-- **?**: Open the in-app usage guide. Close it with `x`, click outside, or press `Escape`.
-
-## File Management
-
-1. Select a folder by clicking its name.
-2. Click `+` in the Files panel.
-3. Choose File or Folder, enter a name, and create it.
-4. The new item is created inside the selected folder.
-5. Hover a node to see rename, copy, and move actions.
-6. To copy or move, first select the destination folder, then click the action on the source node.
-
-The initial example file is stored in the `My Documents` folder. File data is saved to browser localStorage by default.
-
-## Markdown Features
-
-Supported syntax includes:
-
-- GitHub Flavored Markdown
-- Headings, lists, blockquotes, links, and images
-- Tables and task lists
-- Inline HTML
-- LaTeX math, for example `$E = mc^2$`
-- Mermaid diagrams in `mermaid` code blocks
-- Syntax-highlighted code blocks, for example:
-
-````markdown
-```typescript
-const message = 'Hello Markdown'
+```powershell
+cd markdown-editor
+npm install
+npm run dev
 ```
-````
 
-Click **Copy** on a highlighted code block to copy its source.
+Open the URL Vite prints (usually <http://localhost:5173>).
 
-## Editing Tools
+Everyone can read, search, and export. Editing is gated: click **View only** in the
+top-right, enter the admin key (`markdown-editor-admin-2024` by default) and the chip
+turns into **Admin**. The unlock lasts for the browser session only — it is never
+written to storage, so a reload returns you to view-only.
 
-- `Ctrl+Z` or `Cmd+Z`: Undo
-- `Ctrl+Y` or `Ctrl+Shift+Z`: Redo
-- `Tab`: Insert two spaces
-- Scroll either pane to synchronize positions.
-- Double-click a position in Preview to focus the corresponding editor area.
+## The workspace
 
-## Import and Export
+| Area | What it does |
+| --- | --- |
+| Header | File menu, backend sync, view mode, theme, full screen, role |
+| Sidebar | **Files** tree and **Outline** of the current document |
+| Editor | Markdown source, with a formatting toolbar and line numbers |
+| Preview | Live GitHub-flavoured rendering |
+| Status bar | File name, save state, word/line counts, reading time, zoom |
 
-- **Import** accepts `.md` and `.markdown` files and loads the text into the active editor.
-- **Export** downloads the current Markdown as `document.md`.
-- **PDF**, **PNG**, and **JPG** export the rendered Preview. For best results, switch to Preview mode before exporting a long document.
+- Switch panes with the **Editor / Both / Preview** control, or <kbd>Ctrl</kbd>+<kbd>\\</kbd>.
+- Drag the divider between the panes to resize; double-click it to snap back to 50/50.
+- Drag the sidebar's right edge to resize it; double-click to reset.
+- <kbd>F11</kbd> hides the header for distraction-free writing; <kbd>Esc</kbd> or the
+  status-bar button brings it back.
 
-## Backend Storage
+## Command palette
 
-The toolbar supports optional FastAPI synchronization:
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> opens a searchable list of every command,
+every file, and every heading in the current document. Typing is fuzzy, so `tsb` finds
+*Toggle sidebar*. <kbd>Ctrl</kbd>+<kbd>K</kbd> opens it too, except while the editor has
+focus — there it inserts a link instead.
 
-1. Start the backend from `backend/fastapi`.
-2. Enable `BE On`.
-3. Choose `BE JSON` or `BE MySQL`.
-4. Use `Load` or `Save`.
+## Files
 
-Configure the backend with `MARKDOWN_STORAGE_BACKEND=json` or `mysql`. JSON uses `MARKDOWN_JSON_FILE`; MySQL uses the existing database settings. Backend saves require the admin key.
+- Click a folder to select it; new files and folders are created inside the selection.
+- **Drag and drop** to reorganise. Drop a node on the empty space below the tree to move
+  it to the top level. Dropping a folder into its own subtree is refused.
+- Hover a row for rename, duplicate and delete. <kbd>F2</kbd> renames, <kbd>Del</kbd>
+  deletes, arrow keys expand and collapse.
+- Duplicate names are resolved automatically: a second `notes.md` becomes `notes (2).md`.
+- The filter box at the top narrows the tree and keeps parent folders visible.
 
-## Theme and Access
+## Writing
 
-- Click the moon/sun button to switch light and dark themes.
-- Admin mode enables editing and file operations.
-- Click Logout to return to view-only mode.
+The formatting toolbar covers headings, bold, italic, strikethrough, inline code, code
+blocks, lists, task lists, quotes, links, images, tables and horizontal rules. Every
+button has a keyboard equivalent — press <kbd>Ctrl</kbd>+<kbd>/</kbd> for the full list.
 
-## Troubleshooting Fullscreen
+Behaviours worth knowing:
 
-If the top toolbar is hidden, this is expected. Use the green arrow button in the bottom-right corner to exit fullscreen. If the button is not visible, refresh the page; the saved application state will restore the workspace and the floating `?` help button remains available.
+- Formatting **toggles**: pressing <kbd>Ctrl</kbd>+<kbd>B</kbd> on already-bold text removes it.
+- <kbd>Enter</kbd> continues the list or quote you are in, renumbering ordered lists.
+  Pressing it on an empty item outdents, then leaves the list.
+- <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> indents and outdents every selected line.
+- Typing a bracket or quote with text selected **wraps** the selection instead of replacing it.
+- Pasting a URL over selected text turns it into a link. Pasting or dropping an image
+  embeds it. Dropping a `.md` file inserts its text.
+- <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates lines, <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>
+  moves them, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> deletes them.
+- Undo groups a burst of typing into one step rather than one step per keystroke.
+
+## Find and replace
+
+<kbd>Ctrl</kbd>+<kbd>F</kbd> finds, <kbd>Ctrl</kbd>+<kbd>H</kbd> adds replace. Toggle
+**Aa** for case sensitivity, **ab** for whole words and **.\*** for regular expressions.
+<kbd>Enter</kbd> steps forward, <kbd>Shift</kbd>+<kbd>Enter</kbd> back. Anonymous
+visitors can search; replacing needs admin.
+
+## Preview
+
+Renders GitHub-flavoured Markdown: tables, task lists, footnotes, strikethrough, KaTeX
+maths (`$…$` and `$$…$$`), Mermaid diagrams in a ` ```mermaid ` fence, syntax-highlighted
+code, and inline HTML (sanitised, so a shared document cannot inject scripts).
+
+- **Scroll sync** keeps the panes on the same *source line*, not the same percentage, so
+  they stay together across tall tables and diagrams. Toggle it with the link button.
+- **Double-click** a block in the preview to put the caret on the line that produced it.
+  Double-click in the editor to scroll the preview to the matching spot.
+- **Tick a checkbox** in the preview and the `- [ ]` in the source flips with it.
+- Hover a heading for its anchor link; hover a code block for a **Copy** button.
+- A malformed diagram shows the parser's message and its source instead of failing silently.
+
+## Import and export
+
+The **File** menu handles both:
+
+- **Import** reads `.md`, `.markdown` and `.txt` into a new file in the selected folder.
+- **Export Markdown / HTML / PDF / PNG / JPG** — exports are named after the current file.
+  The HTML export is self-contained, styles included, and opens offline.
+- **Print** (<kbd>Ctrl</kbd>+<kbd>P</kbd>) uses a dedicated print stylesheet that drops the
+  chrome and avoids breaking code blocks and tables across pages. For text-heavy documents
+  it gives a better PDF than the image-based export.
+
+## Backend storage
+
+Off by default; everything is kept in this browser's local storage and the status bar
+shows the last successful save. Enable **Sync → Backend sync** to use the FastAPI API
+instead:
+
+- **Load from backend** replaces the tree with the server's copy. Anyone can load.
+- **Save to backend** pushes the tree up. This needs admin, because the API requires the
+  `X-Admin-Key` header.
+- Choose **JSON file** or **MySQL** to match `MARKDOWN_STORAGE_BACKEND` on the server.
+- Failures are reported in plain language: unreachable API, rejected key, or timeout.
+
+Point the frontend elsewhere with `VITE_MARKDOWN_API_URL`, and change the admin key with
+`VITE_MARKDOWN_ADMIN_KEY` (it must match the server's `MARKDOWN_ADMIN_KEY`).
+
+## Appearance
+
+The theme follows your system by default. The moon/sun button pins light or dark;
+*Theme: follow the system* in the command palette hands control back. Editor font size is
+adjustable from the status bar, and line numbers and word wrap each have a toggle in the
+editor's header.
+
+## Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| Stuck in full screen | <kbd>Esc</kbd>, or **Exit full screen** in the status bar |
+| Status bar says *Not saved* | Browser storage is full or blocked (private windows block it). Export your work |
+| Nothing to preview | The file is empty, or the view mode is set to *Editor* |
+| Copy button says *Blocked* | The clipboard needs a secure context; the text is selected for manual copying |
+| Backend buttons greyed out | Enable **Sync → Backend sync** first; saving also needs admin |

@@ -1,0 +1,151 @@
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pane-header-actions .btn-icon {
+  height: 22px;
+  width: 22px;
+}
+
+/* --------------------------------------------------------------------------
+   Editor body: gutter + textarea + hidden measuring mirror.
+   The three share identical typography so their line boxes line up.
+   -------------------------------------------------------------------------- */
+
+.editor-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+
+  --editor-line-height: 1.65;
+  --editor-padding-y: 14px;
+  --editor-padding-x: 16px;
+}
+
+.editor-input,
+.mirror-line {
+  font-family: var(--font-mono);
+  font-size: var(--editor-font-size, 14px);
+  line-height: var(--editor-line-height);
+  letter-spacing: 0;
+  tab-size: 2;
+}
+
+/* Textarea and mirror share one positioning context so their boxes match. */
+.editor-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.editor-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--editor-padding-y) var(--editor-padding-x);
+  color: var(--text);
+  background-color: var(--bg);
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.editor-body.no-wrap .editor-input,
+.editor-body.no-wrap .mirror-line {
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.editor-input::placeholder {
+  color: var(--text-faint);
+}
+
+.editor-input:read-only {
+  background-color: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+/* The mirror is laid over the textarea at the same width so its wrapped line
+   boxes match exactly; it never paints and never takes pointer events. */
+.editor-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Width is set from the textarea's clientWidth in JS. */
+  padding: var(--editor-padding-y) var(--editor-padding-x);
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+  height: 0;
+}
+
+.mirror-line {
+  min-height: calc(var(--editor-font-size, 14px) * var(--editor-line-height));
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* --------------------------------------------------------------------------
+   Gutter
+   -------------------------------------------------------------------------- */
+
+.editor-gutter {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 44px;
+  padding: var(--editor-padding-y) 8px var(--editor-padding-y) 10px;
+  overflow: hidden;
+  text-align: right;
+  background-color: var(--bg-subtle);
+  border-right: 1px solid var(--border-subtle);
+  user-select: none;
+}
+
+.gutter-inner {
+  position: relative;
+}
+
+.gutter-line {
+  position: absolute;
+  right: 0;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: calc(var(--editor-font-size, 14px) - 1px);
+  /* Matches the text's line box in pixels rather than re-deriving the ratio
+     from the smaller font, which would drift a little on every line. */
+  line-height: calc(var(--editor-font-size, 14px) * var(--editor-line-height));
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Before the first measurement the lines stack normally so the gutter is
+   never blank. */
+.gutter-line:not([style]) {
+  position: static;
+}
+
+.gutter-line.is-current {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .editor-gutter {
+    display: none;
+  }
+
+  .pane-header-actions .pane-meta {
+    display: none;
+  }
+}
