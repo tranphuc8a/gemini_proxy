@@ -1,4 +1,5 @@
 import { apiClient, BASE_URL } from './apiClient';
+import i18n from '../i18n';
 import type { MessageRequest, ApiResponse, StreamCompletion, StreamFailure } from '../types';
 
 /** Callbacks a caller supplies to follow a streaming answer. */
@@ -47,6 +48,12 @@ const parseFrame = (raw: string): SseFrame | null => {
   return { event, data: dataLines.join('\n') };
 };
 
+/** How a stream ended, once a terminal frame has been seen. */
+type StreamOutcome =
+  | { kind: 'done'; completion: StreamCompletion }
+  | { kind: 'error'; error: Error; failure?: StreamFailure }
+  | null;
+
 export const geminiService = {
   // Non-streaming query
   async query(request: MessageRequest): Promise<string> {
@@ -57,10 +64,13 @@ export const geminiService = {
   /**
    * Stream an answer over Server-Sent Events.
    *
-   * Exactly one of `onComplete`, `onError` or `onAbort` runs. A stream that ends
-   * without a terminal frame is treated as an error rather than a success: the
-   * connection dropped mid-answer, and reporting it as complete is what used to
-   * leave an empty bubble with no explanation.
+   * Exactly one of `onComplete`, `onError` or `onAbort` runs.
+   *
+   * The server ends a stream with a terminal `done` or `error` frame, which is
+   * what lets a failed answer be told apart from a short one. A server older
+   * than that protocol just closes the connection instead, so a stream that
+   * delivered an answer and then ended is completed rather than failed — only a
+   * stream that ended having delivered nothing is reported as an error.
    *
    * Pass `signal` to cancel; the browser tears down the request and the server
    * keeps whatever text had arrived.
@@ -100,42 +110,85 @@ export const geminiService = {
       }
 
       let buffer = '';
+      let outcome: StreamOutcome = null;
+      // Mutated from inside `consume`; a plain `let` assigned only in a closure
+      // is not something TypeScript can narrow at the read sites below.
+      const seen = { content: false };
 
-      for (;;) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Frames are separated by a blank line; keep any partial tail.
-        const rawFrames = buffer.split('\n\n');
-        buffer = rawFrames.pop() || '';
-
-        for (const raw of rawFrames) {
+      /** Handle complete frames, stopping at the first terminal one. */
+      const consume = (frames: string[]): StreamOutcome => {
+        for (const raw of frames) {
           const frame = parseFrame(raw);
           if (!frame) continue;
 
           if (frame.event === 'error') {
-            terminated = true;
             const payload = JSON.parse(frame.data) as StreamFailure;
-            onError(new Error(payload.message || 'Streaming failed'), payload);
-            return;
+            return {
+              kind: 'error',
+              error: new Error(payload.message || 'Streaming failed'),
+              failure: payload,
+            };
           }
 
           if (frame.event === 'done') {
-            terminated = true;
-            onComplete(JSON.parse(frame.data) as StreamCompletion);
-            return;
+            return { kind: 'done', completion: JSON.parse(frame.data) as StreamCompletion };
           }
 
+          seen.content = true;
           onChunk(JSON.parse(frame.data) as string);
         }
+        return null;
+      };
+
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            // Flush the decoder (a multi-byte character can straddle the last
+            // chunk) and process what is left: the final frame may arrive
+            // without its blank-line terminator.
+            buffer += decoder.decode();
+            if (buffer.trim()) outcome = consume([buffer]);
+            buffer = '';
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Frames are separated by a blank line; keep any partial tail.
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() ?? '';
+          outcome = consume(frames);
+
+          if (outcome) break;
+        }
+      } finally {
+        // Release the connection whether we finished, failed or stopped early.
+        reader.cancel().catch(() => undefined);
       }
 
-      if (!terminated) {
-        throw new Error('Connection closed before the answer finished');
+      if (outcome?.kind === 'error') {
+        terminated = true;
+        onError(outcome.error, outcome.failure);
+        return;
       }
+
+      if (outcome?.kind === 'done') {
+        terminated = true;
+        onComplete(outcome.completion);
+        return;
+      }
+
+      if (seen.content) {
+        // A server that predates the terminal-frame protocol ends exactly here:
+        // it delivered an answer and then simply closed the connection.
+        terminated = true;
+        onComplete({});
+        return;
+      }
+
+      throw new Error(i18n.t('chat.streamIncomplete'));
     } catch (error) {
       if (terminated) return;
       if (signal?.aborted || (error as Error)?.name === 'AbortError') {

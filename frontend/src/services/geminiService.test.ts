@@ -111,16 +111,62 @@ describe('queryStream', () => {
     expect(probe.error?.message).toBe('Gemini API returned HTTP 429');
   });
 
-  it('treats a stream that just stops as a failure, not a success', async () => {
-    // Regression: a connection dropping mid-answer used to fire onComplete,
-    // leaving a truncated reply that looked finished.
-    mockFetch(streamingResponse(['data: "half an ans"\n\n']));
+  it('completes a stream that delivered an answer without a terminal frame', async () => {
+    // A server older than the done/error protocol ends exactly this way.
+    // Failing here made the app unusable against a backend not yet redeployed.
+    mockFetch(streamingResponse(['data: "a complete answer"\n\n']));
 
     const probe = makeHandlers();
     await geminiService.queryStream(REQUEST, probe.handlers);
 
-    expect(probe.chunks).toEqual(['half an ans']);
+    expect(probe.chunks).toEqual(['a complete answer']);
+    expect(probe.calls).toEqual(['complete']);
+    // No ids: the old protocol has no way to report them.
+    expect(probe.completion).toEqual({});
+  });
+
+  it('fails a stream that ended having delivered nothing', async () => {
+    mockFetch(streamingResponse([]));
+
+    const probe = makeHandlers();
+    await geminiService.queryStream(REQUEST, probe.handlers);
+
+    expect(probe.chunks).toEqual([]);
     expect(probe.calls).toEqual(['error']);
+  });
+
+  it('reads a final frame that arrives without its blank-line terminator', async () => {
+    // The body can end right after the frame, with no trailing newlines.
+    mockFetch(
+      streamingResponse(['data: "text"\n\n', 'event: done\ndata: {"message_id":"m1"}'])
+    );
+
+    const probe = makeHandlers();
+    await geminiService.queryStream(REQUEST, probe.handlers);
+
+    expect(probe.chunks).toEqual(['text']);
+    expect(probe.calls).toEqual(['complete']);
+    expect(probe.completion).toEqual({ message_id: 'm1' });
+  });
+
+  it('reads a delta split across a multi-byte character boundary', async () => {
+    // The two-byte à of 'chào' is cut between two network chunks.
+    const encoded = new TextEncoder().encode('data: "chào"\n\nevent: done\ndata: {}\n\n');
+    const cut = encoded.indexOf(0xc3) + 1;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoded.slice(0, cut));
+        controller.enqueue(encoded.slice(cut));
+        controller.close();
+      },
+    });
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => new Response(body, { status: 200 })));
+
+    const probe = makeHandlers();
+    await geminiService.queryStream(REQUEST, probe.handlers);
+
+    expect(probe.chunks).toEqual(['chào']);
+    expect(probe.calls).toEqual(['complete']);
   });
 
   it('surfaces the backend message when the request fails before streaming', async () => {
