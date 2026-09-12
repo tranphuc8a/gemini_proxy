@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 from fastapi import Body
 
 from src.domain.models.message_domain import MessageDomain
@@ -10,14 +12,17 @@ class MessageRequest(BaseModel):
     conversation_id: str
     content: str
     model: str
+    # Set only when re-asking a question the server already stored — the id comes
+    # from a previous error frame, so the retry updates that record rather than
+    # filing the same question twice.
+    message_id: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     def to_domain(self) -> tuple[MessageDomain, str]:
         return (
             MessageDomain(
-                id=generate_unique_id("msg"),
+                id=self.message_id or generate_unique_id("msg"),
                 conversation_id=self.conversation_id,
                 role=ERole.USER,
                 content=self.content,
@@ -31,9 +36,11 @@ class MessageRequest(BaseModel):
         conversation_id: str = Body(..., description="ID cuộc chuyện (không rỗng)", min_length=1),
         content: str = Body(..., description="Nội dung tin nhắn (1-2000 ký tự)", min_length=1, max_length=2000),
         model: str = Body(..., description="Tên mô hình (ví dụ: 'gemini-2.5-pro')", min_length=1),
+        message_id: Optional[str] = Body(None, description="ID tin nhắn đã lưu, chỉ dùng khi gửi lại"),
         ) -> "MessageRequest":
         return MessageRequest(
             conversation_id=conversation_id,
             content=content,
             model=model,
+            message_id=message_id,
         )

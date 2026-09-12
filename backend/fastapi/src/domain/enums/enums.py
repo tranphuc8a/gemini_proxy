@@ -57,3 +57,14 @@ class EModel(str, Enum):
     def from_str(cls, value: Any) -> "EModel":
         return cast_enum(cls, value)
 
+
+class EStreamEvent(str, Enum):
+    """Frame types on the streaming-answer channel."""
+
+    DELTA = "delta"
+    DONE = "done"
+    ERROR = "error"
+
+    @classmethod
+    def from_str(cls, value: Any) -> "EStreamEvent":
+        return cast_enum(cls, value)

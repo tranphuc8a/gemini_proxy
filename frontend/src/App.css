@@ -1,8 +1,17 @@
 /* Custom App Styles for Gemini Chat */
 
-/* Smooth transitions */
-* {
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* Smooth theme transitions.
+   Scoped to the chrome rather than `*`: a universal transition also animates
+   every message bubble while an answer streams in, which reads as lag. */
+.app-header,
+.app-sider,
+.chat-header,
+.chat-input-area,
+.ant-menu-item,
+.ant-btn,
+.ant-input,
+.ant-select-selector {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Custom scrollbar */
@@ -113,16 +122,134 @@
 .app-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: none;
+}
+
+/* The header sits on a saturated gradient in both themes, so its controls are
+   always light — inheriting the theme's text colour makes them vanish. */
+.app-header .app-header-btn,
+.app-header .app-header-title {
+  color: #fff !important;
+}
+
+.app-header .app-header-btn:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.app-header-title {
+  font-size: 18px;
+  white-space: nowrap;
 }
 
 .dark .app-header {
   background: linear-gradient(135deg, #2d3561 0%, #3e2d5c 100%) !important;
 }
 
-/* Chat Area */
+/* ---------------------------------------------------------------- Layout */
+
+.app-sider {
+  overflow: auto;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  left: 0;
+}
+
+.sidebar-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.sidebar-status {
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.sidebar-load-more {
+  padding: 16px;
+}
+
+/* -------------------------------------------------------- Conversation row */
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.conversation-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.conversation-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Secondary line: timestamp and message count. */
+.conversation-item-meta {
+  font-size: 11px;
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Antd sizes menu items for a single line of text; these carry two. */
+.app-sider .ant-menu-item,
+.sidebar-drawer .ant-menu-item {
+  height: auto !important;
+  line-height: 1.3 !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* --------------------------------------------------------------- Chat area */
+
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  /* Fill what is left under the 64px header without overflowing the viewport. */
+  height: calc(100vh - 64px);
+  position: relative;
+  min-width: 0;
+}
+
+.chat-empty-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
 .chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
   background: #ffffff;
   border-bottom: 1px solid #e8e8e8;
+  flex-wrap: wrap;
 }
 
 .dark .chat-header {
@@ -130,8 +257,119 @@
   border-bottom: 1px solid #3a3a3a;
 }
 
+/* Let the title shrink so the model picker and export button stay reachable. */
+.chat-header-title {
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+.chat-model-select {
+  width: 200px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scroll-behavior: smooth;
+}
+
+.chat-list-status {
+  text-align: center;
+  padding: 12px;
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.chat-list-status-large {
+  padding: 48px;
+}
+
+.chat-row {
+  display: flex;
+  padding: 8px 0;
+}
+
+.chat-row-user {
+  justify-content: flex-end;
+}
+
+.chat-row-assistant {
+  justify-content: flex-start;
+}
+
+.chat-row > div {
+  max-width: min(75ch, 85%);
+  min-width: 0;
+}
+
+.chat-message-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chat-message-author {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.chat-message-time {
+  font-size: 11px;
+  opacity: 0.65;
+  white-space: nowrap;
+}
+
+.chat-message-body {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.chat-message-foot {
+  display: flex;
+  margin-top: 6px;
+}
+
+.chat-row-user .chat-message-foot {
+  justify-content: flex-end;
+}
+
+.chat-message-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #a8071a;
+  background: rgba(255, 77, 79, 0.12);
+  border: 1px solid rgba(255, 77, 79, 0.35);
+  font-size: 13px;
+}
+
+.dark .chat-message-error {
+  color: #ffa39e;
+}
+
+/* Floating control that appears once the user scrolls away from the newest
+   message, so they can get back without dragging. */
+.chat-jump-latest {
+  position: absolute;
+  right: 28px;
+  bottom: 140px;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
 .chat-input-area {
-  padding: 16px 24px;
+  padding: 12px 24px 16px;
   background: #fafafa;
   border-top: 1px solid #e8e8e8;
 }
@@ -141,7 +379,16 @@
   border-top: 1px solid #3a3a3a;
 }
 
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
 .chat-input {
+  flex: 1;
+  resize: none;
+  font-size: 15px;
   background: #ffffff !important;
 }
 
@@ -150,38 +397,63 @@
   color: #ffffff !important;
 }
 
-/* Message bubbles */
+.chat-send-btn {
+  height: auto;
+  min-height: 54px;
+  min-width: 110px;
+}
+
+.chat-input-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------ Empty states */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  max-width: 480px;
+}
+
+.empty-state-icon {
+  font-size: 44px;
+  color: #1890ff;
+  margin-bottom: 16px;
+}
+
+.empty-state-text {
+  margin-bottom: 24px !important;
+}
+
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* ---------------------------------------------------------- Message bubbles */
+
 .chat-message-user {
   background: linear-gradient(135deg, #1890ff 0%, #096dd9 50%, #0050b3 100%);
+  color: #fff;
   border-radius: 16px;
   padding: 14px 18px;
   box-shadow: 0 2px 12px rgba(24, 144, 255, 0.25);
   animation: slideInRight 0.3s ease;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
 }
 
-.chat-message-user::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.chat-message-user:hover {
-  box-shadow: 0 4px 20px rgba(24, 144, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  transform: translateY(-1px);
-}
-
-.chat-message-user:hover::before {
-  opacity: 1;
+.chat-message-user .chat-message-time,
+.chat-message-user .message-copy-btn,
+.chat-message-user .message-copy-btn-bottom {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .chat-message-assistant {
@@ -191,13 +463,6 @@
   padding: 14px 18px;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
   animation: slideInLeft 0.3s ease;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.chat-message-assistant:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-  border-color: #d0d7de;
-  transform: translateY(-1px);
 }
 
 .dark .chat-message-assistant {
@@ -206,54 +471,30 @@
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
 }
 
-.dark .chat-message-assistant:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
-  border-color: #4a4a4a;
-  transform: translateY(-1px);
-}
-
-/* Message copy button (top right) */
+/* Copy buttons reveal on hover, but stay permanently visible for keyboard and
+   touch users, who have no hover to trigger them with. */
 .message-copy-btn {
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
 .chat-message-user:hover .message-copy-btn,
-.chat-message-assistant:hover .message-copy-btn {
+.chat-message-assistant:hover .message-copy-btn,
+.message-copy-btn:focus-visible {
   opacity: 1;
 }
 
-.message-copy-btn:hover {
-  color: #1677ff !important;
+@media (hover: none) {
+  .message-copy-btn {
+    opacity: 1;
+  }
 }
 
-.chat-message-user .message-copy-btn:hover {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.2) !important;
-}
-
-/* Message copy button (bottom) */
 .message-copy-btn-bottom {
   border-radius: 6px;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-}
-
-.message-copy-btn-bottom:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
-  color: #1890ff !important;
-}
-
-.chat-message-user .message-copy-btn-bottom:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  color: #ffffff !important;
-}
-
-.dark .message-copy-btn-bottom:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  font-size: 12px;
+  height: 24px;
+  padding: 0 8px;
 }
 
 /* Animations */
@@ -398,16 +639,82 @@
   background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
 }
 
-/* Responsive adjustments */
+/* --------------------------------------------------------------- Responsive */
+
 @media (max-width: 768px) {
-  .ant-btn {
-    font-size: 12px;
-    padding: 4px 12px;
+  .app-header {
+    padding: 0 12px;
   }
-  
+
+  .app-header-title {
+    font-size: 16px;
+  }
+
+  .chat-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  /* The model picker and export button need the full width once the title has
+     wrapped, otherwise the select is squeezed to a few characters. */
+  .chat-header .ant-space {
+    width: 100%;
+  }
+
+  .chat-model-select {
+    width: 100%;
+    min-width: 150px;
+    flex: 1;
+  }
+
+  .chat-messages {
+    padding: 12px;
+  }
+
+  /* A phone has no room for a gutter beside the bubble. */
+  .chat-row > div {
+    max-width: 92%;
+  }
+
+  .chat-input-area {
+    padding: 8px 12px 12px;
+  }
+
+  /* Drop the button label; the icon alone is unambiguous at this width. */
+  .chat-send-btn {
+    min-width: 0;
+  }
+
+  .chat-send-btn > span:not(.anticon) {
+    display: none;
+  }
+
+  .chat-jump-latest {
+    right: 16px;
+    bottom: 120px;
+  }
+}
+
+/* Respect a reduced-motion preference: the entry animations and smooth
+   scrolling are decoration, and can trigger discomfort. */
+@media (prefers-reduced-motion: reduce) {
   .chat-message-user,
-  .chat-message-assistant {
-    max-width: 85%;
+  .chat-message-assistant,
+  .ant-list-item,
+  .ant-empty {
+    animation: none !important;
+  }
+
+  .chat-messages {
+    scroll-behavior: auto;
+  }
+
+  .ant-btn:hover {
+    transform: none;
+  }
+
+  .ant-menu-item:hover {
+    transform: none;
   }
 }
 
@@ -775,6 +1082,29 @@
 
 .dark .mermaid-diagram {
   background-color: #161b22;
+}
+
+/* A diagram that will not parse still shows its source, which is more useful
+   than a bare error line. */
+.mermaid-diagram-error {
+  border: 1px solid rgba(255, 77, 79, 0.4);
+}
+
+.mermaid-error-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cf1322;
+  margin-bottom: 8px;
+}
+
+.dark .mermaid-error-title {
+  color: #ffa39e;
+}
+
+.mermaid-diagram-error pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 12px;
 }
 
 /* Chat message user specific markdown overrides */

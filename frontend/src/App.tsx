@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Layout, ConfigProvider, theme as antdTheme } from 'antd';
+import { Layout, ConfigProvider, theme as antdTheme, App as AntdApp } from 'antd';
 import { ToastContainer } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
@@ -14,21 +15,27 @@ import './i18n';
 const { defaultAlgorithm, darkAlgorithm } = antdTheme;
 
 function App() {
-  const { theme, sidebarCollapsed, toggleSidebar, setSidebarCollapsed } = useAppStore();
-  
+  const { theme, language, sidebarCollapsed, toggleSidebar, setSidebarCollapsed } = useAppStore();
+  const { i18n } = useTranslation();
+
   // Load conversations on mount
   useLoadConversations();
 
-  // Apply theme to body
+  // Apply theme to the document. The class drives the CSS in App.css; the
+  // color-scheme property gets native widgets and scrollbars to match.
   useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.style.colorScheme = theme;
     document.body.style.backgroundColor = theme === 'dark' ? '#141414' : '#f0f2f5';
-    // Add/remove dark class for CSS styling
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
   }, [theme]);
+
+  // Keep i18n and the document language in step with the stored preference,
+  // including when it is restored from a previous session.
+  useEffect(() => {
+    if (i18n.language !== language) i18n.changeLanguage(language);
+    document.documentElement.lang = language;
+  }, [i18n, language]);
 
   return (
     <ErrorBoundary>
@@ -37,28 +44,31 @@ function App() {
           algorithm: theme === 'dark' ? darkAlgorithm : defaultAlgorithm,
           token: {
             colorPrimary: '#1890ff',
+            borderRadius: 8,
           },
         }}
       >
-        <Layout style={{ minHeight: '100vh' }}>
-          <Sidebar collapsed={sidebarCollapsed} onCollapse={setSidebarCollapsed} />
-          <Layout>
-            <AppHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
-            <ChatArea />
+        <AntdApp>
+          <Layout style={{ minHeight: '100vh' }}>
+            <Sidebar collapsed={sidebarCollapsed} onCollapse={setSidebarCollapsed} />
+            <Layout>
+              <AppHeader sidebarCollapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
+              <ChatArea />
+            </Layout>
           </Layout>
-        </Layout>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme={theme === 'dark' ? 'dark' : 'light'}
-        />
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme={theme === 'dark' ? 'dark' : 'light'}
+          />
+        </AntdApp>
       </ConfigProvider>
     </ErrorBoundary>
   );

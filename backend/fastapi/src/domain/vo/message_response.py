@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from src.domain.models.message_domain import MessageDomain
 from src.domain.enums.enums import ERole
@@ -11,8 +11,7 @@ class MessageResponse(BaseModel):
     content: str
     created_at: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_domain(cls, domain_obj: MessageDomain):

@@ -5,6 +5,7 @@ from src.application.ports.output.health_check_output_port import HealthCheckOut
 from src.adapter.output.mysql.entities import MessageEntity
 from src.domain.models.message_domain import MessageDomain
 from src.application.ports.output.message_output_port import MessageOutputPort
+from src.application.exceptions.exceptions import NotFoundError
 
 
 class MessageRepository(MessageOutputPort, HealthCheckOutputPort):
@@ -129,7 +130,9 @@ class MessageRepository(MessageOutputPort, HealthCheckOutputPort):
     async def get_by_id(self, message_id: str) -> MessageDomain:
         ent = await self.db.get(MessageEntity, message_id)
         if ent is None:
-            raise ValueError(f"Message not found: {message_id}")
+            # NotFoundError, not ValueError: a missing row is a 404, whereas a
+            # ValueError now means the caller sent something invalid (400).
+            raise NotFoundError(f"Message not found: {message_id}")
         return ent.to_domain()
 
     async def update(self, message: MessageDomain) -> MessageDomain:

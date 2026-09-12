@@ -1,5 +1,5 @@
-// Add this to browser console if you encounter issues:
-// localStorage.clear(); sessionStorage.clear(); location.reload();
+// Escape hatch for a corrupted persisted store. From the browser console:
+//   clearStorage()
 
 export const clearBrowserStorage = () => {
   try {
@@ -12,7 +12,13 @@ export const clearBrowserStorage = () => {
   }
 };
 
+declare global {
+  interface Window {
+    clearStorage: typeof clearBrowserStorage;
+  }
+}
+
 // Expose to window for easy console access
 if (typeof window !== 'undefined') {
-  (window as any).clearStorage = clearBrowserStorage;
+  window.clearStorage = clearBrowserStorage;
 }

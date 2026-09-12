@@ -18,7 +18,7 @@ async def list_messages(
     conversation_id: Optional[str] = Query(None, description="Filter by conversation id"),
     after: Optional[str] = Query(None),
     limit: int = Query(20, gt=0),
-    order: str = Query("desc", regex="^(asc|desc)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
     message_repo: MessageOutputPort = Depends(ServiceFactory.get_message_output_port),
 ):
     """List messages. If `conversation_id` is provided, returns messages for that conversation (cursor pagination)."""
@@ -78,7 +78,7 @@ async def get_messages_by_conversation(
     conversation_id: str,
     after: Optional[str] = Query(None),
     limit: int = Query(20, gt=0),
-    order: str = Query("desc", regex="^(asc|desc)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
     conversation_service: ConversationInputPort = Depends(ServiceFactory.get_conversation_input_port),
 ):
     data = await conversation_service.get_conversation_messages(conversation_id=conversation_id, after=after, limit=limit, order=order)

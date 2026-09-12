@@ -1,7 +1,9 @@
 try:
-    from pydantic_settings import BaseSettings
-except Exception:
-    from pydantic import BaseSettings
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except Exception:  # pragma: no cover - pydantic v1 fallback
+    from pydantic import BaseSettings  # type: ignore[attr-defined]
+
+    SettingsConfigDict = dict  # type: ignore[assignment,misc]
 
 
 class Settings(BaseSettings): # type: ignore
@@ -46,8 +48,7 @@ class Settings(BaseSettings): # type: ignore
     # Testing
     TESTING: bool = False
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 settings = Settings()

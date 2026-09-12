@@ -12,12 +12,18 @@ from src.adapter.input.controllers.response_utils import success_response
 # Router organized as a grouped resource; prefix is applied when included in the app
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
+# The collection endpoints answer both "/conversations" and "/conversations/".
+# Declaring only the trailing-slash form made every browser call pay a 307
+# redirect round-trip, and a redirected cross-origin POST is fragile.
+_COLLECTION = ["", "/"]
 
-@router.get("/", response_model=ListResponse[ConversationResponse])
+
+@router.get(_COLLECTION[0], response_model=ListResponse[ConversationResponse])
+@router.get(_COLLECTION[1], response_model=ListResponse[ConversationResponse], include_in_schema=False)
 async def list_conversations(
     after: Optional[str] = Query(None),
     limit: int = Query(10, gt=0),
-    order: str = Query("desc", regex="^(asc|desc)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
     conversation_service: ConversationInputPort = Depends(ServiceFactory.get_conversation_input_port)
 ):
     """Cursor pagination: `after` is the id of the anchor element; return `limit` items after that anchor, skipping `offset` items, ordered by `created_at`."""
@@ -34,7 +40,8 @@ async def get_conversation(
     return success_response(data=data, message="ok", status_code=200)
 
 
-@router.post("/", response_model=ConversationResponse)
+@router.post(_COLLECTION[0], response_model=ConversationResponse)
+@router.post(_COLLECTION[1], response_model=ConversationResponse, include_in_schema=False)
 async def create_conversation(
     conversation_service: ConversationInputPort = Depends(ServiceFactory.get_conversation_input_port)
 ):
@@ -42,7 +49,8 @@ async def create_conversation(
     return success_response(data=data, message="created", status_code=201)
 
 
-@router.put("/", response_model=ConversationResponse)
+@router.put(_COLLECTION[0], response_model=ConversationResponse)
+@router.put(_COLLECTION[1], response_model=ConversationResponse, include_in_schema=False)
 async def update_conversation(
     request: ConversationUpdateRequest,
     conversation_service: ConversationInputPort = Depends(ServiceFactory.get_conversation_input_port)
@@ -75,7 +83,7 @@ async def get_conversation_messages(
     conversation_id: str,
     after: Optional[str] = Query(None),
     limit: int = Query(10, gt=0),
-    order: str = Query("desc", regex="^(asc|desc)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
     conversation_service: ConversationInputPort = Depends(ServiceFactory.get_conversation_input_port)
 ):
     """Get messages for a conversation (cursor pagination)."""
