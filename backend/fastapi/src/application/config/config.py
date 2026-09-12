@@ -31,6 +31,17 @@ class Settings(BaseSettings): # type: ignore
     MARKDOWN_STORAGE_BACKEND: str = "json"
     MARKDOWN_JSON_FILE: str = "data/markdown-files.json"
     MARKDOWN_ADMIN_KEY: str = "markdown-editor-admin-2024"
+
+    # SQL administrator (/sql-administrator front-end)
+    # Sessions are sealed with this key before being written to disk; rotating it
+    # invalidates every stored login.
+    SQLADMIN_SECRET_KEY: str = "change-me-sqladmin"
+    SQLADMIN_SESSION_FILE: str = "data/sqladmin-sessions.json"
+    SQLADMIN_PERSIST_SESSIONS: bool = True
+    SQLADMIN_CONNECT_TIMEOUT: int = 10
+    SQLADMIN_STATEMENT_TIMEOUT: int = 60
+    SQLADMIN_POOL_SIZE: int = 5
+    SQLADMIN_MAX_ROWS: int = 10000
     
     # Testing
     TESTING: bool = False

@@ -1,0 +1,47 @@
+/// <reference types="vitest/config" />
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const apiTarget = env.VITE_DEV_API_TARGET || 'http://localhost:6789'
+
+  return {
+    // The FastAPI webapp server can mount this build below a nested URL path.
+    base: './',
+    plugins: [react()],
+    server: {
+      port: 5174,
+      open: true,
+      // Proxying keeps the browser on one origin in development, so the API
+      // never needs CORS headers for the dev server.
+      proxy: {
+        '/sqladmin': { target: apiTarget, changeOrigin: true },
+      },
+    },
+    build: {
+      outDir: 'dist',
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react'
+          },
+        },
+      },
+    },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['./src/test/setup.ts'],
+      css: false,
+      include: ['src/**/*.{test,spec}.{ts,tsx}'],
+      coverage: {
+        provider: 'v8',
+        include: ['src/lib/**/*.ts', 'src/store.ts'],
+        reporter: ['text', 'html'],
+      },
+    },
+  }
+})
