@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller, sql_admin_controller, proxy_controller
+from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller, sql_admin_controller, proxy_controller, postman_controller
 from fastapi import Request
 from src.application.exceptions.exceptions import AppException
 from src.adapter.input.controllers.response_utils import error_response
@@ -61,6 +61,7 @@ app.include_router(health_controller.router, prefix=settings.API_PREFIX)
 app.include_router(markdown_storage_controller.router, prefix=settings.API_PREFIX)
 app.include_router(sql_admin_controller.router, prefix=settings.API_PREFIX)
 app.include_router(proxy_controller.router, prefix=settings.API_PREFIX)
+app.include_router(postman_controller.router, prefix=settings.API_PREFIX)
 
 # Mount webapp controller at root level (static content, not API)
 app.include_router(webapp_controller.router)
