@@ -49,6 +49,7 @@ export default {
       stopped: 'Đã dừng phản hồi',
       retry: 'Thử lại',
       errorSending: 'Lỗi khi gửi tin nhắn',
+      streamIncomplete: 'Kết nối bị ngắt trước khi nhận được câu trả lời',
       sendHint: 'Enter để gửi, Shift + Enter để xuống dòng',
       rename: 'Đổi tên cuộc trò chuyện',
       renamePrompt: 'Nhập tên mới cho cuộc trò chuyện',

@@ -15,6 +15,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Component tests here mount antd plus i18n plus the markdown pipeline, and
+    // individual cases already run 2-4s. Vitest's 5s default left them tipping
+    // over the limit whenever the suite ran in parallel on a loaded machine.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     coverage: {
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test/**', 'src/main.tsx'],

@@ -1,6 +1,6 @@
 # Báo cáo: Fix lỗi & cải tiến gemini-proxy (FE + BE)
 
-> Ngày: 2026-09-12 · Branch: `head/260909` · Phạm vi: `frontend/` + `backend/fastapi/`
+> Ngày: 2026-09-12, cập nhật 2026-09-13 · Phạm vi: `frontend/` + `backend/fastapi/`
 > File này compact lại ngữ cảnh để sẵn sàng cho phiên làm việc tiếp theo.
 
 ## 1. Trạng thái
@@ -8,7 +8,7 @@
 | | Trước | Sau |
 |---|---|---|
 | Backend `pytest` | 142 pass, 1 fail, 4 lỗi collect, 15 warning | **197 pass, 1 warning** |
-| Frontend test | *không có framework* | **85 test / 8 file (Vitest)** |
+| Frontend test | *không có framework* | **88 test / 8 file (Vitest)** |
 | Frontend `tsc` | clean | clean |
 | Frontend `eslint` | 8 error, 3 warning | **clean** |
 | Frontend `build` | OK | OK |
@@ -50,6 +50,14 @@
 | `onKeyPress` deprecated; Enter giữa lúc gõ Unikey gửi chữ dở | `components/ChatArea.tsx` |
 | `rehypeRaw` + mermaid `securityLevel: 'loose'` render HTML thô từ model → XSS | `components/MarkdownRenderer.tsx` |
 
+**Sửa thêm 2026-09-13 — lỗi `"Connection closed before the answer finished"`** (cả 3 đều ở `services/geminiService.ts`):
+
+1. **Bắt buộc frame kết thúc** → vỡ với backend chưa deploy. Xem bảng tương thích ở mục 5.
+2. **Không xả buffer khi stream đóng**: `reader.read()` trả `done` thì `break` ngay, bỏ luôn frame cuối còn nằm trong buffer nếu nó thiếu dấu `
+
+` kết thúc. Giờ flush cả buffer lẫn `TextDecoder` (ký tự nhiều byte có thể bị cắt giữa 2 chunk mạng).
+3. **Không `reader.cancel()`** khi return sớm → kết nối HTTP bị treo. Giờ cancel trong `finally`.
+
 ## 4. Tính năng / UX mới
 
 - **Dừng sinh câu trả lời** — nút Gửi đổi thành Dừng khi đang stream (`AbortController`).
@@ -75,8 +83,22 @@ event: error\ndata: {"message","user_message_id"}
 ```
 
 - FE dùng `message_id`/`user_message_id` để thay ID tạm bằng ID thật.
-- Stream đứt mà không có frame cuối → FE coi là **lỗi**, không phải thành công.
 - Khi retry, FE gửi lại `message_id` trong body để BE update thay vì insert.
+
+### Tương thích ngược (sửa 2026-09-13)
+
+Backend **chưa deploy** (bản trên `main`) không gửi frame kết thúc. Ban đầu FE bắt
+buộc phải có frame này nên báo lỗi `"Connection closed before the answer finished"`
+với **mọi** câu hỏi. Quy tắc hiện tại:
+
+| Stream kết thúc | Có nội dung? | Kết quả |
+|---|---|---|
+| có frame `done` | — | `onComplete` (kèm ID thật) |
+| có frame `error` | — | `onError` |
+| không frame cuối | **có** | `onComplete` — backend đời cũ kết thúc đúng kiểu này |
+| không frame cuối | **không** | `onError` (`chat.streamIncomplete`) |
+
+Với backend mới, mọi stream đều có frame cuối nên tính nghiêm ngặt vẫn giữ nguyên.
 
 ## 6. Lệnh
 
@@ -97,6 +119,10 @@ Hiện `.env` của BE để `API_PREFIX=` rỗng → FE dùng `http://localhost
 
 ## 7. Còn tồn đọng (chưa làm)
 
+0. **Quan trọng — backend chưa được deploy.** `main` đang ở `c389b58` (2026-09-08),
+   chưa có các fix backend. `gemini8a.vercel.app` vì thế vẫn chạy code cũ. FE giờ
+   chạy được với cả hai, nhưng để có báo lỗi stream đúng, ID thật và tự đặt tên
+   conversation thì cần merge + deploy backend.
 1. **Bundle 2.5 MB** (gzip 814 kB) — `mermaid` + `react-syntax-highlighter` chiếm phần lớn. Nên `React.lazy` cho `MarkdownRenderer`.
 2. **`rehype-raw` vẫn còn trong `package.json`** nhưng không còn được dùng — có thể gỡ.
 3. **Cursor pagination trên khoá thay đổi**: sidebar sắp theo `COALESCE(updated_at, created_at)`, nếu có conversation được cập nhật *trong lúc* user đang bấm "Tải thêm" thì có thể nhảy/lặp 1 item. Đánh đổi có chủ đích để đổi lấy UX đúng.

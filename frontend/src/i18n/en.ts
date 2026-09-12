@@ -50,6 +50,7 @@ export default {
       stopped: 'Generation stopped',
       retry: 'Retry',
       errorSending: 'Error sending message',
+      streamIncomplete: 'The connection closed before any answer arrived',
       sendHint: 'Enter to send, Shift + Enter for a new line',
       rename: 'Rename Conversation',
       renamePrompt: 'Enter new conversation name',
