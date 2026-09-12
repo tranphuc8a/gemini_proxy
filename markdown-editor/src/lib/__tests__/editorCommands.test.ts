@@ -26,7 +26,7 @@ function sel(marked: string): EditorSelection {
     const end = marked.indexOf('»') - 1
     return { value: marked.replace('«', '').replace('»', ''), start, end }
   }
-  return { value: marked.replace('|', ''), start: marked.indexOf('|'), end: marked.indexOf('|') }
+  return { value: marked.replace(/\|/g, ''), start: marked.indexOf('|'), end: marked.indexOf('|') }
 }
 
 /** Renders a result back into the same notation for readable assertions. */
