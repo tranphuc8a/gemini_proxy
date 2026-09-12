@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller
+from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller, sql_admin_controller
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from src.application.exceptions.exceptions import AppException
@@ -8,6 +8,7 @@ from src.adapter.input.controllers.response_utils import error_response
 from fastapi import HTTPException
 from src.adapter.output.mysql.db.base import init_db
 from src.adapter.input.admin import setup_admin
+from src.adapter.factory.sql_admin_factory import shutdown_sql_admin
 from src.application.config.config import settings
 
 app = FastAPI(
@@ -42,6 +43,7 @@ app.include_router(conversation_controller.router, prefix=settings.API_PREFIX)
 app.include_router(messages_controller.router, prefix=settings.API_PREFIX)
 app.include_router(health_controller.router, prefix=settings.API_PREFIX)
 app.include_router(markdown_storage_controller.router, prefix=settings.API_PREFIX)
+app.include_router(sql_admin_controller.router, prefix=settings.API_PREFIX)
 
 # Mount webapp controller at root level (static content, not API)
 app.include_router(webapp_controller.router)
@@ -56,6 +58,12 @@ def startup():
         init_db()
     except Exception:
         pass
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    # Close the connection pools the SQL administrator opened against user servers.
+    await shutdown_sql_admin()
 
 
 @app.exception_handler(AppException)
