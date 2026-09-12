@@ -1,0 +1,20 @@
+{
+  "title": "SQL Administrator",
+  "description": "Bảng điều khiển quản trị MySQL/MariaDB chạy trên trình duyệt, tương tự phpMyAdmin hay Adminer. Đăng nhập vào bất kỳ host:port nào và giữ phiên qua các lần tải lại trang, chỉ lưu token chứ không lưu mật khẩu. Duyệt và sửa dữ liệu theo trang có sắp xếp, tìm kiếm, thêm/sửa/xoá bản ghi; xem cấu trúc bảng, chỉ mục và khoá ngoại; chạy script SQL nhiều câu lệnh với kết quả và thời gian riêng từng câu; theo dõi trạng thái server; xuất bảng ra CSV, JSON hoặc SQL dump.",
+  "tags": [
+    "sql",
+    "mysql",
+    "mariadb",
+    "database",
+    "admin",
+    "phpmyadmin",
+    "query",
+    "export",
+    "dba",
+    "react",
+    "typescript",
+    "tools",
+    "tranphuc8a"
+  ],
+  "icon": "🗄️"
+}
