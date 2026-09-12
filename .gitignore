@@ -42,6 +42,10 @@ coverage.xml
 htmlcov/
 .ropeproject
 
+# Runtime data written by the backend: SQL-administrator sessions and
+# postman-lite-pro workspaces. Both hold user secrets and are per-machine.
+backend/fastapi/data/
+
 # OS files
 .DS_Store
 Thumbs.db

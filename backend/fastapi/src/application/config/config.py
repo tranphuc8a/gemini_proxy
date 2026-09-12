@@ -58,6 +58,13 @@ class Settings(BaseSettings): # type: ignore
     # certificates, and refusing would make it weaker than the curl it prints.
     PROXY_VERIFY_TLS: bool = False
 
+    # postman-lite-pro workspace sync (/postman/*)
+    # "json" keeps everything in one file and needs no database, which is how
+    # the tool is normally run; "mysql" creates its tables on first use.
+    POSTMAN_STORAGE_BACKEND: str = "json"
+    POSTMAN_JSON_FILE: str = "data/postman-workspaces.json"
+    POSTMAN_MAX_HISTORY: int = 500
+
     
     # Testing
     TESTING: bool = False
