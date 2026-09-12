@@ -2,46 +2,67 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <!-- No maximum-scale: pinch-zoom must stay available. -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Postman Lite 🚀</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header>
-    <button id="toggleSidebarBtn" title="Ẩn/Hiện Sidebar">☰</button>
-    <select id="method">
+    <button id="toggleSidebarBtn" title="Ẩn/Hiện Sidebar (Ctrl+B)" aria-expanded="true">☰</button>
+    <select id="method" aria-label="HTTP method">
       <option>GET</option>
       <option>POST</option>
       <option>PUT</option>
       <option>PATCH</option>
       <option>DELETE</option>
+      <option>HEAD</option>
+      <option>OPTIONS</option>
     </select>
-    <input id="url" placeholder="https://api.example.com/data" />
-    <button id="sendBtn">Gửi 🚀</button>
-    <button id="copyCurlBtn" title="Copy lệnh curl">Copy cURL 📋</button>
-    <div class="env-select-wrapper">
-      <select id="environmentSelect" title="Chọn environment"></select>
+    <input id="url" placeholder="https://api.example.com/data hoặc {{BASE_URL}}/users" aria-label="URL" />
+    <button id="sendBtn" title="Gửi request (Ctrl+Enter)">Gửi 🚀</button>
+    <button id="cancelBtn" class="btn-danger" style="display:none" title="Hủy request đang chạy">Hủy ⛔</button>
+    <button id="copyCurlBtn" title="Copy lệnh curl tương đương">cURL 📋</button>
+
+    <div class="header-right">
+      <label class="inline-label" title="Cách gửi request">
+        <select id="sendMode" aria-label="Chế độ gửi">
+          <option value="auto">Auto</option>
+          <option value="direct">Direct</option>
+          <option value="proxy">Proxy</option>
+        </select>
+      </label>
+      <select id="environmentSelect" title="Chọn environment" aria-label="Environment"></select>
+      <span id="envHint" class="env-hint" style="display:none"></span>
       <button id="manageEnvsBtn" title="Quản lý environments">🌐</button>
+      <button id="settingsBtn" title="Cài đặt">⚙️</button>
     </div>
   </header>
+
+  <div class="sub-header">
+    <span id="sendModeHint" class="hint"></span>
+  </div>
+
   <div class="top-bar-extensions">
-    <input id="requestNameInput" placeholder="Request name (để lưu vào collection)" />
-    <button id="saveCurrentBtn" title="Lưu request hiện tại">💾 Lưu</button>
+    <input id="requestNameInput" placeholder="Tên request (để lưu vào collection)" aria-label="Tên request" />
+    <button id="saveCurrentBtn" title="Lưu request hiện tại (Ctrl+S)">💾 Lưu</button>
+    <button id="newBlankBtn" title="Làm mới form">✨ Mới</button>
     <div class="search-wrapper">
-      <input id="sidebarSearch" placeholder="Tìm trong collections..." />
+      <input id="sidebarSearch" placeholder="Tìm trong collections / history..." aria-label="Tìm kiếm" />
     </div>
     <div class="data-transfer">
       <button id="exportDataBtn" title="Export dữ liệu JSON">⬇️ Export</button>
       <button id="importDataBtn" title="Import dữ liệu JSON">⬆️ Import</button>
     </div>
   </div>
+
   <div class="app-container">
     <aside class="sidebar">
       <div class="sidebar-header">
         <h3>📚 Collections</h3>
         <div class="sidebar-actions">
           <button id="newCollectionBtn" title="Tạo collection mới">📁+</button>
-          <button id="newRequestBtn" title="Tạo request mới">📄+</button>
+          <button id="newRequestBtn" title="Lưu request hiện tại vào collection">📄+</button>
           <button id="clearAllBtn" title="Xóa tất cả dữ liệu">🗑️</button>
         </div>
       </div>
@@ -50,27 +71,35 @@
         <button class="sidebar-tab" data-tab="history">History</button>
       </div>
       <div class="sidebar-content" id="sidebarContent"><!-- dynamic --></div>
+      <div class="sidebar-footer"><span id="sidebarCounts"></span></div>
     </aside>
+
     <main>
-      <div class="panel" style="flex:1">
+      <div class="panel request-panel">
         <div class="tabs">
-          <div class="tab active" data-tab="params">Params</div>
-          <div class="tab" data-tab="headers">Headers</div>
-          <div class="tab" data-tab="auth">Auth</div>
-          <div class="tab" data-tab="body">Body</div>
-          <div class="tab" data-tab="cookies">Cookies</div>
-          <div class="tab" data-tab="curl">From cURL</div>
+          <div class="tab active" data-tab="params">Params <span class="tab-badge"></span></div>
+          <div class="tab" data-tab="headers">Headers <span class="tab-badge"></span></div>
+          <div class="tab" data-tab="auth">Auth <span class="tab-badge"></span></div>
+          <div class="tab" data-tab="body">Body <span class="tab-badge"></span></div>
+          <div class="tab" data-tab="cookies">Cookies <span class="tab-badge"></span></div>
+          <div class="tab" data-tab="curl">cURL</div>
         </div>
+
         <div id="params" class="tab-content">
           <div class="kv-container" id="paramsContainer"></div>
-          <button class="add" onclick="App.addKV('paramsContainer')">+ Thêm query</button>
+          <button class="add" data-add-kv="paramsContainer">+ Thêm query param</button>
+          <p class="hint">Các param ở đây và query string trên thanh URL luôn được đồng bộ hai chiều.</p>
         </div>
+
         <div id="headers" class="tab-content" style="display:none">
           <div class="kv-container" id="headersContainer"></div>
-          <button class="add" onclick="App.addKV('headersContainer')">+ Thêm header</button>
+          <button class="add" data-add-kv="headersContainer">+ Thêm header</button>
+          <p class="hint">Các header như <code>Cookie</code>, <code>Referer</code>, <code>User-Agent</code> bị trình duyệt cấm —
+            chỉ gửi được ở chế độ <b>Proxy</b>/<b>Auto</b>.</p>
         </div>
+
         <div id="auth" class="tab-content" style="display:none">
-          <label>Loại Auth:
+          <label class="field">Loại Auth
             <select id="authType">
               <option value="none">None</option>
               <option value="basic">Basic</option>
@@ -81,98 +110,136 @@
           <div id="auth-basic" class="auth-section">
             <h4>Basic Auth</h4>
             <div class="inline">
-              <input id="basicUser" placeholder="Username" />
-              <input id="basicPass" placeholder="Password" type="password" />
+              <input id="basicUser" placeholder="Username" autocomplete="off" />
+              <input id="basicPass" placeholder="Password" type="password" autocomplete="off" />
             </div>
           </div>
           <div id="auth-bearer" class="auth-section">
             <h4>Bearer Token</h4>
-            <input id="bearerToken" placeholder="Token" />
+            <input id="bearerToken" placeholder="Token (hỗ trợ {{TOKEN}})" autocomplete="off" />
           </div>
           <div id="auth-apikey" class="auth-section">
             <h4>API Key</h4>
             <div class="inline">
-              <input id="apiKeyName" placeholder="Key name (e.g. X-API-Key)" />
-              <input id="apiKeyValue" placeholder="Key value" />
+              <input id="apiKeyName" placeholder="Tên key (vd: X-API-Key)" />
+              <input id="apiKeyValue" placeholder="Giá trị key" autocomplete="off" />
             </div>
-            <label style="margin-top:6px;display:block">Vị trí:
+            <label class="field" style="margin-top:8px">Vị trí
               <select id="apiKeyLocation">
                 <option value="header">Header</option>
                 <option value="query">Query</option>
               </select>
             </label>
           </div>
-          <div id="curlPreview" style="display:none"></div>
         </div>
+
+        <div id="body" class="tab-content" style="display:none">
+          <div class="body-toolbar">
+            <label class="field inline-field">Content-Type
+              <select id="contentType">
+                <option value="application/json">application/json</option>
+                <option value="text/plain">text/plain</option>
+                <option value="application/xml">application/xml</option>
+                <option value="application/x-www-form-urlencoded">form-urlencoded</option>
+                <option value="multipart/form-data">multipart/form-data</option>
+              </select>
+            </label>
+            <button class="add" id="beautifyBodyBtn" title="Format lại JSON">✨ Format JSON</button>
+          </div>
+          <textarea id="bodyContent" placeholder='{"key": "value"}' spellcheck="false"></textarea>
+          <p class="hint" id="bodyHint"></p>
+          <div class="inline" id="fileRow" style="display:none">
+            <input type="file" id="fileInput" multiple />
+          </div>
+        </div>
+
         <div id="cookies" class="tab-content" style="display:none">
           <div class="kv-container" id="cookiesContainer"></div>
-          <button class="add" onclick="App.addKV('cookiesContainer')">+ Thêm cookie</button>
-        </div>
-        <div id="body" class="tab-content" style="display:none">
-          <label>Content-Type:
-            <select id="contentType">
-              <option value="application/json">application/json</option>
-              <option value="text/plain">text/plain</option>
-              <option value="application/x-www-form-urlencoded">form-urlencoded</option>
-              <option value="multipart/form-data">multipart/form-data</option>
-            </select>
+          <button class="add" data-add-kv="cookiesContainer">+ Thêm cookie</button>
+          <label class="checkbox-label" style="margin-top:10px">
+            <input type="checkbox" id="withCredentials" />
+            Gửi kèm cookie của trình duyệt (chỉ áp dụng khi gửi Direct)
           </label>
-          <textarea id="bodyContent" placeholder='{"key": "value"}'></textarea>
-          <input type="file" id="fileInput" style="margin-top:5px;display:none" multiple />
+          <p class="hint">Cookie khai báo ở đây được gộp thành header <code>Cookie</code>.
+            Trình duyệt cấm header này, nên request sẽ tự động đi qua <b>Proxy</b>.</p>
         </div>
+
         <div id="curl" class="tab-content" style="display:none">
-          <textarea id="curlInput" placeholder="curl -X POST 'https://api.example.com/items?limit=10' -H 'Authorization: Bearer xxx' -H 'Content-Type: application/json' -d '{\n  \"name\": \"foo\"\n}'"></textarea>
-          <div class="inline" style="margin-top:6px;">
-            <button class="add" id="parseCurlBtn">Parse & Fill ⤵️</button>
-            <span style="color:#9ab; font-size:12px;">Hỗ trợ: -X/--request, -H/--header, -d/--data, -F/--form, -b/--cookie, -u/--user</span>
+          <label class="field">Dán lệnh curl để nạp vào form</label>
+          <textarea id="curlInput" spellcheck="false"
+            placeholder="curl -X POST 'https://api.example.com/items?limit=10' \
+  -H 'Authorization: Bearer xxx' \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;name&quot;: &quot;foo&quot;}'"></textarea>
+          <div class="inline" style="margin-top:8px">
+            <button class="add" id="parseCurlBtn">Parse &amp; Fill ⤵️</button>
+            <span class="hint">Hỗ trợ -X, -H, -d/--data*, -F, -b, -u, -A, -e, --url, -L, nối dòng bằng <code>\</code>.</span>
           </div>
-          <div id="curlExplain" style="margin-top:6px; font-size:12px; color:#9ab; display:none"></div>
+          <div id="curlExplain" style="display:none"></div>
+          <div class="curl-output">
+            <div class="curl-output-header">
+              <span>Lệnh curl tương đương request hiện tại</span>
+              <button class="add" id="copyGeneratedCurlBtn">Copy 📋</button>
+            </div>
+            <pre id="curlPreview"></pre>
+          </div>
         </div>
       </div>
-      <div class="panel response-panel" style="flex:1.2">
-        <div id="status"></div>
+
+      <div class="panel response-panel">
+        <div id="status" class="status-line"></div>
         <div id="responseMeta">
           <span id="respStatusCode" class="tag"></span>
           <span id="respTime" class="tag"></span>
           <span id="respSize" class="tag"></span>
+          <span id="respVia" class="tag" style="display:none"></span>
         </div>
+        <div id="respNotes" style="display:none"></div>
+
         <div id="responseTabs">
           <div class="resp-tab active" data-rtab="responseBody">Body</div>
           <div class="resp-tab" data-rtab="responseHeaders">Headers</div>
           <div class="resp-tab" data-rtab="responsePreview">Preview</div>
           <div class="resp-tab" data-rtab="responseRaw">Raw</div>
         </div>
-        <div class="response-actions" style="margin-bottom:6px;">
-          <button id="copyResponseBtn" class="btn-secondary" title="Copy response body">Copy Body 📋</button>
+
+        <div class="response-actions">
+          <input id="respSearch" placeholder="Tìm trong body..." aria-label="Tìm trong response" />
+          <span id="respSearchInfo" class="hint"></span>
+          <label class="checkbox-label"><input type="checkbox" id="wrapToggle" checked /> Wrap</label>
+          <button id="copyResponseBtn" class="btn-secondary" title="Copy response body">Copy 📋</button>
+          <button id="downloadResponseBtn" class="btn-secondary" title="Tải body về máy">Tải body ⬇️</button>
         </div>
-        <div id="responseBody" class="response-area">Response sẽ hiển thị ở đây...</div>
+
+        <div id="responseBody" class="response-area"></div>
         <div id="responseHeaders" class="response-area" style="display:none"></div>
         <div id="responsePreview" class="response-area" style="display:none"></div>
         <div id="responseRaw" class="response-area" style="display:none"></div>
       </div>
     </main>
   </div>
-  <div class="bottom-bar">🚀 Postman Lite - Collections • History • Environments</div>
+
+  <div class="bottom-bar">🚀 Postman Lite · Ctrl+Enter gửi · Ctrl+S lưu · Ctrl+B ẩn/hiện sidebar</div>
 
   <!-- Collection Modal -->
   <div id="collectionModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="collectionModalTitle">Tạo Collection Mới</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" aria-label="Đóng">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="collectionId" />
         <div class="form-group">
           <label>Tên Collection *</label>
-          <input type="text" id="collectionName" placeholder="My API Collection" required />
+          <input type="text" id="collectionName" placeholder="My API Collection" />
         </div>
         <div class="form-group">
           <label>Mô tả</label>
           <textarea id="collectionDescription" placeholder="Mô tả về collection..." rows="3"></textarea>
         </div>
         <div class="form-group">
-          <label>Collection cha (optional)</label>
+          <label>Collection cha</label>
           <select id="collectionParent">
             <option value="">-- Không có (Root) --</option>
           </select>
@@ -190,13 +257,13 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="requestModalTitle">Tạo Request Mới</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" aria-label="Đóng">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="requestId" />
         <div class="form-group">
           <label>Tên Request *</label>
-          <input type="text" id="requestName" placeholder="Get Users" required />
+          <input type="text" id="requestName" placeholder="Get Users" />
         </div>
         <div class="form-group">
           <label>Collection</label>
@@ -204,7 +271,7 @@
             <option value="">-- Không thuộc collection nào --</option>
           </select>
         </div>
-        <p style="color:#9ab;font-size:12px;margin-top:10px;">💡 Request sẽ lấy cấu hình hiện tại từ form (method, URL, headers, body, auth...)</p>
+        <p class="hint">💡 Request sẽ lấy cấu hình hiện tại từ form: method, URL, params, headers, cookies, auth, body.</p>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary modal-dismiss">Hủy</button>
@@ -213,21 +280,25 @@
     </div>
   </div>
 
-  <!-- Environment Management Modal -->
+  <!-- Environment Modal -->
   <div id="envModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
         <h3>Environments</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" aria-label="Đóng">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
           <label>Tên Environment *</label>
-          <input type="text" id="envName" placeholder="Local" />
+          <div class="inline">
+            <input type="text" id="envName" placeholder="Local" />
+            <button class="btn-secondary" id="newEnvBtn" title="Nhập environment mới">Mới</button>
+          </div>
         </div>
         <div class="kv-container" id="envVarsContainer"></div>
         <button class="add" id="addEnvVarBtn">+ Thêm biến</button>
-        <div style="margin-top:10px; font-size:12px; color:#9ab;">Dùng {{VAR_NAME}} trong URL, headers, body...</div>
+        <p class="hint">Dùng <code>{{TÊN_BIẾN}}</code> trong URL, header, cookie, auth và body.
+          Giá trị chỉ được thay lúc gửi, form của bạn vẫn giữ nguyên template.</p>
         <div class="env-list" id="envList"></div>
       </div>
       <div class="modal-footer">
@@ -237,15 +308,60 @@
     </div>
   </div>
 
-  <!-- Import Data Modal -->
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Cài đặt</h3>
+        <button class="modal-close" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="proxyStatus" class="notice"></div>
+        <div class="form-group">
+          <label>API prefix của backend FastAPI</label>
+          <input type="text" id="setApiPrefix" placeholder="/api/v1" />
+        </div>
+        <div class="form-group">
+          <label>Proxy base URL (để trống = cùng origin + API prefix)</label>
+          <input type="text" id="setProxyBaseUrl" placeholder="http://localhost:6789/api/v1" />
+        </div>
+        <div class="form-group">
+          <label>Timeout (giây)</label>
+          <input type="number" id="setTimeout" min="1" max="600" />
+        </div>
+        <div class="form-group">
+          <label>Số request tối đa giữ trong History</label>
+          <input type="number" id="setMaxHistory" min="1" max="1000" />
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="setFollowRedirects" /> Tự động đi theo redirect (3xx)
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="testProxyBtn">Kiểm tra proxy</button>
+        <button class="btn-secondary modal-dismiss">Đóng</button>
+        <button class="btn-primary" id="saveSettingsBtn">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
   <div id="importModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Import Data JSON</h3>
-        <button class="modal-close">&times;</button>
+        <h3>Import dữ liệu</h3>
+        <button class="modal-close" aria-label="Đóng">&times;</button>
       </div>
       <div class="modal-body">
-        <textarea id="importDataTextarea" placeholder="Paste JSON ở đây" rows="10" style="width:100%;"></textarea>
+        <div class="form-group">
+          <label>Chọn file JSON</label>
+          <input type="file" id="importFileInput" accept="application/json,.json" />
+        </div>
+        <textarea id="importDataTextarea" placeholder="...hoặc dán JSON vào đây" rows="10"></textarea>
+        <div class="inline" style="margin-top:10px">
+          <label class="checkbox-label"><input type="radio" name="importMode" value="replace" checked /> Ghi đè</label>
+          <label class="checkbox-label"><input type="radio" name="importMode" value="merge" /> Gộp thêm</label>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary modal-dismiss">Hủy</button>
@@ -254,15 +370,15 @@
     </div>
   </div>
 
-  <!-- Export Data Modal -->
+  <!-- Export Modal -->
   <div id="exportModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Export Data JSON</h3>
-        <button class="modal-close">&times;</button>
+        <h3>Export dữ liệu</h3>
+        <button class="modal-close" aria-label="Đóng">&times;</button>
       </div>
       <div class="modal-body">
-        <textarea id="exportDataTextarea" readonly rows="10" style="width:100%;"></textarea>
+        <textarea id="exportDataTextarea" readonly rows="12"></textarea>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary modal-dismiss">Đóng</button>
@@ -271,10 +387,12 @@
     </div>
   </div>
 
+  <script src="toast.js"></script>
   <script src="storage.js"></script>
+  <script src="env.js"></script>
+  <script src="http-client.js"></script>
   <script src="curl-parser.js"></script>
   <script src="sidebar.js"></script>
-  <script src="env.js"></script>
   <script src="response-viewer.js"></script>
   <script src="search.js"></script>
   <script src="app.js"></script>

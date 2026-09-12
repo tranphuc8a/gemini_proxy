@@ -1,6 +1,6 @@
 {
   "title": "Postman Lite",
-  "description": "Lightweight API testing tool. Send HTTP requests and view responses directly in your browser.",
-  "tags": ["api", "http", "testing", "developer", "tools"],
+  "description": "Công cụ test API gọn nhẹ chạy trong trình duyệt. Gửi HTTP request, xem response, và vượt CORS nhờ proxy phía FastAPI.",
+  "tags": ["api", "http", "testing", "developer", "tools", "cors", "proxy"],
   "icon": "📡"
 }
