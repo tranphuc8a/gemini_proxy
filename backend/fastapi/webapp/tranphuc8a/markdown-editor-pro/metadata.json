@@ -1,0 +1,20 @@
+{
+  "title": "Markdown Editor Pro",
+  "description": "Trình soạn thảo Markdown chạy hoàn toàn trong trình duyệt với xem trước GitHub Flavored Markdown theo thời gian thực, KaTeX, sơ đồ Mermaid và tô màu cú pháp. Có command palette, cây thư mục kéo thả, dàn ý theo heading, tìm/thay thế hỗ trợ regex, cuộn đồng bộ hai chiều, tự động lưu và xuất ra Markdown, HTML, PDF, PNG hoặc JPG. Tuỳ chọn đồng bộ với backend FastAPI, HTML nhúng được khử độc trước khi hiển thị.",
+  "tags": [
+    "markdown",
+    "editor",
+    "writing",
+    "preview",
+    "katex",
+    "mermaid",
+    "syntax-highlighting",
+    "export",
+    "pdf",
+    "react",
+    "typescript",
+    "tools",
+    "tranphuc8a"
+  ],
+  "icon": "✍️"
+}

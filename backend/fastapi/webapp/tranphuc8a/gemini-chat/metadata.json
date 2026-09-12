@@ -1,0 +1,21 @@
+{
+  "title": "Gemini Chat",
+  "description": "Giao diện chat với Gemini API: trả lời theo luồng (streaming) và có thể dừng giữa chừng, quản lý nhiều cuộc trò chuyện với tìm kiếm và tự đặt tên, hiển thị Markdown kèm KaTeX, sơ đồ Mermaid và tô màu cú pháp. Hỗ trợ chọn model, xuất hội thoại ra Markdown, giao diện sáng/tối, song ngữ Việt - Anh và bố cục thích ứng trên di động.",
+  "tags": [
+    "gemini",
+    "ai",
+    "chat",
+    "llm",
+    "streaming",
+    "markdown",
+    "katex",
+    "mermaid",
+    "react",
+    "typescript",
+    "antd",
+    "i18n",
+    "tools",
+    "tranphuc8a"
+  ],
+  "icon": "✨"
+}
