@@ -1,4 +1,4 @@
-// Sidebar Manager - Collections & History UI
+// Sidebar Manager - the Collections tree and the History list.
 const Sidebar = {
   currentTab: 'collections',
   selectedRequest: null,
@@ -8,8 +8,8 @@ const Sidebar = {
 
   init() {
     this.setupTabs();
-    this.render();
     this.setupEventListeners();
+    this.render();
   },
 
   setupTabs() {
@@ -24,337 +24,421 @@ const Sidebar = {
   },
 
   setupEventListeners() {
-    // New Collection
-    document.getElementById('newCollectionBtn').addEventListener('click', () => {
-      this.showCollectionModal();
-    });
-
-    // New Request
-    document.getElementById('newRequestBtn').addEventListener('click', () => {
-      this.showRequestModal();
-    });
-
-    // Clear All
-    document.getElementById('clearAllBtn').addEventListener('click', () => {
-      this.confirmClearAll();
-    });
+    document.getElementById('newCollectionBtn')
+      .addEventListener('click', () => this.showCollectionModal());
+    document.getElementById('newRequestBtn')
+      .addEventListener('click', () => this.showRequestModal());
+    document.getElementById('clearAllBtn')
+      .addEventListener('click', () => this.confirmClearAll());
   },
 
   render() {
     const container = document.getElementById('sidebarContent');
-    if (this.currentTab === 'collections') {
-      this.renderCollections(container);
-    } else if (this.currentTab === 'history') {
-      this.renderHistory(container);
-    }
+    if (this.currentTab === 'collections') this.renderCollections(container);
+    else this.renderHistory(container);
+    this.updateCounts();
   },
 
+  updateCounts() {
+    const el = document.getElementById('sidebarCounts');
+    if (!el) return;
+    el.textContent = this.currentTab === 'collections'
+      ? `${Storage.getCollections().length} collection · ${Storage.getRequests().length} request`
+      : `${Storage.getHistory().length} lần gửi`;
+  },
+
+  // ------------------------------------------------------------- collections
   renderCollections(container) {
     const collections = Storage.getCollections();
     const requests = Storage.getRequests();
 
-    if (collections.length === 0 && requests.filter(r => !r.collectionId).length === 0) {
+    if (!collections.length && !requests.length) {
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">📁</div>
-          <div class="empty-state-text">Chưa có collection nào<br>Nhấn "+" để tạo mới</div>
-        </div>
-      `;
+          <div class="empty-state-text">Chưa có collection nào<br>Nhấn 📁+ để tạo mới</div>
+        </div>`;
       return;
     }
 
-    const tree = this.buildTree(collections, requests);
-    const filtered = this.applyFilter(tree);
-    container.innerHTML = `<ul class="collection-tree">${this.renderTree(filtered)}</ul>`;
-    this.attachTreeEvents();
+    const tree = this.applyFilter(this.buildTree(collections, requests));
+    if (!tree.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔍</div>
+          <div class="empty-state-text">Không khớp với "${this.escapeHtml(this.filterTerm)}"</div>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `<ul class="collection-tree">${this.renderTree(tree)}</ul>`;
+    this.attachTreeEvents(container);
   },
 
   buildTree(collections, requests) {
-    // Build hierarchical structure
-    const rootCollections = collections.filter(c => !c.parentId);
-    const orphanRequests = requests.filter(r => !r.collectionId);
+    const byParent = new Map();
+    collections.forEach(c => {
+      const key = c.parentId || '';
+      if (!byParent.has(key)) byParent.set(key, []);
+      byParent.get(key).push(c);
+    });
 
+    const requestsByCollection = new Map();
+    requests.forEach(r => {
+      const key = r.collectionId || '';
+      if (!requestsByCollection.has(key)) requestsByCollection.set(key, []);
+      requestsByCollection.get(key).push(r);
+    });
+
+    // A parentId pointing at a deleted collection would otherwise make the whole
+    // subtree invisible, so those collections are surfaced at the root instead.
+    const knownIds = new Set(collections.map(c => c.id));
+    const orphanCollections = collections.filter(c => c.parentId && !knownIds.has(c.parentId));
+
+    const seen = new Set();
     const buildNode = (collection) => {
-      const children = collections.filter(c => c.parentId === collection.id);
-      const collectionRequests = requests.filter(r => r.collectionId === collection.id);
-      
-      return {
-        type: 'collection',
-        data: collection,
-        children: [
-          ...children.map(buildNode),
-          ...collectionRequests.map(r => ({ type: 'request', data: r }))
-        ]
-      };
+      if (seen.has(collection.id)) return null; // cycle guard
+      seen.add(collection.id);
+      const children = (byParent.get(collection.id) || []).map(buildNode).filter(Boolean);
+      const items = (requestsByCollection.get(collection.id) || [])
+        .map(r => ({ type: 'request', data: r }));
+      return { type: 'collection', data: collection, children: [...children, ...items] };
     };
 
     return [
-      ...rootCollections.map(buildNode),
-      ...orphanRequests.map(r => ({ type: 'request', data: r }))
+      ...(byParent.get('') || []).map(buildNode).filter(Boolean),
+      ...orphanCollections.map(buildNode).filter(Boolean),
+      ...(requestsByCollection.get('') || []).map(r => ({ type: 'request', data: r }))
     ];
   },
 
-  applyFilter(nodes){
-    if(!this.filterTerm) return nodes;
-    const term = this.filterTerm.toLowerCase();
-    function matchNode(node){
-      if(node.type==='collection'){
-        const nameMatch = (node.data.name||'').toLowerCase().includes(term);
-        const childMatches = node.children.map(matchNode).filter(Boolean);
-        if(nameMatch || childMatches.length){
-          return { ...node, children: childMatches.length?childMatches:node.children.filter(()=>false) };
-        }
-        return null;
-      } else {
-        return (node.data.name||'').toLowerCase().includes(term) ? node : null;
+  /**
+   * Keep nodes whose name matches, plus their ancestors.
+   *
+   * A collection that matches by name keeps ALL of its children. The previous
+   * version replaced them with an empty list, so searching for a collection
+   * showed the folder and hid everything you were looking for inside it.
+   */
+  applyFilter(nodes) {
+    const term = (this.filterTerm || '').toLowerCase();
+    if (!term) return nodes;
+
+    const matchNode = (node) => {
+      const name = (node.data.name || '').toLowerCase();
+      if (node.type === 'request') {
+        const url = (node.data.url || '').toLowerCase();
+        return (name.includes(term) || url.includes(term)) ? node : null;
       }
-    }
+      if (name.includes(term)) return node;                       // keep subtree intact
+      const matches = (node.children || []).map(matchNode).filter(Boolean);
+      return matches.length ? { ...node, children: matches } : null;
+    };
+
     return nodes.map(matchNode).filter(Boolean);
   },
 
-  filter(term){
+  filter(term) {
     this.filterTerm = term;
+    // While searching, show every match rather than making the user expand each
+    // folder by hand to discover where the hits are.
+    if (term) Storage.getCollections().forEach(c => this.expandedCollections.add(c.id));
     this.render();
   },
 
-  renderTree(nodes, level = 0) {
+  renderTree(nodes) {
     return nodes.map(node => {
       if (node.type === 'collection') {
-        const isExpanded = this.expandedCollections.has(node.data.id);
+        const expanded = this.expandedCollections.has(node.data.id);
         const hasChildren = node.children && node.children.length > 0;
-        const isSelected = this.selectedCollection === node.data.id;
+        const selected = this.selectedCollection === node.data.id;
+        const count = hasChildren ? `<span class="tree-count">${node.children.length}</span>` : '';
 
         return `
           <li class="tree-item">
-            <div class="tree-node collection ${isSelected ? 'active' : ''}" 
-                 data-id="${node.data.id}" 
-                 data-type="collection"
-                 draggable="true">
-              ${hasChildren ? `
-                <span class="tree-toggle" data-collection-id="${node.data.id}">
-                  ${isExpanded ? '▼' : '▶'}
-                </span>
-              ` : '<span class="tree-toggle" style="width:16px"></span>'}
+            <div class="tree-node collection ${selected ? 'active' : ''}"
+                 data-id="${node.data.id}" data-type="collection" draggable="true"
+                 title="${this.escapeHtml(node.data.description || node.data.name)}">
+              <span class="tree-toggle" data-collection-id="${node.data.id}">${hasChildren ? (expanded ? '▼' : '▶') : ''}</span>
               <span class="tree-icon">📁</span>
               <span class="tree-label">${this.escapeHtml(node.data.name)}</span>
+              ${count}
               <div class="tree-actions">
-                <button class="tree-action-btn" data-action="edit-collection" data-id="${node.data.id}" title="Edit">✏️</button>
-                <button class="tree-action-btn" data-action="delete-collection" data-id="${node.data.id}" title="Delete">🗑️</button>
+                <button class="tree-action-btn" data-action="add-request" data-id="${node.data.id}" title="Thêm request">➕</button>
+                <button class="tree-action-btn" data-action="edit-collection" data-id="${node.data.id}" title="Sửa">✏️</button>
+                <button class="tree-action-btn" data-action="delete-collection" data-id="${node.data.id}" title="Xóa">🗑️</button>
               </div>
             </div>
-            ${hasChildren ? `
-              <ul class="tree-children ${isExpanded ? '' : 'collapsed'}">
-                ${this.renderTree(node.children, level + 1)}
-              </ul>
-            ` : ''}
-          </li>
-        `;
-      } else {
-        const isSelected = this.selectedRequest === node.data.id;
-        const methodClass = node.data.method || 'GET';
-        
-        return `
-          <li class="tree-item">
-            <div class="tree-node request ${isSelected ? 'active' : ''}" 
-                 data-id="${node.data.id}" 
-                 data-type="request"
-                 draggable="true">
-              <span class="tree-icon history-method ${methodClass}">${methodClass}</span>
-              <span class="tree-label">${this.escapeHtml(node.data.name)}</span>
-              <div class="tree-actions">
-                <button class="tree-action-btn" data-action="edit-request" data-id="${node.data.id}" title="Edit">✏️</button>
-                <button class="tree-action-btn" data-action="delete-request" data-id="${node.data.id}" title="Delete">🗑️</button>
-              </div>
-            </div>
-          </li>
-        `;
+            ${hasChildren ? `<ul class="tree-children ${expanded ? '' : 'collapsed'}">${this.renderTree(node.children)}</ul>` : ''}
+          </li>`;
       }
+
+      const selected = this.selectedRequest === node.data.id;
+      const method = node.data.method || 'GET';
+      return `
+        <li class="tree-item">
+          <div class="tree-node request ${selected ? 'active' : ''}"
+               data-id="${node.data.id}" data-type="request" draggable="true"
+               title="${this.escapeHtml(node.data.url || '')}">
+            <span class="tree-icon method-badge ${method}">${method}</span>
+            <span class="tree-label">${this.escapeHtml(node.data.name || '(không tên)')}</span>
+            <div class="tree-actions">
+              <button class="tree-action-btn" data-action="duplicate-request" data-id="${node.data.id}" title="Nhân bản">⧉</button>
+              <button class="tree-action-btn" data-action="edit-request" data-id="${node.data.id}" title="Sửa">✏️</button>
+              <button class="tree-action-btn" data-action="delete-request" data-id="${node.data.id}" title="Xóa">🗑️</button>
+            </div>
+          </div>
+        </li>`;
     }).join('');
   },
 
-  attachTreeEvents() {
-    // Toggle expand/collapse
-    document.querySelectorAll('.tree-toggle').forEach(toggle => {
+  /**
+   * @param {HTMLElement} root  scope for every selector.
+   *
+   * Scoping matters: the previous code called `document.querySelectorAll('[data-action]')`,
+   * which also picked up the Load/Delete buttons inside the Environments modal
+   * and attached tree handlers to them on every single re-render.
+   */
+  attachTreeEvents(root) {
+    root.querySelectorAll('.tree-toggle').forEach(toggle => {
       toggle.addEventListener('click', (e) => {
         e.stopPropagation();
-        const collectionId = toggle.dataset.collectionId;
-        if (this.expandedCollections.has(collectionId)) {
-          this.expandedCollections.delete(collectionId);
-        } else {
-          this.expandedCollections.add(collectionId);
-        }
+        const id = toggle.dataset.collectionId;
+        if (!id) return;
+        if (this.expandedCollections.has(id)) this.expandedCollections.delete(id);
+        else this.expandedCollections.add(id);
         this.render();
       });
     });
 
-    // Select collection/request
-    document.querySelectorAll('.tree-node').forEach(node => {
+    root.querySelectorAll('.tree-node').forEach(node => {
       node.addEventListener('click', (e) => {
-        if (e.target.closest('.tree-actions') || e.target.closest('.tree-toggle')) {
-          return;
-        }
-
-        const id = node.dataset.id;
-        const type = node.dataset.type;
-
+        if (e.target.closest('.tree-actions') || e.target.closest('.tree-toggle')) return;
+        const { id, type } = node.dataset;
         if (type === 'collection') {
           this.selectedCollection = id;
           this.selectedRequest = null;
-          App.loadCollection(id);
-        } else if (type === 'request') {
+          // Clicking the folder is also the natural way to open it.
+          if (this.expandedCollections.has(id)) this.expandedCollections.delete(id);
+          else this.expandedCollections.add(id);
+        } else {
           this.selectedRequest = id;
           this.selectedCollection = null;
           App.loadRequest(id);
         }
-
         this.render();
       });
     });
 
-    // Tree actions
-    document.querySelectorAll('[data-action]').forEach(btn => {
+    root.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const action = btn.dataset.action;
-        const id = btn.dataset.id;
-
-        switch (action) {
-          case 'edit-collection':
-            this.showCollectionModal(id);
-            break;
-          case 'delete-collection':
-            this.confirmDeleteCollection(id);
-            break;
-          case 'edit-request':
-            this.showRequestModal(id);
-            break;
-          case 'delete-request':
-            this.confirmDeleteRequest(id);
-            break;
-        }
+        const { action, id } = btn.dataset;
+        if (action === 'add-request') { this.selectedCollection = id; this.showRequestModal(); }
+        else if (action === 'edit-collection') this.showCollectionModal(id);
+        else if (action === 'delete-collection') this.confirmDeleteCollection(id);
+        else if (action === 'edit-request') this.showRequestModal(id);
+        else if (action === 'duplicate-request') this.duplicateRequest(id);
+        else if (action === 'delete-request') this.confirmDeleteRequest(id);
       });
     });
 
-    // Drag & Drop
-    this.setupDragDrop();
+    this.setupDragDrop(root);
   },
 
-  renderHistory(container) {
-    const history = Storage.getHistory();
+  duplicateRequest(id) {
+    const request = Storage.getRequests().find(r => r.id === id);
+    if (!request) return;
+    const { id: _id, createdAt, updatedAt, ...rest } = request;
+    Storage.addRequest({ ...rest, name: `${request.name || 'Request'} (copy)` });
+    this.render();
+    Toast.success('Đã nhân bản request');
+  },
 
-    if (history.length === 0) {
+  // ----------------------------------------------------------------- history
+  renderHistory(container) {
+    const term = (this.filterTerm || '').toLowerCase();
+    const history = Storage.getHistory().filter(item => {
+      if (!term) return true;
+      return (item.url || '').toLowerCase().includes(term)
+        || (item.method || '').toLowerCase().includes(term);
+    });
+
+    if (!history.length) {
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">📜</div>
-          <div class="empty-state-text">Chưa có request nào trong lịch sử</div>
-        </div>
-      `;
+          <div class="empty-state-text">${term ? 'Không có lịch sử nào khớp' : 'Chưa có request nào trong lịch sử'}</div>
+        </div>`;
       return;
     }
 
     container.innerHTML = `
+      <div class="history-toolbar">
+        <button class="btn-secondary" id="clearHistoryBtn">🧹 Xóa lịch sử</button>
+      </div>
       <ul class="history-list">
-        ${history.map(item => `
-          <li class="history-item ${item.success ? 'success' : 'error'}" data-id="${item.id}">
-            <div>
-              <span class="history-method ${item.method}">${item.method}</span>
-              <span class="history-url">${this.escapeHtml(this.truncate(item.url, 40))}</span>
-            </div>
-            <div class="history-time">${this.formatDate(item.timestamp)}</div>
-          </li>
-        `).join('')}
-      </ul>
-    `;
+        ${history.map(item => {
+          const status = item.response && item.response.status;
+          const statusTag = status
+            ? `<span class="history-status ${this.statusClass(status)}">${status}</span>`
+            : '<span class="history-status status-error">ERR</span>';
+          return `
+            <li class="history-item ${item.success ? 'success' : 'error'}" data-id="${item.id}">
+              <div class="history-line">
+                <span class="method-badge ${item.method}">${item.method}</span>
+                ${statusTag}
+                <span class="history-url" title="${this.escapeHtml(item.url || '')}">${this.escapeHtml(this.truncate(item.url || '', 44))}</span>
+                <button class="tree-action-btn history-delete" data-history-delete="${item.id}" title="Xóa">🗑️</button>
+              </div>
+              <div class="history-time">${this.formatDate(item.timestamp)}${item.response && item.response.duration != null ? ' · ' + item.response.duration + 'ms' : ''}</div>
+            </li>`;
+        }).join('')}
+      </ul>`;
 
-    // History click event
-    document.querySelectorAll('.history-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const id = item.dataset.id;
-        App.loadHistoryItem(id);
+    container.querySelectorAll('.history-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-history-delete]')) return;
+        App.loadHistoryItem(el.dataset.id);
       });
     });
+
+    container.querySelectorAll('[data-history-delete]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        Storage.deleteHistoryItem(btn.dataset.historyDelete);
+        this.render();
+      });
+    });
+
+    const clearBtn = container.querySelector('#clearHistoryBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', async () => {
+        if (await Toast.confirm('Xóa toàn bộ lịch sử? Collections và environments vẫn được giữ.')) {
+          Storage.clearHistory();
+          this.render();
+          Toast.success('Đã xóa lịch sử');
+        }
+      });
+    }
   },
 
-  // Modals
-  showCollectionModal(collectionId = null) {
-    const collection = collectionId ? Storage.getCollections().find(c => c.id === collectionId) : null;
-    const isEdit = !!collection;
+  statusClass(status) {
+    const code = parseInt(status, 10);
+    if (code >= 200 && code < 300) return 'status-2xx';
+    if (code >= 300 && code < 400) return 'status-3xx';
+    if (code >= 400 && code < 500) return 'status-4xx';
+    if (code >= 500) return 'status-5xx';
+    return 'status-error';
+  },
 
-    const modal = document.getElementById('collectionModal');
-    document.getElementById('collectionModalTitle').textContent = isEdit ? 'Sửa Collection' : 'Tạo Collection Mới';
+  // ------------------------------------------------------------------ modals
+  showCollectionModal(collectionId = null) {
+    const collection = collectionId
+      ? Storage.getCollections().find(c => c.id === collectionId)
+      : null;
+
+    document.getElementById('collectionModalTitle').textContent =
+      collection ? 'Sửa Collection' : 'Tạo Collection Mới';
     document.getElementById('collectionId').value = collectionId || '';
     document.getElementById('collectionName').value = collection?.name || '';
     document.getElementById('collectionDescription').value = collection?.description || '';
 
-    // Parent collection dropdown
-    const collections = Storage.getCollections().filter(c => c.id !== collectionId);
-    const parentSelect = document.getElementById('collectionParent');
-    const defaultParent = isEdit ? (collection?.parentId || '') : (this.selectedCollection || '');
-    parentSelect.innerHTML = '<option value="">-- Không có (Root) --</option>' +
-      collections.map(c => `<option value="${c.id}" ${c.id === defaultParent ? 'selected' : ''}>${this.escapeHtml(c.name)}</option>`).join('');
+    // A collection cannot become a child of itself or of its own descendants.
+    const candidates = Storage.getCollections().filter(c =>
+      c.id !== collectionId && !(collectionId && Storage.isDescendant(collectionId, c.id))
+    );
+    const defaultParent = collection ? (collection.parentId || '') : (this.selectedCollection || '');
+    document.getElementById('collectionParent').innerHTML =
+      '<option value="">-- Không có (Root) --</option>' +
+      candidates.map(c =>
+        `<option value="${c.id}" ${c.id === defaultParent ? 'selected' : ''}>${this.escapeHtml(c.name)}</option>`
+      ).join('');
 
-    modal.classList.add('active');
+    document.getElementById('collectionModal').classList.add('active');
+    document.getElementById('collectionName').focus();
   },
 
   showRequestModal(requestId = null) {
-    const request = requestId ? Storage.getRequests().find(r => r.id === requestId) : null;
-    const isEdit = !!request;
+    const request = requestId
+      ? Storage.getRequests().find(r => r.id === requestId)
+      : null;
 
-    const modal = document.getElementById('requestModal');
-    document.getElementById('requestModalTitle').textContent = isEdit ? 'Sửa Request' : 'Tạo Request Mới';
+    document.getElementById('requestModalTitle').textContent =
+      request ? 'Sửa Request' : 'Tạo Request Mới';
     document.getElementById('requestId').value = requestId || '';
-    document.getElementById('requestName').value = request?.name || '';
+    document.getElementById('requestName').value =
+      request?.name || document.getElementById('requestNameInput').value || '';
 
-    // Collection dropdown
-    const collections = Storage.getCollections();
-    const collectionSelect = document.getElementById('requestCollection');
-    const defaultCollection = isEdit ? (request?.collectionId || '') : (this.selectedCollection || '');
-    collectionSelect.innerHTML = '<option value="">-- Không thuộc collection nào --</option>' +
-      collections.map(c => `<option value="${c.id}" ${c.id === defaultCollection ? 'selected' : ''}>${this.escapeHtml(c.name)}</option>`).join('');
+    const defaultCollection = request ? (request.collectionId || '') : (this.selectedCollection || '');
+    document.getElementById('requestCollection').innerHTML =
+      '<option value="">-- Không thuộc collection nào --</option>' +
+      Storage.getCollections().map(c =>
+        `<option value="${c.id}" ${c.id === defaultCollection ? 'selected' : ''}>${this.escapeHtml(c.name)}</option>`
+      ).join('');
 
-    modal.classList.add('active');
+    document.getElementById('requestModal').classList.add('active');
+    document.getElementById('requestName').focus();
   },
 
-  confirmDeleteCollection(id) {
+  async confirmDeleteCollection(id) {
     const collection = Storage.getCollections().find(c => c.id === id);
     if (!collection) return;
 
-    if (confirm(`Xóa collection "${collection.name}"?\n\nTất cả requests và sub-collections sẽ bị xóa theo.`)) {
+    const requests = Storage.getRequests().filter(r => r.collectionId === id).length;
+    const message = `Xóa collection "${collection.name}"?\n\n`
+      + `Tất cả sub-collections và ${requests} request bên trong sẽ bị xóa theo.`;
+
+    if (await Toast.confirm(message, { okLabel: 'Xóa' })) {
       Storage.deleteCollection(id);
       this.selectedCollection = null;
       this.render();
-      App.clearForm();
+      Toast.success('Đã xóa collection');
     }
   },
 
-  confirmDeleteRequest(id) {
+  async confirmDeleteRequest(id) {
     const request = Storage.getRequests().find(r => r.id === id);
     if (!request) return;
 
-    if (confirm(`Xóa request "${request.name}"?`)) {
+    if (await Toast.confirm(`Xóa request "${request.name || '(không tên)'}"?`, { okLabel: 'Xóa' })) {
       Storage.deleteRequest(id);
-      this.selectedRequest = null;
-      this.render();
-      App.clearForm();
-    }
-  },
-
-  confirmClearAll() {
-    if (confirm('Xóa toàn bộ collections, requests và history?\n\nHành động này không thể hoàn tác!')) {
-      if (confirm('Bạn có chắc chắn không? Tất cả dữ liệu sẽ mất vĩnh viễn!')) {
-        Storage.clearAll();
-        this.selectedCollection = null;
+      if (this.selectedRequest === id) {
         this.selectedRequest = null;
-        this.render();
         App.clearForm();
-        alert('✅ Đã xóa toàn bộ dữ liệu!');
       }
+      this.render();
+      Toast.success('Đã xóa request');
     }
   },
 
-  // Drag & Drop
-  setupDragDrop() {
-    document.querySelectorAll('[draggable="true"]').forEach(elem => {
+  async confirmClearAll() {
+    const ok = await Toast.confirm(
+      'Xóa toàn bộ collections, requests, history và environments?\n\nHành động này không thể hoàn tác.',
+      { title: 'Xóa toàn bộ dữ liệu', okLabel: 'Xóa tất cả' }
+    );
+    if (!ok) return;
+
+    // Offer the export instead of a second "are you really sure" prompt: a
+    // backup is more useful than one more click.
+    const backup = await Toast.confirm(
+      'Tải file backup JSON trước khi xóa?',
+      { title: 'Sao lưu', okLabel: 'Tải backup', danger: false }
+    );
+    if (backup) App.downloadExport(Storage.exportData());
+
+    Storage.clearAll();
+    this.selectedCollection = null;
+    this.selectedRequest = null;
+    this.expandedCollections.clear();
+    App.clearForm();
+    App.refreshEnvironmentSelect();
+    this.render();
+    Toast.success('Đã xóa toàn bộ dữ liệu');
+  },
+
+  // --------------------------------------------------------------- drag&drop
+  setupDragDrop(root) {
+    root.querySelectorAll('[draggable="true"]').forEach(elem => {
       elem.addEventListener('dragstart', (e) => {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', JSON.stringify({
@@ -364,66 +448,71 @@ const Sidebar = {
         elem.classList.add('dragging');
       });
 
-      elem.addEventListener('dragend', (e) => {
-        elem.classList.remove('dragging');
-      });
+      elem.addEventListener('dragend', () => elem.classList.remove('dragging'));
 
       elem.addEventListener('dragover', (e) => {
-        if (elem.dataset.type === 'collection') {
-          e.preventDefault();
-          elem.classList.add('drag-over');
-        }
+        if (elem.dataset.type !== 'collection') return;
+        e.preventDefault();
+        elem.classList.add('drag-over');
       });
 
-      elem.addEventListener('dragleave', (e) => {
-        elem.classList.remove('drag-over');
-      });
+      elem.addEventListener('dragleave', () => elem.classList.remove('drag-over'));
 
       elem.addEventListener('drop', (e) => {
         e.preventDefault();
         elem.classList.remove('drag-over');
-
         if (elem.dataset.type !== 'collection') return;
 
+        let payload;
         try {
-          const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-          const targetCollectionId = elem.dataset.id;
-
-          if (dragData.type === 'request') {
-            Storage.updateRequest(dragData.id, { collectionId: targetCollectionId });
-            this.render();
-          } else if (dragData.type === 'collection' && dragData.id !== targetCollectionId) {
-            Storage.updateCollection(dragData.id, { parentId: targetCollectionId });
-            this.expandedCollections.add(targetCollectionId);
-            this.render();
-          }
-        } catch (err) {
-          console.error('Drop error:', err);
+          payload = JSON.parse(e.dataTransfer.getData('text/plain'));
+        } catch {
+          return;
         }
+        const targetId = elem.dataset.id;
+
+        if (payload.type === 'request') {
+          Storage.updateRequest(payload.id, { collectionId: targetId });
+          this.expandedCollections.add(targetId);
+        } else if (payload.type === 'collection') {
+          if (payload.id === targetId) return;
+          // Dropping a folder into its own descendant detaches that whole branch
+          // from the root: the tree builder then never reaches it and everything
+          // inside disappears from the sidebar.
+          if (Storage.isDescendant(payload.id, targetId)) {
+            Toast.error('Không thể kéo một collection vào chính nó hoặc vào collection con của nó');
+            return;
+          }
+          Storage.updateCollection(payload.id, { parentId: targetId });
+          this.expandedCollections.add(targetId);
+        }
+        this.render();
       });
     });
   },
 
-  // Utilities
+  // --------------------------------------------------------------- utilities
   escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   },
 
   truncate(str, maxLen) {
-    return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
+    const value = String(str || '');
+    return value.length > maxLen ? value.slice(0, maxLen) + '…' : value;
   },
 
   formatDate(isoString) {
     const date = new Date(isoString);
-    const now = new Date();
-    const diff = now - date;
-
+    if (Number.isNaN(date.getTime())) return '';
+    const diff = Date.now() - date.getTime();
     if (diff < 60000) return 'Vừa xong';
     if (diff < 3600000) return `${Math.floor(diff / 60000)} phút trước`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)} giờ trước`;
-    
-    return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString('vi-VN') + ' '
+      + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   }
 };

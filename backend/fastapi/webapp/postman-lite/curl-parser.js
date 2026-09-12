@@ -1,11 +1,26 @@
-// cURL Command Parser
+// curl-parser.js - read a curl command, and write one back.
+//
+// Both directions live here so they stay each other's inverse: the command we
+// print is the command we can re-import.
 const CurlParser = {
+  // Flags that take no argument. Knowing them matters: treating `--compressed`
+  // as "a value follows" swallowed the next token, which was often the URL.
+  BOOLEAN_FLAGS: new Set([
+    '-L', '--location', '-k', '--insecure', '-s', '--silent', '-S', '--show-error',
+    '-v', '--verbose', '-i', '--include', '-g', '--globoff', '-f', '--fail',
+    '--compressed', '--no-buffer', '-#', '--progress-bar', '-N', '--no-keepalive',
+    '-4', '--ipv4', '-6', '--ipv6', '-j', '--junk-session-cookies'
+  ]),
+
   parse(cmd) {
     const tokens = this.shellSplit(cmd);
-    if (tokens.length === 0) throw new Error('Empty command');
-    if (tokens[0].toLowerCase() !== 'curl') throw new Error("Phải bắt đầu bằng 'curl'");
+    if (tokens.length === 0) throw new Error('Lệnh rỗng');
 
-    let method = 'GET';
+    let start = 0;
+    if (tokens[0].toLowerCase() === 'curl') start = 1;
+    else throw new Error("Lệnh phải bắt đầu bằng 'curl'");
+
+    let method = null;
     let url = null;
     const headers = {};
     let data = null;
@@ -14,113 +29,149 @@ const CurlParser = {
     const files = [];
     let cookies = {};
     let contentType = null;
+    let followRedirects = false;
+    const unsupported = [];
 
-    for (let i = 1; i < tokens.length; i++) {
-      const t = tokens[i];
-      const next = (j = 1) => (i + j < tokens.length ? tokens[i + j] : null);
+    for (let i = start; i < tokens.length; i++) {
+      let token = tokens[i];
+      let inlineValue = null;
 
-      if (t === '-X' || t === '--request') {
-        method = (next() || method).toUpperCase();
+      // `--header=value` and `-XPOST` both appear in the wild.
+      if (token.startsWith('--') && token.includes('=')) {
+        const eq = token.indexOf('=');
+        inlineValue = token.slice(eq + 1);
+        token = token.slice(0, eq);
+      } else if (/^-[XHdbuFAe]./.test(token)) {
+        inlineValue = token.slice(2);
+        token = token.slice(0, 2);
+      }
+
+      const takeValue = () => {
+        if (inlineValue !== null) return inlineValue;
+        const next = i + 1 < tokens.length ? tokens[i + 1] : null;
         i++;
+        return next;
+      };
+
+      if (this.BOOLEAN_FLAGS.has(token)) {
+        if (token === '-L' || token === '--location') followRedirects = true;
         continue;
       }
 
-      if (t === '-H' || t === '--header') {
-        const h = next();
-        i++;
-        if (h) {
-          const idx = h.indexOf(':');
-          if (idx > -1) {
-            const k = h.slice(0, idx).trim();
-            const v = h.slice(idx + 1).trim();
-            headers[k] = v;
-            if (/^content-type$/i.test(k)) contentType = v;
+      switch (token) {
+        case '-X': case '--request':
+          method = (takeValue() || 'GET').toUpperCase();
+          continue;
+
+        case '-I': case '--head':
+          method = 'HEAD';
+          continue;
+
+        case '-H': case '--header': {
+          const header = takeValue();
+          if (header) {
+            const idx = header.indexOf(':');
+            if (idx > -1) {
+              const key = header.slice(0, idx).trim();
+              const value = header.slice(idx + 1).trim();
+              if (key) {
+                headers[key] = value;
+                if (/^content-type$/i.test(key)) contentType = value;
+              }
+            }
           }
+          continue;
         }
-        continue;
-      }
 
-      if (t === '-d' || t === '--data' || t === '--data-raw' || t === '--data-binary' || t === '--data-urlencode') {
-        const d = next() || '';
-        i++;
-        data = data ? (data + '&' + d) : d;
-        if (method === 'GET') method = 'POST';
-        continue;
-      }
+        case '-d': case '--data': case '--data-raw':
+        case '--data-binary': case '--data-ascii': case '--data-urlencode': {
+          const value = takeValue() || '';
+          if (value.startsWith('@')) unsupported.push(`${token} ${value} (đọc file không khả dụng trong trình duyệt)`);
+          else data = data === null ? value : data + '&' + value;
+          if (!method) method = 'POST';
+          continue;
+        }
 
-      if (t === '-F' || t === '--form') {
-        const f = next() || '';
-        i++;
-        isMultipart = true;
-        const eq = f.indexOf('=');
-        if (eq > -1) {
-          const k = f.slice(0, eq);
-          const v = f.slice(eq + 1);
-          if (v.startsWith('@')) {
-            files.push(v.slice(1));
-          } else {
-            formFields[k] = v;
+        case '-F': case '--form': case '--form-string': {
+          const value = takeValue() || '';
+          isMultipart = true;
+          const eq = value.indexOf('=');
+          if (eq > -1) {
+            const key = value.slice(0, eq);
+            const raw = value.slice(eq + 1);
+            if (raw.startsWith('@') || raw.startsWith('<')) files.push({ field: key, path: raw.slice(1) });
+            else formFields[key] = raw;
           }
+          if (!method) method = 'POST';
+          continue;
         }
-        if (method === 'GET') method = 'POST';
-        continue;
-      }
 
-      if (t === '-b' || t === '--cookie') {
-        const c = next() || '';
-        i++;
-        cookies = { ...cookies, ...this.parseCookieString(c) };
-        continue;
-      }
+        case '-b': case '--cookie': {
+          const value = takeValue() || '';
+          if (value.includes('=')) cookies = { ...cookies, ...this.parseCookieString(value) };
+          else unsupported.push(`${token} ${value} (cookie jar dạng file)`);
+          continue;
+        }
 
-      if (t === '-u' || t === '--user') {
-        const u = next() || '';
-        i++;
-        headers['Authorization'] = 'Basic ' + btoa(u);
-        continue;
-      }
+        case '-u': case '--user': {
+          const value = takeValue() || '';
+          headers['Authorization'] = 'Basic ' + this.utf8Base64(value);
+          continue;
+        }
 
-      if (t === '--url') {
-        url = next();
-        i++;
-        continue;
-      }
+        case '-A': case '--user-agent':
+          headers['User-Agent'] = takeValue() || '';
+          continue;
 
-      if (t.startsWith('-')) {
-        continue;
-      }
+        case '-e': case '--referer':
+          headers['Referer'] = takeValue() || '';
+          continue;
 
-      // First non-flag token assumed url
-      url = t;
+        case '--url':
+          url = takeValue();
+          continue;
+
+        default:
+          if (token.startsWith('-')) {
+            // An unknown flag may or may not take a value; skipping only the
+            // flag is the safer guess than silently eating the next token.
+            unsupported.push(token);
+            continue;
+          }
+          if (!url) url = token;
+          continue;
+      }
     }
 
-    let baseUrl = url || '';
+    if (!url) throw new Error('Không tìm thấy URL trong lệnh curl');
+
     const params = {};
-
+    let baseUrl = url;
     try {
-      const u = new URL(url);
-      baseUrl = `${u.origin}${u.pathname}`;
-      for (const [k, v] of u.searchParams.entries()) {
-        params[k] = v;
+      const parsed = new URL(url);
+      baseUrl = `${parsed.origin}${parsed.pathname}`;
+      parsed.searchParams.forEach((value, key) => { params[key] = value; });
+    } catch {
+      // Relative or templated URL ({{BASE}}/users) - keep the query inline.
+      const queryIndex = url.indexOf('?');
+      if (queryIndex > -1) {
+        baseUrl = url.slice(0, queryIndex);
+        new URLSearchParams(url.slice(queryIndex + 1)).forEach((value, key) => { params[key] = value; });
       }
-    } catch {}
+    }
 
-    // Heuristic content type
     if (!contentType) {
-      if (isMultipart) {
-        contentType = 'multipart/form-data';
-      } else if (data != null) {
-        const t = data.trim();
-        if (t.startsWith('{') || t.startsWith('[')) {
-          contentType = 'application/json';
-        } else {
-          contentType = 'application/x-www-form-urlencoded';
-        }
+      if (isMultipart) contentType = 'multipart/form-data';
+      else if (data != null) {
+        const trimmed = data.trim();
+        contentType = (trimmed.startsWith('{') || trimmed.startsWith('['))
+          ? 'application/json'
+          : 'application/x-www-form-urlencoded';
       }
     }
 
     return {
-      method,
+      method: method || 'GET',
       url,
       baseUrl,
       params,
@@ -130,27 +181,43 @@ const CurlParser = {
       formFields,
       files,
       cookies,
-      contentType
+      contentType,
+      followRedirects,
+      unsupported
     };
   },
 
+  /**
+   * Split a shell command into tokens.
+   *
+   * Handles the backslash-newline continuation that every "Copy as cURL" in
+   * every browser emits. The previous version turned that continuation into a
+   * bare "\n" token, which then fell through to the "first non-flag token is the
+   * URL" rule and overwrote the real URL - so no multi-line curl could be
+   * imported at all.
+   */
   shellSplit(str) {
     const out = [];
     let i = 0;
     let cur = '';
-    let q = null; // quote: ' or "
+    let started = false;   // distinguishes '' (an empty token) from no token
+    let quote = null;      // "'", '"' or "$'"
+
+    const push = () => {
+      if (started || cur.length) out.push(cur);
+      cur = '';
+      started = false;
+    };
 
     while (i < str.length) {
       const ch = str[i];
 
-      if (q) {
-        if (ch === q) {
-          q = null;
-          i++;
-          continue;
-        }
-        if (q === '"' && ch === '\\' && i + 1 < str.length) {
-          cur += str[i + 1];
+      if (quote === "$'") {
+        if (ch === "'") { quote = null; i++; continue; }
+        if (ch === '\\' && i + 1 < str.length) {
+          const escapes = { n: '\n', t: '\t', r: '\r', '\\': '\\', "'": "'", '"': '"', '0': '\0' };
+          const next = str[i + 1];
+          cur += Object.prototype.hasOwnProperty.call(escapes, next) ? escapes[next] : next;
           i += 2;
           continue;
         }
@@ -159,43 +226,135 @@ const CurlParser = {
         continue;
       }
 
-      if (ch === "'" || ch === '"') {
-        q = ch;
+      if (quote) {
+        if (ch === quote) { quote = null; i++; continue; }
+        if (quote === '"' && ch === '\\' && i + 1 < str.length) {
+          // Inside double quotes a backslash only escapes a few characters.
+          const next = str[i + 1];
+          if (next === '\n') { i += 2; continue; }
+          cur += '"$`\\'.includes(next) ? next : '\\' + next;
+          i += 2;
+          continue;
+        }
+        cur += ch;
         i++;
         continue;
       }
 
-      if (/\s/.test(ch)) {
-        if (cur.length) {
-          out.push(cur);
-          cur = '';
-        }
-        i++;
-        while (i < str.length && /\s/.test(str[i])) i++;
-        continue;
-      }
+      if (ch === '$' && str[i + 1] === "'") { quote = "$'"; started = true; i += 2; continue; }
+      if (ch === "'" || ch === '"') { quote = ch; started = true; i++; continue; }
 
       if (ch === '\\' && i + 1 < str.length) {
+        if (str[i + 1] === '\n') { i += 2; continue; }          // line continuation
+        if (str[i + 1] === '\r' && str[i + 2] === '\n') { i += 3; continue; }
         cur += str[i + 1];
+        started = true;
         i += 2;
         continue;
       }
 
+      // Windows "Copy as cURL (cmd)" uses ^ at end of line for continuation.
+      if (ch === '^' && (str[i + 1] === '\n' || (str[i + 1] === '\r' && str[i + 2] === '\n'))) {
+        i += str[i + 1] === '\r' ? 3 : 2;
+        continue;
+      }
+
+      if (/\s/.test(ch)) {
+        push();
+        while (i < str.length && /\s/.test(str[i])) i++;
+        continue;
+      }
+
       cur += ch;
+      started = true;
       i++;
     }
 
-    if (cur.length) out.push(cur);
+    push();
     return out;
   },
 
-  parseCookieString(s) {
+  parseCookieString(str) {
     const out = {};
-    s.split(';').forEach(part => {
-      const [k, ...rest] = part.split('=');
-      if (!k) return;
-      out[k.trim()] = (rest.join('=') || '').trim();
+    String(str || '').split(';').forEach(part => {
+      const idx = part.indexOf('=');
+      if (idx === -1) return;
+      const key = part.slice(0, idx).trim();
+      if (key) out[key] = part.slice(idx + 1).trim();
     });
     return out;
+  },
+
+  utf8Base64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    bytes.forEach(b => { binary += String.fromCharCode(b); });
+    return btoa(binary);
+  },
+
+  /** Wrap a value in single quotes, escaping any single quote inside it. */
+  shQuote(value) {
+    return "'" + String(value ?? '').replace(/'/g, "'\\''") + "'";
+  },
+
+  /**
+   * Render a request spec as a runnable curl command.
+   *
+   * Note the trailing backslashes. The previous builder joined lines with a bare
+   * newline, producing a command that a shell reads as several separate ones -
+   * every copied command failed with "curl: no URL specified".
+   */
+  build(spec, options = {}) {
+    const method = (spec.method || 'GET').toUpperCase();
+    const headers = { ...(spec.headers || {}) };
+    const params = { ...(spec.params || {}) };
+
+    if (window.HttpClient) HttpClient.applyAuth(spec.auth, headers, params);
+
+    const url = window.HttpClient
+      ? HttpClient.buildUrl(spec.url, params)
+      : spec.url;
+
+    const lines = [];
+    lines.push(`curl -X ${method} ${this.shQuote(url)}`);
+    if (options.followRedirects) lines.push('--location');
+
+    const contentType = spec.contentType || 'application/json';
+    const isMultipart = contentType === 'multipart/form-data';
+    const hasBody = !['GET', 'HEAD'].includes(method) && (spec.body || '').trim();
+
+    Object.entries(headers).forEach(([key, value]) => {
+      // curl derives the multipart Content-Type (with its own boundary) from -F.
+      if (isMultipart && /^content-type$/i.test(key)) return;
+      lines.push(`-H ${this.shQuote(`${key}: ${value}`)}`);
+    });
+
+    const cookieEntries = Object.entries(spec.cookies || {}).filter(([k]) => k);
+    if (cookieEntries.length) {
+      lines.push(`-b ${this.shQuote(cookieEntries.map(([k, v]) => `${k}=${v}`).join('; '))}`);
+    }
+
+    if (hasBody || (isMultipart && (spec.files || []).length)) {
+      if (isMultipart) {
+        try {
+          const fields = JSON.parse(spec.body || '{}');
+          Object.entries(fields).forEach(([k, v]) => lines.push(`-F ${this.shQuote(`${k}=${v}`)}`));
+        } catch { /* no text fields */ }
+        Array.from(spec.files || []).forEach(file => {
+          lines.push(`-F ${this.shQuote(`${file.name}=@${file.name}`)}`);
+        });
+      } else if (contentType === 'application/x-www-form-urlencoded') {
+        let encoded = spec.body;
+        try {
+          const parsed = JSON.parse(spec.body || '{}');
+          if (parsed && typeof parsed === 'object') encoded = new URLSearchParams(parsed).toString();
+        } catch { /* raw */ }
+        lines.push(`-d ${this.shQuote(encoded)}`);
+      } else {
+        lines.push(`-d ${this.shQuote(spec.body)}`);
+      }
+    }
+
+    return lines.join(' \\\n  ');
   }
 };

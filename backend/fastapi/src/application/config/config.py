@@ -44,6 +44,20 @@ class Settings(BaseSettings): # type: ignore
     SQLADMIN_STATEMENT_TIMEOUT: int = 60
     SQLADMIN_POOL_SIZE: int = 5
     SQLADMIN_MAX_ROWS: int = 10000
+    # HTTP forward proxy (/proxy/request, used by the postman-lite web app)
+    # A browser cannot call an API that sends no CORS headers; forwarding the
+    # request server-side removes that limit. It also makes the backend reachable
+    # as a forward proxy, so turn it off or pin the host list when the API is
+    # exposed publicly.
+    PROXY_ENABLED: bool = True
+    # Comma-separated hostname patterns ("api.example.com,*.internal") or "*".
+    PROXY_ALLOWED_HOSTS: str = "*"
+    PROXY_TIMEOUT_SECONDS: float = 60.0
+    PROXY_MAX_BYTES: int = 10 * 1024 * 1024
+    # Off by default: testers routinely point the tool at boxes with self-signed
+    # certificates, and refusing would make it weaker than the curl it prints.
+    PROXY_VERIFY_TLS: bool = False
+
     
     # Testing
     TESTING: bool = False
