@@ -1,85 +1,105 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useEditorStore } from '../store'
+import { IconClose, IconLock } from './Icons'
 import './AuthModal.css'
 
-function AuthModal() {
-  const [showModal, setShowModal] = useState(false)
+interface AuthModalProps {
+  open: boolean
+  onClose: () => void
+}
+
+function AuthModal({ open, onClose }: AuthModalProps) {
+  const loginAdmin = useEditorStore((state) => state.loginAdmin)
   const [key, setKey] = useState('')
   const [error, setError] = useState('')
-  const isAdmin = useEditorStore((state) => state.isAdmin)
-  const loginAdmin = useEditorStore((state) => state.loginAdmin)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleLogin = () => {
-    if (loginAdmin(key)) {
+  useEffect(() => {
+    if (!open) {
       setKey('')
       setError('')
-      setShowModal(false)
+      return
+    }
+    const frame = requestAnimationFrame(() => inputRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [open])
+
+  if (!open) return null
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault()
+    if (loginAdmin(key)) {
+      onClose()
     } else {
-      setError('Invalid admin key')
+      setError('That key was not accepted.')
       setKey('')
+      inputRef.current?.focus()
     }
   }
 
-  if (isAdmin) return null
-
   return (
-    <>
-      <button
-        className="auth-trigger"
-        onClick={() => setShowModal(true)}
-        title="Login as admin"
+    <div className="overlay" onClick={onClose}>
+      <form
+        className="panel auth-panel"
+        onClick={(event) => event.stopPropagation()}
+        onSubmit={submit}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-title"
       >
-        🔐
-      </button>
-
-      {showModal && (
-        <div className="auth-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Admin Login</h2>
-            <p className="auth-desc">
-              Enter admin key to unlock editing features
-            </p>
-
-            <input
-              type="password"
-              placeholder="Admin key"
-              value={key}
-              onChange={(e) => {
-                setKey(e.target.value)
-                setError('')
-              }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') handleLogin()
-              }}
-              autoFocus
-              className={error ? 'error' : ''}
-            />
-
-            {error && <div className="auth-error">{error}</div>}
-
-            <div className="auth-buttons">
-              <button className="auth-btn confirm" onClick={handleLogin}>
-                Login
-              </button>
-              <button
-                className="auth-btn cancel"
-                onClick={() => {
-                  setShowModal(false)
-                  setKey('')
-                  setError('')
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-
-            <p className="auth-hint">
-              💡 Hint: Key is defined in store.ts
-            </p>
+        <div className="auth-head">
+          <span className="auth-icon">
+            <IconLock size={18} />
+          </span>
+          <div>
+            <h2 id="auth-title">Unlock editing</h2>
+            <p>Anyone can read and export. Editing files needs the admin key.</p>
           </div>
+          <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Close">
+            <IconClose />
+          </button>
         </div>
-      )}
-    </>
+
+        <div className="auth-body">
+          <label className="auth-label" htmlFor="admin-key">
+            Admin key
+          </label>
+          <input
+            ref={inputRef}
+            id="admin-key"
+            type="password"
+            className={error ? 'has-error' : ''}
+            value={key}
+            onChange={(event) => {
+              setKey(event.target.value)
+              setError('')
+            }}
+            placeholder="Enter the admin key"
+            autoComplete="current-password"
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? 'auth-error' : undefined}
+          />
+          {error && (
+            <p id="auth-error" className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
+          <p className="auth-note">
+            The key is set with <code>VITE_MARKDOWN_ADMIN_KEY</code> at build time. It only gates this browser session and is
+            never written to storage.
+          </p>
+        </div>
+
+        <div className="auth-actions">
+          <button type="button" className="btn btn-outline" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={!key}>
+            Unlock
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }
 

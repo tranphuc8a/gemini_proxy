@@ -1,102 +1,143 @@
-import { useEffect, useState } from 'react'
-import { useEditorStore } from '../store'
+import { IconClose } from './Icons'
 import './HelpModal.css'
 
-function HelpModal() {
-  const [open, setOpen] = useState(false)
-  const isDarkMode = useEditorStore((state) => state.isDarkMode)
-  const fullscreen = useEditorStore((state) => state.fullscreen)
-  const toggleFullscreen = useEditorStore((state) => state.toggleFullscreen)
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      if (open) {
-        setOpen(false)
-      } else if (fullscreen) {
-        toggleFullscreen()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [fullscreen, open, toggleFullscreen])
-
-  return (
-    <>
-      <div className="help-floating-actions">
-        <button
-          className="help-floating-button"
-          onClick={() => setOpen(true)}
-          title="Open usage guide"
-          aria-label="Open usage guide"
-        >
-          ?
-        </button>
-        <ExitFullscreenButton />
-      </div>
-
-      {open && (
-        <div className="help-overlay" onClick={() => setOpen(false)}>
-          <section
-            className={`help-modal ${isDarkMode ? 'dark-mode' : ''}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="help-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="help-modal-header">
-              <div>
-                <p className="help-eyebrow">Markdown Editor</p>
-                <h2 id="help-title">Usage guide</h2>
-              </div>
-              <button className="help-close-button" onClick={() => setOpen(false)} aria-label="Close help">×</button>
-            </div>
-            <div className="help-modal-content">
-              <p><strong>Getting stuck in fullscreen?</strong> Click the green fullscreen button at the bottom-right, or press <kbd>Escape</kbd>.</p>
-              <h3>Workspace</h3>
-              <ul>
-                <li><strong>Editor</strong> writes Markdown and <strong>Preview</strong> renders it live.</li>
-                <li>Choose <strong>Editor</strong>, <strong>Both</strong>, or <strong>Preview</strong> from the view switcher.</li>
-                <li>Drag the divider between the two panes to resize them.</li>
-                <li>Use <strong>Hide files</strong> to collapse the sidebar.</li>
-              </ul>
-              <h3>Files</h3>
-              <ul>
-                <li>Click a folder to select it, then use <strong>+</strong> to create a file or folder inside it.</li>
-                <li>Hover a node for rename, copy, and move actions. Copy/move targets the selected folder.</li>
-                <li>Use <strong>Import</strong> for `.md` files and <strong>Export</strong> to download Markdown.</li>
-              </ul>
-              <h3>Writing and preview</h3>
-              <ul>
-                <li>Supports GFM tables, links, images, HTML, math, Mermaid, and language code blocks.</li>
-                <li>Click <strong>Copy</strong> on a highlighted code block to copy its source.</li>
-                <li>Scroll either pane to synchronize position. Double-click Preview to focus the matching editor area.</li>
-              </ul>
-              <h3>Useful shortcuts</h3>
-              <p><kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Z</kbd> undo, <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Y</kbd> redo, <kbd>Tab</kbd> inserts two spaces, and <kbd>Escape</kbd> closes this guide.</p>
-            </div>
-          </section>
-        </div>
-      )}
-    </>
-  )
+interface HelpModalProps {
+  open: boolean
+  onClose: () => void
 }
 
-function ExitFullscreenButton() {
-  const fullscreen = useEditorStore((state) => state.fullscreen)
-  const toggleFullscreen = useEditorStore((state) => state.toggleFullscreen)
+const SHORTCUTS: { group: string; items: [string, string][] }[] = [
+  {
+    group: 'Workspace',
+    items: [
+      ['Ctrl Shift P', 'Command palette — commands, files and headings'],
+      ['Ctrl K', 'Same, when the editor does not have focus'],
+      ['Ctrl \\', 'Cycle editor / split / preview'],
+      ['Ctrl Shift B', 'Show or hide the sidebar'],
+      ['Ctrl Shift O', 'Jump to the document outline'],
+      ['Ctrl S', 'Save to browser storage now'],
+      ['Ctrl G', 'Go to line'],
+      ['F11', 'Distraction-free mode'],
+      ['Esc', 'Close a dialog, or leave full screen']
+    ]
+  },
+  {
+    group: 'Formatting',
+    items: [
+      ['Ctrl B', 'Bold'],
+      ['Ctrl I', 'Italic'],
+      ['Ctrl Shift X', 'Strikethrough'],
+      ['Ctrl E', 'Inline code'],
+      ['Ctrl Shift C', 'Code block'],
+      ['Ctrl K', 'Insert link (while editing)'],
+      ['Ctrl Shift I', 'Insert image'],
+      ['Ctrl 1 … 6', 'Heading level, pressed again to clear'],
+      ['Ctrl Shift 8', 'Bullet list'],
+      ['Ctrl Shift 7', 'Numbered list'],
+      ['Ctrl Shift 9', 'Task list'],
+      ['Ctrl Shift Q', 'Block quote']
+    ]
+  },
+  {
+    group: 'Editing',
+    items: [
+      ['Tab / Shift Tab', 'Indent or outdent the selected lines'],
+      ['Enter', 'Continue the list or quote you are in'],
+      ['Alt ↑ / ↓', 'Move the current lines'],
+      ['Ctrl D', 'Duplicate the current lines'],
+      ['Ctrl Shift K', 'Delete the current lines'],
+      ['Ctrl F', 'Find'],
+      ['Ctrl H', 'Find and replace'],
+      ['Ctrl Z / Ctrl Y', 'Undo and redo']
+    ]
+  }
+]
 
-  if (!fullscreen) return null
+function HelpModal({ open, onClose }: HelpModalProps) {
+  if (!open) return null
 
   return (
-    <button
-      className="exit-fullscreen-floating-button"
-      onClick={toggleFullscreen}
-      title="Exit fullscreen"
-      aria-label="Exit fullscreen"
-    >
-      ↙
-    </button>
+    <div className="overlay" onClick={onClose}>
+      <section
+        className="panel help-panel"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-title"
+      >
+        <header className="help-head">
+          <div>
+            <p className="help-eyebrow">Markdown Editor</p>
+            <h2 id="help-title">Help and shortcuts</h2>
+          </div>
+          <button className="btn btn-icon" onClick={onClose} aria-label="Close help">
+            <IconClose />
+          </button>
+        </header>
+
+        <div className="help-body">
+          <section className="help-section">
+            <h3>Getting around</h3>
+            <ul className="help-list">
+              <li>
+                The <strong>editor</strong> is on the left and the live <strong>preview</strong> on the right. Drag the divider
+                to resize them, or double-click it to snap back to an even split.
+              </li>
+              <li>
+                <strong>Double-click</strong> any block in the preview to put the caret on the line that produced it — and
+                double-click in the editor to scroll the preview to the matching spot.
+              </li>
+              <li>
+                Tick a <strong>checkbox</strong> in the preview and the source updates with it.
+              </li>
+              <li>
+                <strong>Drag files and folders</strong> in the sidebar to reorganise them. Drop onto the empty area below the
+                tree to move something to the top level.
+              </li>
+              <li>
+                Paste a URL over selected text to turn it into a link, or paste an image to embed it.
+              </li>
+            </ul>
+          </section>
+
+          <section className="help-section">
+            <h3>What renders</h3>
+            <p className="help-text">
+              GitHub-flavoured Markdown: tables, task lists, footnotes and strikethrough, plus KaTeX maths (
+              <code>$…$</code> and <code>$$…$$</code>), Mermaid diagrams in a <code>mermaid</code> code fence, syntax
+              highlighting for fenced code, and sanitised inline HTML.
+            </p>
+          </section>
+
+          {SHORTCUTS.map((section) => (
+            <section key={section.group} className="help-section">
+              <h3>{section.group}</h3>
+              <dl className="help-shortcuts">
+                {section.items.map(([keys, description]) => (
+                  <div key={keys + description} className="help-shortcut">
+                    <dt>
+                      {keys.split(' ').map((part, index) => (
+                        <kbd key={`${part}-${index}`}>{part}</kbd>
+                      ))}
+                    </dt>
+                    <dd>{description}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+
+          <section className="help-section">
+            <h3>Saving</h3>
+            <p className="help-text">
+              Work is written to this browser's local storage automatically; the status bar shows when it last succeeded.
+              Turn on <strong>backend sync</strong> from the toolbar to load and save the whole file tree through the FastAPI
+              API instead — saving there needs admin access.
+            </p>
+          </section>
+        </div>
+      </section>
+    </div>
   )
 }
 

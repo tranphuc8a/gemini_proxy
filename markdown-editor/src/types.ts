@@ -1,32 +1,51 @@
 export interface FileNode {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  content?: string;
-  children?: FileNode[];
-  parentId?: string;
+  id: string
+  name: string
+  type: 'file' | 'folder'
+  content?: string
+  children?: FileNode[]
+  parentId?: string
 }
 
-export interface EditorState {
-  currentContent: string;
-  currentFileId: string | null;
-  selectedFolderId: string | null;
-  files: FileNode[];
-  history: string[];
-  historyIndex: number;
-  isAdmin: boolean;
-  isDarkMode: boolean;
-  scrollSync: boolean;
-  viewMode: 'split' | 'editor' | 'preview';
-  editorWidth: number;
-  backendStorage: boolean;
-  backendStorageType: 'json' | 'mysql';
-  sidebarCollapsed: boolean;
-  fullscreen: boolean;
+export type ViewMode = 'split' | 'editor' | 'preview'
+export type ThemePreference = 'light' | 'dark' | 'system'
+export type SidebarTab = 'files' | 'outline'
+export type StorageBackend = 'json' | 'mysql'
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+
+export interface Toast {
+  id: string
+  message: string
+  tone: 'info' | 'success' | 'error'
 }
 
-export interface ActionHistory {
-  action: string;
-  timestamp: number;
-  details?: string;
+/** Everything that survives a reload, minus the auth flag. */
+export interface Settings {
+  theme: ThemePreference
+  scrollSync: boolean
+  viewMode: ViewMode
+  editorWidth: number
+  sidebarWidth: number
+  sidebarCollapsed: boolean
+  sidebarTab: SidebarTab
+  showLineNumbers: boolean
+  wordWrap: boolean
+  fontSize: number
+  backendStorage: boolean
+  backendStorageType: StorageBackend
+}
+
+export interface EditorState extends Settings {
+  currentContent: string
+  currentFileId: string | null
+  selectedFolderId: string | null
+  expandedFolders: string[]
+  files: FileNode[]
+  history: string[]
+  historyIndex: number
+  isAdmin: boolean
+  fullscreen: boolean
+  saveState: SaveState
+  lastSavedAt: number | null
+  toasts: Toast[]
 }

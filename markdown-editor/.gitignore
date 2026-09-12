@@ -31,3 +31,8 @@ dist-ssr
 # Generated files
 coverage
 .nyc_output
+
+# Emitted next to sources; Vite resolves vite.config.js before .ts
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo

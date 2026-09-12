@@ -1,34 +1,44 @@
-# 📝 Markdown Editor - Full-Stack Frontend Application
+# 📝 Markdown Editor
 
-A modern, feature-rich markdown editor web application built with React, TypeScript, and Vite. No backend required!
+A markdown editor that runs entirely in the browser: live GitHub-flavoured preview,
+a file tree, and optional sync with the FastAPI backend in this repository.
 
 ## ✨ Features
 
-### Core Features
-- **Live Markdown Editor & Preview**: Real-time markdown editing with instant preview
-- **File Management**: Complete file system with folder structure support
-- **Admin Authentication**: Secret key-based admin login for edit permissions
-- **Role-Based Access**: 
-  - **Admin**: Full create/read/update/delete capabilities
-  - **Anonymous**: View-only access to preview and existing files
+### Writing
+- **Formatting toolbar and shortcuts** for headings, bold, italic, strikethrough, inline
+  code, code blocks, lists, task lists, quotes, links, images, tables and rules —
+  all of which *toggle* rather than blindly inserting
+- **Smart list continuation**: Enter extends and renumbers lists, and outdents out of them
+- **Multi-line indent/outdent**, duplicate, move and delete lines
+- **Selection-aware paste**: a pasted URL becomes a link, a pasted image is embedded
+- **Find and replace** with case, whole-word and regular-expression modes
+- **Measured line-number gutter** that stays aligned even with word wrap on
+- **Coalesced undo** — a burst of typing is one undo step, capped at 200 entries
 
-### Advanced Markdown Support
-- ✅ **GitHub Flavored Markdown (GFM)** with full GitHub theme styling
-- ✅ **Markdown Images** - Full support for image embedding
-- ✅ **Markdown Links** - Hyperlinks with proper formatting
-- ✅ **Markdown Tables** - Create and render complex tables
-- ✅ **Markdown HTML** - Inline HTML support
-- ✅ **Math Formulas** - LaTeX/KaTeX support for mathematical expressions
-- ✅ **Mermaid Diagrams** - Flowcharts, sequence diagrams, and more
+### Preview
+- **GitHub Flavored Markdown**: tables, task lists, footnotes, strikethrough
+- **KaTeX maths**, **Mermaid diagrams** (loaded on demand), **syntax-highlighted code**
+- **Sanitised inline HTML**, so a document from the shared backend cannot inject scripts
+- **Line-accurate scroll sync** in both directions, plus double-click to jump between a
+  rendered block and the source line that produced it
+- **Interactive task lists**: ticking a checkbox in the preview edits the source
+- Heading anchors, per-block copy buttons, and readable errors for malformed diagrams
 
-### Editor Features
-- ⏪ **Undo/Redo**: Full history support with keyboard shortcuts (Ctrl+Z / Ctrl+Y)
-- 🔄 **Synchronize Scroll**: Auto-scroll between editor and preview
-- 🌓 **Dark Mode**: Light and dark theme support
-- 💾 **Auto-Save**: Automatic file saving to browser localStorage
-- ⌨️ **Keyboard Shortcuts**: Tab indentation, Ctrl+Z undo, etc.
-- 📊 **File Tree**: Visual hierarchy of files and folders
-- 📝 **File Operations**: Create, rename, delete files and folders (admin only)
+### Workspace
+- **Command palette** (Ctrl+Shift+P) over commands, files and headings, with fuzzy matching
+- **Document outline** panel built from the headings
+- **File tree** with drag-and-drop, inline rename, duplicate, filter and automatic
+  de-duplication of names
+- **Status bar**: save state, word and line counts, reading time, cursor position, zoom
+- **Light / dark / system theme**, resizable panes and sidebar, distraction-free mode
+- **Export** to Markdown, self-contained HTML, PDF, PNG or JPG, plus a real print stylesheet
+
+### Access and storage
+- **Admin key unlocks editing**; anonymous visitors can read, search and export
+- The admin flag lives in memory only — it is never written to storage
+- **Auto-save** to localStorage, debounced, with the last successful save shown
+- **Optional FastAPI backend sync** (JSON file or MySQL), with errors reported in plain language
 
 ## 📋 Project Structure
 
@@ -36,27 +46,45 @@ A modern, feature-rich markdown editor web application built with React, TypeScr
 markdown-editor/
 ├── src/
 │   ├── components/
-│   │   ├── AppHeader.tsx          # Top navigation with controls
-│   │   ├── Sidebar.tsx            # File tree and navigation
-│   │   ├── FileTree.tsx           # File system component
-│   │   ├── Editor.tsx             # Markdown editor textarea
-│   │   ├── Preview.tsx            # Markdown preview panel
-│   │   ├── AuthModal.tsx          # Admin login modal
+│   │   ├── Header.tsx             # Top bar: menus, view mode, theme, role
+│   │   ├── Sidebar.tsx            # Files / Outline tabs
+│   │   ├── FileTree.tsx           # Drag-and-drop tree
+│   │   ├── Outline.tsx            # Headings of the open document
+│   │   ├── EditorPane.tsx         # Textarea, gutter, measuring mirror, shortcuts
+│   │   ├── FormatToolbar.tsx      # Formatting actions
+│   │   ├── FindReplace.tsx        # Find and replace bar
+│   │   ├── Preview.tsx            # react-markdown pipeline
+│   │   ├── CodeBlock.tsx          # Highlighted code with a copy button
+│   │   ├── MermaidDiagram.tsx     # Lazily loaded diagrams
+│   │   ├── CommandPalette.tsx     # Ctrl+Shift+P
+│   │   ├── StatusBar.tsx          # Save state and document statistics
+│   │   ├── AuthModal.tsx          # Admin unlock
+│   │   ├── HelpModal.tsx          # Help and shortcut reference
+│   │   ├── Toasts.tsx             # Transient notifications
+│   │   ├── Icons.tsx              # Inline SVG icon set
 │   │   └── *.css                  # Component styles
-│   ├── App.tsx                    # Main app component
-│   ├── App.css                    # App styles
-│   ├── main.tsx                   # React entry point
-│   ├── index.css                  # Global styles
-│   ├── store.ts                   # Zustand state management
-│   └── types.ts                   # TypeScript type definitions
-├── index.html                     # HTML entry point
-├── vite.config.ts                 # Vite configuration
-├── tsconfig.json                  # TypeScript configuration
-├── tsconfig.node.json             # TypeScript Node config
-├── package.json                   # Dependencies and scripts
-├── eslint.config.js               # ESLint configuration
-├── .gitignore                     # Git ignore rules
-└── README.md                      # This file
+│   ├── lib/                       # Pure, unit-tested logic
+│   │   ├── tree.ts                # File-tree operations
+│   │   ├── editorCommands.ts      # Text transforms on a selection
+│   │   ├── markdown.ts            # Headings, statistics, search, line mapping
+│   │   ├── paneSync.ts            # Line-based scroll sync
+│   │   ├── rehypeEnhance.ts       # data-line stamps, anchors, sanitize schema
+│   │   ├── persistence.ts         # Versioned localStorage with migration
+│   │   ├── exporters.ts           # Markdown/HTML/PDF/image export, clipboard
+│   │   ├── fuzzy.ts               # Command palette matching
+│   │   └── id.ts                  # Collision-free ids
+│   ├── services/markdownStorage.ts # FastAPI client
+│   ├── __tests__/                 # Store and component tests
+│   ├── test/setup.ts              # Vitest/jsdom setup
+│   ├── App.tsx                    # Shell, layout, global shortcuts
+│   ├── store.ts                   # Zustand state and actions
+│   ├── types.ts                   # Shared types
+│   └── index.css                  # Design tokens, reset, markdown styles
+├── index.html
+├── vite.config.ts                 # Build + Vitest configuration
+├── tsconfig.json / tsconfig.node.json
+├── eslint.config.js               # Flat config, typescript-eslint
+└── package.json
 ```
 
 ## 🚀 Getting Started
@@ -148,17 +176,24 @@ npm run build
 
 ## 🎨 Customization
 
-### Change Admin Key
-Edit `src/store.ts` and modify the `ADMIN_KEY` constant:
-```typescript
-const ADMIN_KEY = 'your-custom-admin-key'
+### Change the admin key
+Set it at build time so it does not have to be edited in source:
+```bash
+# .env.local
+VITE_MARKDOWN_ADMIN_KEY=your-custom-admin-key
+VITE_MARKDOWN_API_URL=http://localhost:6789/api/v1/markdown/files
 ```
+It must match the backend's `MARKDOWN_ADMIN_KEY`. Without the variable the default
+`markdown-editor-admin-2024` is used.
 
-### Change Markdown Theme
-The editor uses GitHub's markdown theme. To customize:
-1. Modify CSS variables in `src/components/Preview.css`
-2. Adjust color schemes for dark/light modes
-3. Customize font preferences in `src/index.css`
+> The key only gates the UI; it ships in the bundle. Real protection comes from the
+> backend, which requires `X-Admin-Key` on every write.
+
+### Restyle the app
+Every colour, radius, shadow and font is a CSS custom property declared at the top of
+`src/index.css`. Light is the base palette and `:root[data-theme='dark']` re-declares
+only the colours, so a token added once works in both themes. Markdown styles are scoped
+to `.markdown-body`, so they never leak into the application chrome.
 
 ### Customize Storage
 By default, files are stored in browser's localStorage. To use server storage:
@@ -169,32 +204,40 @@ By default, files are stored in browser's localStorage. To use server storage:
 ## 📦 Dependencies
 
 ### Main Dependencies
-- **react**: UI library
-- **react-dom**: React DOM bindings
-- **react-markdown**: Markdown rendering
-- **remark-gfm**: GitHub Flavored Markdown support
-- **remark-math**: Math formula support
-- **rehype-katex**: KaTeX rendering for math
-- **mermaid**: Diagram rendering
-- **zustand**: Lightweight state management
+- **react** / **react-dom**: UI library
+- **zustand**: state management
+- **react-markdown** + **remark-gfm**, **remark-math**: parsing and GFM
+- **rehype-katex**: maths rendering
+- **rehype-raw** + **rehype-sanitize**: inline HTML, safely
+- **react-syntax-highlighter**: code highlighting (async-light build, one grammar per language)
+- **mermaid**: diagrams, dynamically imported
+- **html2canvas** + **jspdf**: image and PDF export, dynamically imported
 
 ### Dev Dependencies
-- **typescript**: Type safety
-- **vite**: Fast build tool
-- **@vitejs/plugin-react**: React support for Vite
-- **eslint**: Code linting
+- **typescript**, **vite**, **@vitejs/plugin-react**
+- **vitest**, **jsdom**, **@testing-library/react**, **@testing-library/user-event**, **@testing-library/jest-dom**
+- **eslint**, **typescript-eslint**, **eslint-plugin-react-hooks**, **eslint-plugin-react-refresh**
+
+### Bundle
+Mermaid, html2canvas, jsPDF and the Prism grammars are all loaded on demand, so the
+initial payload is roughly 950 kB uncompressed (~250 kB gzipped) rather than one
+monolithic chunk.
 
 ## 🧪 Quality Assurance
 
-### Type Checking
 ```bash
-npm run type-check
+npm run type-check   # tsc --noEmit
+npm run lint         # eslint (flat config, typescript-eslint, react-hooks)
+npm test             # vitest run
+npm run test:watch   # vitest in watch mode
+npm run coverage     # coverage for src/lib and src/store.ts
+npm run build        # tsc -b && vite build
 ```
 
-### Linting
-```bash
-npm run lint
-```
+The suite covers the pure logic in `src/lib` (tree operations, editor commands,
+markdown parsing, search, scroll mapping, fuzzy matching), the Zustand store
+(history coalescing, admin gating, persistence and its legacy migration), and the
+interactive components with Testing Library.
 
 ## 🌐 Browser Compatibility
 
@@ -257,15 +300,24 @@ graph TD
 
 ## 🔐 Security Notes
 
-- ⚠️ The admin key is hardcoded for demo purposes only
-- ⚠️ All data is stored in browser localStorage (not persistent across devices)
-- ⚠️ This is a frontend-only application with no server authentication
-- For production use with sensitive data:
-  1. Implement proper backend authentication
-  2. Use secure password hashing
-  3. Add database persistence
-  4. Enable HTTPS
-  5. Implement rate limiting
+What the app does do:
+
+- The admin flag lives in memory only. It is never written to storage, so a reload
+  always returns to view-only and a tampered localStorage cannot grant admin.
+- Settings restored from storage are filtered against a known key list, so an unknown
+  field in the payload cannot inject state.
+- Inline HTML in a document is sanitised (`rehype-raw` then `rehype-sanitize`) before it
+  reaches the DOM, so a file loaded from the shared backend cannot run script. Mermaid
+  runs at `securityLevel: 'strict'`.
+- Writes to the backend require the `X-Admin-Key` header, which the server verifies.
+
+What it does not:
+
+- ⚠️ The admin key ships in the frontend bundle. It gates the UI, not the data — anyone
+  can read the key from the build. The backend's check is the real boundary.
+- ⚠️ Local data lives in this browser only; it does not follow you across devices.
+- For production use with sensitive content: put real authentication in front of the API,
+  serve over HTTPS, and rate-limit the write endpoint.
 
 ## Backend Storage
 

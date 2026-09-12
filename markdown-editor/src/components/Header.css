@@ -1,184 +1,310 @@
-.header {
+.app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
-  background-color: #f6f8fa;
-  border-bottom: 1px solid #d0d7de;
-  gap: 20px;
-  flex-wrap: wrap;
-  min-height: 60px;
-  overflow: auto;
+  gap: 12px;
+  height: var(--header-height);
+  padding: 0 10px;
+  flex-shrink: 0;
+  background-color: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
 }
 
-.app.dark-mode .header {
-  background-color: #161b22;
-  border-bottom-color: #30363d;
-}
-
-.header-left {
+.header-group {
   display: flex;
   align-items: center;
-  min-width: 200px;
-}
-
-.header-title {
-  margin: 0;
-  font-size: 1.2em;
-  font-weight: 600;
-  white-space: nowrap;
+  gap: 4px;
+  min-width: 0;
 }
 
 .header-center {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.view-mode-control {
-  display: flex;
-  gap: 2px;
+  flex: 1;
+  justify-content: center;
+  gap: 8px;
 }
 
 .header-right {
+  justify-content: flex-end;
+}
+
+/* --------------------------------------------------------------------------
+   Brand and breadcrumb
+   -------------------------------------------------------------------------- */
+
+.header-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 4px;
 }
 
-.header-btn {
-  padding: 6px 12px;
-  border: 1px solid #d0d7de;
-  border-radius: 6px;
-  background-color: #ffffff;
-  color: #24292e;
-  font-size: 0.875em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-muted);
   white-space: nowrap;
-}
-
-.app.dark-mode .header-btn {
-  background-color: #21262d;
-  color: #c9d1d9;
-  border-color: #30363d;
-}
-
-.header-btn:hover:not(:disabled) {
-  background-color: #f3f4f6;
-  border-color: #24292e;
-}
-
-.import-btn {
-  position: relative;
   overflow: hidden;
 }
 
-.import-btn input {
+.breadcrumb-part {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.breadcrumb-part > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumb-sep {
+  margin: 0 2px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.breadcrumb-current {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Command palette trigger
+   -------------------------------------------------------------------------- */
+
+.btn-search {
+  gap: 8px;
+  min-width: 200px;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--text-faint);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  justify-content: flex-start;
+}
+
+.btn-search:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg);
+}
+
+.btn-search-label {
+  flex: 1;
+  text-align: left;
+  font-size: 12.5px;
+}
+
+.btn-search kbd {
+  font-size: 10px;
+  padding: 0 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Dropdown menus
+   -------------------------------------------------------------------------- */
+
+.menu {
+  position: relative;
+}
+
+.menu-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 232px;
+  padding: 5px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: panel-in 120ms var(--ease);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  border-radius: var(--radius);
+  cursor: pointer;
+  position: relative;
+}
+
+.menu-item:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+}
+
+.menu-item:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.menu-item.is-active {
+  color: var(--accent-text);
+  background-color: var(--accent-soft);
+}
+
+.menu-item input[type='file'] {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
 }
 
-.app.dark-mode .header-btn:hover:not(:disabled) {
-  background-color: #30363d;
-  border-color: #58a6ff;
+.menu-item kbd {
+  margin-left: auto;
 }
 
-.header-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.menu-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background-color: var(--border-subtle);
 }
 
-.header-btn.active {
-  background-color: #0969da;
-  color: #ffffff;
-  border-color: #0969da;
+.menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 9px;
+  font-size: 13px;
 }
 
-.app.dark-mode .header-btn.active {
-  background-color: #238636;
-  border-color: #238636;
+.menu-select {
+  height: 26px;
+  padding: 0 6px;
+  font-size: 12.5px;
+  background-color: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
-.header-btn.danger {
-  background-color: #da3633;
-  color: #ffffff;
-  border-color: #da3633;
+.menu-note {
+  padding: 4px 9px 6px;
+  font-size: 11.5px;
+  color: var(--text-faint);
 }
 
-.header-btn.danger:hover {
-  background-color: #f85149;
-  border-color: #f85149;
+.menu-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-faint);
 }
 
-.header-user-status {
-  padding: 4px 8px;
-  background-color: #eaeef2;
-  border-radius: 4px;
-  font-size: 0.875em;
+.menu-badge {
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--success);
+  background-color: var(--success-soft);
+  border-radius: 9px;
+}
+
+/* --------------------------------------------------------------------------
+   Role chip
+   -------------------------------------------------------------------------- */
+
+.role-chip {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 12px;
   font-weight: 500;
+  color: var(--text-muted);
+  background-color: var(--bg-sunken);
+  border: 1px solid var(--border);
+}
+
+.role-chip.is-admin {
+  color: var(--success);
+  background-color: var(--success-soft);
+  border-color: transparent;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
+  border: 0;
 }
 
-.storage-select {
-  min-height: 30px;
-  border: 1px solid #d0d7de;
-  border-radius: 6px;
-  background: #fff;
-  color: #24292e;
-}
+/* --------------------------------------------------------------------------
+   Responsive — shed the least important controls first
+   -------------------------------------------------------------------------- */
 
-.app.dark-mode .storage-select {
-  background: #21262d;
-  color: #c9d1d9;
-  border-color: #30363d;
-}
-
-.storage-message {
-  position: fixed;
-  right: 20px;
-  bottom: 78px;
-  max-width: 320px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: #24292e;
-  color: #fff;
-  font-size: 0.8em;
-  z-index: 20;
-}
-
-.app.dark-mode .header-user-status {
-  background-color: #30363d;
-  color: #8b949e;
-}
-
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 10px;
+@media (max-width: 1200px) {
+  .btn-search-label,
+  .btn-search kbd {
+    display: none;
   }
 
-  .header-left,
-  .header-center,
-  .header-right {
-    width: 100%;
+  .btn-search {
+    min-width: 0;
+    width: 28px;
+    padding: 0;
     justify-content: center;
   }
+}
 
-  .header-title {
-    font-size: 1em;
+@media (max-width: 1000px) {
+  .breadcrumb-part:not(:last-child) {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .header-center .segmented .btn {
+    padding: 0 7px;
   }
 
-  .header-center,
-  .header-right {
-    flex-wrap: wrap;
+  .menu > .btn {
+    width: 28px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
   }
 
-  .header-btn {
-    font-size: 0.75em;
-    padding: 4px 8px;
+  .menu > .btn svg {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 680px) {
+  .header-brand .breadcrumb {
+    display: none;
+  }
+
+  .role-chip {
+    width: 26px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
   }
 }

@@ -1,0 +1,108 @@
+.app-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: var(--statusbar-height);
+  padding: 0 10px;
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background-color: var(--bg-subtle);
+  border-top: 1px solid var(--border);
+  user-select: none;
+}
+
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.status-right {
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-file {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.status-save.is-saved {
+  color: var(--success);
+}
+
+.status-save.is-saving {
+  color: var(--text-faint);
+}
+
+.status-save.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.status-separator {
+  width: 1px;
+  height: 13px;
+  background-color: var(--border);
+}
+
+.status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-btn:hover {
+  color: var(--text);
+  background-color: var(--bg-hover);
+}
+
+.status-zoom {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.status-zoom-value {
+  min-width: 34px;
+  justify-content: center;
+}
+
+.status-exit {
+  color: var(--accent-text);
+  background-color: var(--accent-soft);
+}
+
+.status-role.is-admin {
+  color: var(--success);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .status-right .status-item:nth-child(2),
+  .status-right .status-item:nth-child(3),
+  .status-separator,
+  .status-zoom {
+    display: none;
+  }
+}

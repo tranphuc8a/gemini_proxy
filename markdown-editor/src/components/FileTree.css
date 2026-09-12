@@ -1,137 +1,150 @@
 .file-tree {
-  padding: 8px 0;
+  min-height: 100%;
+  padding: 4px 0;
+  border-radius: var(--radius);
 }
 
-.file-tree-item {
-  user-select: none;
+.file-tree.is-root-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -3px;
 }
 
-.file-tree-row {
+.file-tree-empty,
+.tree-empty {
+  padding: 12px 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.tree-empty {
+  padding: 2px 0;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.tree-row {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
-  cursor: pointer;
-  transition: background-color 0.2s;
   gap: 4px;
-  position: relative;
-}
-
-.file-tree-row:hover {
-  background-color: #e1e4e8;
-}
-
-.app.dark-mode .file-tree-row:hover {
-  background-color: #30363d;
-}
-
-.file-tree-row.selected {
-  background-color: #ddf4ff;
-}
-
-.app.dark-mode .file-tree-row.selected {
-  background-color: #0d47a1;
-}
-
-.expand-btn {
-  background: none;
-  border: none;
+  height: 26px;
+  padding-right: 4px;
+  font-size: 13px;
+  color: var(--text);
+  border-radius: var(--radius);
   cursor: pointer;
-  padding: 0;
-  margin: 0;
+  user-select: none;
+  transition: background-color 100ms var(--ease);
+}
+
+.tree-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.tree-row.is-current {
+  color: var(--accent-text);
+  background-color: var(--accent-soft);
+  font-weight: 500;
+}
+
+.tree-row.is-selected-folder:not(.is-current) {
+  background-color: var(--bg-active);
+}
+
+.tree-row.is-drop-target {
+  background-color: var(--accent-soft);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.tree-row.is-dragging {
+  opacity: 0.45;
+}
+
+.tree-twisty,
+.tree-twisty-spacer {
+  display: grid;
+  place-items: center;
   width: 16px;
   height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75em;
-  color: #57606a;
+  flex-shrink: 0;
 }
 
-.app.dark-mode .expand-btn {
-  color: #8b949e;
+.tree-twisty {
+  color: var(--text-faint);
+  border-radius: var(--radius-sm);
+  transition: transform 120ms var(--ease);
 }
 
-.file-icon,
-.folder-icon {
-  font-size: 0.875em;
-  width: 16px;
-  display: inline-block;
-  text-align: center;
+.tree-twisty.is-open {
+  transform: rotate(90deg);
 }
 
-.file-name {
+.tree-twisty:hover {
+  color: var(--text);
+}
+
+.tree-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.tree-icon.is-folder {
+  color: var(--accent);
+}
+
+.tree-row.is-current .tree-icon {
+  color: var(--accent-text);
+}
+
+.tree-name {
   flex: 1;
-  font-size: 0.875em;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.rename-input {
+.tree-rename {
   flex: 1;
-  padding: 2px 4px;
-  border: 1px solid #0969da;
-  border-radius: 2px;
-  font-size: 0.875em;
-  background-color: #ffffff;
-  color: #24292e;
+  min-width: 0;
+  height: 20px;
+  padding: 0 4px;
+  font-size: 13px;
+  color: var(--text);
+  background-color: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  outline: none;
 }
 
-.app.dark-mode .rename-input {
-  background-color: #0d1117;
-  color: #c9d1d9;
-  border-color: #58a6ff;
-}
-
-.file-actions {
-  display: flex;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.file-tree-row:hover .file-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
-  font-size: 0.75em;
-  width: 16px;
-  height: 16px;
-  display: flex;
+.tree-actions {
+  display: none;
   align-items: center;
-  justify-content: center;
-  border-radius: 2px;
-  transition: background-color 0.2s;
+  gap: 1px;
+  flex-shrink: 0;
 }
 
-.action-btn:hover {
-  background-color: #d0d7de;
+.tree-row:hover .tree-actions,
+.tree-row:focus-within .tree-actions {
+  display: flex;
 }
 
-.app.dark-mode .action-btn:hover {
-  background-color: #483f5e;
+.tree-action {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-faint);
+  border-radius: var(--radius-sm);
 }
 
-.action-btn.delete:hover {
-  background-color: #f85149;
+.tree-action:hover {
+  color: var(--text);
+  background-color: var(--bg-active);
 }
 
-.file-tree-children {
-  padding-left: 12px;
-}
-
-@media (max-width: 768px) {
-  .file-tree-row {
-    padding: 3px 4px;
-  }
-
-  .file-actions {
-    opacity: 1;
-  }
+.tree-action.is-danger:hover {
+  color: #fff;
+  background-color: var(--danger);
 }
