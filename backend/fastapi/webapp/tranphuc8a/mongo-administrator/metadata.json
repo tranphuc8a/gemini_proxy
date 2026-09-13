@@ -1,0 +1,20 @@
+{
+  "title": "Mongo Administrator",
+  "description": "Bảng điều khiển quản trị MongoDB chạy trên trình duyệt, kiểu mongo-express kết hợp Compass. Kết nối bằng host/port hoặc chuỗi mongodb:// và mongodb+srv:// (hỗ trợ TLS, SRV, replica set), giữ phiên qua các lần tải lại trang mà không lưu mật khẩu trong trình duyệt. Duyệt cây database và collection, truy vấn bằng cú pháp quen thuộc với ObjectId, ISODate và regex, sửa document, quản lý index, chạy aggregation pipeline và xem trạng thái server.",
+  "tags": [
+    "mongodb",
+    "nosql",
+    "database",
+    "admin",
+    "mongo-express",
+    "compass",
+    "aggregation",
+    "query",
+    "dba",
+    "react",
+    "typescript",
+    "tools",
+    "tranphuc8a"
+  ],
+  "icon": "🍃"
+}

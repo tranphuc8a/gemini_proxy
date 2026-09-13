@@ -24,9 +24,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      // Build straight into the folder the FastAPI webapp controller serves, so
-      // `npm run build` is the whole deployment step.
-      outDir: '../backend/fastapi/webapp/postman-lite-pro',
+      // Build to dist/ like the other web apps; scripts/build-webapps.mjs is what
+      // publishes it into the collection. Writing straight into webapp/ put the
+      // app at the wrong path and let emptyOutDir wipe files the collection owns.
+      outDir: 'dist',
       emptyOutDir: true,
       sourcemap: false,
       rollupOptions: {

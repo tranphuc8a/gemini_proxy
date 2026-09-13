@@ -12,12 +12,14 @@ function AuthModal({ open, onClose }: AuthModalProps) {
   const loginAdmin = useEditorStore((state) => state.loginAdmin)
   const [key, setKey] = useState('')
   const [error, setError] = useState('')
+  const [checking, setChecking] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) {
       setKey('')
       setError('')
+      setChecking(false)
       return
     }
     const frame = requestAnimationFrame(() => inputRef.current?.focus())
@@ -26,12 +28,23 @@ function AuthModal({ open, onClose }: AuthModalProps) {
 
   if (!open) return null
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (loginAdmin(key)) {
-      onClose()
-    } else {
+    if (checking) return
+
+    setChecking(true)
+    setError('')
+    try {
+      // The backend verifies the key; this component never sees the real one.
+      if (await loginAdmin(key)) {
+        onClose()
+        return
+      }
       setError('That key was not accepted.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not reach the backend')
+    } finally {
+      setChecking(false)
       setKey('')
       inputRef.current?.focus()
     }
@@ -42,7 +55,7 @@ function AuthModal({ open, onClose }: AuthModalProps) {
       <form
         className="panel auth-panel"
         onClick={(event) => event.stopPropagation()}
-        onSubmit={submit}
+        onSubmit={(event) => void submit(event)}
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
@@ -85,8 +98,8 @@ function AuthModal({ open, onClose }: AuthModalProps) {
             </p>
           )}
           <p className="auth-note">
-            The key is set with <code>VITE_MARKDOWN_ADMIN_KEY</code> at build time. It only gates this browser session and is
-            never written to storage.
+            The backend checks the key against <code>MARKDOWN_ADMIN_KEY</code>. It unlocks this browser session only, and is
+            never written to storage or built into this page.
           </p>
         </div>
 
@@ -94,8 +107,8 @@ function AuthModal({ open, onClose }: AuthModalProps) {
           <button type="button" className="btn btn-outline" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={!key}>
-            Unlock
+          <button type="submit" className="btn btn-primary" disabled={!key || checking}>
+            {checking ? 'Checking...' : 'Unlock'}
           </button>
         </div>
       </form>

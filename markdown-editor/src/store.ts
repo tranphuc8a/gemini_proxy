@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { EditorState, FileNode, Settings, SidebarTab, StorageBackend, ThemePreference, ViewMode } from './types'
-import { loadMarkdownFiles, saveMarkdownFiles } from './services/markdownStorage'
+import { loadMarkdownFiles, saveMarkdownFiles, setAdminKey, verifyAdminKey } from './services/markdownStorage'
 import { createId } from './lib/id'
 import {
   addNode,
@@ -17,8 +17,6 @@ import {
   uniqueName
 } from './lib/tree'
 import { DEFAULT_SETTINGS, clearLegacyStorage, loadFiles, loadSettings, saveFiles, saveSettings } from './lib/persistence'
-
-const ADMIN_KEY = import.meta.env.VITE_MARKDOWN_ADMIN_KEY || 'markdown-editor-admin-2024'
 
 /** Keystrokes inside this window collapse into a single undo step. */
 export const HISTORY_DEBOUNCE_MS = 600
@@ -81,7 +79,7 @@ interface StoreState extends EditorState {
   copyNode: (nodeId: string, parentId: string | null) => void
   importFile: (name: string, content: string) => void
 
-  loginAdmin: (key: string) => boolean
+  loginAdmin: (key: string) => Promise<boolean>
   logout: () => void
 
   setTheme: (theme: ThemePreference) => void
@@ -391,14 +389,19 @@ export const useEditorStore = create<StoreState>((set, get) => {
       schedulePersist()
     },
 
-    loginAdmin: (key: string) => {
-      if (key !== ADMIN_KEY) return false
+    loginAdmin: async (key: string) => {
+      // The backend decides. Comparing against a key held in the browser proved
+      // nothing, and required shipping that key to every visitor.
+      const accepted = await verifyAdminKey(key)
+      if (!accepted) return false
+      setAdminKey(key)
       set({ isAdmin: true })
       get().pushToast('Admin mode enabled', 'success')
       return true
     },
 
     logout: () => {
+      setAdminKey(null)
       set({ isAdmin: false })
       get().pushToast('Switched to view-only mode', 'info')
     },

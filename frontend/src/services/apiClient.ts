@@ -1,14 +1,28 @@
 import axios, { type AxiosInstance } from 'axios';
+import { resolveApiBase } from './runtimeConfig';
+
+/**
+ * Where the backend sits while developing.
+ *
+ * The dev server puts this app on its own port, so it cannot be same-origin with
+ * the API and needs an absolute URL. Guarded by `import.meta.env.DEV` so the
+ * string is dropped from a production build: a localhost address shipped inside
+ * a bundle is exactly the bug this whole arrangement exists to prevent.
+ */
+const devFallbackBaseUrl = (): string | undefined =>
+  import.meta.env.DEV ? 'http://localhost:6789' : undefined;
 
 /**
  * Root of the API, including the backend's API_PREFIX if it sets one.
  *
- * The two halves have to agree: the backend mounts its routers under
- * `settings.API_PREFIX`, which ships empty, so the default below carries no
- * prefix either. Point VITE_API_BASE_URL at `http://localhost:6789/api/v1` if
- * you set API_PREFIX=/api/v1 on the backend.
+ * When this build is served from the FastAPI web-app collection the server
+ * injects the live prefix, so the value follows the deployment rather than the
+ * machine that ran `vite build`. Outside that (the dev server, or a standalone
+ * deploy on another origin) VITE_API_BASE_URL still applies.
  */
-export const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:6789').replace(/\/+$/, '');
+export const BASE_URL = resolveApiBase(
+  import.meta.env.VITE_API_BASE_URL || devFallbackBaseUrl()
+);
 
 /**
  * Ceiling for a single request.

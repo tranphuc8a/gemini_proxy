@@ -9,6 +9,8 @@
  * and a query string is the wrong shape for them.
  */
 
+import { resolveApiBase } from './runtimeConfig'
+
 import type {
   ApiEnvelope,
   CollectionInfo,
@@ -27,7 +29,10 @@ import type {
   StatsResult,
 } from '../types'
 
-const API_BASE = (import.meta.env?.VITE_API_BASE ?? '').replace(/\/+$/, '')
+// Resolved per call rather than once at module load: the injected config is
+// on the page before this bundle runs, and reading it lazily also keeps the
+// value correct for tests that stub window.__WEBAPP_CONFIG__.
+const apiBase = () => resolveApiBase(import.meta.env?.VITE_API_BASE)
 
 export class ApiError extends Error {
   readonly status: number
@@ -58,7 +63,7 @@ export function configureApi(options: {
 }
 
 function buildUrl(path: string, query?: Record<string, unknown>): string {
-  const url = `${API_BASE}${path}`
+  const url = `${apiBase()}${path}`
   if (!query) return url
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) {

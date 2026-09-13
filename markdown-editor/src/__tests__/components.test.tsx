@@ -9,7 +9,6 @@ import FormatToolbar from '../components/FormatToolbar'
 import StatusBar from '../components/StatusBar'
 import { onJump } from '../lib/paneSync'
 
-const ADMIN_KEY = 'markdown-editor-admin-2024'
 
 beforeEach(() => {
   useEditorStore.setState({
@@ -185,7 +184,7 @@ describe('StatusBar', () => {
   it('shows the read-only role by default and admin once unlocked', () => {
     const { rerender } = render(<StatusBar onOpenHelp={vi.fn()} />)
     expect(screen.getByText('View only')).toBeInTheDocument()
-    useEditorStore.getState().loginAdmin(ADMIN_KEY)
+    useEditorStore.setState({ isAdmin: true })
     rerender(<StatusBar onOpenHelp={vi.fn()} />)
     expect(screen.getByText('Admin')).toBeInTheDocument()
   })

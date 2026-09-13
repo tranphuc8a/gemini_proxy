@@ -128,6 +128,68 @@ def _load_app_metadata(app_path: Path, relative_path: str) -> Dict[str, Any]:
     return metadata
 
 
+# ---------------------------------------------------------------- runtime config
+
+#: Global the browser reads its deployment config from.
+RUNTIME_CONFIG_GLOBAL = "__WEBAPP_CONFIG__"
+
+
+def _runtime_config(app_path: Optional[Path] = None) -> Dict[str, Any]:
+    """Configuration a bundled web app cannot know until the server is running.
+
+    A Vite build freezes `import.meta.env.VITE_*` into the bundle, so a webapp
+    copied into this collection carries whatever URLs its build machine had --
+    typically localhost. But `API_PREFIX` is a *deployment* choice made when this
+    process starts, and the apps are served from this very origin. Handing them
+    the real values at serve time is what keeps the two in step.
+
+    An app may add its own keys through a `"config"` object in its metadata.json.
+    """
+    config: Dict[str, Any] = {
+        # Where the API routers are mounted. Empty string means "no prefix".
+        "apiBase": settings.API_PREFIX or "",
+        # Root of the app collection, for apps that build links to siblings.
+        "webappBase": router.prefix,
+    }
+
+    if app_path is not None:
+        extra = _load_app_metadata(app_path, "").get("config")
+        if isinstance(extra, dict):
+            config.update(extra)
+
+    return config
+
+
+def _inject_runtime_config(html: str, config: Dict[str, Any]) -> str:
+    """Place the runtime config ahead of every script the page loads.
+
+    It has to come first: the app reads it while its own bundle evaluates.
+    """
+    payload = json.dumps(config, ensure_ascii=False)
+    # A literal "</" inside the JSON would close the script tag early.
+    payload = payload.replace("</", "<\\/")
+    tag = f"<script>window.{RUNTIME_CONFIG_GLOBAL}=Object.freeze({payload});</script>"
+
+    lowered = html.lower()
+    head = lowered.find("<head")
+    if head != -1:
+        close = html.find(">", head)
+        if close != -1:
+            return html[: close + 1] + tag + html[close + 1 :]
+
+    # No <head> to hook onto; the very top of the document still runs first.
+    return tag + html
+
+
+def _html_with_config(index_file: Path, app_path: Path) -> HTMLResponse:
+    """Serve an app's entry document with its runtime config injected."""
+    try:
+        html = index_file.read_text(encoding="utf-8")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to read index file")
+    return HTMLResponse(content=_inject_runtime_config(html, _runtime_config(app_path)))
+
+
 def _scan_apps_recursive(base: Path, current: Path, collection: Optional[str] = None, depth: int = 0) -> List[AppMetadata]:
     """Recursively scan for apps (folders with index.html or subdirectories).
     
@@ -256,6 +318,21 @@ async def search_apps(q: str = Query("", description="Search query")):
     })
 
 
+@router.get("/_api/config")
+async def runtime_config(app: Optional[str] = Query(None, description="Relative path of an app, for its extra config")):
+    """The same config injected into each page, for an app that prefers to fetch it.
+
+    Mostly useful during development, when the app runs on the Vite dev server
+    and so never receives the injected script tag.
+    """
+    app_path: Optional[Path] = None
+    if app:
+        candidate = _safe_join(WEBAPP_ROOT, app)
+        if candidate.is_dir():
+            app_path = candidate
+    return JSONResponse(_runtime_config(app_path))
+
+
 @router.get("/_list", response_model=list)
 async def list_apps_json():
     """Return JSON list of available app names (subdirectories with index.html). Legacy endpoint."""
@@ -300,11 +377,7 @@ async def serve_index(app_name: str, request: Request):
     folder = _app_folder(app_name)
     index_file = _find_index_file(folder)
     if index_file is not None:
-        try:
-            content = index_file.read_text(encoding="utf-8")
-        except Exception:
-            raise HTTPException(status_code=500, detail="Failed to read index file")
-        return HTMLResponse(content=content)
+        return _html_with_config(index_file, folder)
     # Otherwise, render directory listing at app root
     base_href = str(request.url.path)  # endswith '/'
     if not base_href.endswith('/'):
@@ -325,8 +398,7 @@ async def serve_asset(app_name: str, asset_path: str, request: Request):
         folder = _app_folder(app_name)
         index_file = _find_index_file(folder)
         if index_file is not None:
-            media_type = _guess_media_type(index_file)
-            return FileResponse(str(index_file), media_type=media_type)
+            return _html_with_config(index_file, folder)
         # No index here -> render root listing for this app
         base_href = str(request.base_url).rstrip('/') + request.url.path
         if not base_href.endswith('/'):
@@ -341,8 +413,9 @@ async def serve_asset(app_name: str, asset_path: str, request: Request):
         # Serve index.* if present otherwise directory listing
         idx = _find_index_file(target)
         if idx is not None:
-            media_type = _guess_media_type(idx)
-            return FileResponse(str(idx), media_type=media_type)
+            # An app inside a collection (webapp/<collection>/<app>/) arrives
+            # here rather than at serve_index, and needs the same config.
+            return _html_with_config(idx, target)
         # Render directory listing for nested folders
         # Compute rel path inside app
         rel = asset_path

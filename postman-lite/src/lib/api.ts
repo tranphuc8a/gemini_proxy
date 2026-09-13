@@ -9,8 +9,11 @@
  */
 
 import type { ApiEnvelope } from '../types'
+import { resolveApiBase } from './runtimeConfig'
 
-const CONFIGURED_BASE = (import.meta.env?.VITE_API_BASE as string | undefined)?.replace(/\/+$/, '')
+// The server-injected base when there is one, else this app's VITE_API_BASE.
+// Probing below still covers the case where neither is set.
+const CONFIGURED_BASE = resolveApiBase(import.meta.env?.VITE_API_BASE as string | undefined)
 const STORAGE_KEY = 'postman_pro_api_base'
 
 let resolvedBase: string | null = null

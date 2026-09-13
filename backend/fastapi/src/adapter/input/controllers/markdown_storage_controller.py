@@ -81,6 +81,19 @@ def _rows_to_tree(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return roots
 
 
+@router.post("/admin/verify")
+async def verify_admin_key(x_admin_key: str | None = Header(default=None)):
+    """Check an admin key without writing anything.
+
+    The editor needs this because the key must not travel in its bundle: a
+    VITE_* value is compiled into the JavaScript, so anyone opening DevTools
+    could read it, and a client-side comparison proves nothing anyway. The key
+    the user types is verified here and then only ever sent as a header.
+    """
+    _check_admin(x_admin_key)
+    return {"ok": True}
+
+
 @router.get("/files", response_model=MarkdownDocument)
 async def get_markdown_files(backend: str | None = Query(default=None)):
     if _storage_backend(backend) == "json":

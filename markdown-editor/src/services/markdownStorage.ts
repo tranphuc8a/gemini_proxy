@@ -1,9 +1,47 @@
 import type { FileNode, StorageBackend } from '../types'
 import { normalizeTree } from '../lib/tree'
+import { resolveApiBase } from './runtimeConfig'
 
-const API_URL = import.meta.env.VITE_MARKDOWN_API_URL || 'http://localhost:6789/api/v1/markdown/files'
-const ADMIN_KEY = import.meta.env.VITE_MARKDOWN_ADMIN_KEY || 'markdown-editor-admin-2024'
+/**
+ * Endpoint of the shared document store.
+ *
+ * Built from the runtime API base rather than a whole URL frozen at build time:
+ * this bundle is served from the FastAPI collection, where the prefix is decided
+ * when the server starts. VITE_MARKDOWN_API_URL still wins when it names a full
+ * URL, for a deployment that keeps the API on another origin.
+ */
+function filesUrl(): string {
+  const configured = import.meta.env.VITE_MARKDOWN_API_URL
+  if (configured) return configured
+  return `${resolveApiBase()}/markdown/files`
+}
+
 const TIMEOUT_MS = 10_000
+
+/**
+ * The admin key for this browser session.
+ *
+ * Deliberately a module-level variable and nothing more: it is never written to
+ * localStorage, and never compiled into the bundle. It used to come from
+ * VITE_MARKDOWN_ADMIN_KEY, which put the real key in the JavaScript every
+ * visitor downloads.
+ */
+let adminKey: string | null = null
+
+export function setAdminKey(key: string | null): void {
+  adminKey = key
+}
+
+/** Ask the backend whether a key is the real one. */
+export async function verifyAdminKey(key: string): Promise<boolean> {
+  const response = await request(`${resolveApiBase()}/markdown/admin/verify`, {
+    method: 'POST',
+    headers: { 'X-Admin-Key': key }
+  })
+  if (response.ok) return true
+  if (response.status === 401 || response.status === 403) return false
+  throw new Error(await describeFailure(response))
+}
 
 /** Turns a fetch failure into a message worth showing in a toast. */
 async function describeFailure(response: Response): Promise<string> {
@@ -30,7 +68,7 @@ async function request(url: string, init?: RequestInit): Promise<Response> {
 }
 
 export async function loadMarkdownFiles(storageType: StorageBackend): Promise<FileNode[]> {
-  const response = await request(`${API_URL}?backend=${storageType}`)
+  const response = await request(`${filesUrl()}?backend=${storageType}`)
   if (!response.ok) throw new Error(await describeFailure(response))
 
   const data = (await response.json()) as { files?: unknown }
@@ -39,11 +77,13 @@ export async function loadMarkdownFiles(storageType: StorageBackend): Promise<Fi
 }
 
 export async function saveMarkdownFiles(files: FileNode[], storageType: StorageBackend): Promise<void> {
-  const response = await request(`${API_URL}?backend=${storageType}`, {
+  if (!adminKey) throw new Error('Unlock editing with the admin key before saving')
+
+  const response = await request(`${filesUrl()}?backend=${storageType}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'X-Admin-Key': ADMIN_KEY
+      'X-Admin-Key': adminKey
     },
     body: JSON.stringify({ files })
   })

@@ -3,10 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HISTORY_DEBOUNCE_MS, useEditorStore } from '../store'
 import { FILES_KEY, LEGACY_KEY, SETTINGS_KEY } from '../lib/persistence'
 import { findNode, flatten } from '../lib/tree'
+import { setAdminKey, verifyAdminKey } from '../services/markdownStorage'
 
-const ADMIN_KEY = 'markdown-editor-admin-2024'
+// The admin key lives on the server now, so unlocking is a network call.
+vi.mock('../services/markdownStorage', () => ({
+  verifyAdminKey: vi.fn(),
+  setAdminKey: vi.fn(),
+  loadMarkdownFiles: vi.fn(),
+  saveMarkdownFiles: vi.fn()
+}))
 
 const store = () => useEditorStore.getState()
+
+/** Put the store in admin mode without going through the backend. */
+const unlockAdmin = () => useEditorStore.setState({ isAdmin: true })
 
 function reset() {
   localStorage.clear()
@@ -109,23 +119,41 @@ describe('content and history', () => {
   })
 
   it('starts a fresh history when the open file changes', () => {
-    act(() => {
-      store().loginAdmin(ADMIN_KEY)
-      store().createFile('root', 'b.md')
-    })
+    unlockAdmin()
+    act(() => store().createFile('root', 'b.md'))
     expect(store().history).toEqual([''])
     expect(store().historyIndex).toBe(0)
   })
 })
 
 describe('admin gating', () => {
-  it('rejects a wrong key and accepts the right one', () => {
-    expect(store().loginAdmin('nope')).toBe(false)
+  it('lets the backend decide whether a key is accepted', async () => {
+    // Regression: this used to compare against a key compiled into the bundle,
+    // which every visitor could read and which proved nothing.
+    vi.mocked(verifyAdminKey).mockResolvedValueOnce(false)
+    expect(await store().loginAdmin('nope')).toBe(false)
     expect(store().isAdmin).toBe(false)
-    act(() => {
-      expect(store().loginAdmin(ADMIN_KEY)).toBe(true)
+    expect(setAdminKey).not.toHaveBeenCalled()
+
+    vi.mocked(verifyAdminKey).mockResolvedValueOnce(true)
+    await act(async () => {
+      expect(await store().loginAdmin('right-key')).toBe(true)
     })
     expect(store().isAdmin).toBe(true)
+    // The accepted key is handed to the storage layer for the X-Admin-Key header.
+    expect(setAdminKey).toHaveBeenCalledWith('right-key')
+  })
+
+  it('forgets the key on logout', async () => {
+    vi.mocked(verifyAdminKey).mockResolvedValueOnce(true)
+    await act(async () => {
+      await store().loginAdmin('right-key')
+    })
+
+    act(() => store().logout())
+
+    expect(store().isAdmin).toBe(false)
+    expect(setAdminKey).toHaveBeenLastCalledWith(null)
   })
 
   it('refuses every file mutation while anonymous', () => {
@@ -151,7 +179,7 @@ describe('admin gating', () => {
 
 describe('file operations', () => {
   beforeEach(() => {
-    act(() => store().loginAdmin(ADMIN_KEY))
+    unlockAdmin()
   })
 
   it('creates a file, opens it and expands its folder', () => {
@@ -245,10 +273,8 @@ describe('persistence', () => {
   })
 
   it('never writes the admin flag', () => {
-    act(() => {
-      store().loginAdmin(ADMIN_KEY)
-      store().flushPersist()
-    })
+    unlockAdmin()
+    act(() => store().flushPersist())
     const dump = localStorage.getItem(FILES_KEY)! + localStorage.getItem(SETTINGS_KEY)!
     expect(dump).not.toMatch(/isAdmin/)
   })
