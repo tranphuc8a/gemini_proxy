@@ -23,6 +23,10 @@ aiomysql>=0.0.21
 # MySQL sync fallback driver (if the code uses synchronous connections anywhere)
 pymysql>=1.0
 
+# MongoDB driver for the mongo-administrator bridge.
+# 4.13+ ships PyMongo's native async API (AsyncMongoClient), which replaced Motor.
+pymongo>=4.13
+
 # Sealing SQL-administrator session credentials at rest (AES-GCM)
 cryptography>=42.0
 

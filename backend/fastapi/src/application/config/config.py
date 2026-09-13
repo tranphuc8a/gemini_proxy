@@ -44,6 +44,18 @@ class Settings(BaseSettings): # type: ignore
     SQLADMIN_STATEMENT_TIMEOUT: int = 60
     SQLADMIN_POOL_SIZE: int = 5
     SQLADMIN_MAX_ROWS: int = 10000
+    # MongoDB administrator (/mongo-administrator front-end)
+    # Sessions are sealed with this key before being written to disk; rotating it
+    # invalidates every stored login. The whole connection URI is the credential
+    # here, so it is the URI that gets sealed.
+    MONGOADMIN_SECRET_KEY: str = "change-me-mongoadmin"
+    MONGOADMIN_SESSION_FILE: str = "data/mongoadmin-sessions.json"
+    MONGOADMIN_PERSIST_SESSIONS: bool = True
+    MONGOADMIN_CONNECT_TIMEOUT: int = 10
+    MONGOADMIN_OPERATION_TIMEOUT: int = 60
+    MONGOADMIN_POOL_SIZE: int = 10
+    MONGOADMIN_MAX_DOCUMENTS: int = 1000
+
     # HTTP forward proxy (/proxy/request, used by the postman-lite web app)
     # A browser cannot call an API that sends no CORS headers; forwarding the
     # request server-side removes that limit. It also makes the backend reachable

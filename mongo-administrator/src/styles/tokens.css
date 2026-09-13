@@ -1,0 +1,122 @@
+/* Design tokens. The app sets data-theme on <html>; dark is the default. */
+
+:root,
+:root[data-theme='dark'] {
+  --bg: #10151a;
+  --bg-raised: #161d24;
+  --bg-sunken: #0b1014;
+  --bg-hover: #1d262f;
+  --surface: #19222a;
+  --border: #27323c;
+  --border-strong: #374553;
+
+  --text: #e4ecf1;
+  --text-muted: #94a3ae;
+  --text-faint: #66757f;
+
+  --accent: #00c86a;
+  --accent-hover: #24e089;
+  --accent-contrast: #04140c;
+  --danger: #f2555a;
+  --danger-hover: #ff6b70;
+  --success: #3fb950;
+  --warning: #d29922;
+
+  /* Value colouring in the document grid, by BSON type. */
+  --type-null: #6f7d88;
+  --type-string: #9cd8a4;
+  --type-number: #7fb7f5;
+  --type-boolean: #d9a75a;
+  --type-objectid: #c29cf0;
+  --type-date: #6fd4d0;
+  --type-binary: #b392f0;
+  --type-object: #9aa7b2;
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SFMono-Regular', 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+
+  --sidebar-width: 286px;
+  --topbar-height: 54px;
+}
+
+:root[data-theme='light'] {
+  --bg: #f3f6f8;
+  --bg-raised: #ffffff;
+  --bg-sunken: #e9eef1;
+  --bg-hover: #e6edf1;
+  --surface: #ffffff;
+  --border: #d6dde3;
+  --border-strong: #b6c1ca;
+
+  --text: #16202a;
+  --text-muted: #56646f;
+  --text-faint: #85929c;
+
+  --accent: #00854f;
+  --accent-hover: #006c40;
+  --accent-contrast: #ffffff;
+  --danger: #cf222e;
+  --danger-hover: #a40e26;
+  --success: #1a7f37;
+  --warning: #9a6700;
+
+  --type-null: #85929c;
+  --type-string: #1a7f37;
+  --type-number: #0b5fc7;
+  --type-boolean: #9a6700;
+  --type-objectid: #7a3fc0;
+  --type-date: #0f7a77;
+  --type-binary: #8250df;
+  --type-object: #56646f;
+
+  --shadow: 0 10px 30px rgba(22, 32, 42, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre,
+.code-input {
+  font-family: var(--font-mono);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
