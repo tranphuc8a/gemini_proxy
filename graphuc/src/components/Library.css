@@ -1,0 +1,101 @@
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(860px, 94vw);
+  max-height: 84vh;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.library-head { display: flex; align-items: center; gap: 10px; }
+
+.tabs { display: flex; gap: 3px; flex: 1; }
+
+.tab {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tab:hover { background: var(--bg-sunken); color: var(--text); }
+.tab.is-active { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.grid .card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px;
+  text-align: left;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: inherit;
+}
+
+.grid .card:hover { border-color: var(--accent); }
+.grid .card small { color: var(--text-faint); font-size: 11px; line-height: 1.45; }
+
+.list { display: flex; flex-direction: column; gap: 7px; overflow-y: auto; }
+
+.row-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.row-item.is-current { border-color: var(--accent); }
+
+.row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.row-main small { color: var(--text-faint); font-size: 11px; }
+
+.backend-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 7px;
+}
+
+.backend-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  cursor: pointer;
+}
+
+.backend-choice:hover:not(:disabled) { border-color: var(--accent); }
+.backend-choice.is-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.backend-choice:disabled { opacity: 0.5; cursor: not-allowed; }
+.backend-choice small { color: var(--text-faint); font-size: 11px; }

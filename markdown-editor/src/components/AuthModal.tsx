@@ -98,8 +98,9 @@ function AuthModal({ open, onClose }: AuthModalProps) {
             </p>
           )}
           <p className="auth-note">
-            The backend checks the key against <code>MARKDOWN_ADMIN_KEY</code>. It unlocks this browser session only, and is
-            never written to storage or built into this page.
+            The backend checks the key against <code>MARKDOWN_ADMIN_KEY</code>. The key itself is never stored or built into
+            this page — it is exchanged for a signed session token, so this browser stays unlocked across reloads until the
+            token expires or you sign out.
           </p>
         </div>
 

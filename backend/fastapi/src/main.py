@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller, sql_admin_controller, mongo_admin_controller, proxy_controller, postman_controller
+from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller, sql_admin_controller, mongo_admin_controller, proxy_controller, postman_controller, graph_storage_controller
 from fastapi import Request
 from src.application.exceptions.exceptions import AppException
 from src.adapter.input.controllers.response_utils import error_response
@@ -12,6 +12,7 @@ from src.adapter.output.mysql.db.base import init_db
 from src.adapter.input.admin import setup_admin
 from src.adapter.factory.sql_admin_factory import shutdown_sql_admin
 from src.adapter.factory.mongo_admin_factory import shutdown_mongo_admin
+from src.adapter.output.mongostore import client as mongo_store
 from src.application.config.config import settings
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,8 @@ async def lifespan(app: FastAPI):
     await shutdown_sql_admin()
     # Same for the driver clients the MongoDB administrator opened.
     await shutdown_mongo_admin()
+    # And this deployment's own MongoDB pool, if the mongo backend was used.
+    await mongo_store.shutdown()
 
 
 app = FastAPI(
@@ -66,6 +69,7 @@ app.include_router(sql_admin_controller.router, prefix=settings.API_PREFIX)
 app.include_router(mongo_admin_controller.router, prefix=settings.API_PREFIX)
 app.include_router(proxy_controller.router, prefix=settings.API_PREFIX)
 app.include_router(postman_controller.router, prefix=settings.API_PREFIX)
+app.include_router(graph_storage_controller.router, prefix=settings.API_PREFIX)
 
 # Mount webapp controller at root level (static content, not API)
 app.include_router(webapp_controller.router)

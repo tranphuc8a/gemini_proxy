@@ -19,6 +19,7 @@ import type {
   Tab,
   TestResult,
   ToastMessage,
+  StorageBackend,
   WorkspaceLink,
 } from './types'
 import { ApiError, api } from './lib/api'
@@ -163,8 +164,8 @@ export interface StoreActions {
   runCollection: (collectionId: string) => Promise<void>
 
   // workspace
-  createWorkspace: (name: string) => Promise<void>
-  connectWorkspace: (id: string, accessKey: string) => Promise<void>
+  createWorkspace: (name: string, backend?: StorageBackend) => Promise<void>
+  connectWorkspace: (id: string, accessKey: string, backend?: StorageBackend) => Promise<void>
   pullWorkspace: () => Promise<void>
   pushWorkspace: (force?: boolean) => Promise<void>
   disconnectWorkspace: () => void
@@ -354,7 +355,7 @@ export const useStore = create<Store>((set, get) => ({
             via: response.via,
             success: response.status < 400,
             spec: tab.draft as unknown as Record<string, unknown>,
-          })
+          }, workspace.storageBackend)
           // History is a convenience; failing to record it must not disturb a
           // successful request.
           .catch(() => {})
@@ -657,15 +658,18 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   // -------------------------------------------------------------- workspace
-  createWorkspace: async (name) => {
+  createWorkspace: async (name, backend) => {
     set({ syncing: true })
     try {
-      const created = await api.createWorkspace(name)
+      const created = await api.createWorkspace(name, backend)
       const link: WorkspaceLink = {
         id: created.id,
         name: created.name,
         accessKey: created.access_key,
         revision: created.revision,
+        // Remembered on the link, not in settings: the id and key only mean
+        // something inside the store they were minted in.
+        storageBackend: backend,
       }
       set({ workspace: link })
       saveWorkspace(link)
@@ -678,10 +682,10 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
 
-  connectWorkspace: async (id, accessKey) => {
+  connectWorkspace: async (id, accessKey, backend) => {
     set({ syncing: true })
     try {
-      const dto = await api.getWorkspace(id, accessKey)
+      const dto = await api.getWorkspace(id, accessKey, backend)
       const link: WorkspaceLink = {
         id: dto.id,
         name: dto.name,
@@ -689,6 +693,7 @@ export const useStore = create<Store>((set, get) => ({
         revision: dto.revision,
         shareToken: dto.share_token,
         lastSyncedAt: new Date().toISOString(),
+        storageBackend: backend,
       }
       set({
         workspace: link,
@@ -711,7 +716,7 @@ export const useStore = create<Store>((set, get) => ({
     if (!workspace) return
     set({ syncing: true })
     try {
-      const dto = await api.getWorkspace(workspace.id, workspace.accessKey)
+      const dto = await api.getWorkspace(workspace.id, workspace.accessKey, workspace.storageBackend)
       set({
         collections: dto.collections as Collection[],
         requests: dto.requests as RequestSpec[],
@@ -735,13 +740,18 @@ export const useStore = create<Store>((set, get) => ({
 
     set({ syncing: true })
     try {
-      const dto = await api.saveWorkspace(workspace.id, workspace.accessKey, {
-        revision: workspace.revision,
-        name: workspace.name,
-        collections: state.collections,
-        requests: state.requests,
-        environments: state.environments,
-      })
+      const dto = await api.saveWorkspace(
+        workspace.id,
+        workspace.accessKey,
+        {
+          revision: workspace.revision,
+          name: workspace.name,
+          collections: state.collections,
+          requests: state.requests,
+          environments: state.environments,
+        },
+        workspace.storageBackend,
+      )
       const link = { ...workspace, revision: dto.revision, lastSyncedAt: new Date().toISOString() }
       set({ workspace: link })
       saveWorkspace(link)
@@ -772,7 +782,7 @@ export const useStore = create<Store>((set, get) => ({
     const workspace = get().workspace
     if (!workspace) return
     try {
-      const result = await api.setShare(workspace.id, workspace.accessKey, enabled)
+      const result = await api.setShare(workspace.id, workspace.accessKey, enabled, workspace.storageBackend)
       const link = { ...workspace, shareToken: result.share_token }
       set({ workspace: link })
       saveWorkspace(link)

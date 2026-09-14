@@ -1,21 +1,10 @@
 {
-  "title": "Light Grid Version 2",
-  "description": "Phiên bản nâng cấp với giao diện hiện đại hơn và khả năng lưu trữ trạng thái cục bộ. Hỗ trợ tạo, chỉnh sửa và thử nghiệm nhiều biến thể của bài toán Lights Out. Bổ sung LocalStorage, import/export trạng thái dưới định dạng JSON, thống kê số bước và số đèn đang bật, cùng các chế độ tác động phổ biến phục vụ học tập và nghiên cứu.",
+  "title": "Light Grid · Lab",
+  "description": "Phòng thí nghiệm Lights Out: dựng cấu hình từ mẫu có sẵn hoặc tự chọn hình dạng và luật, vẽ trực tiếp từng ô, ghi lại băng nước đi rồi phát lại/tua bằng thanh trượt. Hiển thị hạng ma trận, số chiều nhân và số lời giải theo thời gian thực; chạy thí nghiệm hàng loạt trên hàng trăm bàn ngẫu nhiên để đo tỉ lệ giải được và phân bố số nước tối thiểu; đồ thị số đèn sáng theo từng nước; import/export JSON, xuất PNG và chia sẻ bàn qua URL.",
   "tags": [
-    "lights-out",
-    "localstorage",
-    "json",
-    "simulation",
-    "puzzle",
-    "mathematics",
-    "interactive",
-    "html",
-    "css",
-    "javascript", 
-    "light-grid",
-    "light",
-    "grid",
-    "tranphuc8a"
+    "lights-out", "lab", "experiment", "statistics", "replay", "gf2",
+    "linear-algebra", "json", "export", "share", "svg", "html", "css",
+    "javascript", "light-grid", "light", "grid", "tranphuc8a"
   ],
   "icon": "⚡"
 }

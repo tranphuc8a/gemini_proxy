@@ -1,25 +1,11 @@
 {
-  "title": "Light Grid Version 3",
-  "description": "Phòng thí nghiệm Lights Out mở rộng dành cho nghiên cứu toán học và thuật toán. Hỗ trợ chia sẻ trạng thái qua URL, lưu tự động, các phép biến đổi bán kính Manhattan và Square, hệ thống thống kê, khung solver và khả năng mở rộng cho Gaussian Elimination trên GF(2). Thích hợp để khám phá đại số tuyến tính, lý thuyết trò chơi và các biến thể của bài toán đèn.",
+  "title": "Light Grid · Research",
+  "description": "Mở hộp toán học của Lights Out. Dựng ma trận nước đi A từ luật chơi rồi khử Gauss trên GF(2): hạng, số chiều nhân, toàn bộ tập nghiệm của A·x = b, lời giải ngắn nhất, các mẫu im lặng (cơ sở hạt nhân) và các bất biến chứng minh một bàn là không giải được. Có trình xem ma trận dạng bitmap kèm dạng bậc thang rút gọn, trình chạy lại từng phép biến đổi hàng, mô phỏng thuật toán đuổi đèn, xuất ma trận ra CSV và phần giải thích lý thuyết gắn với chính bàn đang mở.",
   "tags": [
-    "lights-out",
-    "gf2",
-    "linear-algebra",
-    "gaussian-elimination",
-    "graph-theory",
-    "mathematics",
-    "research",
-    "simulation",
-    "solver",
-    "interactive",
-    "html",
-    "css",
-    "javascript",
-    "light-grid",
-    "light",
-    "grid",
-    "puzzle",
-    "tranphuc8a"
+    "lights-out", "gf2", "linear-algebra", "gaussian-elimination", "null-space",
+    "invariant", "solver", "research", "mathematics", "visualization",
+    "light-chasing", "svg", "canvas", "html", "css", "javascript",
+    "light-grid", "light", "grid", "puzzle", "tranphuc8a"
   ],
   "icon": "🧩"
 }

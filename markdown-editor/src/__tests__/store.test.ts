@@ -3,12 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HISTORY_DEBOUNCE_MS, useEditorStore } from '../store'
 import { FILES_KEY, LEGACY_KEY, SETTINGS_KEY } from '../lib/persistence'
 import { findNode, flatten } from '../lib/tree'
-import { setAdminKey, verifyAdminKey } from '../services/markdownStorage'
+import { clearAdminCredentials, restoreAdminSession, verifyAdminKey } from '../services/markdownStorage'
 
 // The admin key lives on the server now, so unlocking is a network call.
 vi.mock('../services/markdownStorage', () => ({
   verifyAdminKey: vi.fn(),
-  setAdminKey: vi.fn(),
+  restoreAdminSession: vi.fn(async () => false),
+  clearAdminCredentials: vi.fn(),
   loadMarkdownFiles: vi.fn(),
   saveMarkdownFiles: vi.fn()
 }))
@@ -133,18 +134,15 @@ describe('admin gating', () => {
     vi.mocked(verifyAdminKey).mockResolvedValueOnce(false)
     expect(await store().loginAdmin('nope')).toBe(false)
     expect(store().isAdmin).toBe(false)
-    expect(setAdminKey).not.toHaveBeenCalled()
 
     vi.mocked(verifyAdminKey).mockResolvedValueOnce(true)
     await act(async () => {
       expect(await store().loginAdmin('right-key')).toBe(true)
     })
     expect(store().isAdmin).toBe(true)
-    // The accepted key is handed to the storage layer for the X-Admin-Key header.
-    expect(setAdminKey).toHaveBeenCalledWith('right-key')
   })
 
-  it('forgets the key on logout', async () => {
+  it('forgets the session on logout', async () => {
     vi.mocked(verifyAdminKey).mockResolvedValueOnce(true)
     await act(async () => {
       await store().loginAdmin('right-key')
@@ -153,7 +151,25 @@ describe('admin gating', () => {
     act(() => store().logout())
 
     expect(store().isAdmin).toBe(false)
-    expect(setAdminKey).toHaveBeenLastCalledWith(null)
+    expect(clearAdminCredentials).toHaveBeenCalled()
+  })
+
+  it('comes back unlocked when the stored session is still valid', async () => {
+    // The reported bug: every reload dropped the user back to view-only and
+    // asked for the admin token again.
+    vi.mocked(restoreAdminSession).mockResolvedValueOnce(true)
+    await act(async () => {
+      await store().restoreAdminSession()
+    })
+    expect(store().isAdmin).toBe(true)
+  })
+
+  it('stays view-only when the stored session has expired', async () => {
+    vi.mocked(restoreAdminSession).mockResolvedValueOnce(false)
+    await act(async () => {
+      await store().restoreAdminSession()
+    })
+    expect(store().isAdmin).toBe(false)
   })
 
   it('refuses every file mutation while anonymous', () => {

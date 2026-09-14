@@ -1,0 +1,12 @@
+{
+  "title": "graphuc",
+  "description": "Trình vẽ đồ thị phục vụ học cấu trúc dữ liệu và giải thuật. Vẽ được đơn đồ thị, đa đồ thị, đồ thị có hướng, DAG, mạng luồng, cây, cây nhị phân, BST, heap, danh sách liên kết, trie, máy trạng thái và sơ đồ hoạt động — mỗi kiểu có ràng buộc riêng được kiểm tra và báo ngay trên canvas. Gắn nhãn và ghi chú lên đỉnh/cạnh, đổi hình dạng đỉnh, kiểu nét và đầu mũi tên; bảy kiểu sắp xếp tự động; chạy từng bước BFS, DFS, Dijkstra, sắp xếp tô-pô, cây khung nhỏ nhất, thành phần liên thông, kiểm tra 2-phân và tìm chu trình. Hoàn tác/làm lại đầy đủ, tự lưu vào trình duyệt, chia sẻ qua URL, lưu lên máy chủ bằng admin token với ba kho JSON/MySQL/MongoDB, xuất ra JSON, PNG, SVG, PDF, DOT và ma trận kề CSV.",
+  "tags": [
+    "graph", "đồ thị", "data-structures", "algorithms", "bfs", "dfs",
+    "dijkstra", "topological-sort", "mst", "tree", "binary-tree", "bst",
+    "heap", "trie", "linked-list", "dag", "flow-network", "state-machine",
+    "flowchart", "diagram", "editor", "canvas", "svg", "react", "typescript",
+    "export", "pdf", "png", "graphviz", "tranphuc8a"
+  ],
+  "icon": "◎"
+}

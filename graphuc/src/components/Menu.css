@@ -1,0 +1,55 @@
+.menu { position: relative; }
+
+.menu-badge {
+  padding: 0 6px;
+  font-size: 10.5px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-radius: 999px;
+}
+
+.menu-popover {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 30;
+  min-width: 244px;
+  padding: 5px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  position: relative;
+}
+
+.menu-item:hover:not(:disabled) { background: var(--bg-sunken); }
+.menu-item:disabled { color: var(--text-faint); cursor: not-allowed; }
+.menu-item small { color: var(--text-faint); font-size: 11px; }
+
+/* The file input covers its label so the whole row opens the picker. */
+.menu-item input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 3px;
+  background: var(--border);
+}

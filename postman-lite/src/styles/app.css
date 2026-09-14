@@ -945,3 +945,45 @@ textarea::placeholder {
     display: none;
   }
 }
+
+/* Workspace storage picker ---------------------------------------------------
+   Radio-style cards rather than a <select>: the three stores are separate, and
+   the trade-off between them is worth a line of text each. */
+.backend-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.backend-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.backend-choice:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.backend-choice.is-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.backend-choice:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.backend-choice small {
+  font-size: 11px;
+  color: var(--text-muted);
+}

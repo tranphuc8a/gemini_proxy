@@ -50,6 +50,7 @@ const APPS = [
   { name: 'sql-administrator', dest: 'tranphuc8a/sql-administrator' },
   { name: 'postman-lite', dest: 'tranphuc8a/postman-lite-pro' },
   { name: 'mongo-administrator', dest: 'tranphuc8a/mongo-administrator' },
+  { name: 'graphuc', dest: 'tranphuc8a/graphuc' },
 ]
 
 /**

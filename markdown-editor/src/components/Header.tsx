@@ -3,6 +3,8 @@ import type { ChangeEvent } from 'react'
 import { resolveTheme, useEditorStore } from '../store'
 import { findNode, getPath } from '../lib/tree'
 import { exportHtml, exportImage, exportMarkdown, exportPdf } from '../lib/exporters'
+import { listBackends, type BackendInfo } from '../services/markdownStorage'
+import type { StorageBackend } from '../types'
 import {
   IconChevron,
   IconCloud,
@@ -22,6 +24,18 @@ import {
   IconUpload
 } from './Icons'
 import './Header.css'
+
+/**
+ * What the picker offers, independent of what this deployment can serve.
+ *
+ * The list is fixed so the menu renders the same before and after the server
+ * answers; `/markdown/backends` only decides which entries are selectable.
+ */
+const STORAGE_OPTIONS: { id: StorageBackend; label: string; hint: string }[] = [
+  { id: 'json', label: 'JSON file', hint: 'No database needed' },
+  { id: 'mysql', label: 'MySQL / MariaDB', hint: "The server's SQL database" },
+  { id: 'mongo', label: 'MongoDB', hint: 'Document storage' }
+]
 
 interface HeaderProps {
   onOpenHelp: () => void
@@ -59,6 +73,22 @@ function Header({ onOpenHelp, onOpenPalette, onOpenAuth }: HeaderProps) {
   const saveBackendStorage = useEditorStore((state) => state.saveBackendStorage)
 
   const [busy, setBusy] = useState<string | null>(null)
+  const [backends, setBackends] = useState<BackendInfo[]>([])
+
+  // Asked for once: which backends this server can actually serve. Failing to
+  // find out is not worth a toast -- the picker just offers everything, and a
+  // save against a missing backend reports the real reason.
+  useEffect(() => {
+    let cancelled = false
+    listBackends()
+      .then((available) => {
+        if (!cancelled) setBackends(available)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const fileName = findNode(files, currentFileId)?.name ?? 'Untitled'
   const breadcrumb = currentFileId ? getPath(files, currentFileId).map((node) => node.name) : ['Untitled']
 
@@ -209,16 +239,30 @@ function Header({ onOpenHelp, onOpenPalette, onOpenAuth }: HeaderProps) {
             Backend sync {backendStorage ? 'enabled' : 'disabled'}
           </button>
           <div className="menu-separator" />
-          <div className="menu-row">
-            <span>Storage</span>
-            <select
-              className="menu-select"
-              value={backendStorageType}
-              onChange={(event) => setBackendStorageType(event.target.value as 'json' | 'mysql')}
-            >
-              <option value="json">JSON file</option>
-              <option value="mysql">MySQL</option>
-            </select>
+          <div className="menu-group" data-menu-keep-open role="radiogroup" aria-label="Storage backend">
+            <span className="menu-group-label">Storage</span>
+            {STORAGE_OPTIONS.map((option) => {
+              const info = backends.find((entry) => entry.id === option.id)
+              const unavailable = info ? !info.available : false
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={backendStorageType === option.id}
+                  className={`menu-choice${backendStorageType === option.id ? ' is-active' : ''}`}
+                  disabled={unavailable}
+                  title={unavailable ? info?.reason ?? 'Not available on this server' : option.hint}
+                  onClick={() => setBackendStorageType(option.id)}
+                >
+                  <span className="menu-choice-dot" aria-hidden="true" />
+                  <span className="menu-choice-text">
+                    {option.label}
+                    <small>{unavailable ? info?.reason ?? 'Not configured on the server' : option.hint}</small>
+                  </span>
+                </button>
+              )
+            })}
           </div>
           <button className="menu-item" disabled={!backendStorage || busy !== null} onClick={() => void syncBackend('load')}>
             Load from backend {busy === 'load' && <span className="menu-hint">working…</span>}
@@ -281,6 +325,20 @@ function Menu({ label, icon, badge, children }: MenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  /**
+   * Close on a command, stay open on a control.
+   *
+   * This used to close on *any* click inside the popover, which made the storage
+   * picker impossible to use: pressing it counted as a click, the menu unmounted,
+   * and the choice went with it. A menu item is a command and should dismiss the
+   * menu; a radio, checkbox or field is a setting the user is still adjusting.
+   */
+  const closeIfCommand = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement
+    if (target.closest('[data-menu-keep-open]')) return
+    if (target.closest('.menu-item')) setOpen(false)
+  }
+
   useEffect(() => {
     if (!open) return
     const onPointerDown = (event: PointerEvent) => {
@@ -308,7 +366,7 @@ function Menu({ label, icon, badge, children }: MenuProps) {
         {badge && <span className="menu-badge">{badge}</span>}
       </button>
       {open && (
-        <div className="menu-popover" role="menu" onClick={() => setOpen(false)}>
+        <div className="menu-popover" role="menu" onClick={closeIfCommand}>
           {children}
         </div>
       )}

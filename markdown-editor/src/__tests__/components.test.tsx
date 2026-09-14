@@ -7,7 +7,23 @@ import Toasts from '../components/Toasts'
 import FileTree from '../components/FileTree'
 import FormatToolbar from '../components/FormatToolbar'
 import StatusBar from '../components/StatusBar'
+import Header from '../components/Header'
 import { onJump } from '../lib/paneSync'
+
+// Header asks the backend which storage backends exist; nothing here needs a
+// real answer, and an unmocked fetch would make every assertion wait on a timeout.
+vi.mock('../services/markdownStorage', () => ({
+  listBackends: vi.fn(async () => [
+    { id: 'json', available: true },
+    { id: 'mysql', available: true },
+    { id: 'mongo', available: false, reason: 'MONGO_URI is not configured on the server' }
+  ]),
+  verifyAdminKey: vi.fn(),
+  restoreAdminSession: vi.fn(async () => false),
+  clearAdminCredentials: vi.fn(),
+  loadMarkdownFiles: vi.fn(),
+  saveMarkdownFiles: vi.fn()
+}))
 
 
 beforeEach(() => {
@@ -215,5 +231,50 @@ describe('Toasts', () => {
     expect(screen.getByText('Saved to backend')).toBeInTheDocument()
     await userEvent.click(screen.getByLabelText('Dismiss'))
     expect(useEditorStore.getState().toasts).toHaveLength(0)
+  })
+})
+
+
+describe('Sync menu', () => {
+  beforeEach(() => {
+    useEditorStore.setState({ backendStorage: false, backendStorageType: 'json' })
+  })
+
+  // The direct API rather than userEvent.setup(): setup() stubs navigator.clipboard,
+  // which cannot be redefined once another test in this file has installed it.
+  // The name is anchored because the button carries an "on" badge once sync is enabled.
+  const openSyncMenu = async () => {
+    render(<Header onOpenHelp={() => {}} onOpenPalette={() => {}} onOpenAuth={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
+  }
+
+  it('stays open while the storage backend is being chosen', async () => {
+    // Regression: the popover closed on any click inside it, so pressing the
+    // storage control dismissed the menu before the choice could be made.
+    await openSyncMenu()
+
+    await userEvent.click(screen.getByRole('radio', { name: /MySQL/ }))
+
+    expect(screen.getByRole('radiogroup', { name: /storage backend/i })).toBeInTheDocument()
+    expect(useEditorStore.getState().backendStorageType).toBe('mysql')
+
+    await userEvent.click(screen.getByRole('radio', { name: /JSON file/ }))
+    expect(useEditorStore.getState().backendStorageType).toBe('json')
+  })
+
+  it('still closes when a command is chosen', async () => {
+    await openSyncMenu()
+
+    await userEvent.click(screen.getByRole('button', { name: /backend sync/i }))
+
+    expect(screen.queryByRole('radiogroup', { name: /storage backend/i })).not.toBeInTheDocument()
+  })
+
+  it('offers all three backends and disables the ones the server cannot serve', async () => {
+    await openSyncMenu()
+
+    expect(screen.getByRole('radio', { name: /JSON file/ })).toBeEnabled()
+    expect(screen.getByRole('radio', { name: /MySQL/ })).toBeEnabled()
+    expect(await screen.findByRole('radio', { name: /MongoDB/ })).toBeDisabled()
   })
 })

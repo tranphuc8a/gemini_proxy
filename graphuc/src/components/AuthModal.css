@@ -1,0 +1,10 @@
+.auth {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, 92vw);
+  padding: 18px;
+}
+
+.auth .error { color: var(--danger); font-size: 12px; }
+.auth .row { justify-content: flex-end; }

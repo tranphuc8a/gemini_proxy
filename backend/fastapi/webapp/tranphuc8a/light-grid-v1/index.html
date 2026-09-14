@@ -1,52 +1,127 @@
-<!DOCTYPE html>
-<html lang="vi">
+<!doctype html>
+<html lang="vi" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lights Grid Lab</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Light Grid · Playground</title>
+<link rel="stylesheet" href="../light-grid-shared/theme.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="container">
-<h1>Lights Grid Lab</h1>
 
-<div class="toolbar">
-<input id="rows" type="number" min="1" value="5">
-<input id="cols" type="number" min="1" value="5">
-<button id="createBtn">Tạo lưới</button>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">💡</span>
+    <div>
+      <h1>Light Grid · Playground</h1>
+      <p class="hint">Tắt hết đèn. Mỗi lần bấm sẽ lật ô đó và những ô mà luật chơi chỉ định.</p>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-sm" id="help">Hướng dẫn</button>
+    <button class="btn btn-sm" id="theme" aria-label="Đổi giao diện sáng/tối">🌙</button>
+  </div>
+</header>
 
-<label>Bật</label><input type="color" id="onColor" value="#22c55e">
-<label>Tắt</label><input type="color" id="offColor" value="#9ca3af">
+<main class="layout">
+  <!-- Left: setup -->
+  <aside class="panel">
+    <section class="card col">
+      <h3>Bàn chơi</h3>
+      <div class="field">
+        <label for="shape">Hình dạng</label>
+        <select id="shape"></select>
+        <p class="hint" id="shapeNote"></p>
+      </div>
+      <div class="field-inline">
+        <div class="field"><label for="rows">Hàng</label><input id="rows" type="number" min="2" max="26" value="5"></div>
+        <div class="field"><label for="cols">Cột</label><input id="cols" type="number" min="2" max="26" value="5"></div>
+        <div class="field" id="thicknessField"><label for="thickness">Độ dày</label><input id="thickness" type="number" min="1" max="6" value="1"></div>
+      </div>
+    </section>
 
-<select id="mode">
-<option value="self">Self</option>
-<option value="cross">Cross</option>
-<option value="x">X</option>
-<option value="neighbors8">8 Neighbors</option>
-<option value="row">Whole Row</option>
-<option value="column">Whole Column</option>
-<option value="rowColumn">Row + Column</option>
-<option value="checkerboard">Checkerboard</option>
-<option value="knight">Knight</option>
-<option value="manhattan">Manhattan</option>
-<option value="square">Square</option>
-</select>
+    <section class="card col">
+      <h3>Luật tác động</h3>
+      <div class="field">
+        <label for="rule">Khi bấm một ô thì…</label>
+        <select id="rule"></select>
+        <p class="hint" id="ruleNote"></p>
+      </div>
+      <div class="field" id="radiusField">
+        <label for="radius">Bán kính R = <b id="radiusValue">1</b></label>
+        <input id="radius" type="range" min="1" max="6" value="1">
+      </div>
+      <div class="field">
+        <label for="states">Số trạng thái mỗi ô = <b id="statesValue">2</b></label>
+        <input id="states" type="range" min="2" max="6" value="2">
+        <p class="hint">2 là trò chơi cổ điển bật/tắt. Từ 3 trở lên, mỗi lần bấm đẩy ô tiến một bước theo vòng màu.</p>
+      </div>
+    </section>
 
-<label>Radius</label>
-<input id="radius" type="number" min="1" value="2" style="width:60px">
+    <section class="card col">
+      <h3>Hiển thị</h3>
+      <div class="field"><label for="palette">Bảng màu</label><select id="palette"></select></div>
+      <div class="field"><label for="tileShape">Hình quân cờ</label><select id="tileShape"></select></div>
+      <div class="field-inline">
+        <label class="check"><input type="checkbox" id="glow" checked> Hiệu ứng phát sáng</label>
+        <label class="check"><input type="checkbox" id="labels"> Đánh số ô</label>
+        <label class="check"><input type="checkbox" id="previewOn" checked> Xem trước nước bấm</label>
+      </div>
+    </section>
+  </aside>
 
-<button id="randomBtn">Random</button>
-<button id="resetBtn">Reset</button>
-<button id="undoBtn">Undo</button>
-</div>
+  <!-- Middle: the board -->
+  <section class="stage-wrap">
+    <div class="row stats-row">
+      <div class="stat"><span>Nước đi</span><b id="moves">0</b></div>
+      <div class="stat"><span>Đèn sáng</span><b id="lit">0</b></div>
+      <div class="stat"><span>Thời gian</span><b id="timer">0:00</b></div>
+      <div class="stat"><span>Kỷ lục</span><b id="best">—</b></div>
+      <div class="spacer"></div>
+      <span class="badge" id="status">Sẵn sàng</span>
+    </div>
 
-<div class="stats">
-<span>Bước: <b id="moves">0</b></span>
-<span>Ô bật: <b id="onCount">0</b></span>
-</div>
+    <div class="lg-stage grow" id="stage"></div>
 
-<div id="grid"></div>
-</div>
+    <div class="row action-row">
+      <button class="btn btn-primary" id="newPuzzle">Ván mới</button>
+      <select id="difficulty" aria-label="Độ khó">
+        <option value="6">Dễ · 6 nước xáo</option>
+        <option value="14" selected>Vừa · 14 nước xáo</option>
+        <option value="30">Khó · 30 nước xáo</option>
+        <option value="0">Ngẫu nhiên hoàn toàn</option>
+      </select>
+      <button class="btn" id="undo">↶ Hoàn tác</button>
+      <button class="btn" id="redo">↷ Làm lại</button>
+      <button class="btn" id="clear">Xoá sạch</button>
+      <div class="spacer"></div>
+      <button class="btn" id="hint">💡 Gợi ý</button>
+      <button class="btn" id="solve">Giải giúp tôi</button>
+    </div>
+
+    <p class="hint" id="solverNote">Bộ giải dùng khử Gauss trên GF(2) — chỉ áp dụng cho bàn 2 trạng thái.</p>
+  </section>
+</main>
+
+<dialog id="helpDialog" class="card">
+  <h2>Chơi thế nào</h2>
+  <ul class="help-list">
+    <li>Mục tiêu: đưa toàn bộ bàn về trạng thái tắt.</li>
+    <li>Mỗi lần bấm lật ô được bấm <b>và</b> những ô mà luật đang chọn chỉ định — không chỉ riêng ô đó.</li>
+    <li>Bấm hai lần vào cùng một ô sẽ trở lại như cũ, và thứ tự bấm không quan trọng. Vì thế lời giải chỉ là một <i>tập ô</i>.</li>
+    <li>“Ván mới” xáo bàn bằng cách bấm ngẫu nhiên từ trạng thái đã tắt hết, nên ván luôn giải được. “Ngẫu nhiên hoàn toàn” thì không đảm bảo điều đó — và đó chính là chỗ thú vị.</li>
+    <li>Phím tắt: <kbd>N</kbd> ván mới · <kbd>Z</kbd> hoàn tác · <kbd>Y</kbd> làm lại · <kbd>H</kbd> gợi ý · <kbd>C</kbd> xoá sạch.</li>
+  </ul>
+  <form method="dialog"><button class="btn btn-primary">Đã hiểu</button></form>
+</dialog>
+
+<div class="toast-stack" id="toasts"></div>
+
+<script src="../light-grid-shared/geometry.js"></script>
+<script src="../light-grid-shared/rules.js"></script>
+<script src="../light-grid-shared/gf2.js"></script>
+<script src="../light-grid-shared/board.js"></script>
+<script src="../light-grid-shared/render.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

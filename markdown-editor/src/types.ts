@@ -10,7 +10,7 @@ export interface FileNode {
 export type ViewMode = 'split' | 'editor' | 'preview'
 export type ThemePreference = 'light' | 'dark' | 'system'
 export type SidebarTab = 'files' | 'outline'
-export type StorageBackend = 'json' | 'mysql'
+export type StorageBackend = 'json' | 'mysql' | 'mongo'
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export interface Toast {

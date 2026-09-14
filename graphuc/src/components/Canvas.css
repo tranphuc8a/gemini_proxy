@@ -1,0 +1,141 @@
+.canvas-host {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: var(--canvas-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* The browser's own pan/zoom would fight the editor's. */
+  touch-action: none;
+}
+
+.canvas.tool-node { cursor: copy; }
+.canvas.tool-edge { cursor: crosshair; }
+.canvas.tool-pan { cursor: grab; }
+.canvas.tool-erase { cursor: not-allowed; }
+.canvas.tool-annotation { cursor: text; }
+
+.grid-dot { fill: var(--grid-dot); }
+
+/* --- nodes --------------------------------------------------------------- */
+.node { cursor: pointer; }
+
+.node path {
+  transition: stroke 120ms ease, stroke-width 120ms ease;
+}
+
+.node.is-selected path:first-child {
+  /* A halo rather than a thicker stroke: the node's own stroke is a style the
+     user chose, and overriding it would hide their formatting. */
+  filter: drop-shadow(0 0 0 var(--accent)) drop-shadow(0 0 6px var(--accent));
+}
+
+.node.is-edge-source path:first-child {
+  stroke-dasharray: 6 4;
+}
+
+.node-label {
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}
+
+.node-note {
+  font-size: 11px;
+  fill: var(--text-faint);
+  pointer-events: none;
+}
+
+.node-badge {
+  font-size: 15px;
+  pointer-events: none;
+}
+
+/* --- algorithm playback -------------------------------------------------- */
+.node.is-active path:first-child { filter: drop-shadow(0 0 8px var(--algo-active)); }
+.node.is-settled path:first-child { opacity: 0.94; }
+
+.algo-badge-bg { fill: var(--algo-active); }
+
+.algo-badge {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #07120c;
+  pointer-events: none;
+}
+
+/* --- edges --------------------------------------------------------------- */
+.edge-hit {
+  stroke: transparent;
+  stroke-width: 16;
+  fill: none;
+  cursor: pointer;
+}
+
+.edge.is-selected path:nth-child(2) {
+  filter: drop-shadow(0 0 5px var(--accent));
+}
+
+.edge-label {
+  font-size: 12px;
+  fill: var(--text);
+  pointer-events: none;
+  user-select: none;
+}
+
+.edge-label-plate {
+  fill: var(--canvas-bg);
+  opacity: 0.86;
+  pointer-events: none;
+}
+
+.pending-edge {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  pointer-events: none;
+}
+
+/* --- annotations and marquee --------------------------------------------- */
+.annotation text {
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.annotation.is-selected text {
+  text-decoration: underline;
+}
+
+.marquee {
+  fill: var(--accent);
+  fill-opacity: 0.08;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+  pointer-events: none;
+}
+
+/* --- empty state --------------------------------------------------------- */
+.canvas-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--text-muted);
+  /* Must not swallow the click that creates the first node. */
+  pointer-events: none;
+}

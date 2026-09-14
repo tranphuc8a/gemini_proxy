@@ -8,7 +8,7 @@
  * so we probe the plausible mounts once and remember the answer.
  */
 
-import type { ApiEnvelope } from '../types'
+import type { ApiEnvelope, StorageBackend, StorageBackendInfo } from '../types'
 import { resolveApiBase } from './runtimeConfig'
 
 // The server-injected base when there is one, else this app's VITE_API_BASE.
@@ -164,54 +164,76 @@ export interface WorkspaceCreatedDto {
   created_at: string
 }
 
+/**
+ * Every workspace call carries the backend the workspace lives in.
+ *
+ * The id and access key were minted inside one store, so asking another for
+ * them is a 404 with a confusing message. `undefined` leaves the choice to the
+ * server's own default, which is what links made before this existed rely on.
+ */
 export const api = {
-  createWorkspace: (name: string) =>
-    request<WorkspaceCreatedDto>('/postman/workspaces', { method: 'POST', body: JSON.stringify({ name }) }),
+  listBackends: () =>
+    request<{ default: StorageBackend; backends: StorageBackendInfo[] }>('/postman/backends'),
 
-  getWorkspace: (id: string, accessKey: string) =>
-    request<WorkspaceDto>(`/postman/workspaces/${encodeURIComponent(id)}`, { accessKey }),
+  createWorkspace: (name: string, backend?: StorageBackend) =>
+    request<WorkspaceCreatedDto>('/postman/workspaces', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+      query: { backend },
+    }),
+
+  getWorkspace: (id: string, accessKey: string, backend?: StorageBackend) =>
+    request<WorkspaceDto>(`/postman/workspaces/${encodeURIComponent(id)}`, { accessKey, query: { backend } }),
 
   saveWorkspace: (
     id: string,
     accessKey: string,
     payload: { revision: number; name?: string; collections: any[]; requests: any[]; environments: any[] },
+    backend?: StorageBackend,
   ) =>
     request<WorkspaceDto>(`/postman/workspaces/${encodeURIComponent(id)}`, {
       method: 'PUT',
       accessKey,
       body: JSON.stringify(payload),
+      query: { backend },
     }),
 
-  deleteWorkspace: (id: string, accessKey: string) =>
-    request<{ deleted: boolean }>(`/postman/workspaces/${encodeURIComponent(id)}`, { method: 'DELETE', accessKey }),
+  deleteWorkspace: (id: string, accessKey: string, backend?: StorageBackend) =>
+    request<{ deleted: boolean }>(`/postman/workspaces/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      accessKey,
+      query: { backend },
+    }),
 
-  setShare: (id: string, accessKey: string, enabled: boolean) =>
+  setShare: (id: string, accessKey: string, enabled: boolean, backend?: StorageBackend) =>
     request<{ share_token: string | null; enabled: boolean }>(
       `/postman/workspaces/${encodeURIComponent(id)}/share`,
-      { method: 'POST', accessKey, query: { enabled } },
+      { method: 'POST', accessKey, query: { enabled, backend } },
     ),
 
   getShared: (token: string) => request<Omit<WorkspaceDto, 'environments' | 'share_token' | 'created_at'>>(
     `/postman/shared/${encodeURIComponent(token)}`,
   ),
 
-  listHistory: (id: string, accessKey: string, limit = 50, offset = 0) =>
+  listHistory: (id: string, accessKey: string, limit = 50, offset = 0, backend?: StorageBackend) =>
     request<{ items: any[]; total: number }>(`/postman/workspaces/${encodeURIComponent(id)}/history`, {
       accessKey,
-      query: { limit, offset },
+      query: { limit, offset, backend },
     }),
 
-  addHistory: (id: string, accessKey: string, entry: Record<string, unknown>) =>
+  addHistory: (id: string, accessKey: string, entry: Record<string, unknown>, backend?: StorageBackend) =>
     request<any>(`/postman/workspaces/${encodeURIComponent(id)}/history`, {
       method: 'POST',
       accessKey,
       body: JSON.stringify(entry),
+      query: { backend },
     }),
 
-  clearHistory: (id: string, accessKey: string) =>
+  clearHistory: (id: string, accessKey: string, backend?: StorageBackend) =>
     request<{ removed: number }>(`/postman/workspaces/${encodeURIComponent(id)}/history`, {
       method: 'DELETE',
       accessKey,
+      query: { backend },
     }),
 
   proxyStatus: () =>

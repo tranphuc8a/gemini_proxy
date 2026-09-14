@@ -1,0 +1,63 @@
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: center; gap: 7px; }
+.brand-mark { font-size: 19px; color: var(--accent); }
+.brand-name { font-weight: 700; letter-spacing: -0.02em; }
+
+.title-input {
+  width: min(280px, 34vw);
+  font-weight: 600;
+  background: transparent;
+  border-color: transparent;
+}
+
+.title-input:hover,
+.title-input:focus {
+  background: var(--bg-sunken);
+  border-color: var(--border);
+}
+
+.kind-select { width: auto; min-width: 190px; }
+
+/* --- tools --------------------------------------------------------------- */
+.tool-group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tool:hover { background: var(--surface); color: var(--text); }
+.tool.is-active { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+
+.tool-icon { font-size: 13px; width: 14px; text-align: center; }
+
+.tools-row { font-size: 12px; }

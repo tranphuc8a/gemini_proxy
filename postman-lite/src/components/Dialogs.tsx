@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store'
-import type { Environment, Tab } from '../types'
+import { api } from '../lib/api'
+import type { Environment, StorageBackend, StorageBackendInfo, Tab } from '../types'
 import { KeyValueEditor } from './KeyValueEditor'
 import { Modal } from './Modal'
 import { exportPostmanCollection, importAny } from '../lib/importers'
@@ -358,6 +359,14 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
 // ---------------------------------------------------------------------------
 // Workspace sync
 // ---------------------------------------------------------------------------
+
+/** The three stores, in the order they are worth reaching for. */
+const BACKEND_LABELS: { id: StorageBackend; label: string; hint: string }[] = [
+  { id: 'json', label: 'JSON file', hint: 'Không cần database' },
+  { id: 'mysql', label: 'MySQL / MariaDB', hint: 'Bền qua mỗi lần deploy' },
+  { id: 'mongo', label: 'MongoDB', hint: 'Lưu dạng document' },
+]
+
 export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
   const workspace = useStore((s) => s.workspace)
   const syncing = useStore((s) => s.syncing)
@@ -372,6 +381,26 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('My Workspace')
   const [joinId, setJoinId] = useState('')
   const [joinKey, setJoinKey] = useState('')
+  const [backend, setBackend] = useState<StorageBackend | undefined>(undefined)
+  const [backends, setBackends] = useState<StorageBackendInfo[]>([])
+
+  // Which stores this deployment can serve, and which one it defaults to. Asked
+  // for once when the dialog opens; a failure just leaves the picker on the
+  // server default, which is how this worked before the choice existed.
+  useEffect(() => {
+    let cancelled = false
+    api
+      .listBackends()
+      .then((info) => {
+        if (cancelled) return
+        setBackends(info.backends)
+        setBackend((current) => current ?? info.default)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const shareUrl = workspace?.shareToken
     ? `${location.origin}${location.pathname}?share=${workspace.shareToken}`
@@ -391,6 +420,7 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
         <>
           <div className="notice notice-ok">
             Đang kết nối <b>{workspace.name}</b> · revision {workspace.revision}
+            {workspace.storageBackend ? ` · ${workspace.storageBackend}` : ''}
             {workspace.lastSyncedAt ? ` · đồng bộ ${formatRelativeTime(workspace.lastSyncedAt)}` : ''}
           </div>
 
@@ -452,10 +482,42 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
           </p>
 
           <div className="form-group">
+            <label htmlFor="ws-backend">Nơi lưu trên server</label>
+            <div className="backend-choices" role="radiogroup" aria-labelledby="ws-backend">
+              {BACKEND_LABELS.map((option) => {
+                const info = backends.find((entry) => entry.id === option.id)
+                const disabled = info ? !info.available : false
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={backend === option.id}
+                    className={`backend-choice${backend === option.id ? ' is-active' : ''}`}
+                    disabled={disabled}
+                    title={disabled ? info?.reason ?? 'Server chưa cấu hình' : option.hint}
+                    onClick={() => setBackend(option.id)}
+                  >
+                    <b>{option.label}</b>
+                    <small>{disabled ? info?.reason ?? 'Server chưa cấu hình' : option.hint}</small>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="hint">
+              Mỗi backend là một kho riêng: ID và access key sinh ra ở kho nào thì chỉ mở được ở kho đó.
+            </p>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="ws-name">Tạo workspace mới</label>
             <div className="field-row">
               <input id="ws-name" value={name} onChange={(e) => setName(e.target.value)} style={{ flex: 1 }} />
-              <button className="btn btn-primary" onClick={() => createWorkspace(name.trim() || 'My Workspace')} disabled={syncing}>
+              <button
+                className="btn btn-primary"
+                onClick={() => createWorkspace(name.trim() || 'My Workspace', backend)}
+                disabled={syncing}
+              >
                 Tạo
               </button>
             </div>
@@ -475,7 +537,7 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
           </div>
           <button
             className="btn"
-            onClick={() => connectWorkspace(joinId.trim(), joinKey.trim())}
+            onClick={() => connectWorkspace(joinId.trim(), joinKey.trim(), backend)}
             disabled={syncing || !joinId.trim() || !joinKey.trim()}
           >
             Kết nối

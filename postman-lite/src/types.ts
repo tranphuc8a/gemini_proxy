@@ -132,6 +132,15 @@ export interface Tab {
   dirty: boolean
 }
 
+/** Where the server keeps a workspace. Each one is a separate store. */
+export type StorageBackend = 'json' | 'mysql' | 'mongo'
+
+export interface StorageBackendInfo {
+  id: StorageBackend
+  available: boolean
+  reason?: string | null
+}
+
 export interface WorkspaceLink {
   id: string
   name: string
@@ -139,6 +148,12 @@ export interface WorkspaceLink {
   revision: number
   shareToken?: string | null
   lastSyncedAt?: string
+  /**
+   * The backend this workspace lives in, fixed when it was created or connected.
+   * Absent on links saved before the choice existed, which the server reads as
+   * "whatever POSTMAN_STORAGE_BACKEND says" -- the behaviour those links had.
+   */
+  storageBackend?: StorageBackend
 }
 
 export interface ToastMessage {

@@ -14,6 +14,12 @@ class Settings(BaseSettings): # type: ignore
     DB_USERNAME: str = "root"
     DB_PASSWORD: str = ""
 
+    # Where JSON data files are written. Empty means "probe for a writable
+    # location" (see src/application/utils/data_paths.py) -- normally ./data,
+    # falling back to the system temp dir on a read-only deployment such as
+    # Vercel. Set it explicitly when a volume is mounted.
+    DATA_DIR: str = ""
+
     # App
     APP_PORT: int = 6789
     API_PREFIX: str = "/api/v1"
@@ -30,9 +36,25 @@ class Settings(BaseSettings): # type: ignore
     # Comma-separated list of allowed origins, or '*' to allow all origins.
     # Example: "http://localhost:5173,http://127.0.0.1:5173"
     FRONTEND_ALLOWED_ORIGINS: str = "*"
+    # This deployment's own MongoDB, used by the "mongo" storage backend of the
+    # editor apps. Unrelated to the mongo-administrator, which connects to
+    # whatever server its user logs into. Empty means the backend is unavailable.
+    MONGO_URI: str = ""
+    MONGO_DATABASE: str = "gemini_proxy"
+    MONGO_CONNECT_TIMEOUT: int = 10
+
     MARKDOWN_STORAGE_BACKEND: str = "json"
     MARKDOWN_JSON_FILE: str = "data/markdown-files.json"
     MARKDOWN_ADMIN_KEY: str = "markdown-editor-admin-2024"
+    # How long an unlocked browser stays unlocked. The key itself is never
+    # stored client-side; what the browser keeps is a signed token that expires.
+    MARKDOWN_SESSION_HOURS: int = 12
+
+    # graphuc (/graphuc front-end): graph drawings saved server-side.
+    GRAPHUC_STORAGE_BACKEND: str = "json"
+    GRAPHUC_JSON_FILE: str = "data/graphuc-graphs.json"
+    GRAPHUC_ADMIN_KEY: str = "graphuc-admin-2024"
+    GRAPHUC_SESSION_HOURS: int = 12
 
     # SQL administrator (/sql-administrator front-end)
     # Sessions are sealed with this key before being written to disk; rotating it

@@ -19,6 +19,7 @@ from typing import Any
 from src.adapter.output.sqlgateway.crypto import PasswordSealer, SealError
 from src.application.ports.output.sql_gateway_output_port import ConnectionProfile
 from src.application.ports.output.sql_session_output_port import SqlSessionOutputPort, StoredSession
+from src.application.utils.data_paths import seeded_data_path
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +45,9 @@ class FileSessionStore(SqlSessionOutputPort):
                 logger.warning("cryptography is not installed; sessions will not be persisted")
                 self._sealer = None
             if self._sealer:
-                path = Path(file_path)
-                self._path = path if path.is_absolute() else Path.cwd() / path
+                # Resolved against a writable root rather than the working
+                # directory: a serverless deployment is unpacked read-only.
+                self._path = seeded_data_path(file_path)
 
     @property
     def persistent(self) -> bool:

@@ -266,7 +266,7 @@ function HistoryList() {
     if (!workspace) return
     setError(null)
     try {
-      const page = await api.listHistory(workspace.id, workspace.accessKey, 100)
+      const page = await api.listHistory(workspace.id, workspace.accessKey, 100, 0, workspace.storageBackend)
       setItems(page.items)
     } catch (err) {
       setError((err as Error).message)

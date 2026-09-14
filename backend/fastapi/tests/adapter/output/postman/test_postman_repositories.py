@@ -1,8 +1,13 @@
-"""Both workspace storage backends must behave identically.
+"""All three workspace storage backends must behave identically.
 
 The JSON one is exercised directly; the SQL one runs against the in-memory
 SQLite engine the test suite already falls back to, which is why every statement
-in `MySqlPostmanRepository` sticks to portable SQL.
+in `MySqlPostmanRepository` sticks to portable SQL; the Mongo one runs against
+`tests.support.fake_mongo`, so its own paging, trimming and serialisation code
+executes rather than a mock of it.
+
+Parametrising one suite over all three is the point: a client that switches
+backend must not have to care which one it got.
 """
 
 import os
@@ -13,10 +18,13 @@ import re
 
 import pytest
 
+from src.adapter.output.postman import mongo_repository
 from src.adapter.output.postman.json_repository import JsonPostmanRepository
+from src.adapter.output.postman.mongo_repository import MongoPostmanRepository
 from src.adapter.output.postman.mysql_repository import MySqlPostmanRepository
 from src.domain.vo.postman_vo import HistoryEntry, WorkspaceRecord
 from tests.conftest import arun
+from tests.support import fake_mongo
 
 
 @pytest.fixture
@@ -54,7 +62,21 @@ def sql_repo(_tmp_path):
     return MySqlPostmanRepository()
 
 
-REPOS = [pytest.param(json_repo, id="json"), pytest.param(sql_repo, id="sql")]
+def mongo_repo(_tmp_path):
+    return MongoPostmanRepository()
+
+
+REPOS = [
+    pytest.param(json_repo, id="json"),
+    pytest.param(sql_repo, id="sql"),
+    pytest.param(mongo_repo, id="mongo"),
+]
+
+
+@pytest.fixture(autouse=True)
+def _mongo(monkeypatch):
+    """A fresh in-memory database per test, for the mongo parametrisation."""
+    return fake_mongo.install(monkeypatch, mongo_repository)
 
 
 @pytest.mark.parametrize("factory", REPOS)
