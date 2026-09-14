@@ -201,6 +201,74 @@
   border-radius: var(--radius);
 }
 
+/* Storage picker -----------------------------------------------------------
+   Radio buttons rather than a <select>: a native dropdown inside a popover is
+   a popover inside a popover, and the outer one used to swallow the click that
+   opened the inner one. */
+.menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 4px;
+}
+
+.menu-group-label {
+  padding: 2px 9px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.menu-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 9px;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.menu-choice:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+}
+
+.menu-choice:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.menu-choice-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+}
+
+.menu-choice.is-active .menu-choice-dot {
+  border-color: var(--accent);
+  /* The filled centre is drawn with an inset ring, so it scales with the dot. */
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.menu-choice-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.menu-choice-text small {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
 .menu-note {
   padding: 4px 9px 6px;
   font-size: 11.5px;

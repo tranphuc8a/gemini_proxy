@@ -1,56 +1,142 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lights Grid Lab V3</title>
+<title>Light Grid · Research</title>
+<link rel="stylesheet" href="../light-grid-shared/theme.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="app">
-<h1>Lights Grid Lab V3</h1>
 
-<div class="toolbar">
-<input id="rows" type="number" value="8" min="1">
-<input id="cols" type="number" value="8" min="1">
-<button id="create">Tạo lưới</button>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">🧩</span>
+    <div>
+      <h1>Light Grid · Research</h1>
+      <p class="hint">Lights Out là một hệ phương trình tuyến tính trên GF(2). Trang này mở hộp ra xem.</p>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-sm" id="exportMatrix">⬇ Ma trận (CSV)</button>
+    <button class="btn btn-sm" id="share">🔗 Chia sẻ</button>
+    <button class="btn btn-sm" id="theme" aria-label="Đổi giao diện">🌙</button>
+  </div>
+</header>
 
-<select id="mode">
-<option value="cross">Cross</option>
-<option value="self">Self</option>
-<option value="x">X</option>
-<option value="neighbors8">8 Neighbors</option>
-<option value="row">Row</option>
-<option value="column">Column</option>
-<option value="rowColumn">Row+Column</option>
-<option value="manhattan">Manhattan</option>
-<option value="square">Square</option>
-</select>
+<main class="layout">
+  <section class="col">
+    <div class="card col">
+      <div class="row">
+        <div class="field grow"><label for="shape">Hình dạng</label><select id="shape"></select></div>
+        <div class="field"><label for="rows">Hàng</label><input id="rows" type="number" min="2" max="20" value="5"></div>
+        <div class="field"><label for="cols">Cột</label><input id="cols" type="number" min="2" max="20" value="5"></div>
+        <div class="field" id="thicknessField"><label for="thickness">Dày</label><input id="thickness" type="number" min="1" max="6" value="1"></div>
+      </div>
+      <div class="row">
+        <div class="field grow"><label for="rule">Luật</label><select id="rule"></select></div>
+        <div class="field" id="radiusField"><label for="radius">R</label><input id="radius" type="number" min="1" max="6" value="1"></div>
+        <button class="btn btn-primary" id="apply">Dựng lại</button>
+      </div>
+      <p class="hint" id="configNote"></p>
+    </div>
 
-<input id="radius" type="number" value="2" min="1">
-<input id="onColor" type="color" value="#22c55e">
-<input id="offColor" type="color" value="#4b5563">
+    <div class="lg-stage" id="stage"></div>
 
-<button id="random">Random</button>
-<button id="clear">Clear</button>
-<button id="undo">Undo</button>
-<button id="export">Export</button>
-<button id="share">Share URL</button>
-<button id="solve">Solve (Cross)</button>
-</div>
+    <div class="row action-row">
+      <button class="btn btn-sm" id="scramble">Xáo</button>
+      <button class="btn btn-sm" id="random">Ngẫu nhiên</button>
+      <button class="btn btn-sm" id="allOn">Sáng hết</button>
+      <button class="btn btn-sm" id="clear">Xoá</button>
+      <div class="spacer"></div>
+      <label class="check"><input type="checkbox" id="paintMode" checked> Vẽ trực tiếp từng ô</label>
+    </div>
 
-<div class="stats">
-<span>Bước: <b id="moves">0</b></span>
-<span>Ô sáng: <b id="onCount">0</b></span>
-<span>Rank: <b id="rank">-</b></span>
-</div>
+    <div class="card col" id="verdict"></div>
+  </section>
 
-<div id="grid"></div>
+  <section class="col scroll">
+    <nav class="tabs" role="tablist">
+      <button class="tab is-active" data-tab="solution" role="tab">Lời giải</button>
+      <button class="tab" data-tab="quiet" role="tab">Mẫu im lặng</button>
+      <button class="tab" data-tab="matrix" role="tab">Ma trận A</button>
+      <button class="tab" data-tab="elimination" role="tab">Khử Gauss</button>
+      <button class="tab" data-tab="chasing" role="tab">Đuổi đèn</button>
+      <button class="tab" data-tab="theory" role="tab">Lý thuyết</button>
+    </nav>
 
-<h3>Kết quả Solver</h3>
-<pre id="solverOutput"></pre>
+    <!-- Solutions -->
+    <div class="card col tab-panel" data-panel="solution">
+      <h3>Tập nghiệm của A·x = b</h3>
+      <div id="solutionSummary" class="analysis"></div>
+      <div class="row">
+        <button class="btn btn-sm" id="applyMinimal">Áp dụng lời giải ngắn nhất</button>
+        <button class="btn btn-sm" id="stepSolution">Đi từng nước</button>
+      </div>
+      <h3>Mọi lời giải</h3>
+      <p class="hint">Mỗi lời giải là một lời giải riêng cộng với một mẫu im lặng. Bấm để xem nó trên bàn.</p>
+      <div id="solutionList" class="chip-list"></div>
+    </div>
 
-</div>
+    <!-- Quiet patterns -->
+    <div class="card col tab-panel" data-panel="quiet" hidden>
+      <h3>Mẫu im lặng (cơ sở của hạt nhân)</h3>
+      <p class="hint">Bấm hết các ô trong một mẫu im lặng thì bàn không đổi gì cả. Chúng là lý do một bàn giải được luôn có đúng 2^(số chiều nhân) lời giải.</p>
+      <div id="quietList" class="chip-list"></div>
+      <div id="quietDetail"></div>
+    </div>
+
+    <!-- Matrix -->
+    <div class="card col tab-panel" data-panel="matrix" hidden>
+      <h3>Ma trận nước đi A</h3>
+      <p class="hint">Cột j là tập ô bị lật khi bấm ô j. Ô đen = 1. Với luật đối xứng thì A = Aᵀ, nhưng không phải luật nào cũng vậy.</p>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="showReduced"> Hiện dạng bậc thang rút gọn (RREF)</label>
+      </div>
+      <div class="matrix-wrap"><canvas id="matrixCanvas"></canvas></div>
+      <p class="hint" id="matrixNote"></p>
+    </div>
+
+    <!-- Elimination -->
+    <div class="card col tab-panel" data-panel="elimination" hidden>
+      <h3>Khử Gauss từng bước</h3>
+      <p class="hint">Mỗi bước là một phép đổi chỗ hàng hoặc một phép cộng hàng (mod 2). Kéo thanh trượt để chạy qua toàn bộ quá trình.</p>
+      <input id="stepSlider" type="range" min="0" max="0" value="0">
+      <div class="row"><b id="stepLabel">—</b><div class="spacer"></div><span class="hint" id="stepCount"></span></div>
+      <div class="matrix-wrap"><canvas id="stepCanvas"></canvas></div>
+    </div>
+
+    <!-- Light chasing -->
+    <div class="card col tab-panel" data-panel="chasing" hidden>
+      <h3>Thuật toán đuổi đèn (light chasing)</h3>
+      <p class="hint">
+        Cách giải tay quen thuộc: đi từ hàng thứ hai xuống dưới, ô nào có đèn sáng ngay phía trên thì bấm.
+        Sau khi quét xong, chỉ còn hàng cuối có thể sáng — và hàng cuối đó xác định hoàn toàn nước bấm cần thêm ở hàng đầu.
+      </p>
+      <div id="chasingNote"></div>
+      <div class="row">
+        <button class="btn btn-sm" id="chaseStep">Quét một hàng</button>
+        <button class="btn btn-sm" id="chaseAll">Quét hết</button>
+        <button class="btn btn-sm" id="chaseReset">Về đầu</button>
+      </div>
+      <div id="chasingState" class="analysis"></div>
+    </div>
+
+    <!-- Theory -->
+    <div class="card col tab-panel" data-panel="theory" hidden>
+      <h3>Vì sao lại là đại số tuyến tính</h3>
+      <div class="prose" id="theory"></div>
+    </div>
+  </section>
+</main>
+
+<div class="toast-stack" id="toasts"></div>
+
+<script src="../light-grid-shared/geometry.js"></script>
+<script src="../light-grid-shared/rules.js"></script>
+<script src="../light-grid-shared/gf2.js"></script>
+<script src="../light-grid-shared/board.js"></script>
+<script src="../light-grid-shared/render.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

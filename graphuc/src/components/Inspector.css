@@ -1,0 +1,60 @@
+.inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+  flex: none;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.inspector .panel {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.violations {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.violation {
+  width: 100%;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--warn);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.violation:hover { background: rgba(251, 191, 36, 0.18); }
+
+.swatches { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+@media (max-width: 1100px) {
+  /* The inspector drops below the canvas rather than being squeezed. */
+  .inspector { width: auto; max-height: 40vh; }
+}

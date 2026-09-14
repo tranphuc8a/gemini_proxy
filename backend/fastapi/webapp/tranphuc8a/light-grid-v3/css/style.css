@@ -1,10 +1,129 @@
+/* Layout for Research: board on the left, a tabbed workbench on the right.
+   Tabs rather than a long scroll because the panels are alternatives — you look
+   at the matrix *or* the elimination, not both at once. */
 
-body{margin:0;background:#0f172a;color:#e2e8f0;font-family:system-ui}
-.app{padding:20px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px}
-button,input,select{padding:8px;border-radius:8px}
-#grid{display:grid;gap:2px;width:max-content;background:#334155;padding:4px;border-radius:8px}
-.cell{width:36px;height:36px;border-radius:4px;cursor:pointer;transition:.2s transform,.2s background}
-.cell:hover{transform:scale(1.08)}
-.stats{display:flex;gap:20px;margin-bottom:10px}
-pre{background:#111827;padding:10px;border-radius:8px;overflow:auto}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  font-size: 20px;
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 520px) minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 18px 28px;
+  max-width: 1600px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.action-row { gap: 8px; }
+.check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 4px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tab {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tab:hover { background: var(--bg-sunken); color: var(--text); }
+.tab.is-active { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+
+.analysis { display: flex; flex-direction: column; gap: 2px; }
+
+.kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 12.5px;
+}
+.kv span { color: var(--text-muted); }
+.kv b { font-variant-numeric: tabular-nums; }
+
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip {
+  padding: 4px 10px;
+  font-size: 12.5px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip:hover { border-color: var(--accent); color: var(--accent-text); }
+.chip.is-best { border-color: var(--warn); color: var(--warn); }
+
+.matrix-wrap {
+  overflow: auto;
+  padding: 8px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.matrix-wrap canvas {
+  display: block;
+  /* Nearest-neighbour: each matrix entry is one pixel and smoothing turns a
+     sharp 0/1 bitmap into grey mush. */
+  image-rendering: pixelated;
+}
+
+.prose { line-height: 1.7; color: var(--text-muted); max-width: 72ch; }
+.prose p { margin: 0 0 12px; }
+.prose ul { margin: 0 0 12px; padding-left: 20px; }
+.prose li { margin-bottom: 4px; }
+.prose b { color: var(--text); }
+.prose code {
+  padding: 1px 5px;
+  font-size: 12.5px;
+  background: var(--bg-sunken);
+  border-radius: 4px;
+  color: var(--accent-text);
+}
+
+.badge-warn-text { color: var(--warn); }
+
+#stepSlider { width: 100%; }
+
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: 1fr; }
+}

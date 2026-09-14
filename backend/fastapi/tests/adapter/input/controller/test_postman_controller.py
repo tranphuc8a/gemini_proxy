@@ -242,3 +242,45 @@ def test_deleting_a_workspace_takes_its_history_with_it(client):
 
     assert client.delete(f"{BASE}/workspaces/{created['id']}", headers=key).json()["data"]["deleted"] is True
     assert client.get(f"{BASE}/workspaces/{created['id']}", headers=key).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# storage backend selection
+# ---------------------------------------------------------------------------
+def test_backends_endpoint_names_the_default_and_what_is_available(client, monkeypatch):
+    monkeypatch.setattr(postman_factory.mongo_store, "is_configured", lambda: False)
+    data = client.get(f"{BASE}/backends").json()["data"]
+    assert data["default"] == postman_factory.default_backend()
+    listed = {entry["id"]: entry for entry in data["backends"]}
+    assert listed["json"]["available"] is True
+    assert listed["mongo"]["available"] is False
+
+
+def test_each_backend_gets_its_own_usecase(monkeypatch, tmp_path):
+    """A workspace id belongs to the store it was created in, so the wiring must
+    not hand two backends the same repository."""
+    postman_factory.reset_for_tests()
+    monkeypatch.setattr(postman_factory.mongo_store, "is_configured", lambda: True)
+    try:
+        assert postman_factory.get_postman_usecase("json") is postman_factory.get_postman_usecase("json")
+        assert postman_factory.get_postman_usecase("json") is not postman_factory.get_postman_usecase("mysql")
+        assert postman_factory.get_postman_usecase("mysql") is not postman_factory.get_postman_usecase("mongo")
+    finally:
+        postman_factory.reset_for_tests()
+
+
+def test_unknown_backend_is_rejected():
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as raised:
+        postman_factory.resolve_backend("postgres")
+    assert raised.value.status_code == 400
+
+
+def test_mongo_without_a_uri_is_a_503(monkeypatch):
+    from fastapi import HTTPException
+
+    monkeypatch.setattr(postman_factory.mongo_store, "is_configured", lambda: False)
+    with pytest.raises(HTTPException) as raised:
+        postman_factory.resolve_backend("mongo")
+    assert raised.value.status_code == 503

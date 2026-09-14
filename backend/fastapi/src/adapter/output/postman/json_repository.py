@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from src.application.ports.output.postman_repository_port import PostmanRepositoryPort
+from src.application.utils.data_paths import seeded_data_path
 from src.domain.vo.postman_vo import HistoryEntry, WorkspaceRecord
 
 logger = logging.getLogger(__name__)
@@ -26,8 +27,10 @@ logger = logging.getLogger(__name__)
 
 class JsonPostmanRepository(PostmanRepositoryPort):
     def __init__(self, file_path: str | Path = "data/postman-workspaces.json"):
-        path = Path(file_path)
-        self._path = path if path.is_absolute() else Path.cwd() / path
+        # Resolved against a writable root rather than the working directory:
+        # a serverless deployment unpacks its code read-only, and the first save
+        # there used to fail with EROFS.
+        self._path = seeded_data_path(file_path)
         self._lock = asyncio.Lock()
         self._loaded = False
         self._workspaces: Dict[str, WorkspaceRecord] = {}

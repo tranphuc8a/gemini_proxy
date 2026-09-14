@@ -1,20 +1,10 @@
 {
-  "title": "Light Grid Version 1",
-  "description": "Ứng dụng mô phỏng lưới đèn cơ bản. Cho phép tạo lưới kích thước tùy ý, bật/tắt đèn theo nhiều quy tắc tác động khác nhau như Self, Cross, X, 8 Neighbors, Whole Row, Whole Column, Row + Column, Checkerboard, Knight Move, Manhattan Radius và Square Radius. Hỗ trợ thay đổi màu sắc đèn, tạo trạng thái ngẫu nhiên, đặt lại lưới và hoàn tác thao tác.",
+  "title": "Light Grid · Playground",
+  "description": "Trò Lights Out để chơi: tắt hết đèn trên bàn. Chọn hình dạng bàn (chữ nhật, xuyến, vành khuyên, lục giác, tam giác, kim cương, hình tròn), luật tác động (Cross, X, 8 hàng xóm, nước mã, hàng/cột, bàn cờ, bán kính Manhattan/vuông/vòng), số trạng thái mỗi ô từ 2 đến 6, bảng màu và hình quân cờ. Ván mới luôn được sinh bằng cách bấm ngẫu nhiên từ bàn đã tắt nên chắc chắn giải được; có gợi ý và tự giải bằng khử Gauss trên GF(2), đồng hồ bấm giờ, hoàn tác/làm lại và kỷ lục riêng cho từng cấu hình.",
   "tags": [
-    "lights-out",
-    "grid",
-    "cellular-automata",
-    "mathematics",
-    "game",
-    "simulation",
-    "html",
-    "css",
-    "javascript",
-    "light-grid",
-    "light",
-    "puzzle",
-    "tranphuc8a"
+    "lights-out", "puzzle", "game", "grid", "hexagon", "torus", "gf2",
+    "linear-algebra", "solver", "svg", "html", "css", "javascript",
+    "light-grid", "light", "tranphuc8a"
   ],
   "icon": "💡"
 }

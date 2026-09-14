@@ -1,39 +1,146 @@
 <!doctype html>
-<html lang="vi"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lights Grid Lab V2</title>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Light Grid · Lab</title>
+<link rel="stylesheet" href="../light-grid-shared/theme.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="wrap">
-<h1>Lights Grid Lab V2</h1>
-<div class="panel">
-<input id="rows" type="number" value="8" min="1">
-<input id="cols" type="number" value="8" min="1">
-<button id="create">Tạo lưới</button>
-<select id="mode">
-<option value="cross">Cross</option>
-<option value="self">Self</option>
-<option value="x">X</option>
-<option value="neighbors8">8 Neighbors</option>
-<option value="row">Row</option>
-<option value="column">Column</option>
-<option value="rowColumn">Row+Column</option>
-</select>
-<input id="radius" type="number" value="2" min="1">
-<input type="color" id="onColor" value="#22c55e">
-<input type="color" id="offColor" value="#6b7280">
-<button id="random">Random</button>
-<button id="clear">Clear</button>
-<button id="undo">Undo</button>
-<button id="exportBtn">Export</button>
-<input type="file" id="importFile">
-</div>
-<div class="info">
-<span>Bước: <b id="moves">0</b></span>
-<span>Ô bật: <b id="onCount">0</b></span>
-</div>
-<div id="grid"></div>
-</div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">⚡</span>
+    <div>
+      <h1>Light Grid · Lab</h1>
+      <p class="hint">Dựng ván, ghi lại nước đi, chạy thí nghiệm hàng loạt và đo xem cấu hình nào khó tới đâu.</p>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-sm" id="share">🔗 Chia sẻ</button>
+    <button class="btn btn-sm" id="exportJson">⬇ JSON</button>
+    <button class="btn btn-sm" id="exportPng">⬇ PNG</button>
+    <label class="btn btn-sm">⬆ Nhập<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+    <button class="btn btn-sm" id="theme" aria-label="Đổi giao diện">🌙</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="panel scroll">
+    <section class="card col">
+      <h3>Cấu hình</h3>
+      <div class="field"><label for="preset">Mẫu dựng sẵn</label><select id="preset"></select></div>
+      <p class="hint" id="presetNote"></p>
+      <hr class="rule">
+      <div class="field"><label for="shape">Hình dạng</label><select id="shape"></select></div>
+      <div class="field-inline">
+        <div class="field"><label for="rows">Hàng</label><input id="rows" type="number" min="2" max="26" value="5"></div>
+        <div class="field"><label for="cols">Cột</label><input id="cols" type="number" min="2" max="26" value="5"></div>
+        <div class="field" id="thicknessField"><label for="thickness">Dày</label><input id="thickness" type="number" min="1" max="6" value="1"></div>
+      </div>
+      <div class="field"><label for="rule">Luật tác động</label><select id="rule"></select></div>
+      <div class="field" id="radiusField">
+        <label for="radius">Bán kính R = <b id="radiusValue">1</b></label>
+        <input id="radius" type="range" min="1" max="6" value="1">
+      </div>
+      <button class="btn btn-primary" id="apply">Dựng lại bàn</button>
+    </section>
+
+    <section class="card col">
+      <h3>Trạng thái</h3>
+      <div class="row">
+        <button class="btn btn-sm" id="scramble">Xáo (giải được)</button>
+        <button class="btn btn-sm" id="random">Ngẫu nhiên</button>
+        <button class="btn btn-sm" id="allOn">Sáng hết</button>
+        <button class="btn btn-sm" id="clear">Xoá sạch</button>
+      </div>
+      <div class="field">
+        <label for="density">Mật độ ngẫu nhiên = <b id="densityValue">50</b>%</label>
+        <input id="density" type="range" min="5" max="95" value="50">
+      </div>
+      <div class="field-inline">
+        <label class="check"><input type="checkbox" id="paintMode"> Chế độ vẽ (bấm = bật/tắt một ô)</label>
+      </div>
+      <p class="hint">Chế độ vẽ bỏ qua luật tác động, dùng để dựng chính xác một thế cờ muốn khảo sát.</p>
+    </section>
+
+    <section class="card col">
+      <h3>Hiển thị</h3>
+      <div class="field-inline">
+        <div class="field grow"><label for="palette">Bảng màu</label><select id="palette"></select></div>
+        <div class="field grow"><label for="tileShape">Quân cờ</label><select id="tileShape"></select></div>
+      </div>
+      <div class="field-inline">
+        <label class="check"><input type="checkbox" id="glow" checked> Phát sáng</label>
+        <label class="check"><input type="checkbox" id="labels"> Đánh số</label>
+      </div>
+    </section>
+  </aside>
+
+  <section class="stage-wrap">
+    <div class="row stats-row">
+      <div class="stat"><span>Nước đi</span><b id="moves">0</b></div>
+      <div class="stat"><span>Đèn sáng</span><b id="lit">0</b></div>
+      <div class="stat"><span>Hạng</span><b id="rank">—</b></div>
+      <div class="stat"><span>Số chiều nhân</span><b id="nullity">—</b></div>
+      <div class="stat"><span>Số lời giải</span><b id="solutions">—</b></div>
+      <div class="spacer"></div>
+      <span class="badge" id="status">Sẵn sàng</span>
+    </div>
+
+    <div class="lg-stage grow" id="stage"></div>
+
+    <div class="row action-row">
+      <button class="btn" id="undo">↶</button>
+      <button class="btn" id="redo">↷</button>
+      <button class="btn" id="solveNow">Giải tối ưu</button>
+      <div class="spacer"></div>
+      <button class="btn" id="recordToggle">⏺ Bắt đầu ghi</button>
+      <button class="btn" id="replay" disabled>▶ Phát lại</button>
+    </div>
+
+    <div class="card col" id="replayPanel" hidden>
+      <div class="row">
+        <h3 class="grow">Băng ghi · <b id="tapeLength">0</b> nước</h3>
+        <button class="btn btn-sm" id="clearTape">Xoá băng</button>
+      </div>
+      <input id="scrubber" type="range" min="0" max="0" value="0">
+      <p class="hint">Kéo để tua tới bất kỳ nước nào. Mỗi vị trí được dựng lại bằng cách phát từ trạng thái đầu băng — nên tua lùi cũng chính xác như tua tới.</p>
+    </div>
+  </section>
+
+  <aside class="panel scroll">
+    <section class="card col">
+      <h3>Phân tích cấu hình</h3>
+      <div id="analysis" class="analysis"></div>
+    </section>
+
+    <section class="card col">
+      <h3>Thí nghiệm hàng loạt</h3>
+      <p class="hint">Sinh ngẫu nhiên nhiều bàn với cấu hình hiện tại rồi đo tỉ lệ giải được và số nước tối thiểu.</p>
+      <div class="field-inline">
+        <div class="field"><label for="trials">Số bàn</label><input id="trials" type="number" min="10" max="5000" step="10" value="300"></div>
+        <button class="btn btn-primary" id="runTrials">Chạy</button>
+      </div>
+      <div id="trialResult"></div>
+    </section>
+
+    <section class="card col">
+      <h3>Lịch sử đèn sáng</h3>
+      <p class="hint">Số đèn còn sáng sau mỗi nước — nhìn được ván nào đang tiến gần lời giải và ván nào đang đi vòng.</p>
+      <canvas id="litChart" height="120"></canvas>
+    </section>
+  </aside>
+</main>
+
+<div class="toast-stack" id="toasts"></div>
+
+<script src="../light-grid-shared/geometry.js"></script>
+<script src="../light-grid-shared/rules.js"></script>
+<script src="../light-grid-shared/gf2.js"></script>
+<script src="../light-grid-shared/board.js"></script>
+<script src="../light-grid-shared/render.js"></script>
 <script src="js/app.js"></script>
-</body></html>
+</body>
+</html>

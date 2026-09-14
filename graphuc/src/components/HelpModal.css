@@ -1,0 +1,34 @@
+.help {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(680px, 94vw);
+  max-height: 86vh;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.help .prose {
+  overflow-y: auto;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.help .prose h3 { margin: 14px 0 6px; }
+.help .prose h3:first-child { margin-top: 0; }
+.help .prose ul { margin: 0; padding-left: 20px; }
+.help .prose li { margin-bottom: 5px; }
+.help .prose b { color: var(--text); }
+
+.keys {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.keys td { padding: 4px 8px 4px 0; }
+.keys td:nth-child(2),
+.keys td:nth-child(4) { color: var(--text-muted); }
+
+.help .row { justify-content: flex-end; }

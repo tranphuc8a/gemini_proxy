@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import type { EditorState, FileNode, Settings, SidebarTab, StorageBackend, ThemePreference, ViewMode } from './types'
-import { loadMarkdownFiles, saveMarkdownFiles, setAdminKey, verifyAdminKey } from './services/markdownStorage'
+import {
+  clearAdminCredentials,
+  loadMarkdownFiles,
+  restoreAdminSession as restoreStoredSession,
+  saveMarkdownFiles,
+  verifyAdminKey
+} from './services/markdownStorage'
 import { createId } from './lib/id'
 import {
   addNode,
@@ -80,6 +86,7 @@ interface StoreState extends EditorState {
   importFile: (name: string, content: string) => void
 
   loginAdmin: (key: string) => Promise<boolean>
+  restoreAdminSession: () => Promise<void>
   logout: () => void
 
   setTheme: (theme: ThemePreference) => void
@@ -391,17 +398,23 @@ export const useEditorStore = create<StoreState>((set, get) => {
 
     loginAdmin: async (key: string) => {
       // The backend decides. Comparing against a key held in the browser proved
-      // nothing, and required shipping that key to every visitor.
+      // nothing, and required shipping that key to every visitor. On success it
+      // hands back a session token, which is what survives the next reload.
       const accepted = await verifyAdminKey(key)
       if (!accepted) return false
-      setAdminKey(key)
       set({ isAdmin: true })
       get().pushToast('Admin mode enabled', 'success')
       return true
     },
 
+    restoreAdminSession: async () => {
+      // Silent on failure: arriving without a valid session is the normal case,
+      // not something to interrupt the user about.
+      if (await restoreStoredSession()) set({ isAdmin: true })
+    },
+
     logout: () => {
-      setAdminKey(null)
+      clearAdminCredentials()
       set({ isAdmin: false })
       get().pushToast('Switched to view-only mode', 'info')
     },
@@ -495,6 +508,9 @@ export const useEditorStore = create<StoreState>((set, get) => {
       const stored = loadFiles()
       // isAdmin is deliberately absent: it is never restored from storage.
       set({ ...settings })
+      // Admin mode is not read from storage -- it is re-proved against the
+      // backend, which is what makes an expired or revoked session take effect.
+      void get().restoreAdminSession()
 
       if (stored?.files.length) {
         const current = findNode(stored.files, stored.currentFileId)

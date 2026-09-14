@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, Query
 
-from src.adapter.factory.postman_factory import get_postman_input_port
+from src.adapter.factory.postman_factory import available_backends, default_backend, get_postman_input_port
 from src.adapter.input.controllers.response_utils import success_response
 from src.application.ports.input.postman_input_port import PostmanInputPort
 from src.domain.vo.postman_vo import (
@@ -31,6 +31,20 @@ def workspace_key(
     if authorization and authorization.lower().startswith("bearer "):
         return authorization[7:].strip()
     return ""
+
+
+@router.get("/backends", summary="Storage backends this deployment can serve")
+async def list_backends():
+    """What `?backend=` will accept, and which entry is the default.
+
+    Each backend is a separate store: a workspace id and its access key were
+    minted in one of them and mean nothing in the others. The web app shows the
+    choice, and needs to know which entries would only fail on first use.
+    """
+    return success_response(
+        data={"default": default_backend(), "backends": available_backends()},
+        message="OK",
+    )
 
 
 # ---------------------------------------------------------------------------
