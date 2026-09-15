@@ -19,6 +19,8 @@ from src.adapter.input.controllers.response_utils import success_response
 from src.application.ports.input.mongo_admin_input_port import MongoAdminInputPort
 from src.domain.vo.mongoadmin_vo import (
     AggregateRequest,
+    MongoBackupRequest,
+    MongoRestoreRequest,
     CommandRequest,
     ConnectRequest,
     CountRequest,
@@ -345,3 +347,38 @@ async def current_operations(
     service: MongoAdminInputPort = Depends(get_mongo_admin_input_port),
 ):
     return success_response(data=await service.current_operations(token), message="OK")
+
+
+# ---------------------------------------------------------------------------
+# backup & restore
+# ---------------------------------------------------------------------------
+@router.post("/databases/{database}/backup", summary="Dump a database as Extended JSON")
+async def backup_database(
+    database: str,
+    request: MongoBackupRequest,
+    download: bool = Query(default=False, description="Return the dump as a file attachment"),
+    token: str = Depends(session_token),
+    service: MongoAdminInputPort = Depends(get_mongo_admin_input_port),
+):
+    result = await service.backup_database(token, database, request)
+    if download:
+        # A dump is routinely tens of megabytes; sending it as a file keeps it
+        # out of the JSON envelope and out of the browser's string handling.
+        return Response(
+            content=result.content,
+            media_type=result.media_type,
+            headers={"Content-Disposition": f'attachment; filename="{result.filename}"'},
+        )
+    return success_response(data=result, message="Đã tạo bản sao lưu")
+
+
+@router.post("/databases/{database}/restore", summary="Load a dump back into a database")
+async def restore_database(
+    database: str,
+    request: MongoRestoreRequest,
+    token: str = Depends(session_token),
+    service: MongoAdminInputPort = Depends(get_mongo_admin_input_port),
+):
+    result = await service.restore_database(token, database, request)
+    message = "Đã phục hồi" if not result.failed else f"Phục hồi xong với {result.failed} lỗi"
+    return success_response(data=result, message=message)

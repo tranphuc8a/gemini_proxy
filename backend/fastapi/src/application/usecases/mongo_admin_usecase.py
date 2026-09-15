@@ -11,6 +11,8 @@ import csv
 import io
 import json
 import secrets
+import time
+from datetime import datetime, timezone
 from typing import Any
 
 from src.application.exceptions.exceptions import BadRequestError, ConflictError, NotFoundError, UnauthorizedError
@@ -31,6 +33,7 @@ from src.domain.utils.mongo_json import (
     coerce_pipeline,
     collect_field_names,
     flatten_for_csv,
+    from_extended_json,
     is_reserved_database,
     is_update_operator_document,
     normalise_sort,
@@ -45,6 +48,10 @@ from src.domain.utils.mongo_uri import (
     parse_uri,
 )
 from src.domain.vo.mongoadmin_vo import (
+    MongoBackupRequest,
+    MongoBackupResult,
+    MongoRestoreRequest,
+    MongoRestoreResult,
     AggregateRequest,
     CollectionInfo,
     CommandRequest,
@@ -102,6 +109,17 @@ _documents = _wrap_value_errors(coerce_documents)
 _pipeline = _wrap_value_errors(coerce_pipeline)
 _sort = _wrap_value_errors(normalise_sort)
 _is_operator_update = _wrap_value_errors(is_update_operator_document)
+
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+#: Documents per insert during a restore. One insert_many of a hundred thousand
+#: documents can exceed MongoDB's 48MB command limit, and a failure there loses
+#: the whole collection instead of one batch.
+_RESTORE_BATCH = 500
 
 
 class MongoAdminUseCase(MongoAdminInputPort):
@@ -741,6 +759,188 @@ class MongoAdminUseCase(MongoAdminInputPort):
             for entry in entries
             if isinstance(entry, dict)
         ]
+
+
+
+    # ------------------------------------------------------------------
+    # backup & restore
+    # ------------------------------------------------------------------
+    async def backup_database(
+        self, token: str, database: str, request: MongoBackupRequest
+    ) -> MongoBackupResult:
+        """Dump a database as one Extended JSON document.
+
+        `mongodump` is the obvious tool and is not available here: the process
+        has no mongo tools installed and, on a serverless platform, nowhere to
+        install them. So the dump is assembled from the same driver calls the
+        rest of this administrator uses.
+
+        The format is Extended JSON, not BSON, because a dump that can be opened
+        in a text editor and diffed is worth more than a compact one — and
+        `mongo_json` already round-trips ObjectId, dates, Decimal128 and binary
+        through it, so nothing is lost on the way back.
+        """
+        session = await self._require_session(token)
+        db = _db_name(database)
+        generated_at = _utc_now()
+
+        available = await self._gateway.list_collections(token, session.profile, db)
+        names = [item.get("name") for item in available if item.get("name")]
+        wanted = set(request.collections or [])
+        if wanted:
+            names = [name for name in names if name in wanted]
+
+        dumped: list[dict[str, Any]] = []
+        total_documents = 0
+        total_indexes = 0
+        truncated: list[str] = []
+
+        for name in sorted(names):
+            entry: dict[str, Any] = {"name": name, "documents": [], "indexes": []}
+
+            if request.include_indexes:
+                try:
+                    indexes = await self._gateway.list_indexes(token, session.profile, db, name)
+                except Exception:  # noqa: BLE001 - a view has no indexes; keep going
+                    indexes = []
+                for index in indexes:
+                    # `_id_` is created automatically; restoring it would fail
+                    # and reporting it would overstate what the dump carries.
+                    if index.get("name") == "_id_":
+                        continue
+                    entry["indexes"].append(to_extended_json(index))
+                    total_indexes += 1
+
+            if request.include_documents:
+                # One over the cap, so the dump can say it was truncated rather
+                # than silently losing the rest.
+                probe = min(request.max_documents_per_collection + 1, self._max_documents)
+                outcome = await self._gateway.find(
+                    token, session.profile, db, name, {}, None, None, 0, probe
+                )
+                documents = list(outcome.documents)
+                if len(documents) > request.max_documents_per_collection:
+                    documents = documents[: request.max_documents_per_collection]
+                    truncated.append(name)
+                entry["documents"] = [to_extended_json(document) for document in documents]
+                total_documents += len(documents)
+
+            dumped.append(entry)
+
+        payload = {
+            "format": "gemini-proxy/mongo-dump",
+            "version": 1,
+            "database": db,
+            "generated_at": generated_at,
+            "collections": dumped,
+        }
+        content = json.dumps(payload, ensure_ascii=False, indent=2)
+
+        return MongoBackupResult(
+            database=db,
+            filename=f"{db}-{generated_at[:10]}.json",
+            content=content,
+            collections=len(dumped),
+            documents=total_documents,
+            indexes=total_indexes,
+            bytes=len(content.encode("utf-8")),
+            generated_at=generated_at,
+            truncated_collections=truncated,
+        )
+
+    async def restore_database(
+        self, token: str, database: str, request: MongoRestoreRequest
+    ) -> MongoRestoreResult:
+        """Load a dump back into `database`.
+
+        `confirm_database` must name the target when supplied, for the same
+        reason the SQL side insists on it: with `drop_existing` on, a restore
+        aimed at the wrong database destroys it, and that is not a mistake a
+        dialog alone should be trusted to prevent.
+        """
+        session = await self._require_session(token)
+        db = _db_name(database)
+
+        if request.confirm_database is not None and request.confirm_database != db:
+            raise BadRequestError(
+                f"Xac nhan khong khop: ban go '{request.confirm_database}' "
+                f"nhung dang phuc hoi vao '{db}'"
+            )
+
+        try:
+            payload = json.loads(request.content)
+        except json.JSONDecodeError as cause:
+            raise BadRequestError(f"Noi dung backup khong phai JSON hop le: {cause.msg}") from cause
+
+        collections = payload.get("collections") if isinstance(payload, dict) else None
+        if not isinstance(collections, list):
+            raise BadRequestError("Backup thieu danh sach 'collections'")
+
+        started = time.perf_counter()
+        restored_collections = 0
+        restored_documents = 0
+        restored_indexes = 0
+        failed = 0
+        errors: list[str] = []
+
+        for entry in collections:
+            if not isinstance(entry, dict) or not entry.get("name"):
+                continue
+            name = _coll_name(str(entry["name"]))
+            restored_collections += 1
+
+            try:
+                if request.drop_existing:
+                    # No drop_collection on the port; `drop` is the command the
+                    # rest of this usecase uses for the same thing.
+                    await self._gateway.run_command(token, session.profile, db, {"drop": name})
+
+                documents = entry.get("documents") or []
+                if documents:
+                    decoded = [from_extended_json(document) for document in documents]
+                    # In batches: one insert_many of a hundred thousand documents
+                    # can exceed the 48MB command limit, and a failure there
+                    # loses the whole collection rather than one batch.
+                    for start in range(0, len(decoded), _RESTORE_BATCH):
+                        batch = decoded[start : start + _RESTORE_BATCH]
+                        outcome = await self._gateway.insert(token, session.profile, db, name, batch)
+                        restored_documents += outcome.inserted or len(batch)
+
+                for index in entry.get("indexes") or []:
+                    decoded_index = from_extended_json(index)
+                    keys = decoded_index.get("key") or {}
+                    if not keys:
+                        continue
+                    options = {
+                        option: decoded_index[option]
+                        for option in ("unique", "sparse", "expireAfterSeconds", "partialFilterExpression")
+                        if option in decoded_index
+                    }
+                    if decoded_index.get("name"):
+                        options["name"] = decoded_index["name"]
+                    # A direction may be a string ("text", "2dsphere"), so it is
+                    # passed through rather than coerced to an int.
+                    await self._gateway.create_index(
+                        token, session.profile, db, name,
+                        [(field, direction) for field, direction in keys.items()],
+                        options,
+                    )
+                    restored_indexes += 1
+            except Exception as cause:  # noqa: BLE001 - reported per collection
+                failed += 1
+                errors.append(f"{name}: {str(cause)[:200]}")
+                if request.stop_on_error:
+                    break
+
+        return MongoRestoreResult(
+            database=db,
+            collections=restored_collections,
+            documents=restored_documents,
+            indexes=restored_indexes,
+            failed=failed,
+            duration_ms=(time.perf_counter() - started) * 1000,
+            errors=errors[:50],
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -10,16 +10,25 @@ import { resolveApiBase } from './runtimeConfig'
 
 import type {
   ApiEnvelope,
+  BackupOptions,
+  BackupResult,
   BrowsePage,
+  ColumnDefinition,
   ConnectRequest,
+  CreateTablePayload,
   DatabaseInfo,
+  ForeignKeyPayload,
   MutationResult,
   ProcessInfo,
   QueryResult,
+  RestoreResult,
+  RoutineInfo,
   ServerOverview,
   SessionInfo,
   TableInfo,
   TableStructure,
+  TriggerInfo,
+  ViewInfo,
 } from '../types'
 
 // Resolved per call rather than once at module load: the injected config is
@@ -192,6 +201,147 @@ export const api = {
   serverOverview: () => request<ServerOverview>(`${root}/server/overview`),
 
   processList: () => request<ProcessInfo[]>(`${root}/server/processes`),
+
+
+  // --- schema editing ---
+  // One method per operation, matching the backend. The console (`runSql`) is
+  // where free-form SQL belongs; these build their statement from validated
+  // parts server-side, so a table name cannot become a second statement.
+  createTable: (database: string, payload: CreateTablePayload) =>
+    request<MutationResult>(`${root}/databases/${encodeURIComponent(database)}/tables`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  renameTable: (database: string, table: string, newName: string) =>
+    request<MutationResult>(`${tablePath(database, table)}/rename`, {
+      method: 'PATCH',
+      body: JSON.stringify({ new_name: newName }),
+    }),
+
+  addColumn: (database: string, table: string, column: ColumnDefinition) =>
+    request<MutationResult>(`${tablePath(database, table)}/columns`, {
+      method: 'POST',
+      body: JSON.stringify({ column }),
+    }),
+
+  modifyColumn: (database: string, table: string, name: string, column: ColumnDefinition) =>
+    request<MutationResult>(`${tablePath(database, table)}/columns`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name, column }),
+    }),
+
+  dropColumn: (database: string, table: string, name: string) =>
+    request<MutationResult>(`${tablePath(database, table)}/columns/delete`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  // --- keys and indexes ---
+  setPrimaryKey: (database: string, table: string, columns: string[]) =>
+    request<MutationResult>(`${tablePath(database, table)}/primary-key`, {
+      method: 'PUT',
+      body: JSON.stringify({ columns }),
+    }),
+
+  createIndex: (database: string, table: string, payload: { name: string; columns: string[]; unique: boolean }) =>
+    request<MutationResult>(`${tablePath(database, table)}/indexes`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  dropIndex: (database: string, table: string, name: string) =>
+    request<MutationResult>(`${tablePath(database, table)}/indexes/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    }),
+
+  createForeignKey: (database: string, table: string, payload: ForeignKeyPayload) =>
+    request<MutationResult>(`${tablePath(database, table)}/foreign-keys`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  dropForeignKey: (database: string, table: string, name: string) =>
+    request<MutationResult>(`${tablePath(database, table)}/foreign-keys/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    }),
+
+  // --- views ---
+  listViews: (database: string) =>
+    request<ViewInfo[]>(`${root}/databases/${encodeURIComponent(database)}/views`),
+
+  getView: (database: string, view: string) =>
+    request<ViewInfo>(`${root}/databases/${encodeURIComponent(database)}/views/${encodeURIComponent(view)}`),
+
+  saveView: (database: string, payload: { name: string; select: string; replace?: boolean }) =>
+    request<MutationResult>(`${root}/databases/${encodeURIComponent(database)}/views`, {
+      method: 'PUT',
+      body: JSON.stringify({ replace: true, ...payload }),
+    }),
+
+  dropView: (database: string, view: string) =>
+    request<MutationResult>(`${root}/databases/${encodeURIComponent(database)}/views/${encodeURIComponent(view)}`, {
+      method: 'DELETE',
+    }),
+
+  // --- routines ---
+  listRoutines: (database: string) =>
+    request<RoutineInfo[]>(`${root}/databases/${encodeURIComponent(database)}/routines`),
+
+  getRoutine: (database: string, kind: string, name: string) =>
+    request<RoutineInfo>(
+      `${root}/databases/${encodeURIComponent(database)}/routines/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`,
+    ),
+
+  saveRoutine: (database: string, statement: string, replace = true) =>
+    request<MutationResult>(`${root}/databases/${encodeURIComponent(database)}/routines`, {
+      method: 'PUT',
+      body: JSON.stringify({ statement, replace }),
+    }),
+
+  dropRoutine: (database: string, kind: string, name: string) =>
+    request<MutationResult>(
+      `${root}/databases/${encodeURIComponent(database)}/routines/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`,
+      { method: 'DELETE' },
+    ),
+
+  callRoutine: (database: string, name: string, args: unknown[] = []) =>
+    request<QueryResult>(`${root}/databases/${encodeURIComponent(database)}/routines/call`, {
+      method: 'POST',
+      body: JSON.stringify({ name, arguments: args }),
+    }),
+
+  listTriggers: (database: string) =>
+    request<TriggerInfo[]>(`${root}/databases/${encodeURIComponent(database)}/triggers`),
+
+  // --- backup and restore ---
+  backupDatabase: (database: string, options: Partial<BackupOptions> = {}) =>
+    request<BackupResult>(`${root}/databases/${encodeURIComponent(database)}/backup`, {
+      method: 'POST',
+      body: JSON.stringify({
+        include_schema: true,
+        include_data: true,
+        include_routines: true,
+        include_views: true,
+        drop_if_exists: true,
+        max_rows_per_table: 100000,
+        tables: [],
+        ...options,
+      }),
+    }),
+
+  restoreDatabase: (database: string, content: string, options: { stopOnError?: boolean } = {}) =>
+    request<RestoreResult>(`${root}/databases/${encodeURIComponent(database)}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({
+        content,
+        stop_on_error: options.stopOnError ?? true,
+        // Always sent: the server refuses a restore whose confirmation does not
+        // name the target, which is the guard against restoring into the wrong
+        // database and destroying it.
+        confirm_database: database,
+      }),
+    }),
 
   /** Exports stream as a file body rather than an envelope, so fetch is used directly. */
   exportTable: async (database: string, table: string, format: 'csv' | 'json' | 'sql', limit = 1000) => {

@@ -239,15 +239,12 @@ async def list_backends():
 
     Prefixed with an underscore so it can never collide with a graph id.
     """
-    configured = mongo_store.is_configured()
+    from src.adapter.input.controllers.storage_controller import list_backends as probe
+
+    # Connects rather than reads configuration -- see storage_controller.
     return [
-        BackendInfo(id="json", available=True),
-        BackendInfo(id="mysql", available=True),
-        BackendInfo(
-            id="mongo",
-            available=configured,
-            reason=None if configured else "MONGO_URI is not configured on the server",
-        ),
+        BackendInfo(id=status.id, available=status.available, reason=status.detail)
+        for status in await probe()
     ]
 
 

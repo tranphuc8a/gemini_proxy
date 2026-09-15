@@ -243,17 +243,15 @@ async def _write_mongo(document: MarkdownDocument) -> None:
 async def list_backends():
     """Which storage backends this deployment can actually serve.
 
-    The editor shows all three; without this it would offer `mongo` on a
-    deployment that has no MongoDB and only find out on the first save.
+    Answered by connecting, not by reading configuration. Reporting `mongo` as
+    available purely because MONGO_URI is set meant a wrong host or password
+    only surfaced as a failed save, long after the user had chosen it.
     """
+    from src.adapter.input.controllers.storage_controller import list_backends as probe
+
     return [
-        BackendInfo(id="json", available=True),
-        BackendInfo(id="mysql", available=True),
-        BackendInfo(
-            id="mongo",
-            available=mongo_store.is_configured(),
-            reason=None if mongo_store.is_configured() else "MONGO_URI is not configured on the server",
-        ),
+        BackendInfo(id=status.id, available=status.available, reason=status.detail)
+        for status in await probe()
     ]
 
 

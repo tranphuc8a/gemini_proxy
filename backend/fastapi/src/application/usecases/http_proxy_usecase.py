@@ -82,7 +82,14 @@ def _is_blocked_address(hostname: str) -> bool:
 
 
 def validate_target(url: str) -> str:
-    """Reject anything we refuse to fetch, and return the normalised hostname."""
+    """Reject anything we refuse to fetch, and return the normalised hostname.
+
+    Note what this does *not* return: the URL to fetch. `forward` below must
+    hand httpx `request.url`, not this hostname -- passing the bare hostname
+    makes httpx read it as a relative path and send the request to
+    `/api.example.com` on no host at all, which is how every forwarded request
+    once failed.
+    """
     parts = urlsplit(url)
     scheme = parts.scheme.lower()
     if scheme not in ALLOWED_SCHEMES:
@@ -136,7 +143,10 @@ async def forward(request: ProxyRequest) -> ProxyResponse:
     if method not in ALLOWED_METHODS:
         raise BadRequestError(f"Method '{method}' không được hỗ trợ")
 
-    target_url = validate_target(request.url)
+    # Validation answers "may we fetch this?"; the URL to fetch is the one the
+    # caller sent. Keeping these two apart is the whole fix -- see validate_target.
+    validate_target(request.url)
+    target_url = request.url
 
     headers = _clean_request_headers(request.headers)
     content = _decode_request_body(request)
@@ -188,6 +198,6 @@ async def forward(request: ProxyRequest) -> ProxyResponse:
         size_bytes=size_bytes,
         elapsed_ms=elapsed_ms,
         final_url=str(upstream.url),
-        redirected=str(upstream.url) != target_url,
+        redirected=str(upstream.url) != request.url,
         truncated=truncated,
     )

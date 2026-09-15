@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 
+import { BackupView } from './components/BackupView'
 import { ConnectScreen } from './components/ConnectScreen'
+import { ObjectsView } from './components/ObjectsView'
 import { ServerView } from './components/ServerView'
 import { Sidebar } from './components/Sidebar'
 import { SqlConsole } from './components/SqlConsole'
@@ -52,6 +54,8 @@ export default function App() {
         <main className="app-main">
           {view === 'browse' ? <TableBrowser /> : null}
           {view === 'structure' ? <StructureView /> : null}
+          {view === 'objects' ? <ObjectsView /> : null}
+          {view === 'backup' ? <BackupView /> : null}
           {view === 'console' ? <SqlConsole /> : null}
           {view === 'server' ? <ServerView /> : null}
         </main>

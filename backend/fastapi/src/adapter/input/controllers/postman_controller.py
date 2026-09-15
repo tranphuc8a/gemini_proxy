@@ -42,7 +42,7 @@ async def list_backends():
     choice, and needs to know which entries would only fail on first use.
     """
     return success_response(
-        data={"default": default_backend(), "backends": available_backends()},
+        data={"default": default_backend(), "backends": await available_backends()},
         message="OK",
     )
 

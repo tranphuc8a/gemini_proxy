@@ -149,4 +149,106 @@ export interface QueryHistoryEntry {
   durationMs: number
 }
 
-export type ViewName = 'browse' | 'structure' | 'console' | 'server'
+export type ViewName = 'browse' | 'structure' | 'objects' | 'backup' | 'console' | 'server'
+
+// ---------------------------------------------------------------------------
+// Schema editing
+//
+// Mirrors the backend's request models. Types are free-form strings on purpose:
+// MySQL has too many to enumerate and the list grows, so the server validates
+// the *shape* of a type rather than checking it against a list.
+// ---------------------------------------------------------------------------
+export interface ColumnDefinition {
+  name: string
+  data_type: string
+  nullable: boolean
+  default?: string | null
+  extra?: string | null
+  comment?: string | null
+  /** Place after this column; '' means FIRST, undefined means "leave it". */
+  after?: string | null
+}
+
+export interface CreateTablePayload {
+  name: string
+  columns: ColumnDefinition[]
+  primary_key: string[]
+  engine?: string | null
+  charset?: string | null
+  comment?: string | null
+}
+
+export interface ForeignKeyPayload {
+  name: string
+  columns: string[]
+  referenced_table: string
+  referenced_columns: string[]
+  referenced_schema?: string | null
+  on_delete?: string | null
+  on_update?: string | null
+}
+
+export interface ViewInfo {
+  name: string
+  updatable: boolean
+  definer?: string | null
+  security?: string | null
+  definition?: string | null
+}
+
+export interface RoutineInfo {
+  name: string
+  kind: 'FUNCTION' | 'PROCEDURE'
+  returns?: string | null
+  parameters?: string | null
+  language?: string | null
+  deterministic: boolean
+  security?: string | null
+  comment?: string | null
+  created?: string | null
+  modified?: string | null
+  definition?: string | null
+}
+
+export interface TriggerInfo {
+  name: string
+  table: string
+  timing: string
+  event: string
+  statement?: string | null
+}
+
+export interface BackupOptions {
+  include_schema: boolean
+  include_data: boolean
+  include_routines: boolean
+  include_views: boolean
+  drop_if_exists: boolean
+  max_rows_per_table: number
+  tables: string[]
+}
+
+export interface BackupResult {
+  database: string
+  filename: string
+  media_type: string
+  content: string
+  tables: number
+  rows: number
+  routines: number
+  views: number
+  bytes: number
+  generated_at: string
+  /** Tables whose rows were cut short by `max_rows_per_table`. */
+  truncated_tables: string[]
+}
+
+export interface RestoreResult {
+  database: string
+  statements: number
+  executed: number
+  failed: number
+  affected_rows: number
+  duration_ms: number
+  errors: string[]
+}

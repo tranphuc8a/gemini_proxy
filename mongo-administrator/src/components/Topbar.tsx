@@ -7,6 +7,7 @@ const TABS: { id: Tab; label: string; needsCollection: boolean }[] = [
   { id: 'indexes', label: 'Indexes', needsCollection: true },
   { id: 'aggregate', label: 'Aggregate', needsCollection: true },
   { id: 'stats', label: 'Stats', needsCollection: false },
+  { id: 'backup', label: 'Backup', needsCollection: false },
   { id: 'server', label: 'Server', needsCollection: false },
 ]
 

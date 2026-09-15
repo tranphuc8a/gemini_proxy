@@ -56,6 +56,13 @@ class Settings(BaseSettings): # type: ignore
     GRAPHUC_ADMIN_KEY: str = "graphuc-admin-2024"
     GRAPHUC_SESSION_HOURS: int = 12
 
+    # Where the two administrators mirror their login sessions: json | mysql | mongo.
+    # Sessions last until the user logs out, so the only question is whether the
+    # mirror survives. "json" writes a file, which on a serverless platform sits
+    # in a per-instance temp directory and is therefore lost between requests --
+    # that is what made users log in again and again. Pick mysql or mongo there.
+    ADMIN_SESSION_BACKEND: str = "json"
+
     # SQL administrator (/sql-administrator front-end)
     # Sessions are sealed with this key before being written to disk; rotating it
     # invalidates every stored login.

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 
 import { useStore } from './store'
 import { AggregateConsole } from './components/AggregateConsole'
+import { BackupView } from './components/BackupView'
 import { ConnectScreen } from './components/ConnectScreen'
 import { DocumentBrowser } from './components/DocumentBrowser'
 import { IndexView } from './components/IndexView'
@@ -48,6 +49,7 @@ export default function App() {
           {tab === 'indexes' ? <IndexView /> : null}
           {tab === 'aggregate' ? <AggregateConsole /> : null}
           {tab === 'stats' ? <StatsView /> : null}
+          {tab === 'backup' ? <BackupView /> : null}
           {tab === 'server' ? <ServerView /> : null}
         </main>
       </div>

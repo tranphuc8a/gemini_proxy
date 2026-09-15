@@ -81,16 +81,17 @@ def get_postman_input_port(
     return get_postman_usecase(backend)
 
 
-def available_backends() -> list[dict[str, object]]:
-    """What this deployment can serve, for a client that offers the choice."""
+async def available_backends() -> list[dict[str, object]]:
+    """What this deployment can serve, for a client that offers the choice.
+
+    Connects rather than reads configuration: a URI can be present and wrong,
+    and the picker used to offer such a backend until the first save failed.
+    """
+    from src.adapter.input.controllers.storage_controller import list_backends as probe
+
     return [
-        {"id": "json", "available": True, "reason": None},
-        {"id": "mysql", "available": True, "reason": None},
-        {
-            "id": "mongo",
-            "available": mongo_store.is_configured(),
-            "reason": None if mongo_store.is_configured() else "MONGO_URI is not configured on the server",
-        },
+        {"id": status.id, "available": status.available, "reason": status.detail}
+        for status in await probe()
     ]
 
 

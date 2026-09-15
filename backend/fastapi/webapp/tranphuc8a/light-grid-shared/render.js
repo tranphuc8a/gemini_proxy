@@ -20,18 +20,24 @@
   /**
    * Cell colours by state.
    *
-   * Index 0 is "off" and the rest are the lit states, so a 2-state board uses
-   * the first two entries and a mod-6 board the whole row. Each palette keeps
-   * its lit colours distinguishable in brightness as well as hue, so they are
-   * still tellable apart without colour vision.
+   * `lit` holds the on-states, so a 2-state board uses `lit[0]` and a mod-6
+   * board the whole row. Each palette keeps its lit colours distinguishable in
+   * brightness as well as hue, so they are still tellable apart without colour
+   * vision.
+   *
+   * "Off" is a *pair*, not one colour. A single dark off-colour looked right on
+   * the dark theme and turned the light theme unreadable: dark tiles on a light
+   * page, with the cell numbers drawn in the light theme's dark ink and so
+   * invisible against them. The renderer picks `off` or `offLight` from the
+   * theme actually in force.
    */
   const PALETTES = {
-    emerald: { label: 'Ngọc lục bảo', colors: ['#1f2937', '#34d399', '#fbbf24', '#f87171', '#60a5fa', '#c084fc'] },
-    amber: { label: 'Hổ phách', colors: ['#292524', '#fbbf24', '#fb923c', '#f87171', '#a3e635', '#38bdf8'] },
-    ocean: { label: 'Đại dương', colors: ['#0f172a', '#38bdf8', '#22d3ee', '#a78bfa', '#f472b6', '#facc15'] },
-    mono: { label: 'Đơn sắc', colors: ['#18181b', '#e4e4e7', '#a1a1aa', '#71717a', '#52525b', '#3f3f46'] },
-    neon: { label: 'Neon', colors: ['#0b0b16', '#ff2e97', '#00e5ff', '#c6ff00', '#ff9100', '#7c4dff'] },
-    paper: { label: 'Giấy', colors: ['#e7e5e4', '#1c1917', '#b91c1c', '#1d4ed8', '#15803d', '#a16207'] }
+    emerald: { label: 'Ngọc lục bảo', off: '#1f2937', offLight: '#e2e8f0', lit: ['#34d399', '#fbbf24', '#f87171', '#60a5fa', '#c084fc'] },
+    amber: { label: 'Hổ phách', off: '#292524', offLight: '#e7e5e4', lit: ['#f59e0b', '#ea580c', '#dc2626', '#65a30d', '#0284c7'] },
+    ocean: { label: 'Đại dương', off: '#0f172a', offLight: '#dbeafe', lit: ['#0ea5e9', '#06b6d4', '#8b5cf6', '#ec4899', '#eab308'] },
+    mono: { label: 'Đơn sắc', off: '#18181b', offLight: '#f4f4f5', lit: ['#71717a', '#a1a1aa', '#52525b', '#3f3f46', '#27272a'] },
+    neon: { label: 'Neon', off: '#0b0b16', offLight: '#1c1c2b', lit: ['#ff2e97', '#00e5ff', '#c6ff00', '#ff9100', '#7c4dff'] },
+    paper: { label: 'Giấy', off: '#e7e5e4', offLight: '#e7e5e4', lit: ['#1c1917', '#b91c1c', '#1d4ed8', '#15803d', '#a16207'] }
   }
 
   /** How a cell is drawn. Shape is independent of the board's topology. */
@@ -41,6 +47,30 @@
     circle: 'Tròn',
     hex: 'Lục giác',
     diamond: 'Thoi'
+  }
+
+  /**
+   * Black or white, whichever is readable on `hex`.
+   *
+   * The label cannot take its colour from the theme: the "Giấy" palette is a
+   * light board *on the dark theme*, so theme-coloured text disappears on it.
+   * Deriving the ink from the tile underneath is right for every combination of
+   * palette and theme, including ones nobody has tried yet.
+   *
+   * Uses the WCAG relative-luminance coefficients rather than a plain average:
+   * the eye is far more sensitive to green than to blue, and an average call
+   * flips to the wrong ink on saturated colours.
+   */
+  function contrastInk(hex) {
+    const value = String(hex).replace('#', '')
+    const full = value.length === 3 ? value.split('').map((c) => c + c).join('') : value
+    const channel = (at) => {
+      const srgb = parseInt(full.slice(at, at + 2), 16) / 255
+      return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4)
+    }
+    if (full.length !== 6 || Number.isNaN(parseInt(full, 16))) return '#000000'
+    const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
+    return luminance > 0.42 ? '#0b1020' : '#f8fafc'
   }
 
   function element(name, attributes) {
@@ -103,8 +133,17 @@
       return this
     }
 
+    /**
+     * Colours for this draw, index 0 being "off".
+     *
+     * The off-colour follows the document's theme so the board stays legible in
+     * both; the lit colours do not, because they are the user's choice and a
+     * theme has no business overruling it.
+     */
     palette() {
-      return (PALETTES[this.options.palette] || PALETTES.emerald).colors
+      const palette = PALETTES[this.options.palette] || PALETTES.emerald
+      const light = typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light'
+      return [light ? palette.offLight : palette.off, ...palette.lit]
     }
 
     /**
@@ -147,6 +186,7 @@
             x: cell.x * size + size / 2,
             y: cell.y * size + size / 2,
             class: 'lg-label',
+            fill: contrastInk(colors[value % colors.length]),
             'text-anchor': 'middle',
             'dominant-baseline': 'central'
           })

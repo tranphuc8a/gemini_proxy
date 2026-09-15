@@ -159,3 +159,191 @@ class ProcessInfo(BaseModel):
     time: int | None = None
     state: str | None = None
     info: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Schema editing
+#
+# One request model per operation rather than a single "run this ALTER" string:
+# the operation is what gets validated, and an identifier that has been through
+# `quote_identifier` cannot become a second statement. A free-text DDL box does
+# exist -- it is `/query` -- but a form that builds SQL must not be one.
+# ---------------------------------------------------------------------------
+
+class ColumnDefinition(BaseModel):
+    """Enough to render a column clause. Types are not enumerated on purpose.
+
+    MySQL has too many, they grow, and a caller that wants `GEOMETRY` or an
+    `ENUM(...)` should not have to wait for this list to catch up. The type is
+    checked for shape rather than membership -- see `validate_column_type`.
+    """
+
+    name: str = Field(min_length=1, max_length=64)
+    data_type: str = Field(min_length=1, max_length=200)
+    nullable: bool = True
+    default: str | None = Field(default=None, max_length=500)
+    #: Rendered verbatim after the type: AUTO_INCREMENT, UNSIGNED, ON UPDATE …
+    extra: str | None = Field(default=None, max_length=200)
+    comment: str | None = Field(default=None, max_length=500)
+    #: Place the column after this one; "" means FIRST.
+    after: str | None = Field(default=None, max_length=64)
+
+
+class AddColumnRequest(BaseModel):
+    column: ColumnDefinition
+
+
+class ModifyColumnRequest(BaseModel):
+    """`name` is the column as it is now; `column.name` is what it becomes."""
+
+    name: str = Field(min_length=1, max_length=64)
+    column: ColumnDefinition
+
+
+class DropColumnRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+
+
+class RenameTableRequest(BaseModel):
+    new_name: str = Field(min_length=1, max_length=64)
+
+
+class CreateTableRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    columns: list[ColumnDefinition] = Field(min_length=1)
+    primary_key: list[str] = Field(default_factory=list)
+    engine: str | None = Field(default=None, max_length=64)
+    charset: str | None = Field(default=None, max_length=64)
+    comment: str | None = Field(default=None, max_length=500)
+
+
+class IndexRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    columns: list[str] = Field(min_length=1)
+    unique: bool = False
+
+
+class PrimaryKeyRequest(BaseModel):
+    """Empty `columns` drops the primary key instead of setting one."""
+
+    columns: list[str] = Field(default_factory=list)
+
+
+class ForeignKeyRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    columns: list[str] = Field(min_length=1)
+    referenced_table: str = Field(min_length=1, max_length=64)
+    referenced_columns: list[str] = Field(min_length=1)
+    referenced_schema: str | None = Field(default=None, max_length=64)
+    on_delete: str | None = Field(default=None, max_length=20)
+    on_update: str | None = Field(default=None, max_length=20)
+
+
+# --------------------------------------------------------------------- views
+
+class ViewInfo(BaseModel):
+    name: str
+    updatable: bool = False
+    definer: str | None = None
+    security: str | None = None
+    definition: str | None = None
+
+
+class ViewRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    #: The SELECT behind the view. Free-form by necessity: a view *is* a query.
+    select: str = Field(min_length=1)
+    replace: bool = True
+    check_option: str | None = Field(default=None, max_length=20)
+
+
+# ------------------------------------------------------------------ routines
+
+class RoutineInfo(BaseModel):
+    name: str
+    kind: Literal["FUNCTION", "PROCEDURE"]
+    returns: str | None = None
+    parameters: str | None = None
+    language: str | None = None
+    deterministic: bool = False
+    security: str | None = None
+    comment: str | None = None
+    created: str | None = None
+    modified: str | None = None
+    definition: str | None = None
+
+
+class RoutineRequest(BaseModel):
+    """A routine body cannot be assembled from parts, so this takes the whole
+    `CREATE PROCEDURE …` / `CREATE FUNCTION …` statement."""
+
+    statement: str = Field(min_length=1)
+    replace: bool = False
+
+
+class CallRoutineRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    #: Bound as parameters, never interpolated.
+    arguments: list[Any] = Field(default_factory=list)
+
+
+class TriggerInfo(BaseModel):
+    name: str
+    table: str
+    timing: str
+    event: str
+    statement: str | None = None
+
+
+# ---------------------------------------------------------- backup & restore
+
+class BackupRequest(BaseModel):
+    """What to include in a dump.
+
+    Schema and data are separable because the two are wanted for different
+    reasons: schema-only to recreate a structure elsewhere, data-only to reload
+    rows into a structure that already exists.
+    """
+
+    include_schema: bool = True
+    include_data: bool = True
+    include_routines: bool = True
+    include_views: bool = True
+    drop_if_exists: bool = True
+    #: Cap per table, so one runaway table cannot exhaust memory.
+    max_rows_per_table: int = Field(default=100_000, ge=1, le=1_000_000)
+    tables: list[str] = Field(default_factory=list)
+
+
+class BackupResult(BaseModel):
+    database: str
+    filename: str
+    media_type: str = "application/sql"
+    content: str
+    tables: int = 0
+    rows: int = 0
+    routines: int = 0
+    views: int = 0
+    bytes: int = 0
+    generated_at: str = ""
+    truncated_tables: list[str] = Field(default_factory=list)
+
+
+class RestoreRequest(BaseModel):
+    """A dump to replay. `stop_on_error` off is what makes a partial restore
+    useful: one bad statement in a thousand should not hide the other 999."""
+
+    content: str = Field(min_length=1)
+    stop_on_error: bool = True
+    #: Refuse the whole thing unless the caller names the database it targets.
+    confirm_database: str | None = None
+
+
+class RestoreResult(BaseModel):
+    database: str
+    statements: int = 0
+    executed: int = 0
+    failed: int = 0
+    affected_rows: int = 0
+    duration_ms: float = 0.0
+    errors: list[str] = Field(default_factory=list)

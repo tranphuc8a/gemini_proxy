@@ -208,3 +208,60 @@ class OperationInfo(BaseModel):
     description: str | None = None
     active: bool = False
     command: Any = None
+
+
+# ---------------------------------------------------------- backup & restore
+
+class MongoBackupRequest(BaseModel):
+    """What to include in a dump of a MongoDB database.
+
+    Indexes are separable from documents because they are the expensive half to
+    rebuild and the cheap half to carry: a dump taken for "keep a copy of the
+    data" wants both, one taken to seed a test database often wants neither.
+    """
+
+    collections: list[str] = Field(default_factory=list)
+    include_documents: bool = True
+    include_indexes: bool = True
+    #: Cap per collection, so one huge collection cannot exhaust memory.
+    max_documents_per_collection: int = Field(default=10_000, ge=1, le=200_000)
+
+
+class MongoBackupResult(BaseModel):
+    """A dump as Extended JSON.
+
+    Extended JSON rather than BSON: it survives a copy-paste, a text editor and
+    a git diff, and `mongo_json` already round-trips ObjectId, dates and binary
+    through it. The cost is size, which matters less than being able to read
+    what you backed up.
+    """
+
+    database: str
+    filename: str
+    media_type: str = "application/json"
+    content: str
+    collections: int = 0
+    documents: int = 0
+    indexes: int = 0
+    bytes: int = 0
+    generated_at: str = ""
+    truncated_collections: list[str] = Field(default_factory=list)
+
+
+class MongoRestoreRequest(BaseModel):
+    content: str = Field(min_length=1)
+    #: Empty the collection before inserting. Off by default: a restore that
+    #: silently discarded existing documents would be a data-loss trap.
+    drop_existing: bool = False
+    stop_on_error: bool = True
+    confirm_database: str | None = None
+
+
+class MongoRestoreResult(BaseModel):
+    database: str
+    collections: int = 0
+    documents: int = 0
+    indexes: int = 0
+    failed: int = 0
+    duration_ms: float = 0.0
+    errors: list[str] = Field(default_factory=list)

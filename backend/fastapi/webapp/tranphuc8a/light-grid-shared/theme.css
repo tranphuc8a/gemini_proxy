@@ -55,6 +55,15 @@
 
 * { box-sizing: border-box; }
 
+/* `hidden` must actually hide.
+   Every panel in these apps carries a class that sets `display` -- .card is
+   `display: flex` -- and a class beats the user-agent rule the `hidden`
+   attribute relies on. Without this line, hiding a panel by setting
+   `element.hidden = true` did nothing: the Research app rendered all six of its
+   tab panels stacked on top of each other, and the Lab showed its replay panel
+   before anything had been recorded. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: var(--font);
@@ -218,13 +227,13 @@ label { color: var(--text-muted); font-size: 12.5px; }
 .lg-cell.is-quiet .lg-tile { stroke: var(--info); stroke-width: 6; stroke-dasharray: 14 10; }
 .lg-cell.is-obstruction .lg-tile { stroke: var(--danger); stroke-width: 6; }
 
+/* No `fill` here: the renderer sets it per cell from the tile's own luminance,
+   which is the only rule that works for every palette in both themes. */
 .lg-label {
   font-family: var(--mono);
   font-size: 26px;
-  fill: rgba(255, 255, 255, 0.55);
   pointer-events: none;
 }
-[data-theme='light'] .lg-label { fill: rgba(0, 0, 0, 0.5); }
 
 /* --- misc ---------------------------------------------------------------- */
 .toast-stack {

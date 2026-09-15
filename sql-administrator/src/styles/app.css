@@ -1187,3 +1187,243 @@ input[type='checkbox'] {
     max-width: none;
   }
 }
+
+/* ===========================================================================
+   Objects and Backup views
+   
+   Both are "a form and a table of results" rather than the data grid the rest
+   of the app is built around, so they share a small set of layout primitives
+   instead of reusing the grid's.
+   =========================================================================== */
+
+.objects-view,
+.backup-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px 28px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.panel-body > h3 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.spacer { flex: 1; }
+
+.mono { font-family: var(--font-mono, ui-monospace, Consolas, monospace); }
+.dim { color: var(--text-muted); }
+
+.actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.field-narrow { max-width: 220px; }
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  padding: 48px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* --- editors and results ------------------------------------------------- */
+.editor-card,
+.result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-sunken, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.editor-card h3 { margin: 0; font-size: 13px; }
+
+.editor-card textarea,
+.backup-view textarea {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  resize: vertical;
+}
+
+.dump-preview {
+  max-height: 340px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  white-space: pre;
+}
+
+.stat-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-row .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 11px;
+  min-width: 82px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.stat-row .stat span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.stat-row .stat b { font-size: 16px; font-variant-numeric: tabular-nums; }
+
+/* --- notices -------------------------------------------------------------
+   Coloured by severity rather than by which panel they sit in: a restore that
+   will overwrite data reads the same wherever it appears. */
+.notice {
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  border-radius: var(--radius-sm, 6px);
+  border-left: 3px solid var(--border-strong, var(--border));
+  background: var(--bg);
+}
+
+.notice-warn {
+  border-left-color: var(--warning, #d29922);
+  background: color-mix(in srgb, var(--warning, #d29922) 10%, transparent);
+}
+
+.notice-danger {
+  border-left-color: var(--danger, #f2555a);
+  background: color-mix(in srgb, var(--danger, #f2555a) 10%, transparent);
+}
+
+.error-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.error-list li { margin-bottom: 4px; word-break: break-word; }
+
+/* --- schema editor -------------------------------------------------------
+   Chips rather than a table: these rows are actions on one object, and a grid
+   would suggest the columns are data to be read across. */
+.schema-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.column-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.column-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  font-size: 12.5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.chip-toggle {
+  padding: 5px 10px;
+  font-size: 12.5px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip-toggle:hover { border-color: var(--border-strong, var(--border)); }
+
+.chip-toggle.is-active {
+  background: var(--accent-soft, rgba(56, 189, 248, 0.16));
+  border-color: var(--accent);
+  color: var(--accent-text, var(--accent));
+  font-weight: 600;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}

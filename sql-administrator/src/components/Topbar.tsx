@@ -1,12 +1,34 @@
 import { useStore } from '../store'
-import { ColumnsIcon, DatabaseIcon, LogoutIcon, MoonIcon, ServerIcon, SunIcon, TableIcon, TerminalIcon } from './Icons'
+import {
+  ArchiveIcon,
+  ColumnsIcon,
+  DatabaseIcon,
+  LayersIcon,
+  LogoutIcon,
+  MoonIcon,
+  ServerIcon,
+  SunIcon,
+  TableIcon,
+  TerminalIcon,
+} from './Icons'
 import type { ViewName } from '../types'
 
-const TABS: { id: ViewName; label: string; icon: typeof TableIcon; needsTable: boolean }[] = [
+// `needsDatabase` separates the tabs that work on a schema from the two that
+// work on one table: Objects and Backup are about the database as a whole, so
+// requiring a table selection would hide them exactly when they are wanted.
+const TABS: {
+  id: ViewName
+  label: string
+  icon: typeof TableIcon
+  needsTable?: boolean
+  needsDatabase?: boolean
+}[] = [
   { id: 'browse', label: 'Browse', icon: TableIcon, needsTable: true },
   { id: 'structure', label: 'Structure', icon: ColumnsIcon, needsTable: true },
-  { id: 'console', label: 'SQL', icon: TerminalIcon, needsTable: false },
-  { id: 'server', label: 'Server', icon: ServerIcon, needsTable: false },
+  { id: 'objects', label: 'Objects', icon: LayersIcon, needsDatabase: true },
+  { id: 'backup', label: 'Backup', icon: ArchiveIcon, needsDatabase: true },
+  { id: 'console', label: 'SQL', icon: TerminalIcon },
+  { id: 'server', label: 'Server', icon: ServerIcon },
 ]
 
 export function Topbar() {
@@ -36,7 +58,9 @@ export function Topbar() {
       <nav className="topbar-tabs" aria-label="Views">
         {TABS.map((tab) => {
           const Icon = tab.icon
-          const disabled = tab.needsTable && !currentTable
+          const disabled = Boolean(
+            (tab.needsTable && !currentTable) || (tab.needsDatabase && !currentDatabase),
+          )
           return (
             <button
               key={tab.id}
@@ -44,7 +68,7 @@ export function Topbar() {
               className={`tab${view === tab.id ? ' is-active' : ''}`}
               onClick={() => setView(tab.id)}
               disabled={disabled}
-              title={disabled ? 'Select a table first' : tab.label}
+              title={disabled ? (tab.needsTable ? 'Chọn một bảng trước' : 'Chọn một database trước') : tab.label}
             >
               <Icon size={14} />
               {tab.label}

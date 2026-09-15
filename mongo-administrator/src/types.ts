@@ -162,7 +162,7 @@ export interface CreateIndexRequest {
 }
 
 // --- client-side only -------------------------------------------------------
-export type Tab = 'documents' | 'indexes' | 'aggregate' | 'stats' | 'server'
+export type Tab = 'documents' | 'indexes' | 'aggregate' | 'stats' | 'backup' | 'server'
 export type ViewMode = 'table' | 'json'
 export type Theme = 'light' | 'dark'
 

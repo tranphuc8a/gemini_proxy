@@ -1356,3 +1356,138 @@
     border-top: 1px solid var(--border);
   }
 }
+
+/* ===========================================================================
+   Backup view
+   A form plus a result card, rather than the document grid the rest of the app
+   is built around.
+   =========================================================================== */
+.backup-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px 28px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.backup-view .panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface, var(--bg-raised));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.backup-view .panel-body > h3 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.backup-view .checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.backup-view .check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.backup-view .field-narrow { max-width: 240px; }
+
+.backup-view textarea {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  resize: vertical;
+}
+
+.backup-view .result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.backup-view .stat-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.backup-view .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 11px;
+  min-width: 84px;
+  background: var(--surface, var(--bg-raised));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.backup-view .stat span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.backup-view .stat b { font-size: 16px; font-variant-numeric: tabular-nums; }
+
+.backup-view .notice {
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  border-radius: var(--radius-sm, 6px);
+  border-left: 3px solid var(--border);
+  background: var(--bg);
+}
+
+.backup-view .notice-warn { border-left-color: var(--warning, #d29922); }
+.backup-view .notice-danger { border-left-color: var(--danger, #f2555a); }
+
+.backup-view .dump-preview {
+  max-height: 340px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg-sunken, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  white-space: pre;
+}
+
+.backup-view .error-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.backup-view .empty-state,
+.empty-state {
+  display: grid;
+  place-items: center;
+  padding: 48px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}

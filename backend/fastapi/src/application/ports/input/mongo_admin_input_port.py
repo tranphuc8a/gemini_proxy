@@ -6,6 +6,10 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from src.domain.vo.mongoadmin_vo import (
+    MongoBackupRequest,
+    MongoBackupResult,
+    MongoRestoreRequest,
+    MongoRestoreResult,
     AggregateRequest,
     CollectionInfo,
     CommandRequest,
@@ -137,3 +141,15 @@ class MongoAdminInputPort(ABC):
 
     @abstractmethod
     async def current_operations(self, token: str) -> list[OperationInfo]: ...
+
+    # --- backup & restore ------------------------------------------------
+    # Declared but not abstract, for the same reason as the SQL side: an
+    # implementation that only browses is legitimate and should not have to
+    # stub these out.
+    async def backup_database(
+        self, token: str, database: str, request: MongoBackupRequest
+    ) -> MongoBackupResult: ...
+
+    async def restore_database(
+        self, token: str, database: str, request: MongoRestoreRequest
+    ) -> MongoRestoreResult: ...

@@ -145,3 +145,17 @@ export const ColumnsIcon = (props: IconProps) => (
     <path d="M9 3v18M15 3v18" />
   </Svg>
 )
+
+export const LayersIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="m12 2 9 5-9 5-9-5 9-5Z" />
+    <path d="m3 12 9 5 9-5M3 17l9 5 9-5" />
+  </Svg>
+)
+
+export const ArchiveIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <rect x="2" y="3" width="20" height="5" rx="1" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4" />
+  </Svg>
+)

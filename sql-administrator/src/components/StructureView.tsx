@@ -1,5 +1,6 @@
 import { buildDeleteTemplate, buildInsertTemplate, buildUpdateTemplate } from '../lib/sql'
 import { useStore } from '../store'
+import { SchemaEditor } from './SchemaEditor'
 import { useConfirm } from './useConfirm'
 import { TerminalIcon, TrashIcon } from './Icons'
 
@@ -9,6 +10,7 @@ export function StructureView() {
   const setView = useStore((state) => state.setView)
   const truncateTable = useStore((state) => state.truncateTable)
   const dropTable = useStore((state) => state.dropTable)
+  const selectTable = useStore((state) => state.selectTable)
   const notify = useStore((state) => state.notify)
   const [confirm, confirmDialog] = useConfirm()
 
@@ -184,6 +186,13 @@ export function StructureView() {
           <pre className="ddl-block">{structure.ddl}</pre>
         </section>
       ) : null}
+
+      <SchemaEditor
+        structure={structure}
+        // Re-selecting the table is what reloads the structure; a DDL change
+        // has to be read back from the server, not guessed at locally.
+        onChanged={() => void selectTable(structure.table, 'structure')}
+      />
 
       {confirmDialog}
     </div>

@@ -242,6 +242,45 @@ export const api = {
 
   currentOperations: () => request<OperationInfo[]>(`${root}/server/operations`),
 
+  // --- backup and restore ---
+  backupDatabase: (
+    database: string,
+    options: {
+      include_documents?: boolean
+      include_indexes?: boolean
+      max_documents_per_collection?: number
+      collections?: string[]
+    } = {},
+  ) =>
+    request<any>(`${root}/databases/${encodeURIComponent(database)}/backup`, {
+      method: 'POST',
+      body: JSON.stringify({
+        include_documents: true,
+        include_indexes: true,
+        max_documents_per_collection: 10000,
+        collections: [],
+        ...options,
+      }),
+    }),
+
+  restoreDatabase: (
+    database: string,
+    content: string,
+    options: { drop_existing?: boolean; stop_on_error?: boolean } = {},
+  ) =>
+    request<any>(`${root}/databases/${encodeURIComponent(database)}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({
+        content,
+        drop_existing: false,
+        stop_on_error: true,
+        ...options,
+        // Always sent: the server refuses a restore whose confirmation does not
+        // name the target, which is the guard against wiping the wrong database.
+        confirm_database: database,
+      }),
+    }),
+
   /** Exports stream as a file body rather than an envelope, so fetch is used directly. */
   exportCollection: async (
     database: string,
