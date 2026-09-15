@@ -21,7 +21,7 @@ chặn CORS của giao thức `file://`.
 ### Cách 2 — qua máy chủ cục bộ (khuyến nghị)
 
 ```bash
-cd gemini/web
+cd samsung/web
 python -m http.server 8777 --bind 127.0.0.1
 # mở http://127.0.0.1:8777
 ```
@@ -117,7 +117,7 @@ Nội dung **không** được đọc trực tiếp từ các tệp `.md` lúc c
 Sau khi sửa bất kỳ tệp markdown nào của khoá học hay ca nghiên cứu:
 
 ```bash
-cd gemini/web
+cd samsung/web
 python build.py      # sinh lại assets/content.js
 python check.py      # kiểm tra liên kết và cú pháp
 ```
