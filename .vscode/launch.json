@@ -1,0 +1,51 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug FastAPI (uvicorn)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/fastapi/.venv/Scripts/python",
+      "args": ["src.main:app", "--reload", "--port", "6789", "--host", "0.0.0.0"],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend/fastapi"
+      },
+      "cwd": "${workspaceFolder}/backend/fastapi",
+      "jinja": true,
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Run FastAPI (uvicorn)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/fastapi/.venv/Scripts/python",
+      "args": ["src.main:app", "--port", "6789", "--host", "0.0.0.0"],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend/fastapi"
+      },
+      "cwd": "${workspaceFolder}/backend/fastapi",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Attach to Spring Boot (Java)",
+      "type": "java",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run FastAPI + Spring Boot",
+      "configurations": ["Run FastAPI (uvicorn)", "Attach to Spring Boot (Java)"]
+    },
+    {
+      "name": "Debug FastAPI + Attach Java",
+      "configurations": ["Debug FastAPI (uvicorn)", "Attach to Spring Boot (Java)"]
+    }
+  ]
+}

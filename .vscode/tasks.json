@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run FastAPI",
+      "type": "shell",
+      "command": "python -m uvicorn src.main:app --reload --port 6789",
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Spring Boot",
+      "type": "shell",
+      "command": ".\\mvnw.cmd spring-boot:run",
+      "options": { "cwd": "${workspaceFolder}\\backend\\gemini-proxy" },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Debug Spring Boot (enable debug port 5005)",
+      "type": "shell",
+      "command": "powershell -NoProfile -Command \"$env:MAVEN_OPTS='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'; .\\mvnw.cmd spring-boot:run\"",
+      "options": { "cwd": "${workspaceFolder}\\backend\\gemini-proxy" },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Run Tests",
+      "type": "shell",
+      "command": "pytest --maxfail=1 --disable-warnings -q",
+      "options": { "cwd": "${workspaceFolder}\\backend\\fastapi" },
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Java: Run Tests",
+      "type": "shell",
+      "command": ".\\mvnw.cmd test",
+      "options": { "cwd": "${workspaceFolder}\\backend\\gemini-proxy" },
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": []
+    }
+  ]
+}

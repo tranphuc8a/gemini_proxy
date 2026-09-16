@@ -26,7 +26,6 @@ backend/fastapi/.pytest_cache/
 backend/fastapi/htmlcov/
 
 # VSCode workspace settings
-.vscode/
 
 # General Python / tooling ignores
 __pycache__/

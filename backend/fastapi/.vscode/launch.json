@@ -1,0 +1,25 @@
+{
+  // VS Code launch config for debugging the FastAPI app
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: FastAPI (uvicorn)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "src.main:app",
+        "--reload",
+        "--port",
+        "6789",
+        "--host",
+        "0.0.0.0"
+      ],
+      "jinja": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend/fastapi"
+      },
+      "console": "integratedTerminal"
+    }
+  ]
+}

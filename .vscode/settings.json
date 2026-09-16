@@ -1,0 +1,9 @@
+{
+    // Add both the package root and the src folder so Pylance can resolve
+    // imports that use the top-level `src` package (e.g. `src.domain...`).
+    "python.analysis.extraPaths": [
+        "./backend/fastapi",
+        "./backend/fastapi/src"
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system"
+}
