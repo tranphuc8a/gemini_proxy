@@ -206,6 +206,30 @@
       return this
     }
 
+    /**
+     * Update only the decoration classes of cells already drawn.
+     *
+     * Exists because redrawing on hover breaks clicking. `draw` empties the
+     * <svg> and rebuilds every node; do that from a `pointerenter` handler and
+     * the element under the cursor is destroyed mid-gesture, so the browser
+     * never sees pointerdown and pointerup land on the *same* element and no
+     * `click` is ever dispatched. Turning the hover preview off was the only
+     * way to play the game.
+     *
+     * Touching one attribute per cell also happens to be far cheaper than
+     * rebuilding a few hundred SVG nodes on every mouse move.
+     */
+    decorate(decorations = {}) {
+      this.nodes.forEach((group, index) => {
+        const mark = decorations[index]
+        const wanted = mark ? `lg-cell is-${mark}` : 'lg-cell'
+        // Compared before writing: assigning an unchanged class still
+        // invalidates style on some engines, which is visible as flicker.
+        if (group.getAttribute('class') !== wanted) group.setAttribute('class', wanted)
+      })
+      return this
+    }
+
     glowFilter() {
       const defs = element('defs', {})
       const filter = element('filter', { id: 'lg-glow', x: '-50%', y: '-50%', width: '200%', height: '200%' })

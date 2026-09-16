@@ -86,35 +86,57 @@ const CodeBlock: React.FC<{ code: string; language: string; theme: 'dark' | 'lig
   );
 };
 
-/** A mermaid diagram, rendered into its own container outside React's tree. */
+/**
+ * A mermaid diagram, rendered into its own container outside React's tree.
+ *
+ * The container stays mounted whether or not the last render succeeded. That is
+ * the whole fix for "Không thể vẽ sơ đồ, hiển thị mã nguồn": the error branch
+ * used to return different JSX, which unmounted the host div. The next effect
+ * run then found `hostRef.current === null`, bailed out at the guard, and the
+ * diagram was stuck showing its source **forever** — even once the code was
+ * complete and valid. Since source arrives a character at a time while
+ * streaming, mermaid is near-certain to fail at least once, so in practice
+ * almost every diagram ended up in that dead end.
+ *
+ * Mermaid also leaves its probe element behind when parsing throws, which is
+ * why each attempt uses a fresh id and the strays are swept up afterwards.
+ */
 const MermaidDiagram: React.FC<{ code: string; theme: 'dark' | 'light' }> = ({ code, theme }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rendered, setRendered] = useState(false);
   const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
-    const host = hostRef.current;
-    if (!host || !code.trim()) return;
+    if (!code.trim()) return;
 
     configureMermaid(theme);
 
-    // Diagram source arrives a character at a time while streaming, so most
-    // intermediate states are syntactically invalid. Debouncing avoids flashing
-    // an error for every keystroke of the model's output.
+    // Debounced: most intermediate states of a streaming diagram are
+    // syntactically invalid, and re-rendering each one flickers.
     const timer = window.setTimeout(() => {
-      mermaid
-        .render(`mermaid-${diagramSeq++}`, code)
-        .then(({ svg }) => {
+      const id = `mermaid-${diagramSeq++}`;
+      (async () => {
+        try {
+          // `parse` first, so a half-streamed diagram is recognised as
+          // not-yet-valid without mermaid logging an error to the console.
+          await mermaid.parse(code);
+          const { svg } = await mermaid.render(id, code);
           if (cancelled || !hostRef.current) return;
           hostRef.current.innerHTML = svg;
+          setRendered(true);
           setError(null);
-        })
-        .catch((err: unknown) => {
+        } catch (err: unknown) {
           if (cancelled) return;
           setError(err instanceof Error ? err.message : String(err));
-        });
-    }, 150);
+        } finally {
+          // mermaid appends a temporary element for measuring; it is orphaned
+          // when rendering throws, and they accumulate over a long chat.
+          document.getElementById(`d${id}`)?.remove();
+        }
+      })();
+    }, 200);
 
     return () => {
       cancelled = true;
@@ -122,16 +144,24 @@ const MermaidDiagram: React.FC<{ code: string; theme: 'dark' | 'light' }> = ({ c
     };
   }, [code, theme]);
 
-  if (error) {
-    return (
-      <div className="mermaid-diagram mermaid-diagram-error">
-        <div className="mermaid-error-title">{t('chat.diagramError')}</div>
-        <pre>{code}</pre>
-      </div>
-    );
-  }
+  // The source is shown only while nothing has ever rendered. Once a diagram is
+  // on screen a later failure leaves it there rather than replacing a good
+  // picture with an error, which is what a reader of a finished message wants.
+  const showSource = Boolean(error) && !rendered;
 
-  return <div className="mermaid-diagram" ref={hostRef} />;
+  return (
+    <div className={`mermaid-diagram${showSource ? ' mermaid-diagram-error' : ''}`}>
+      {showSource ? (
+        <>
+          <div className="mermaid-error-title">{t('chat.diagramError')}</div>
+          <pre>{code}</pre>
+        </>
+      ) : null}
+      {/* Never unmounted: the ref must survive a failed attempt, or no later
+          attempt can ever find somewhere to draw. */}
+      <div className="mermaid-host" ref={hostRef} hidden={showSource} />
+    </div>
+  );
 };
 
 /**

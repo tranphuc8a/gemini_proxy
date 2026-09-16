@@ -302,9 +302,22 @@
   justify-content: flex-start;
 }
 
+/* Bubble width.
+   `75ch` was the cap that made this feel like "max 50%": on a 1920px screen 75
+   characters of the body font is about half the column, so the percentage never
+   came into play. Reading research puts comfortable prose at 60–90 characters,
+   but a chat carries code blocks, tables and diagrams too, and those want every
+   pixel. So the measure is raised well past prose width and the percentage is
+   what actually limits it on a wide screen. */
 .chat-row > div {
-  max-width: min(75ch, 85%);
+  max-width: min(120ch, 92%);
   min-width: 0;
+}
+
+/* Wide content sets its own rules: a code block, a table or a mermaid diagram
+   is unreadable when wrapped to prose width. */
+.chat-row > div:has(.code-block-wrapper, table, .mermaid-diagram) {
+  max-width: 96%;
 }
 
 .chat-message-head {
@@ -1105,6 +1118,33 @@
   margin: 0;
   white-space: pre-wrap;
   font-size: 12px;
+}
+
+/* The element mermaid draws into. It stays in the tree even while the source is
+   being shown instead -- `hidden` takes it off screen without unmounting it,
+   which is what lets a later attempt succeed. */
+.mermaid-host {
+  display: flex;
+  justify-content: center;
+}
+
+.mermaid-host svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* `hidden` needs this: .mermaid-host sets `display`, and a class beats the
+   user-agent rule the attribute relies on. */
+.mermaid-host[hidden] {
+  display: none !important;
+}
+
+/* An empty container would otherwise render as a grey slab while the first
+   diagram is still streaming in. */
+.mermaid-diagram:not(.mermaid-diagram-error):has(.mermaid-host:empty) {
+  padding: 0;
+  margin: 0;
+  background: none;
 }
 
 /* Chat message user specific markdown overrides */

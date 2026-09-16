@@ -65,7 +65,11 @@ const MEDIA = {
 const args = process.argv.slice(2)
 const shotIndex = args.indexOf('--shots')
 const shotDir = shotIndex === -1 ? null : args[shotIndex + 1]
-const apps = args.filter((value, index) => !value.startsWith('--') && index !== shotIndex + 1)
+// The `shotIndex + 1` guard drops the directory that follows `--shots`. With no
+// `--shots` at all shotIndex is -1, so that expression is 0 — which silently ate
+// the first app name on the command line and audited the defaults instead.
+const shotDirIndex = shotIndex === -1 ? -1 : shotIndex + 1
+const apps = args.filter((value, index) => !value.startsWith('--') && index !== shotDirIndex)
 const targets = apps.length ? apps : DEFAULT_APPS
 
 // Playwright is not a dependency of this repo: there is no package.json at the
@@ -214,11 +218,38 @@ async function audit(app, viewport) {
     if (visible !== 1) report(`tab "${name}" shows ${visible} panels, expected 1`)
   }
 
+  /**
+   * Close whatever modal the last click opened.
+   *
+   * Without this the audit stops being an audit after the first dialog: every
+   * later click lands on the backdrop instead of the control it named.
+   */
+  async function dismissDialog() {
+    const dialog = page.locator('[role="dialog"], .overlay, .modal').first()
+    if ((await dialog.count()) === 0) return
+    const close = dialog.locator('button', { hasText: /^(Đóng|Close|Huỷ|Cancel|×|✕)$/ }).first()
+    if ((await close.count()) > 0) {
+      await close.click({ timeout: 1000 }).catch(() => {})
+      return
+    }
+    await page.keyboard.press('Escape').catch(() => {})
+  }
+
   // Every button must survive a press.
+  //
+  // Two things make this loop slower than it looks. The handles are collected
+  // up front, so a click that re-renders the page detaches the rest of them --
+  // and `textContent()` has no timeout of its own, so each detached handle
+  // blocks for Playwright's 30-second default before failing. On a page with a
+  // hundred buttons that is most of an hour spent waiting. Hence the explicit
+  // timeout below.
+  //
+  // The other is a modal: once one is open its backdrop covers every remaining
+  // button, and each click then burns its full timeout too.
   const buttons = await page.locator('button:visible:not(.tab)').all()
   for (const button of buttons) {
     const before = errors.length
-    const name = ((await button.textContent().catch(() => '?')) || '?').trim().slice(0, 30)
+    const name = ((await button.textContent({ timeout: 500 }).catch(() => '?')) || '?').trim().slice(0, 30)
     try {
       await button.click({ timeout: 1500 })
     } catch {
@@ -226,6 +257,7 @@ async function audit(app, viewport) {
     }
     await page.waitForTimeout(100)
     if (errors.length > before) report(`button "${name}" -> ${errors[errors.length - 1].slice(0, 140)}`)
+    await dismissDialog()
   }
 
   // Every option of every select must be selectable.

@@ -28,15 +28,52 @@
   border-radius: var(--radius);
 }
 
+/* One viewport, two independently scrolling columns.
+   The page used to grow its own scrollbar: the board, the verdict and six tab
+   panels stacked into one document flow, so reading the matrix meant scrolling
+   the board off screen. Giving each column its own overflow keeps the board
+   visible while the panel beside it is scrolled.
+
+   The height comes from a flex column on <body> rather than
+   `calc(100vh - <topbar height>)`: any guess at the topbar's height is wrong as
+   soon as its text wraps, and being 8px out is exactly enough to put a
+   scrollbar back. */
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.topbar { flex: none; }
+
 .layout {
   display: grid;
-  grid-template-columns: minmax(320px, 520px) minmax(0, 1fr);
-  gap: 16px;
-  padding: 16px 18px 28px;
-  max-width: 1600px;
+  grid-template-columns: minmax(320px, 480px) minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px 16px;
+  max-width: 1700px;
+  width: 100%;
   margin: 0 auto;
-  align-items: start;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
+
+.layout > .col {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+/* The board keeps its size instead of being squeezed by whatever is under it. */
+.layout > .col > .lg-stage {
+  flex: none;
+}
+
+.lg-canvas { max-height: 46vh; }
 
 .action-row { gap: 8px; }
 .check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -92,6 +129,20 @@
 .chip:hover { border-color: var(--accent); color: var(--accent-text); }
 .chip.is-best { border-color: var(--warn); color: var(--warn); }
 
+/* The chip whose pattern is currently drawn. Clicking it again clears the
+   board, so it has to look like a pressed switch rather than a plain button. */
+.chip.is-showing {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.chip.is-showing::after {
+  content: ' ✕';
+  opacity: 0.7;
+}
+
 .matrix-wrap {
   overflow: auto;
   padding: 8px;
@@ -125,5 +176,18 @@
 #stepSlider { width: 100%; }
 
 @media (max-width: 1000px) {
-  .layout { grid-template-columns: 1fr; }
+  /* Below this width two columns would each be too narrow to read, so the page
+     goes back to a single scrolling document. */
+  body {
+    height: auto;
+    overflow: visible;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .layout > .col { overflow: visible; }
+  .lg-canvas { max-height: 52vh; }
 }

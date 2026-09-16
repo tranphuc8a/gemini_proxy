@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,18 @@ from src.adapter.output.sessionstore.records import SessionRecordStore, build_re
 logger = logging.getLogger(__name__)
 
 #: Separates this administrator's sessions from the other one's in a shared table.
+#: Floor between mirror re-reads, so a client holding a dead token cannot turn
+#: every request into a database round trip.
+RELOAD_MIN_INTERVAL_SECONDS = 1.0
+
+#: How stale this worker's copy may get before it is refreshed even on a hit.
+#:
+#: Without this, "log out" only logs you out of the worker that handled it: any
+#: other worker keeps its own copy of the session and goes on accepting the
+#: token indefinitely. That is a revocation that does not revoke, so the copy is
+#: given a bounded life. The cost is one round trip per worker per window.
+RELOAD_MAX_AGE_SECONDS = 15.0
+
 SESSION_KIND = "sql"
 
 
@@ -35,6 +48,7 @@ class FileSessionStore(SqlSessionOutputPort):
         self._sessions: dict[str, StoredSession] = {}
         self._lock = asyncio.Lock()
         self._loaded = False
+        self._last_reload = 0.0
         self._sealer: PasswordSealer | None = None
         self._records: SessionRecordStore | None = None
 
@@ -107,10 +121,47 @@ class FileSessionStore(SqlSessionOutputPort):
         Once, not per request: the mirror exists so a restart does not sign
         people out, and re-reading it on every call would put a database round
         trip in front of every query the administrator runs.
+
+        `_reload_locked` below handles the case this misses.
         """
         if self._loaded:
             return
         self._loaded = True
+        await self._read_into_memory(replace=False)
+        # A fresh read is a fresh read; without this the next call would see an
+        # age of "since the epoch" and immediately read again.
+        self._last_reload = time.monotonic()
+
+    async def _reload_locked(self, *, stale_only: bool = False) -> bool:
+        """Re-read the mirror.
+
+        This is what makes the store correct with more than one worker. A
+        session created by worker A is written to the shared mirror, but worker
+        B read that mirror once — at *its* first request, before the session
+        existed — and `_loaded` stopped it ever looking again. So B never saw
+        the session, answered 401, and the user was signed out mid-session at
+        random; with N workers it happened to roughly (N-1)/N of requests.
+
+        Called on the miss path, and — via `stale_only` — once the copy passes
+        `RELOAD_MAX_AGE_SECONDS`, so that a logout elsewhere takes effect here
+        too. Rate limited because a client holding a dead token would otherwise
+        hit the database on every single request.
+        """
+        if not self.persistent or not self._records:
+            return False
+
+        now = time.monotonic()
+        age = now - self._last_reload
+        if age < (RELOAD_MAX_AGE_SECONDS if stale_only else RELOAD_MIN_INTERVAL_SECONDS):
+            return False
+        self._last_reload = now
+
+        # Replaces rather than merges: a logout on another worker removed the
+        # record, and merging would resurrect the session it just ended.
+        await self._read_into_memory(replace=True)
+        return True
+
+    async def _read_into_memory(self, *, replace: bool) -> None:
         if not self.persistent or not self._records:
             return
         try:
@@ -118,6 +169,8 @@ class FileSessionStore(SqlSessionOutputPort):
         except Exception as exc:  # noqa: BLE001
             logger.warning("Could not read sessions from %s: %s", self._records.label, exc)
             return
+
+        loaded: dict[str, Any] = {}
         for record in stored:
             try:
                 session = self._from_record(record)
@@ -125,7 +178,12 @@ class FileSessionStore(SqlSessionOutputPort):
                 # A rotated secret invalidates old sessions; drop them quietly.
                 logger.info("Discarding unreadable stored session: %s", exc)
                 continue
-            self._sessions[session.token] = session
+            loaded[session.token] = session
+
+        if replace:
+            self._sessions = loaded
+        else:
+            self._sessions.update(loaded)
 
     async def _flush_locked(self) -> None:
         if not self.persistent or not self._records:
@@ -153,12 +211,22 @@ class FileSessionStore(SqlSessionOutputPort):
     async def get(self, token: str) -> StoredSession | None:
         async with self._lock:
             await self._load_locked()
-            return self._sessions.get(token)
+            # Bounded staleness, so a logout on another worker reaches this one.
+            await self._reload_locked(stale_only=True)
+            found = self._sessions.get(token)
+            if found is None and await self._reload_locked():
+                # Another worker may have created it since this one last looked.
+                found = self._sessions.get(token)
+            return found
 
     async def touch(self, token: str) -> StoredSession | None:
         async with self._lock:
             await self._load_locked()
+            # Bounded staleness, so a logout on another worker reaches this one.
+            await self._reload_locked(stale_only=True)
             session = self._sessions.get(token)
+            if session is None and await self._reload_locked():
+                session = self._sessions.get(token)
             if session is None:
                 return None
             session.last_used_at = utc_now_iso()

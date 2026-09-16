@@ -38,6 +38,10 @@
     analysis: null,
     result: null,
     highlight: {},        // cell index -> decoration class
+    // Which chip is currently drawn on the board, so clicking it again clears
+    // it. Without this the only way to get the board back was to change
+    // something else, which made comparing two patterns needlessly fiddly.
+    shown: null,          // { kind: 'solution' | 'quiet', key: string } | null
     chasingRow: 1,
     chasingPresses: [],
     theme: 'dark',
@@ -112,6 +116,34 @@
     state.highlight = {}
     for (const index of indices) state.highlight[index] = kind
     render()
+  }
+
+  function clearHighlight() {
+    state.shown = null
+    state.highlight = {}
+    render()
+  }
+
+  /**
+   * Draw this chip's pattern, or clear it if it is already the one on screen.
+   *
+   * `key` identifies the chip rather than the vector, so two patterns that
+   * happen to be equal still toggle independently.
+   */
+  function toggleHighlight(kind, key, indices, onShow) {
+    const already = state.shown && state.shown.kind === kind && state.shown.key === key
+    for (const chip of document.querySelectorAll('.chip.is-showing')) chip.classList.remove('is-showing')
+
+    if (already) {
+      clearHighlight()
+      $('quietDetail').innerHTML = ''
+      return false
+    }
+
+    state.shown = { kind, key }
+    highlight(indices, kind)
+    if (onShow) onShow()
+    return true
   }
 
   // --- analysis ------------------------------------------------------------
@@ -225,8 +257,9 @@
       chip.title = indicesOf(vector).map(cellName).join(', ') || 'không cần bấm gì'
       if (rank === 0) chip.classList.add('is-best')
       chip.addEventListener('click', () => {
-        highlight(indicesOf(vector), 'solution')
-        toast(`Tô vàng: ${GF2.weight(vector)} ô cần bấm.`)
+        const shown = toggleHighlight('solution', 'sol-' + rank, indicesOf(vector), () =>
+          toast(`Tô vàng: ${GF2.weight(vector)} ô cần bấm. Bấm lại để ẩn.`))
+        chip.classList.toggle('is-showing', shown)
       })
       list.appendChild(chip)
     })
@@ -255,23 +288,31 @@
       chip.className = 'chip'
       chip.textContent = `Mẫu ${index + 1} · ${GF2.weight(vector)} ô`
       chip.addEventListener('click', () => {
-        highlight(indicesOf(vector), 'quiet')
-        $('quietDetail').innerHTML = ''
-        const check = document.createElement('button')
-        check.className = 'btn btn-sm'
-        check.textContent = 'Bấm hết mẫu này (bàn sẽ không đổi)'
-        check.addEventListener('click', () => {
-          const before = Array.from(state.board.cells).join('')
-          state.board.checkpoint()
-          for (const at of indicesOf(vector)) state.board.pressIndex(at, { silent: true })
-          const after = Array.from(state.board.cells).join('')
-          render()
-          toast(before === after ? 'Đúng như dự đoán: bàn không đổi gì.' : 'Bàn đã đổi — mẫu này không im lặng!', before === after ? null : 'error')
-        })
-        $('quietDetail').appendChild(check)
+        const shown = toggleHighlight('quiet', 'quiet-' + index, indicesOf(vector), () => buildQuietDetail(vector))
+        chip.classList.toggle('is-showing', shown)
       })
       list.appendChild(chip)
     })
+  }
+
+  /** The "press this whole pattern and watch nothing happen" button. */
+  function buildQuietDetail(vector) {
+    $('quietDetail').innerHTML = ''
+    const check = document.createElement('button')
+    check.className = 'btn btn-sm'
+    check.textContent = 'Bấm hết mẫu này (bàn sẽ không đổi)'
+    check.addEventListener('click', () => {
+      const before = Array.from(state.board.cells).join('')
+      state.board.checkpoint()
+      for (const at of indicesOf(vector)) state.board.pressIndex(at, { silent: true })
+      const after = Array.from(state.board.cells).join('')
+      render()
+      toast(
+        before === after ? 'Đúng như dự đoán: bàn không đổi gì.' : 'Bàn đã đổi — mẫu này không im lặng!',
+        before === after ? null : 'error',
+      )
+    })
+    $('quietDetail').appendChild(check)
   }
 
   // --- matrix bitmaps ------------------------------------------------------
@@ -489,6 +530,30 @@
   }
 
   // --- configuration -------------------------------------------------------
+  /**
+   * Show or hide the fields only some shapes and rules use, and describe the
+   * current choice.
+   *
+   * Reads the *controls*, not the board. Reading the board is what broke the
+   * pickers: this ran on every `change`, so choosing a new shape immediately
+   * wrote the board's old shape back into the select and the choice appeared to
+   * be ignored. Nothing here may write to a control the user is operating.
+   */
+  function updateDependentFields() {
+    const shape = $('shape').value
+    const rule = $('rule').value
+    $('thicknessField').style.display = ['ring', 'hexring', 'cross'].includes(shape) ? '' : 'none'
+    $('radiusField').style.display = ['manhattan', 'square', 'ring'].includes(rule) ? '' : 'none'
+    $('configNote').textContent =
+      (SHAPES[shape] ? SHAPES[shape].note + ' ' : '') + (RULES[rule] ? RULES[rule].note : '')
+  }
+
+  /**
+   * Push the board's configuration back into the controls.
+   *
+   * Only for when the board changed underneath them -- an import, a shared
+   * link. Never from a control's own `change` handler.
+   */
   function syncControls() {
     $('shape').value = state.board.shape
     $('rows').value = state.board.rows
@@ -496,11 +561,7 @@
     $('thickness').value = state.board.thickness
     $('rule').value = state.board.rule
     $('radius').value = state.board.radius
-    $('thicknessField').style.display = ['ring', 'hexring', 'cross'].includes(state.board.shape) ? '' : 'none'
-    $('radiusField').style.display = ['manhattan', 'square', 'ring'].includes(state.board.rule) ? '' : 'none'
-    $('configNote').textContent =
-      (SHAPES[state.board.shape] ? SHAPES[state.board.shape].note + ' ' : '') +
-      (RULES[state.board.rule] ? RULES[state.board.rule].note : '')
+    updateDependentFields()
   }
 
   function applyConfiguration() {
@@ -544,8 +605,8 @@
   // --- wiring --------------------------------------------------------------
   function bind() {
     $('apply').addEventListener('click', applyConfiguration)
-    $('shape').addEventListener('change', syncControls)
-    $('rule').addEventListener('change', syncControls)
+    $('shape').addEventListener('change', updateDependentFields)
+    $('rule').addEventListener('change', updateDependentFields)
 
     $('scramble').addEventListener('click', () => { state.board.scramble(); afterBoardChange() })
     $('random').addEventListener('click', () => { state.board.fillRandom(0.5); afterBoardChange() })

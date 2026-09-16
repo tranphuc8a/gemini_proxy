@@ -383,7 +383,12 @@
       onPress: (cell) => press(cell),
       onHover: (cell) => {
         state.preview = cell ? state.board.preview(cell) : []
-        if (settings.preview) render()
+        // `decorate`, not `render`: a full redraw empties the <svg> and rebuilds
+        // it, which destroys the element the pointer is on. The browser then
+        // never sees pointerdown and pointerup on the same element, so no click
+        // is dispatched -- the board became unclickable whenever the preview was
+        // switched on.
+        if (settings.preview) state.renderer.decorate(decorations())
       }
     })
 

@@ -51,6 +51,7 @@ const APPS = [
   { name: 'postman-lite', dest: 'tranphuc8a/postman-lite-pro' },
   { name: 'mongo-administrator', dest: 'tranphuc8a/mongo-administrator' },
   { name: 'graphuc', dest: 'tranphuc8a/graphuc' },
+  { name: 'casio-fx580vnx', dest: 'tranphuc8a/casio-fx580vnx' },
 ]
 
 /**

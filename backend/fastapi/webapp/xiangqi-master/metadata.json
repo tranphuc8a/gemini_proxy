@@ -1,0 +1,11 @@
+{
+  "title": "Xiangqi",
+  "description": "Xiangqi.",
+  "tags": [
+    "game",
+    "board-game",
+    "strategy"
+  ],
+  "icon": "♟️",
+  "generated": true
+}

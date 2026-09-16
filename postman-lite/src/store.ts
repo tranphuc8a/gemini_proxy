@@ -158,6 +158,8 @@ export interface StoreActions {
   setSidebarTab: (tab: 'collections' | 'history') => void
   setCommandPaletteOpen: (open: boolean) => void
   setDiff: (side: 'left' | 'right', response: ResponseData | null) => void
+  /** Drop one tab's response, so a huge body can be released. */
+  clearResponse: (tabId: string) => void
 
   // runner
   setRunnerOpen: (open: boolean) => void
@@ -573,6 +575,18 @@ export const useStore = create<Store>((set, get) => ({
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   setDiff: (side, response) => set(side === 'left' ? { diffLeft: response } : { diffRight: response }),
+
+  clearResponse: (tabId) =>
+    set((s) => ({
+      // Also dropped from the diff slots: holding a 50MB body there would
+      // defeat the point of clearing it, and the slot would be pointing at a
+      // response the user has said they are done with.
+      diffLeft: s.diffLeft && s.tabs.find((t) => t.id === tabId)?.response === s.diffLeft ? null : s.diffLeft,
+      diffRight: s.diffRight && s.tabs.find((t) => t.id === tabId)?.response === s.diffRight ? null : s.diffRight,
+      tabs: s.tabs.map((tab) =>
+        tab.id === tabId ? { ...tab, response: undefined, testResults: undefined, failure: undefined } : tab,
+      ),
+    })),
 
   // ----------------------------------------------------------------- runner
   setRunnerOpen: (open) => set({ runnerOpen: open }),

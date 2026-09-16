@@ -1,0 +1,11 @@
+{
+  "title": "Web Chess",
+  "description": "Web Chess.",
+  "tags": [
+    "game",
+    "board-game",
+    "strategy"
+  ],
+  "icon": "♟️",
+  "generated": true
+}

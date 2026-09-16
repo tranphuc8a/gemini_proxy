@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Layout,
   Input,
@@ -148,6 +148,19 @@ export const ChatArea: React.FC = () => {
   const listRef = useRef<HTMLDivElement>(null);
   /** Whether the viewport should track new content; false once the user scrolls up. */
   const followOutputRef = useRef(true);
+  /**
+   * In-flight guard for paging, as a ref rather than the `loadingOlder` state.
+   *
+   * A scroll fires dozens of events per gesture. Reading the state meant every
+   * one of them saw the stale `false` that was captured when the handler was
+   * built, so hitting the top fetched the same page several times over and the
+   * list jumped as each arrival was prepended.
+   */
+  const loadingOlderRef = useRef(false);
+  /** Scroll anchor captured before older messages are prepended. */
+  const anchorRef = useRef<{ height: number; top: number } | null>(null);
+  /** Coalesces scroll handling to one run per frame. */
+  const scrollFrameRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   /** True while an IME composition is in progress (Vietnamese, Chinese, …). */
   const composingRef = useRef(false);
@@ -254,7 +267,7 @@ export const ChatArea: React.FC = () => {
   );
 
   const loadOlderMessages = useCallback(async () => {
-    if (!currentConversationId || !hasMoreMessages[currentConversationId] || loadingOlder) return;
+    if (!currentConversationId || !hasMoreMessages[currentConversationId] || loadingOlderRef.current) return;
 
     const cursor = nextMessageCursor[currentConversationId];
     // A cursor that never reached the server is not a cursor the server can
@@ -264,10 +277,17 @@ export const ChatArea: React.FC = () => {
       return;
     }
 
+    // Set before the first await, so a second scroll event in the same gesture
+    // sees it. `setLoadingOlder` only drives the spinner.
+    loadingOlderRef.current = true;
     setLoadingOlder(true);
+
     const listElement = listRef.current;
-    const previousScrollHeight = listElement?.scrollHeight ?? 0;
-    const previousScrollTop = listElement?.scrollTop ?? 0;
+    // Handed to the layout effect below, which restores the position once React
+    // has actually put the new messages in the DOM.
+    anchorRef.current = listElement
+      ? { height: listElement.scrollHeight, top: listElement.scrollTop }
+      : null;
 
     try {
       const result = await conversationService.getMessages(currentConversationId, {
@@ -284,20 +304,16 @@ export const ChatArea: React.FC = () => {
         setNextMessageCursor(currentConversationId, olderMessagesInOrder[0].id);
       }
 
-      // Keep the reading position steady as content is prepended above it.
-      requestAnimationFrame(() => {
-        if (!listElement) return;
-        listElement.scrollTop = previousScrollTop + (listElement.scrollHeight - previousScrollHeight);
-      });
     } catch (error) {
       showToast.error(describeApiError(error, t('errors.loadMessages')));
+      anchorRef.current = null;
     } finally {
+      loadingOlderRef.current = false;
       setLoadingOlder(false);
     }
   }, [
     currentConversationId,
     hasMoreMessages,
-    loadingOlder,
     nextMessageCursor,
     setHasMoreMessages,
     setMessages,
@@ -331,21 +347,54 @@ export const ChatArea: React.FC = () => {
     const listElement = listRef.current;
     if (!listElement) return;
 
-    const handleScroll = () => {
+    const measure = () => {
+      scrollFrameRef.current = null;
       const { scrollTop, scrollHeight, clientHeight } = listElement;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
       followOutputRef.current = distanceFromBottom < FOLLOW_THRESHOLD_PX;
-      setShowJumpToLatest(distanceFromBottom > FOLLOW_THRESHOLD_PX * 3);
+      // Only when it actually flips: this used to run on every scroll event, so
+      // a single flick re-rendered the whole message list dozens of times and
+      // the scrolling stuttered.
+      setShowJumpToLatest((shown) => {
+        const next = distanceFromBottom > FOLLOW_THRESHOLD_PX * 3;
+        return next === shown ? shown : next;
+      });
 
-      if (scrollTop < LOAD_OLDER_THRESHOLD_PX) {
-        loadOlderMessages();
-      }
+      if (scrollTop < LOAD_OLDER_THRESHOLD_PX) loadOlderMessages();
+    };
+
+    // Scroll fires far faster than the screen refreshes; coalescing to one run
+    // per frame is what makes reading back through a long chat smooth.
+    const handleScroll = () => {
+      if (scrollFrameRef.current !== null) return;
+      scrollFrameRef.current = window.requestAnimationFrame(measure);
     };
 
     listElement.addEventListener('scroll', handleScroll, { passive: true });
-    return () => listElement.removeEventListener('scroll', handleScroll);
+    return () => {
+      listElement.removeEventListener('scroll', handleScroll);
+      if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
+    };
   }, [loadOlderMessages]);
+
+  /**
+   * Put the reading position back where it was after older messages are added.
+   *
+   * A layout effect, not `requestAnimationFrame`: this has to run after React
+   * has put the new nodes in the DOM but *before* the browser paints, or the
+   * user sees the list jump to the top and snap back. The old rAF version
+   * measured whenever the next frame happened to arrive, which was sometimes
+   * before the commit and so corrected by the wrong amount.
+   */
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    const listElement = listRef.current;
+    if (!anchor || !listElement) return;
+    anchorRef.current = null;
+    listElement.scrollTop = anchor.top + (listElement.scrollHeight - anchor.height);
+  }, [currentMessages.length]);
 
   // Follow the answer as it streams in, but only if the user is still at the bottom.
   const lastMessage = currentMessages[currentMessages.length - 1];

@@ -1,0 +1,953 @@
+/*
+ * The look of the machine.
+ *
+ * Two ideas hold this together. First, the calculator body is a fixed-width
+ * column with a real keypad grid, because the shape is what makes it
+ * recognisable — shrinking it into a fluid layout would turn it into a generic
+ * web calculator. Second, everything else is a scrollable workspace beside it,
+ * which is where a screen beats a two-line LCD.
+ *
+ * At phone width the two stack, the machine first.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --ink: #e8ecf2;
+  --ink-soft: #97a3b4;
+  --ink-faint: #64707f;
+
+  --ground: #0d1016;
+  --surface: #161b24;
+  --surface-high: #1e2531;
+  --line: #2b3342;
+
+  --accent: #3d7eff;
+  --accent-soft: rgba(61, 126, 255, 0.16);
+  --gold: #f0b429;
+  --red: #ef5f5f;
+  --green: #3fbf7f;
+
+  --lcd-ground: #b6c9a8;
+  --lcd-ink: #1a2013;
+
+  --radius: 10px;
+  --radius-small: 7px;
+  --shadow-key: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--ground);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  padding: 6px 9px;
+  min-width: 0;
+  width: 100%;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+code {
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  font-size: 0.92em;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 0.85em;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+/* ------------------------------------------------------------------ shell */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+  gap: 16px;
+}
+
+.app-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-title h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+}
+
+.app-title p {
+  margin: 2px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.mode-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mode {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.mode:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+.mode.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* ---------------------------------------------------------------- machine */
+
+.machine {
+  background: linear-gradient(180deg, #232a36, #171c25);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 16px;
+}
+
+/* -------------------------------------------------------------------- LCD */
+
+.lcd {
+  background: var(--lcd-ground);
+  color: var(--lcd-ink);
+  border-radius: 8px;
+  padding: 8px 10px 10px;
+  border: 2px solid #2c3444;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+
+.lcd-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(26, 32, 19, 0.3);
+}
+
+.lcd-status .is-on {
+  color: var(--lcd-ink);
+}
+
+.lcd-status-spacer {
+  flex: 1;
+}
+
+.lcd-entry {
+  min-height: 28px;
+  font-size: 18px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  display: flex;
+  align-items: center;
+}
+
+.lcd-char {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.lcd-caret {
+  display: inline-block;
+  width: 2px;
+  height: 20px;
+  background: var(--lcd-ink);
+  vertical-align: -4px;
+  animation: blink 1.06s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lcd-caret {
+    animation: none;
+  }
+}
+
+.lcd-answer {
+  min-height: 34px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.lcd-result {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--lcd-ink);
+  text-align: right;
+  white-space: pre;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lcd-sd {
+  font-size: 9px;
+  font-weight: 700;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 3px;
+  opacity: 0.6;
+}
+
+.lcd-placeholder {
+  font-size: 24px;
+  opacity: 0.35;
+}
+
+.lcd-error {
+  color: #8c2020;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ----------------------------------------------------------------- keypad */
+
+.keypad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.keypad-modifiers {
+  display: grid;
+  grid-template-columns: 1fr 1fr 96px 1fr;
+  gap: 6px;
+  align-items: center;
+}
+
+.cursor-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2px;
+  justify-items: center;
+}
+
+.cursor-pad .up {
+  grid-column: 2;
+}
+.cursor-pad .left {
+  grid-column: 1;
+  grid-row: 2;
+}
+.cursor-pad .down {
+  grid-column: 2;
+  grid-row: 2;
+}
+.cursor-pad .right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.keypad-numbers {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 2px;
+}
+
+.keypad-alpha {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.key {
+  position: relative;
+  background: var(--surface-high);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-key);
+  padding: 7px 2px 6px;
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: center;
+  transition: transform 0.06s, background 0.12s;
+}
+
+.key:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.key-secondary {
+  display: flex;
+  gap: 4px;
+  font-size: 8.5px;
+  line-height: 1;
+  min-height: 9px;
+}
+
+.key-shift-label {
+  color: var(--gold);
+}
+
+.key-alpha-label {
+  color: var(--red);
+}
+
+.key-main {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.key-number {
+  background: #2a3242;
+  font-size: 16px;
+}
+
+.key-operator {
+  background: #33405a;
+}
+
+.key-control {
+  background: #4a3340;
+  min-height: 40px;
+}
+
+.key-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 17px;
+}
+
+.key-shift {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #2a1f00;
+  font-weight: 700;
+  min-height: 40px;
+  font-size: 12px;
+}
+
+.key-alpha {
+  background: var(--red);
+  border-color: var(--red);
+  color: #2a0505;
+  font-weight: 700;
+  min-height: 40px;
+  font-size: 12px;
+}
+
+.key.is-armed {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.key-arrow {
+  min-height: 22px;
+  min-width: 28px;
+  padding: 0;
+  font-size: 10px;
+  box-shadow: none;
+}
+
+.key.is-compact {
+  min-height: 30px;
+  font-size: 12px;
+  padding: 4px 2px;
+  box-shadow: none;
+}
+
+/* -------------------------------------------------------------- workspace */
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px 16px;
+  min-width: 0;
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.panel-head p {
+  margin: 0;
+  flex-basis: 100%;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.panel h3 {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.panel-note {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.panel-error {
+  margin: 10px 0 0;
+  color: var(--red);
+  font-size: 13px;
+}
+
+.panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.panel-row label,
+.panel-stack label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  flex: 1 1 110px;
+  min-width: 0;
+}
+
+.panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.panel-result {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.button {
+  background: var(--surface-high);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.button:hover {
+  border-color: var(--ink-faint);
+}
+
+.button.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.button.is-quiet {
+  background: none;
+  color: var(--ink-soft);
+  font-size: 12px;
+  padding: 4px 9px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  background: var(--ground);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.chip:hover {
+  color: var(--ink);
+}
+
+.chip.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- history */
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+}
+
+.history-list li:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.history-input,
+.history-output {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  font-size: 13px;
+  text-align: left;
+  word-break: break-all;
+}
+
+.history-input {
+  color: var(--ink-soft);
+  flex: 1 1 auto;
+}
+
+.history-output {
+  color: var(--green);
+  font-weight: 600;
+  text-align: right;
+}
+
+.history-error {
+  color: var(--red);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------- memory */
+
+.memory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+
+.memory-list li {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  overflow: hidden;
+}
+
+.memory-name {
+  background: var(--surface-high);
+  border: 0;
+  border-right: 1px solid var(--line);
+  padding: 5px 10px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.memory-value {
+  background: none;
+  border: 0;
+  flex: 1;
+  padding: 5px 8px;
+  text-align: right;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memory-value.is-readonly {
+  color: var(--ink-soft);
+  cursor: default;
+}
+
+.memory-list .is-ans .memory-name {
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.matrix-grid {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.matrix-view {
+  display: inline-grid;
+  gap: 4px 14px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--ink-faint);
+  border-right: 2px solid var(--ink-faint);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  text-align: right;
+}
+
+.stat-table-wrap {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  margin-top: 10px;
+}
+
+.stat-table,
+.coefficient-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.coefficient-table {
+  margin-top: 10px;
+}
+
+.stat-table th,
+.stat-table td,
+.coefficient-table th,
+.coefficient-table td {
+  padding: 3px 5px;
+  text-align: center;
+}
+
+.stat-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-high);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  z-index: 1;
+}
+
+.stat-table tbody th {
+  color: var(--ink-faint);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.stat-table td {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+}
+
+.stat-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+
+.stat-list > div,
+.root-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px dotted var(--line);
+}
+
+.stat-list dt,
+.root-list dt {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.stat-list dd,
+.root-list dd {
+  margin: 0;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-all;
+}
+
+.is-mono {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+}
+
+.root-list {
+  margin: 8px 0 0;
+}
+
+.base-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.base-input input {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+}
+
+.example-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.example-list button {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.example-list button:hover {
+  border-color: var(--accent);
+}
+
+.example-list span {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.big-result {
+  margin: 6px 0 0;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--green);
+  word-break: break-all;
+}
+
+/* -------------------------------------------------------------- overlays */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 8, 12, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 20;
+  overflow-y: auto;
+}
+
+.panel-dialog {
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px 16px;
+}
+
+.panel-dialog .panel {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+/* ------------------------------------------------------------ responsive */
+
+@media (max-width: 900px) {
+  .app-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .machine {
+    position: static;
+    max-width: 420px;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding: 12px;
+  }
+
+  .keypad-alpha {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .key {
+    min-height: 42px;
+    font-size: 12px;
+  }
+}
+
+.memory-input {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-high);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  text-align: right;
+  padding: 5px 8px;
+}

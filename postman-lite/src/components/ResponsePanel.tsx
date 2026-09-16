@@ -11,7 +11,7 @@ import {
   statusClass,
   toBlobPart,
 } from '../lib/util'
-import { IconCopy, IconDiff, IconDownload } from './Icons'
+import { IconCopy, IconDiff, IconDownload, IconTrash } from './Icons'
 
 type ViewTab = 'body' | 'headers' | 'preview' | 'tests' | 'raw'
 
@@ -43,6 +43,7 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
   const [search, setSearch] = useState('')
   const [wrap, setWrap] = useState(true)
   const setDiff = useStore((s) => s.setDiff)
+  const clearResponse = useStore((s) => s.clearResponse)
   const toast = useStore((s) => s.toast)
 
   const response = tab.response
@@ -106,6 +107,13 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
         </button>
         <button className="btn btn-ghost btn-sm" title="Đưa vào ô so sánh phải" onClick={() => setDiff('right', response)}>
           <IconDiff /> B
+        </button>
+        <button
+          className="btn btn-ghost btn-sm"
+          title="Xoá response khỏi bộ nhớ — hữu ích khi body quá lớn làm app chậm"
+          onClick={() => clearResponse(tab.id)}
+        >
+          <IconTrash /> Xoá
         </button>
       </div>
 

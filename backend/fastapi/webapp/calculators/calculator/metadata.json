@@ -1,0 +1,11 @@
+{
+  "title": "Calculator",
+  "description": "Calculator — ứng dụng trong bộ sưu tập calculators.",
+  "tags": [
+    "calculator",
+    "math",
+    "calculators"
+  ],
+  "icon": "🔢",
+  "generated": true
+}

@@ -1,0 +1,14 @@
+{
+  "title": "CASIO fx-580VN X",
+  "description": "Bản mô phỏng máy tính khoa học CASIO fx-580VN X chạy trong trình duyệt. Tính toán bằng số hữu tỉ chính xác nên 1÷3 vẫn là phân số và 20!÷19! đúng bằng 20; kết quả hiển thị được ở dạng phân số, hỗn số hoặc thập phân bằng S⇔D. Đầy đủ các chế độ: COMP, CMPLX (số phức), BASE-N (đổi hệ 2/8/10/16 bù hai 32 bit), MATRIX (định thức, chuyển vị, nghịch đảo — tất cả đều chính xác), STAT (một biến, hai biến, sáu kiểu hồi quy), TABLE (bảng giá trị f(x), g(x)) và EQN (phương trình bậc hai, bậc ba, hệ 2–4 ẩn). Có tích phân, đạo hàm, tổng Σ, tích ∏, lượng giác với giá trị đúng cho các góc đặc biệt, logarit cơ số bất kỳ, GCD, LCM, chia lấy dư, giai thừa, nPr, nCr, Pol/Rec, biến nhớ A–F/M/x/y/z, Ans và PreAns, gán bằng →, nhiều câu lệnh trên một dòng bằng :, cùng CALC và SOLVE. Bàn phím vật lý gõ trực tiếp được.",
+  "tags": [
+    "casio", "fx-580vn-x", "calculator", "máy tính", "máy tính khoa học",
+    "scientific-calculator", "toán", "math", "fraction", "phân số",
+    "exact-arithmetic", "matrix", "ma trận", "linear-algebra", "đại số tuyến tính",
+    "complex", "số phức", "statistics", "thống kê", "regression", "hồi quy",
+    "equation", "phương trình", "integral", "tích phân", "derivative", "đạo hàm",
+    "sigma", "trigonometry", "lượng giác", "logarithm", "logarit",
+    "gcd", "lcm", "base-n", "hệ cơ số", "react", "typescript", "tranphuc8a"
+  ],
+  "icon": "🖩"
+}

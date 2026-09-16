@@ -1,61 +1,110 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Apps Portal</title>
-    <link rel="stylesheet" href="./portal.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Apps Portal</title>
+<meta name="description" content="Tìm và mở nhanh các web app trong bộ sưu tập.">
+<link rel="stylesheet" href="./portal.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>🚀 Web Apps Portal</h1>
-            <p class="subtitle">Browse and launch your web applications</p>
-        </header>
 
-        <div class="search-section">
-            <div class="search-box">
-                <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <input type="text" id="searchInput" placeholder="Search apps by name, tags, or description..." autocomplete="off">
-                <button id="clearBtn" class="clear-btn" style="display: none;">✕</button>
-            </div>
-            <div class="filter-tags" id="filterTags"></div>
-        </div>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">🚀</span>
+    <div class="brand-text">
+      <h1>Web Apps Portal</h1>
+      <p class="hint" id="brandStats">Đang tải…</p>
+    </div>
+  </div>
 
-        <div id="searchResults" class="search-results" style="display: none;"></div>
+  <div class="search-box">
+    <svg class="search-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <input type="search" id="searchInput" autocomplete="off" spellcheck="false"
+           placeholder="Tìm theo tên, mô tả, tag hoặc thư mục…  (bấm / để vào đây)"
+           aria-label="Tìm ứng dụng">
+    <button id="clearSearch" class="icon-btn" hidden aria-label="Xoá ô tìm kiếm">✕</button>
+  </div>
 
-        <div class="stats">
-            <span id="statsText">Loading apps...</span>
-        </div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="themeToggle" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối">🌙</button>
+  </div>
+</header>
 
-        <!-- Standalone Apps -->
-        <section class="apps-section" id="standaloneSection" style="display: none;">
-            <h2 class="section-title">📱 Apps</h2>
-            <div class="apps-grid" id="standaloneApps"></div>
-        </section>
+<main class="layout">
+  <aside class="filters" id="filters">
+    <section class="filter-group">
+      <h2>Sắp xếp</h2>
+      <select id="sortSelect" aria-label="Sắp xếp ứng dụng">
+        <option value="relevance">Phù hợp nhất</option>
+        <option value="popular">Hay mở nhất</option>
+        <option value="recent">Mở gần đây</option>
+        <option value="name">Tên A → Z</option>
+        <option value="name-desc">Tên Z → A</option>
+        <option value="collection">Theo thư mục</option>
+      </select>
+    </section>
 
-        <!-- Collections -->
-        <div id="collectionsContainer"></div>
+    <section class="filter-group">
+      <h2>Thư mục <span class="count" id="collectionCount"></span></h2>
+      <div class="chip-list" id="collectionFilters"></div>
+    </section>
 
-        <!-- Empty State -->
-        <div id="emptyState" class="empty-state" style="display: none;">
-            <div class="empty-icon">📂</div>
-            <h3>No apps found</h3>
-            <p>Add your web apps to the <code>webapp/</code> folder to get started.</p>
-            <div class="help-box">
-                <strong>Quick Start:</strong>
-                <ol>
-                    <li>Create a folder in <code>webapp/</code></li>
-                    <li>Add an <code>index.html</code> file</li>
-                    <li>Optionally add <code>metadata.json</code> for description and tags</li>
-                    <li>Refresh this page</li>
-                </ol>
-            </div>
-        </div>
+    <section class="filter-group">
+      <h2>Tag <span class="count" id="tagCount"></span></h2>
+      <input type="search" id="tagSearch" class="mini-search" placeholder="Lọc danh sách tag…" aria-label="Tìm tag">
+      <div class="chip-list chip-list-scroll" id="tagFilters"></div>
+      <p class="hint" id="tagMatchMode">Chọn nhiều tag: hiện app có <b>bất kỳ</b> tag nào.</p>
+      <label class="check"><input type="checkbox" id="tagMatchAll"> Phải có <b>đủ</b> mọi tag đã chọn</label>
+    </section>
+
+    <button class="btn btn-ghost" id="resetFilters" hidden>Xoá toàn bộ bộ lọc</button>
+  </aside>
+
+  <section class="results">
+    <div class="results-head">
+      <p id="resultSummary" class="hint"></p>
+      <div class="spacer"></div>
+      <div class="view-toggle" role="group" aria-label="Kiểu hiển thị">
+        <button class="view-btn is-active" data-view="grid" title="Dạng lưới">▦</button>
+        <button class="view-btn" data-view="list" title="Dạng danh sách">☰</button>
+      </div>
     </div>
 
-    <script src="./portal.js"></script>
+    <div id="activeFilters" class="active-filters" hidden></div>
+
+    <!-- Recently opened, shown only when the user has history and no query. -->
+    <section class="strip" id="recentStrip" hidden>
+      <h2>Mở gần đây</h2>
+      <div class="strip-items" id="recentItems"></div>
+    </section>
+
+    <div class="apps" id="appList"></div>
+
+    <div class="empty-state" id="emptyState" hidden>
+      <div class="empty-icon">🔍</div>
+      <h3 id="emptyTitle">Không tìm thấy ứng dụng nào</h3>
+      <p class="hint" id="emptyHint">Thử bớt từ khoá hoặc bỏ một vài bộ lọc.</p>
+      <button class="btn" id="emptyReset">Xoá bộ lọc</button>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="hint">Đang tải danh sách ứng dụng…</p>
+    </div>
+
+    <div class="error-state" id="errorState" hidden>
+      <div class="empty-icon">⚠️</div>
+      <h3>Không tải được danh sách</h3>
+      <p class="hint" id="errorMessage"></p>
+      <button class="btn" id="retryLoad">Thử lại</button>
+    </div>
+  </section>
+</main>
+
+<script src="./portal.js"></script>
 </body>
 </html>

@@ -197,3 +197,96 @@ class _MongoModuleShim:
     imports it inside a function, so hand the fake a module-shaped object."""
 
     from src.adapter.output.mongostore import client as mongo_store  # noqa: F401
+
+
+# ------------------------------------------------------- more than one worker
+
+def test_a_worker_finds_a_session_another_worker_created(json_backing):
+    """The signout-while-working bug.
+
+    Each store reads the mirror once, at its own first request. Worker B did
+    that before the session existed, and the `_loaded` flag stopped it ever
+    looking again — so a session created on worker A was invisible to B for the
+    life of the process. Every request that landed on B answered 401 and signed
+    the user out, at random, in the middle of a session.
+    """
+
+    async def scenario():
+        worker_b = sql_sessions.FileSessionStore(json_backing, SECRET)
+        # B does its one-time read now, while the mirror is still empty.
+        assert await worker_b.get("tok-1") is None
+
+        worker_a = sql_sessions.FileSessionStore(json_backing, SECRET)
+        await worker_a.create(make_session())
+
+        # Rate limiting must not hide the session from the next real request.
+        worker_b._last_reload = 0.0
+        return await worker_b.touch("tok-1")
+
+    assert arun(scenario()) is not None, "worker B still cannot see the session"
+
+
+def test_a_logout_on_one_worker_is_seen_by_another(json_backing):
+    """The reload replaces rather than merges, or a logout elsewhere would be
+    undone by the next worker that reloaded."""
+
+    async def scenario():
+        worker_a = sql_sessions.FileSessionStore(json_backing, SECRET)
+        await worker_a.create(make_session())
+
+        worker_b = sql_sessions.FileSessionStore(json_backing, SECRET)
+        assert await worker_b.get("tok-1") is not None, "B should see A's session"
+
+        await worker_a.delete("tok-1")
+        worker_b._last_reload = 0.0
+        return await worker_b.touch("tok-1")
+
+    assert arun(scenario()) is None
+
+
+def test_a_dead_token_does_not_hit_the_mirror_on_every_request(json_backing, monkeypatch):
+    """Rate limiting: without it a client holding an expired token would turn
+    each of its requests into a database round trip."""
+
+    async def scenario():
+        store = sql_sessions.FileSessionStore(json_backing, SECRET)
+        await store.get("warm-up")
+
+        reads = {"count": 0}
+        original = store._records.load
+
+        async def counting(kind):
+            reads["count"] += 1
+            return await original(kind)
+
+        store._records.load = counting
+        store._last_reload = 0.0
+
+        for _ in range(20):
+            assert await store.touch("never-existed") is None
+        return reads["count"]
+
+    assert arun(scenario()) == 1, "the mirror should be re-read once, not per request"
+
+
+def test_the_miss_path_costs_nothing_when_the_session_is_present(json_backing):
+    """The reload must stay on the failure path; a hit should not touch the
+    mirror at all, or every query would carry a round trip."""
+
+    async def scenario():
+        store = sql_sessions.FileSessionStore(json_backing, SECRET)
+        await store.create(make_session())
+
+        reads = {"count": 0}
+        original = store._records.load
+
+        async def counting(kind):
+            reads["count"] += 1
+            return await original(kind)
+
+        store._records.load = counting
+        for _ in range(10):
+            assert await store.touch("tok-1") is not None
+        return reads["count"]
+
+    assert arun(scenario()) == 0

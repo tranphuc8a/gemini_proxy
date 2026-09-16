@@ -402,6 +402,26 @@
   }
 
   // --- configuration -------------------------------------------------------
+  /**
+   * Show or hide the fields that only some shapes and rules use.
+   *
+   * Reads the *controls*, not the board. Reading the board is what broke the
+   * pickers: this ran on every `change`, so choosing a new shape immediately
+   * wrote the board's old shape back into the select and the choice appeared to
+   * be ignored. Nothing here may write to a control the user is operating.
+   */
+  function updateDependentFields() {
+    $('radiusValue').textContent = $('radius').value
+    $('thicknessField').style.display = ['ring', 'hexring', 'cross'].includes($('shape').value) ? '' : 'none'
+    $('radiusField').style.display = ['manhattan', 'square', 'ring'].includes($('rule').value) ? '' : 'none'
+  }
+
+  /**
+   * Push the board's configuration back into the controls.
+   *
+   * Only for when the board changed underneath them -- a preset, an import, a
+   * shared link. Never from a control's own `change` handler.
+   */
   function syncControls() {
     $('shape').value = state.board.shape
     $('rows').value = state.board.rows
@@ -409,9 +429,7 @@
     $('thickness').value = state.board.thickness
     $('rule').value = state.board.rule
     $('radius').value = state.board.radius
-    $('radiusValue').textContent = state.board.radius
-    $('thicknessField').style.display = ['ring', 'hexring', 'cross'].includes(state.board.shape) ? '' : 'none'
-    $('radiusField').style.display = ['manhattan', 'square', 'ring'].includes(state.board.rule) ? '' : 'none'
+    updateDependentFields()
   }
 
   function applyConfiguration() {
@@ -450,8 +468,8 @@
   function bind() {
     $('preset').addEventListener('change', () => applyPreset($('preset').value))
     $('apply').addEventListener('click', applyConfiguration)
-    $('shape').addEventListener('change', syncControls)
-    $('rule').addEventListener('change', syncControls)
+    $('shape').addEventListener('change', updateDependentFields)
+    $('rule').addEventListener('change', updateDependentFields)
     $('radius').addEventListener('input', () => { $('radiusValue').textContent = $('radius').value })
     $('density').addEventListener('input', () => { $('densityValue').textContent = $('density').value })
 

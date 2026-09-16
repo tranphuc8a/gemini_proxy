@@ -1,0 +1,12 @@
+{
+  "title": "Chinese Chess",
+  "description": "Chinese Chess — ứng dụng trong bộ sưu tập games.",
+  "tags": [
+    "game",
+    "board-game",
+    "strategy",
+    "games"
+  ],
+  "icon": "♟️",
+  "generated": true
+}

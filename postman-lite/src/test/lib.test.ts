@@ -52,6 +52,21 @@ describe('URL and params', () => {
     expect(stripQuery(url)).toBe('https://a.dev/x')
   })
 
+  it('leaves a URL with no params exactly as typed', () => {
+    // Reported: typing "https://u" came back mangled. The URL bar is a pure
+    // passthrough and nothing here may rewrite it, so these pin the round trip
+    // for the half-typed states a user passes through on the way to a real URL.
+    for (const url of ['h', 'https:', 'https:/', 'https://', 'https://u', 'https://u/', '//u', 'u']) {
+      expect(buildUrl(url, {}), url).toBe(url)
+      expect(stripQuery(url), url).toBe(url)
+      expect(extractParams(url), url).toEqual({})
+    }
+  })
+
+  it('keeps the double slash when params are added to a bare authority', () => {
+    expect(buildUrl('https://u', { a: '1' })).toBe('https://u?a=1')
+  })
+
   it('knows which headers the browser refuses to send', () => {
     for (const name of ['Cookie', 'referer', 'Content-Length', 'Sec-Fetch-Mode', 'proxy-authorization']) {
       expect(isForbiddenHeader(name), name).toBe(true)
