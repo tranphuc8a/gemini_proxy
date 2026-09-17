@@ -1,0 +1,4 @@
+bin/
+_shots/
+__pycache__/
+*.exe
