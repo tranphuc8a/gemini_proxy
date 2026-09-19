@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Học System Design — Từ số 0 đến kiến trúc production</title>
+<meta name="description" content="Khoá học System Design tiếng Việt: 58 bài giảng, 6 đồ án, 24 tuần — từ nền tảng tới kiến trúc phân tán production-scale.">
+<meta name="color-scheme" content="light dark">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/chu-de.css">   <!-- bảng màu riêng của khoá, phải nạp SAU app.css -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e7490'/%3E%3Cg stroke='%23fff' stroke-width='2.2' fill='none' stroke-linecap='round'%3E%3Crect x='7' y='7' width='8' height='8' rx='1.5'/%3E%3Crect x='17' y='17' width='8' height='8' rx='1.5'/%3E%3Cpath d='M15 11h6a1 1 0 011 1v5'/%3E%3C/g%3E%3C/svg%3E">
+</head>
+<body>
+
+<!-- ===================== SPRITE ICON ===================== -->
+<svg style="display:none" aria-hidden="true"><defs>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-left" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h8"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.1 0l2.9-3a5 5 0 00-7.1-7.1L11 4.8"/><path d="M14 11a5 5 0 00-7.1 0L4 14a5 5 0 007.1 7.1L13 19.2"/></symbol>
+<symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5.5-5.5 2 2-5.5z"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 016.5 2H20v16H6.5A2.5 2.5 0 004 20.5z"/><path d="M4 17.5A2.5 2.5 0 016.5 15H20"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M9 18h6a3 3 0 003-3V9"/></symbol>
+<symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M20 13v7a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h7"/></symbol>
+<symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h16v12l-4 4H4z"/><path d="M20 16h-4v4"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8"/><path d="M3 3v5h5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+</defs></svg>
+
+<!-- ===================== HEADER ===================== -->
+<header class="hdr">
+  <button class="ic-btn only-nar" id="btnMenu" aria-label="Mở mục lục"><svg class="ic"><use href="#i-menu"/></svg></button>
+
+  <a class="brand" href="#/">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32">
+        <g stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round">
+          <rect x="6" y="6" width="9" height="9" rx="1.8"/>
+          <rect x="17" y="17" width="9" height="9" rx="1.8"/>
+          <path d="M15 10.5h5.5a1 1 0 011 1V17"/>
+        </g>
+      </svg>
+    </span>
+    <span class="brand-txt">
+      <b>Học System Design</b>
+      <i>từ số 0 đến kiến trúc production</i>
+    </span>
+  </a>
+
+  <button class="searchpill" id="btnSearch">
+    <svg class="ic"><use href="#i-search"/></svg>
+    <span>Tìm trong 80 tài liệu…</span>
+    <kbd>Ctrl K</kbd>
+  </button>
+
+  <div class="hdr-right">
+    <a class="hdr-prog" href="#/" title="Tiến độ học của bạn">
+      <svg viewBox="0 0 36 36" class="ring" aria-hidden="true">
+        <circle class="ring-bg" cx="18" cy="18" r="15.5"/>
+        <circle class="ring-fg" id="hdrRing" cx="18" cy="18" r="15.5"/>
+      </svg>
+      <span id="hdrPct">0%</span>
+    </a>
+    <button class="ic-btn" id="btnTheme" aria-label="Đổi giao diện sáng/tối">
+      <svg class="ic ic-sun"><use href="#i-sun"/></svg>
+      <svg class="ic ic-moon"><use href="#i-moon"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="readbar"><i id="readbarFill"></i></div>
+
+<!-- ===================== LAYOUT ===================== -->
+<div class="shell">
+  <aside class="side" id="side" aria-label="Mục lục khoá học"><div class="side-in" id="sideNav"></div></aside>
+  <div class="scrim" id="scrim"></div>
+  <main id="main" tabindex="-1"></main>
+</div>
+
+<!-- ===================== SEARCH ===================== -->
+<div class="ovl" id="ovl" hidden>
+  <div class="srch" role="dialog" aria-modal="true" aria-label="Tìm kiếm">
+    <div class="srch-top">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <input id="q" type="search" placeholder="Nhập từ khoá… (ví dụ: sharding, idempotency, cận dưới)" autocomplete="off" spellcheck="false">
+      <button class="ic-btn" id="btnCloseSrch" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="srch-res" id="res"></div>
+    <div class="srch-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> di chuyển</span>
+      <span><kbd>↵</kbd> mở</span>
+      <span><kbd>Esc</kbd> đóng</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/content.js"></script>   <!-- nội dung  (build.py sinh) -->
+<script src="assets/cau-hinh.js"></script>   <!-- cấu hình  (riêng khoá này) -->
+<script src="assets/app.js"></script>        <!-- engine    (engine/sync.py chép) -->
+</body>
+</html>

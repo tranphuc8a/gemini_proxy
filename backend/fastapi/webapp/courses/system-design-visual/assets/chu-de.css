@@ -1,0 +1,9 @@
+/* ==========================================================================
+   Học System Design — bảng màu nhấn của trang trực quan khoá này.
+   Nạp SAU assets/vis.css. Chỉ đè màu; bố cục nằm hết ở vis.css.
+   ========================================================================== */
+:root{                      --ac:#0e7490; --ac2:#0c5c73; --acbg:#e6f4f7; --acbd:#b9dde6; }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --ac:#5ec5da; --ac2:#8ad8e8; --acbg:#12272e; --acbd:#1f4653; }
+}
+:root[data-theme="dark"]{   --ac:#5ec5da; --ac2:#8ad8e8; --acbg:#12272e; --acbd:#1f4653; }

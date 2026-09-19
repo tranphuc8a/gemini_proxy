@@ -1,0 +1,12 @@
+/* ==========================================================================
+   Học Heuristic — bảng màu nhấn của khoá này.
+   Nạp SAU assets/app.css. Chỉ ghi đè màu; mọi bố cục nằm ở app.css.
+   ========================================================================== */
+:root{
+  --ac:#5b4bd6;  --ac2:#4536c4;  --acbg:#eeebfd;  --acbd:#d7d0fa;
+  --sh3:0 24px 60px rgba(30,24,14,.18), 0 4px 14px rgba(30,24,14,.10);
+}
+html[data-theme="dark"]{
+  --ac:#a99bff;  --ac2:#c4baff;  --acbg:#211d37;  --acbd:#3a3366;
+}
+.brand-l{ background:linear-gradient(150deg,var(--ac),#8b7bf0); }

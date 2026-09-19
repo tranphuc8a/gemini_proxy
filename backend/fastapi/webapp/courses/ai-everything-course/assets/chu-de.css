@@ -1,0 +1,12 @@
+/* ==========================================================================
+   Đại khoá học AI — bảng màu nhấn của khoá này.
+   Nạp SAU assets/app.css. Chỉ ghi đè màu; mọi bố cục nằm ở app.css.
+   ========================================================================== */
+:root{
+  --ac:#9d174d;  --ac2:#831843;  --acbg:#fdf2f6;  --acbd:#f3c6d8;
+  --sh3:0 24px 60px rgba(14,40,50,.18), 0 4px 14px rgba(14,40,50,.10);
+}
+html[data-theme="dark"]{
+  --ac:#f472b6;  --ac2:#f9a8d4;  --acbg:#2a1420;  --acbd:#4d2137;
+}
+.brand-l{ background:linear-gradient(150deg,var(--ac),#db2777); }

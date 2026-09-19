@@ -1,0 +1,12 @@
+/* ==========================================================================
+   Học System Design — bảng màu nhấn của khoá này.
+   Nạp SAU assets/app.css. Chỉ ghi đè màu; mọi bố cục nằm ở app.css.
+   ========================================================================== */
+:root{
+  --ac:#0e7490;  --ac2:#0c5c73;  --acbg:#e6f4f7;  --acbd:#b9dde6;
+  --sh3:0 24px 60px rgba(14,40,50,.18), 0 4px 14px rgba(14,40,50,.10);
+}
+html[data-theme="dark"]{
+  --ac:#5ec5da;  --ac2:#8ad8e8;  --acbg:#12272e;  --acbd:#1f4653;
+}
+.brand-l{ background:linear-gradient(150deg,var(--ac),#3fa9c4); }

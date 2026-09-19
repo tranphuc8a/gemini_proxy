@@ -1,0 +1,9 @@
+/* ==========================================================================
+   Đại khoá học AI — bảng màu nhấn của trang trực quan khoá này.
+   Nạp SAU assets/vis.css. Chỉ đè màu; bố cục nằm hết ở vis.css.
+   ========================================================================== */
+:root{                      --ac:#9d174d; --ac2:#831843; --acbg:#fdf2f6; --acbd:#f3c6d8; }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --ac:#f472b6; --ac2:#f9a8d4; --acbg:#2a1420; --acbd:#4d2137; }
+}
+:root[data-theme="dark"]{   --ac:#f472b6; --ac2:#f9a8d4; --acbg:#2a1420; --acbd:#4d2137; }

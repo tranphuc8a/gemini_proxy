@@ -1,0 +1,9 @@
+/* ==========================================================================
+   Học Heuristic — bảng màu nhấn của trang trực quan khoá này.
+   Nạp SAU assets/vis.css. Chỉ đè màu; bố cục nằm hết ở vis.css.
+   ========================================================================== */
+:root{                      --ac:#5b4bd6; --ac2:#4536c4; --acbg:#eeebfd; --acbd:#d7d0fa; }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --ac:#a99bff; --ac2:#c4baff; --acbg:#211d37; --acbd:#3a3366; }
+}
+:root[data-theme="dark"]{   --ac:#a99bff; --ac2:#c4baff; --acbg:#211d37; --acbd:#3a3366; }
