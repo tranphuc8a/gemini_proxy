@@ -1,0 +1,12 @@
+{
+  "_ghi_chu": [
+    "Danh sach trang NHAN engine tu thu muc nay khi chay `python sync.py`.",
+    "Chi them ten thu muc vao 'dich' khi trang do da san sang dung engine v2.",
+    "Ba khoa cu (ai-everything-visual, heuristic-visual, system-design-visual)",
+    "dang giu ban engine v1 cua rieng chung — CO Y de nguyen, chua dong bo.",
+    "Muon dong bo chung: them ten vao 'dich' roi mo lai tung lab de kiem tra."
+  ],
+  "tep": ["vis-core.js", "vis.css"],
+  "dich": ["lab-visual"],
+  "chua_dong_bo": ["ai-everything-visual", "heuristic-visual", "system-design-visual"]
+}

@@ -1,0 +1,14 @@
+/* ==========================================================================
+   Bảng màu riêng của Web Lab. Nạp SAU vis.css để đè các biến nhấn.
+   ========================================================================== */
+:root{
+  --ac:#0d7490;  --ac2:#155e75;  --acbg:#ecfeff;  --acbd:#a5f3fc;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ac:#67e8f9;  --ac2:#a5f3fc;  --acbg:#083344;  --acbd:#155e75;
+  }
+}
+:root[data-theme="dark"]{
+  --ac:#67e8f9;  --ac2:#a5f3fc;  --acbg:#083344;  --acbd:#155e75;
+}

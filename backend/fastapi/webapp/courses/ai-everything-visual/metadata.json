@@ -1,0 +1,16 @@
+{
+  "title": "Phụ lục trực quan — Đại khoá học AI",
+  "description": "39 mô phỏng tương tác cho đại khoá AI: gradient descent, lan truyền ngược từng bước, attention, khuếch tán, bandit, Q-learning, quá khớp. Mỗi mô phỏng chạy thuật toán thật trong trình duyệt và chỉnh được tham số — kéo tới cực trị để xem nó hỏng ở đâu.",
+  "category": "Lab trực quan",
+  "tags": [
+    "truc-quan-hoa",
+    "mo-phong",
+    "ai",
+    "hoc-sau",
+    "attention",
+    "gradient-descent",
+    "tuong-tac",
+    "canvas"
+  ],
+  "icon": "📈"
+}

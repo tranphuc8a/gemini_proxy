@@ -1,0 +1,15 @@
+{
+  "title": "Học System Design — từ số 0 đến kiến trúc production",
+  "description": "Khoá thiết kế hệ thống: 58 bài giảng, 6 đồ án, 9 tài liệu tra cứu. Ước lượng dung lượng, hàng đợi, nhân bản, phân mảnh, nhất quán, caching, khả năng quan sát và các đánh đổi vận hành.",
+  "category": "Khoá học",
+  "tags": [
+    "system-design",
+    "kien-truc",
+    "phan-tan",
+    "kha-mo-rong",
+    "backend",
+    "khoa-hoc",
+    "tieng-viet"
+  ],
+  "icon": "🏗️"
+}

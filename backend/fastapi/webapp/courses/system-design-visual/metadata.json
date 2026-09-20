@@ -1,0 +1,16 @@
+{
+  "title": "Phụ lục trực quan — Học System Design",
+  "description": "8 mô phỏng cho thiết kế hệ thống: độ trễ theo mức sử dụng hàng đợi, đuôi trễ khi fan-out, hiệu quả cache, trễ nhân bản, điểm nóng khi phân mảnh, CAP/PACELC, bão retry và ngân sách lỗi SLO. Kéo tham số để thấy hệ sập ở đâu trước khi nó sập thật.",
+  "category": "Lab trực quan",
+  "tags": [
+    "truc-quan-hoa",
+    "mo-phong",
+    "system-design",
+    "phan-tan",
+    "hang-doi",
+    "cache",
+    "slo",
+    "tuong-tac"
+  ],
+  "icon": "📊"
+}

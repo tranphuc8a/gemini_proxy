@@ -1,11 +1,16 @@
 {
-  "title": "AI Everything Course",
-  "description": "AI Everything",
+  "title": "Đại khoá học Trí tuệ nhân tạo",
+  "description": "Khoá AI từ số 0 đến trình độ nghiên cứu — 15 môn, 218 bài giảng, 8 đồ án, chia 6 học kỳ. Đi từ toán nền tảng và học máy cổ điển tới học sâu, Transformer, mô hình lớn và an toàn AI. Có mục lục, tìm kiếm toàn văn, công thức KaTeX và tô màu mã nguồn.",
+  "category": "Khoá học",
   "tags": [
     "ai",
-    "course",
-    "deeplearning"
+    "hoc-may",
+    "hoc-sau",
+    "transformer",
+    "llm",
+    "khoa-hoc",
+    "tieng-viet",
+    "katex"
   ],
-  "icon": "🔢",
-  "generated": true
+  "icon": "🧠"
 }

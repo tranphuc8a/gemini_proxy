@@ -106,6 +106,7 @@ class AppMetadata(BaseModel):
     tags: List[str] = []
     icon: Optional[str] = None
     collection: Optional[str] = None  # parent folder name if in a collection
+    category: Optional[str] = None  # what KIND of app this is, declared in metadata.json
     has_index: bool = False
 
 
@@ -116,7 +117,10 @@ def _load_app_metadata(app_path: Path, relative_path: str) -> Dict[str, Any]:
         "title": app_path.name,
         "description": "",
         "tags": [],
-        "icon": None
+        "icon": None,
+        # `collection` says where an app SITS (derived from the folder tree);
+        # `category` says what it IS, and only the app itself can know that.
+        "category": None
     }
     if metadata_file.exists():
         try:
@@ -227,6 +231,7 @@ def _scan_apps_recursive(base: Path, current: Path, collection: Optional[str] = 
                     tags=metadata.get("tags", []),
                     icon=metadata.get("icon"),
                     collection=collection,
+                    category=metadata.get("category"),
                     has_index=True
                 ))
                 # DON'T scan deeper - this is a complete app
@@ -304,7 +309,11 @@ async def search_apps(q: str = Query("", description="Search query")):
         for tag in app.tags:
             if query in tag.lower():
                 score += 6
-        
+        # Category match — ranks above description, below a tag: it says what
+        # the app is, but a whole category is a coarser hit than one tag.
+        if app.category and query in app.category.lower():
+            score += 5
+
         if score > 0:
             results.append({"app": app.dict(), "score": score})
     

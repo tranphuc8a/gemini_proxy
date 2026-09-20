@@ -34,6 +34,7 @@ const FIELD_WEIGHTS = {
   title: 100,
   name: 80,
   tag: 45,
+  category: 35,
   collection: 30,
   description: 12,
 }
@@ -41,9 +42,11 @@ const FIELD_WEIGHTS = {
 const state = {
   apps: [],
   collections: [],
+  categories: [],
   tags: [],
   query: '',
   activeCollections: new Set(),
+  activeCategories: new Set(),
   activeTags: new Set(),
   tagMatchAll: false,
   sort: 'relevance',
@@ -114,6 +117,7 @@ function score(app, terms) {
     [normalise(app.title), FIELD_WEIGHTS.title],
     [normalise(app.name), FIELD_WEIGHTS.name],
     [normalise((app.tags || []).join(' ')), FIELD_WEIGHTS.tag],
+    [normalise(app.category), FIELD_WEIGHTS.category],
     [normalise(app.collection), FIELD_WEIGHTS.collection],
     [normalise(app.description), FIELD_WEIGHTS.description],
   ]
@@ -146,6 +150,7 @@ function visibleApps() {
   const matched = state.apps
     .filter((app) => {
       if (state.activeCollections.size && !state.activeCollections.has(app.collection || '')) return false
+      if (state.activeCategories.size && !state.activeCategories.has(app.category || '')) return false
       if (state.activeTags.size) {
         const tags = new Set(app.tags || [])
         const chosen = [...state.activeTags]
@@ -178,6 +183,14 @@ function visibleApps() {
         (a, b) =>
           (a.app.collection || '').localeCompare(b.app.collection || '', 'vi') || byName(a, b),
       )
+      break
+    case 'category':
+      // App chua khai bao the loai xep xuong cuoi, khong tron len dau.
+      matched.sort((a, b) => {
+        const A = a.app.category || '\uffff'
+        const B = b.app.category || '\uffff'
+        return A.localeCompare(B, 'vi') || byName(a, b)
+      })
       break
     case 'relevance':
     default:
@@ -263,6 +276,11 @@ function appCard(app, terms) {
   card.dataset.path = app.path
 
   const badges = []
+  // The loai dung truoc thu muc: no noi app NAY LA GI, thu muc chi noi no nam dau.
+  if (app.category)
+    badges.push(
+      `<span class="badge badge-category" data-category="${escapeHtml(app.category)}">${escapeHtml(app.category)}</span>`,
+    )
   if (app.collection) badges.push(`<span class="badge badge-collection">${escapeHtml(app.collection)}</span>`)
   if (usage?.count) badges.push(`<span class="badge" title="Đã mở ${usage.count} lần">↻ ${usage.count}</span>`)
 
@@ -290,6 +308,13 @@ function appCard(app, terms) {
     if (tag) {
       event.preventDefault()
       toggleTag(tag.dataset.tag)
+      return
+    }
+    // Cung ly le do: bam the loai tren mot the la doi xem cac app cung loai.
+    const cat = event.target.closest('.badge-category')
+    if (cat) {
+      event.preventDefault()
+      toggleCategory(cat.dataset.category)
       return
     }
     recordOpen(app.path)
@@ -332,6 +357,7 @@ function renderActiveFilters() {
   const host = $('activeFilters')
   const chips = [
     ...[...state.activeCollections].map((name) => ({ kind: 'collection', value: name })),
+    ...[...state.activeCategories].map((name) => ({ kind: 'category', value: name })),
     ...[...state.activeTags].map((name) => ({ kind: 'tag', value: name })),
   ]
   host.hidden = chips.length === 0
@@ -339,10 +365,13 @@ function renderActiveFilters() {
   for (const chip of chips) {
     const button = document.createElement('button')
     button.className = 'chip is-active'
-    button.textContent = `${chip.kind === 'collection' ? '📁 ' : '#'}${chip.value} ✕`
-    button.addEventListener('click', () =>
-      chip.kind === 'collection' ? toggleCollection(chip.value) : toggleTag(chip.value),
-    )
+    const dau = { collection: '📁 ', category: '◈ ', tag: '#' }[chip.kind]
+    button.textContent = `${dau}${chip.value} ✕`
+    button.addEventListener('click', () => {
+      if (chip.kind === 'collection') toggleCollection(chip.value)
+      else if (chip.kind === 'category') toggleCategory(chip.value)
+      else toggleTag(chip.value)
+    })
     host.appendChild(button)
   }
 }
@@ -361,7 +390,9 @@ function renderRecent() {
     .map(([path]) => state.apps.find((app) => app.path === path))
     .filter(Boolean)
 
-  const show = recent.length > 0 && !state.query && !state.activeTags.size && !state.activeCollections.size
+  const show =
+    recent.length > 0 && !state.query && !state.activeTags.size &&
+    !state.activeCollections.size && !state.activeCategories.size
   $('recentStrip').hidden = !show
   if (!show) return
 
@@ -389,6 +420,17 @@ function renderChips() {
   }
   $('collectionCount').textContent = state.collections.length
 
+  const categoryHost = $('categoryFilters')
+  categoryHost.textContent = ''
+  for (const entry of state.categories) {
+    const button = document.createElement('button')
+    button.className = `chip${state.activeCategories.has(entry.name) ? ' is-active' : ''}`
+    button.innerHTML = `${escapeHtml(entry.name)} <span class="count">${entry.count}</span>`
+    button.addEventListener('click', () => toggleCategory(entry.name))
+    categoryHost.appendChild(button)
+  }
+  $('categoryCount').textContent = state.categories.length
+
   const needle = normalise(state.tagFilter)
   const tags = needle ? state.tags.filter((t) => normalise(t.name).includes(needle)) : state.tags
   const tagHost = $('tagFilters')
@@ -412,6 +454,12 @@ function toggleTag(tag) {
   render()
 }
 
+function toggleCategory(name) {
+  if (state.activeCategories.has(name)) state.activeCategories.delete(name)
+  else state.activeCategories.add(name)
+  render()
+}
+
 function toggleCollection(name) {
   if (state.activeCollections.has(name)) state.activeCollections.delete(name)
   else state.activeCollections.add(name)
@@ -422,6 +470,7 @@ function resetFilters() {
   state.query = ''
   state.activeTags.clear()
   state.activeCollections.clear()
+  state.activeCategories.clear()
   $('searchInput').value = ''
   render()
 }
@@ -432,6 +481,7 @@ function syncUrl() {
   if (state.query) params.set('q', state.query)
   if (state.activeTags.size) params.set('tags', [...state.activeTags].join(','))
   if (state.activeCollections.size) params.set('in', [...state.activeCollections].join(','))
+  if (state.activeCategories.size) params.set('cat', [...state.activeCategories].join(','))
   if (state.sort !== 'relevance') params.set('sort', state.sort)
 
   const query = params.toString()
@@ -446,6 +496,7 @@ function readUrl() {
   state.query = params.get('q') || ''
   for (const tag of (params.get('tags') || '').split(',').filter(Boolean)) state.activeTags.add(tag)
   for (const name of (params.get('in') || '').split(',').filter(Boolean)) state.activeCollections.add(name)
+  for (const name of (params.get('cat') || '').split(',').filter(Boolean)) state.activeCategories.add(name)
   const sort = params.get('sort')
   if (sort) state.sort = sort
 }
@@ -454,13 +505,16 @@ function readUrl() {
 
 function indexFacets() {
   const collections = new Map()
+  const categories = new Map()
   const tags = new Map()
   for (const app of state.apps) {
     if (app.collection) collections.set(app.collection, (collections.get(app.collection) || 0) + 1)
+    if (app.category) categories.set(app.category, (categories.get(app.category) || 0) + 1)
     for (const tag of app.tags || []) tags.set(tag, (tags.get(tag) || 0) + 1)
   }
   const byCountThenName = (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi')
   state.collections = [...collections.entries()].sort(byCountThenName).map(([name, count]) => ({ name, count }))
+  state.categories = [...categories.entries()].sort(byCountThenName).map(([name, count]) => ({ name, count }))
   state.tags = [...tags.entries()].sort(byCountThenName).map(([name, count]) => ({ name, count }))
 }
 

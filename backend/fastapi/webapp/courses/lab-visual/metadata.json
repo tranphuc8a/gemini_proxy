@@ -1,0 +1,16 @@
+{
+  "title": "Web Lab trực quan",
+  "description": "Phòng thí nghiệm cho những thứ không hình dung nổi bằng chữ — thuật toán, hệ động lực, quy trình. Khác với các phụ lục khoá học, trang này đứng một mình. Mỗi lab chỉnh được tham số, tua như xem video, xuất được ảnh PNG và video WebM, và chia sẻ được bằng liên kết giữ nguyên mọi tham số. Hiện có: giả thuyết Collatz với bốn chế độ xem.",
+  "category": "Lab trực quan",
+  "tags": [
+    "truc-quan-hoa",
+    "mo-phong",
+    "collatz",
+    "toan-hoc",
+    "thuat-toan",
+    "tuong-tac",
+    "canvas",
+    "lab"
+  ],
+  "icon": "🧪"
+}

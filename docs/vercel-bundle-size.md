@@ -49,41 +49,114 @@ lỗi gì** — bundle sau tối ưu vẫn đúng 234 MB như trước, chênh n
 hiệu nhận ra: con số không nhúc nhích thì cấu hình không được áp dụng, chứ không
 phải glob sai.
 
-## Cách đã xử lý
+## `excludeFiles` KHÔNG hoạt động với preset này
 
-**1. Biến wukong thành app thật.** Thêm `index.html` (trang chủ liệt kê ba phần
-chạy được: chơi với máy, xem ván cờ, giải thế cờ) và `metadata.json`. Ba app này
-tự chứa — chỉ nạp file trong thư mục của chúng, không đụng `xqdb/`.
+Đã thử hai lần, hai cấu hình khác nhau:
 
-**2. `backend/fastapi/vercel.json` với `excludeFiles`.** Loại khỏi bundle:
+| Lần | `vercel.json` ở | `functions` key | Bundle sau optimize |
+|---|---|---|---|
+| 1 | repo root | `backend/fastapi/src/main.py` | 234.04 MB |
+| 2 | `backend/fastapi/` | `src/main.py` (đúng entrypoint) | **234.03 MB** |
 
-- phần không phục vụ web của wukong: `xqdb` (65 MB), `res`, `pgn`, `docs`,
-  `integration`, `puzzle_generator`, `opening_book_generator`, `xiangqi_pgn_parser`
-- `tests/`, `alembic/`, `tools/`, `data/`
-- `webapp/**/*.map` — source map không ai đọc trên production
+Chênh 0,01 MB. Vercel **không báo lỗi gì** về cấu hình — nó chỉ im lặng bỏ qua.
 
-Không cần loại `frontend/`, `markdown-editor/`… vì chúng nằm **ngoài** Root
-Directory nên vốn đã không vào bundle.
+Phép tính xác nhận:
 
-Kết quả: **179.1 MB → 103.7 MB**, cộng deps ≈ **120 MB / 225 MB**.
+```
+source trong backend/fastapi (git tracked) : 179.1 MB
+Vercel báo sau optimize                    : 234.03 MB
+→ dependencies                             :  54.9 MB
+```
 
-> **`excludeFiles` tối đa 256 ký tự.** Schema của Vercel chặn ở đó, và deployment
-> bị từ chối trước cả khi build. Nên glob phải gọn: chỉ liệt kê thứ thật sự
-> nặng, gom nhiều thư mục vào một nhóm `{a,b,c}`. Các pattern như
-> `**/__pycache__/**` hay `**/node_modules/**` là vô ích ở đây — những thư mục đó
-> không được git theo dõi nên vốn đã không có trong repo. Script kiểm tra sẽ báo
-> lỗi nếu chuỗi vượt 256 ký tự.
+Nếu `excludeFiles` có tác dụng, source phải là 103.7 MB và tổng 158.6 MB. Nó
+không phải vậy: **mọi file bị "loại" đều được đóng gói**.
 
-> **Đừng dùng `!(backend)/**` để "giữ mọi thứ trừ backend".** Đã thử: minimatch
-> khớp cả `backend/...` với pattern đó, nên nó loại sạch chính phần cần giữ.
-> Negation `!(...)` chỉ an toàn ở segment giữa, ví dụ
-> `.../wukong-xiangqi-main/!(src|apps)/**`. Bản đang dùng liệt kê tường minh để
-> không phụ thuộc vào extglob.
+Kết luận: với **Python framework preset** (zero-config FastAPI), `excludeFiles`
+không có hiệu lực. Tài liệu `vercel.json` mô tả nó cho function nói chung, và ví
+dụ trong tài liệu Python dùng `app.py` ở root — có thể nó chỉ áp dụng cho
+function khai báo trong thư mục `/api`.
 
-**3. Tách requirements.** `pytest`, `pytest-asyncio`, `pytest-cov`, `respx`,
-`alembic` chuyển sang `requirements-dev.txt`. Bỏ `google-auth`: module duy nhất
-nhắc tới nó (`gemini_client_native.py`) không được ai import, và gói đó không hề
-cung cấp `google.generativeai` hay `google.ai.generativelanguage`.
+**Đừng dựa vào `excludeFiles` để giảm bundle ở dự án này.** Chỉ có hai cách thật
+sự hiệu quả:
+
+1. **Đưa file ra khỏi Root Directory** (`backend/fastapi/`). Bất cứ thứ gì ngoài
+   đó đều không vào bundle — đó là lý do `frontend/`, `markdown-editor/`… vốn đã
+   không bị tính.
+2. **Nâng trần bằng Large Functions**: đặt biến môi trường
+   `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` trong Project Settings. Yêu cầu Fluid
+   compute với Active CPU (bật mặc định cho project mới), hỗ trợ Python, nâng
+   giới hạn lên **5 GB**. Không dùng được với Secure Compute hoặc Static IPs.
+
+Ghi chú về con số: tài liệu Vercel nói giới hạn Python là **500 MB**, nhưng build
+thực tế của dự án này bị chặn ở **225 MB**. Lấy con số trong log làm chuẩn.
+
+## Đã làm được gì
+
+**1. Biến wukong thành app thật.** `webapp/wukong-xiangqi-main` trước đây chiếm
+99.7 MB mà **không tạo ra app nào** — không có `index.html` ở cấp nào scanner tìm
+tới. Đã thêm trang chủ liệt kê ba phần chạy được (chơi với máy, xem ván cờ, giải
+thế cờ) và `metadata.json`. Ba app này tự chứa, chỉ nạp file trong thư mục của
+chúng, không đụng `xqdb/`.
+
+**2. Tách requirements.** `pytest`, `pytest-asyncio`, `pytest-cov`, `respx`,
+`alembic` sang `requirements-dev.txt`; bỏ `google-auth` (module duy nhất nhắc
+tới nó không được ai import, và gói đó không cung cấp `google.generativeai`).
+Bundle **trước** optimize giảm 267.88 → 257.42 MB. Sau optimize thì không đổi —
+Vercel tự cắt phần dư thừa, nên phần này chủ yếu giúp môi trường dev gọn hơn.
+
+**3. `backend/fastapi/vercel.json`** với `functions` key đúng entrypoint. Giữ
+lại dù `excludeFiles` hiện không có tác dụng: key đúng là điều kiện cần cho mọi
+cấu hình function khác (`maxDuration`, `memory`…), và nếu Vercel hỗ trợ
+`excludeFiles` cho preset này sau, nó sẽ chạy ngay.
+
+## Kết quả: đã deploy được (2026-09-20)
+
+Bật **Large Functions**. Log build xác nhận:
+
+```
+Function "src/main.py" exceeds the standard size limit; enabling large functions (beta).
+Build Completed in /vercel/output [15s]
+Deployment completed
+```
+
+Cách bật:
+
+1. Vercel → Project → **Settings → Environment Variables**
+2. `VERCEL_SUPPORT_LARGE_FUNCTIONS` = `1`, cho Production và Preview
+3. **Settings → Functions → Fluid compute** phải đang bật (Large Functions yêu cầu
+   Fluid compute với Active CPU)
+4. Redeploy, bỏ tick *Use existing Build Cache*
+
+Trần nâng từ 225 MB lên **5 GB**. Bundle hiện tại 234 MB ≈ 5% trần mới.
+
+Dòng log đó còn xác nhận một điều: Vercel gọi function là `"src/main.py"` — đúng
+key trong `vercel.json`. Nên `excludeFiles` bị bỏ qua **không phải vì key sai**.
+
+### Đã kiểm chứng trên production
+
+| | |
+|---|---|
+| `GET /health/` | `{"status":"ok","service":"gemini-proxy-fastapi"}` |
+| `GET /webapp/_api/config` | `{"apiBase":"","webappBase":"/webapp"}` |
+| `GET /webapp/_api/search?q=wukong` | 1 kết quả, `has_index: true`, icon 🐵 |
+
+`apiBase: ""` đúng như mong đợi vì `API_PREFIX` rỗng — các webapp gọi API
+same-origin.
+
+### Điều cần biết về đánh đổi
+
+Large Functions là **beta**. Deploy hiện phụ thuộc vào nó: tắt biến môi trường
+đó, hoặc beta kết thúc, là vỡ lại. `check-vercel-bundle.mjs` nhắc điều này mỗi
+lần chạy, kèm số MB cần cắt để không còn phụ thuộc (hiện ~9 MB).
+
+Muốn độc lập hoàn toàn với beta: chuyển
+`webapp/wukong-xiangqi-main/{xqdb,res,pgn,docs,integration,puzzle_generator,
+opening_book_generator,xiangqi_pgn_parser}` (73 MB dữ liệu nguồn, không phục vụ
+web) ra ngoài `backend/fastapi/`. File vẫn trong repo, vẫn xem được trên GitHub,
+nhưng ngoài Root Directory thì không vào bundle: 234 → 161 MB.
+
+Large Functions cũng không dùng được nếu project bật Secure Compute hoặc
+Static IPs.
 
 ## Kiểm tra trước khi deploy
 

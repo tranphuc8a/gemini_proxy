@@ -358,6 +358,14 @@ select,
 }
 
 .badge-collection { color: var(--accent-text); background: var(--accent-soft); }
+/* The loai bam duoc (loc ngay), nen phai trong nhu mot nut. */
+.badge-category {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border: 1px solid currentColor;
+  cursor: pointer;
+}
+.badge-category:hover { filter: brightness(1.08); }
 
 .tag {
   padding: 1px 7px;

@@ -193,3 +193,70 @@ def test_config_endpoint_refuses_to_escape_the_collection(client):
     r = client.get("/webapp/_api/config", params={"app": "../../../etc"})
 
     assert r.status_code == 400
+
+
+# --------------------------------------------------------------------------
+# `category` — what an app IS, as opposed to `collection`, where it SITS
+#
+# `collection` is derived from the folder tree, so every app under `courses/`
+# reports the same one. Only the app itself can say whether it is a course or
+# a lab, so that has to come from its own metadata.json.
+# --------------------------------------------------------------------------
+
+
+def write_metadata(app_dir, **fields):
+    (app_dir / "metadata.json").write_text(json.dumps(fields), encoding="utf-8")
+
+
+def find_app(payload, name):
+    """The listing splits standalone apps from collections; callers want neither."""
+    everything = list(payload["apps"])
+    for entry in payload["collections"]:
+        everything.extend(entry["apps"])
+    matches = [app for app in everything if app["name"] == name]
+    assert matches, f"{name!r} missing from listing"
+    return matches[0]
+
+
+def test_the_listing_reports_a_declared_category(client, webapp_root):
+    write_metadata(webapp_root / "solo", title="Solo", category="Lab trực quan")
+
+    solo = find_app(client.get("/webapp/_api/list").json(), "solo")
+
+    assert solo["category"] == "Lab trực quan"
+
+
+def test_an_app_without_a_category_reports_none_rather_than_omitting_it(client):
+    plain = find_app(client.get("/webapp/_api/list").json(), "plain")
+
+    assert plain["category"] is None
+
+
+def test_category_is_independent_of_collection(client, webapp_root):
+    """Two apps in the same folder may be different kinds of thing."""
+    write_metadata(webapp_root / "team" / "nested", title="Nested", category="Khoá học")
+    write_metadata(webapp_root / "team" / "plain", title="Plain", category="Lab trực quan")
+
+    payload = client.get("/webapp/_api/list").json()
+    nested, plain = find_app(payload, "nested"), find_app(payload, "plain")
+
+    assert nested["collection"] == plain["collection"] == "team"
+    assert nested["category"] == "Khoá học"
+    assert plain["category"] == "Lab trực quan"
+
+
+def test_a_category_is_searchable(client, webapp_root):
+    write_metadata(webapp_root / "solo", title="Solo", category="Lab trực quan")
+
+    results = client.get("/webapp/_api/search", params={"q": "lab"}).json()["results"]
+
+    assert [app["name"] for app in results] == ["solo"]
+
+
+def test_a_category_does_not_disturb_the_runtime_config(client, webapp_root):
+    """Only a `config` object feeds the browser; `category` is listing metadata."""
+    write_metadata(webapp_root / "solo", title="Solo", category="Lab trực quan")
+
+    config = injected_config(client.get("/webapp/solo").text)
+
+    assert "category" not in config
