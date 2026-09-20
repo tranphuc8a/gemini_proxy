@@ -73,6 +73,18 @@ if (!entry) {
   process.exit(1)
 }
 const excludeGlob = config.functions[entry].excludeFiles ?? ''
+
+// Vercel's schema caps this string, and the deployment is rejected before the
+// build starts if it is longer - a slow way to find out.
+const EXCLUDE_MAX_CHARS = 256
+if (excludeGlob.length > EXCLUDE_MAX_CHARS) {
+  console.error(
+    `excludeFiles is ${excludeGlob.length} characters; Vercel allows ${EXCLUDE_MAX_CHARS}.
+` +
+      'Drop patterns that match little, or collapse several folders into one brace group.'
+  )
+  process.exit(1)
+}
 // A comma-joined list of globs is one pattern to Vercel; split it so a miss in
 // one pattern is visible rather than silently dropping the rest.
 const patterns = excludeGlob.split(/,(?![^{]*})/).filter(Boolean)
@@ -113,7 +125,7 @@ for (const path of tracked) {
 }
 
 console.log(`entrypoint : ${entry}`)
-console.log(`excluded   : ${patterns.length} glob pattern(s)`)
+console.log(`excluded   : ${patterns.length} glob pattern(s), ${excludeGlob.length}/${EXCLUDE_MAX_CHARS} chars`)
 console.log()
 console.log(`shipped    : ${mb(keptBytes).toFixed(1)} MB`)
 console.log(`excluded   : ${mb(droppedBytes).toFixed(1)} MB`)

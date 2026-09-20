@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "backend/fastapi/src/main.py": {
-      "excludeFiles": "{frontend,markdown-editor,sql-administrator,postman-lite,mongo-administrator,graphuc,casio-fx580vnx,docs,tasks,scripts,design,db,graphify-out,.github}/**,backend/fastapi/{tests,alembic,tools}/**,backend/fastapi/webapp/wukong-xiangqi-main/{xqdb,res,pgn,docs,integration,puzzle_generator,opening_book_generator,xiangqi_pgn_parser}/**,**/__pycache__/**,**/*.pyc,**/node_modules/**"
+      "excludeFiles": "{frontend,markdown-editor,sql-administrator,postman-lite,mongo-administrator,graphuc,casio-fx580vnx}/**,backend/fastapi/{tests,alembic,tools}/**,backend/fastapi/webapp/wukong-xiangqi-main/{xqdb,res,puzzle_generator}/**"
     }
   }
 }

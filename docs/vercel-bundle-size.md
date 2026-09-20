@@ -36,13 +36,25 @@ tự chứa — chỉ nạp file trong thư mục của chúng, không đụng `
 
 **2. `vercel.json` với `excludeFiles`.** Loại khỏi function bundle:
 
-- phần không phục vụ web của wukong: `xqdb`, `res`, `pgn`, `docs`, `integration`,
-  `puzzle_generator`, `opening_book_generator`, `xiangqi_pgn_parser`
+- phần nặng, không phục vụ web của wukong: `xqdb` (65 MB), `res`, `puzzle_generator`
 - mã nguồn các web app (`frontend/`, `markdown-editor/`, …) — backend không cần,
   chỉ cần bản build đã nằm trong `webapp/`
-- `tests/`, `alembic/`, `tools/`, `__pycache__`
+- `tests/`, `alembic/`, `tools/`
 
-Kết quả: **204 MB → 106 MB**.
+Kết quả: **204 MB → 106.6 MB**.
+
+> **`excludeFiles` tối đa 256 ký tự.** Schema của Vercel chặn ở đó, và deployment
+> bị từ chối trước cả khi build. Nên glob phải gọn: chỉ liệt kê thứ thật sự
+> nặng, gom nhiều thư mục vào một nhóm `{a,b,c}`. Các pattern như
+> `**/__pycache__/**` hay `**/node_modules/**` là vô ích ở đây — những thư mục đó
+> không được git theo dõi nên vốn đã không có trong repo. Script kiểm tra sẽ báo
+> lỗi nếu chuỗi vượt 256 ký tự.
+
+> **Đừng dùng `!(backend)/**` để "giữ mọi thứ trừ backend".** Đã thử: minimatch
+> khớp cả `backend/...` với pattern đó, nên nó loại sạch chính phần cần giữ.
+> Negation `!(...)` chỉ an toàn ở segment giữa, ví dụ
+> `.../wukong-xiangqi-main/!(src|apps)/**`. Bản đang dùng liệt kê tường minh để
+> không phụ thuộc vào extglob.
 
 **3. Tách requirements.** `pytest`, `pytest-asyncio`, `pytest-cov`, `respx`,
 `alembic` chuyển sang `requirements-dev.txt`. Bỏ `google-auth`: module duy nhất
