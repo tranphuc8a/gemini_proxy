@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/main.py": {
+      "excludeFiles": "webapp/wukong-xiangqi-main/{xqdb,res,pgn,docs,integration,puzzle_generator,opening_book_generator,xiangqi_pgn_parser}/**,{tests,alembic,tools,data}/**,webapp/**/*.map"
+    }
+  }
+}

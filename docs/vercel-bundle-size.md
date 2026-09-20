@@ -28,20 +28,44 @@ sở dữ liệu ván cờ (`.zip`), script Python sinh dữ liệu, PDF tài li
 `index.html` ở cấp nào mà scanner tìm tới, nên portal không thấy nó, không route
 nào chạm tới nó, nhưng nó vẫn được đóng gói.
 
+## Điều quan trọng nhất: Root Directory không phải repo root
+
+Vercel dò entrypoint FastAPI ở `main.py` hoặc `src/main.py` **tương đối với
+project root**. Trong repo này, file duy nhất khớp là
+`backend/fastapi/src/main.py` — repo root không có `main.py` lẫn `src/main.py`.
+
+Suy ra **Root Directory của project Vercel là `backend/fastapi`**. Hệ quả:
+
+| | |
+|---|---|
+| `vercel.json` phải nằm ở | `backend/fastapi/vercel.json` |
+| `functions` key | `src/main.py` |
+| glob `excludeFiles` tương đối với | `backend/fastapi/` |
+| thư mục ngoài root (`frontend/`, `markdown-editor/`…) | **không hề vào bundle** |
+
+Lần sửa đầu tiên đặt `vercel.json` ở repo root với key
+`backend/fastapi/src/main.py`. Vercel **không đọc file đó**, và cũng **không báo
+lỗi gì** — bundle sau tối ưu vẫn đúng 234 MB như trước, chênh nhau 0.01 MB. Dấu
+hiệu nhận ra: con số không nhúc nhích thì cấu hình không được áp dụng, chứ không
+phải glob sai.
+
 ## Cách đã xử lý
 
 **1. Biến wukong thành app thật.** Thêm `index.html` (trang chủ liệt kê ba phần
 chạy được: chơi với máy, xem ván cờ, giải thế cờ) và `metadata.json`. Ba app này
 tự chứa — chỉ nạp file trong thư mục của chúng, không đụng `xqdb/`.
 
-**2. `vercel.json` với `excludeFiles`.** Loại khỏi function bundle:
+**2. `backend/fastapi/vercel.json` với `excludeFiles`.** Loại khỏi bundle:
 
-- phần nặng, không phục vụ web của wukong: `xqdb` (65 MB), `res`, `puzzle_generator`
-- mã nguồn các web app (`frontend/`, `markdown-editor/`, …) — backend không cần,
-  chỉ cần bản build đã nằm trong `webapp/`
-- `tests/`, `alembic/`, `tools/`
+- phần không phục vụ web của wukong: `xqdb` (65 MB), `res`, `pgn`, `docs`,
+  `integration`, `puzzle_generator`, `opening_book_generator`, `xiangqi_pgn_parser`
+- `tests/`, `alembic/`, `tools/`, `data/`
+- `webapp/**/*.map` — source map không ai đọc trên production
 
-Kết quả: **204 MB → 106.6 MB**.
+Không cần loại `frontend/`, `markdown-editor/`… vì chúng nằm **ngoài** Root
+Directory nên vốn đã không vào bundle.
+
+Kết quả: **179.1 MB → 103.7 MB**, cộng deps ≈ **120 MB / 225 MB**.
 
 > **`excludeFiles` tối đa 256 ký tự.** Schema của Vercel chặn ở đó, và deployment
 > bị từ chối trước cả khi build. Nên glob phải gọn: chỉ liệt kê thứ thật sự
@@ -67,13 +91,20 @@ cung cấp `google.generativeai` hay `google.ai.generativelanguage`.
 node scripts/check-vercel-bundle.mjs
 ```
 
-Script áp chính glob trong `vercel.json` lên danh sách file git sẽ đưa lên
-GitHub, dùng cùng thư viện match (`minimatch`) mà Vercel dùng, rồi báo:
+Script đọc `backend/fastapi/vercel.json` (đúng file Vercel dùng), áp glob lên
+danh sách file git sẽ đưa lên GitHub bằng cùng thư viện match (`minimatch`) mà
+Vercel dùng, rồi báo:
 
 - dung lượng thực sự được đóng gói, so với giới hạn
 - các thư mục lớn nhất còn lại
 - **thư mục nào trong `webapp/` không có index file** — tức được đóng gói nhưng
   không bao giờ phục vụ ai
+
+Và dừng ngay với lỗi rõ ràng khi:
+
+- `functions` key không trỏ tới file nào có thật trong Root Directory
+- không có `vercel.json` trong Root Directory
+- `excludeFiles` dài quá 256 ký tự
 
 Thoát với mã lỗi khi vượt giới hạn, hoặc khi mã nguồn đã chiếm quá 80% (vì
 dependencies còn cộng thêm phía trên). Dùng được trong CI.
@@ -95,9 +126,13 @@ node scripts/check-vercel-bundle.mjs --top 20      # liệt kê nhiều thư m�
 - **`.vercelignore` không dùng được ở đây.** Tài liệu Vercel: *"These ignored
   files are only relevant when using Vercel CLI."* Deployment từ Git clone toàn
   bộ repo, nên chỉ `vercel.json` mới có tác dụng.
-- **Key của `functions` là glob khớp đường dẫn function**, tương đối với project
-  root. Ở đây là `backend/fastapi/src/main.py`. Nếu đổi **Root Directory** trong
-  dashboard Vercel thì phải sửa key này, nếu không cấu hình sẽ không áp dụng.
+- **Key của `functions` phải là entrypoint Vercel đã resolve**, tương đối với
+  Root Directory. Ở đây là `src/main.py`. Một key không khớp file nào sẽ bị **bỏ
+  qua trong im lặng** — không lỗi, không cảnh báo, chỉ là cấu hình không có tác
+  dụng. Đây là cái bẫy đã làm mất một vòng deploy.
+- **Chỉ có một `vercel.json` duy nhất, ở `backend/fastapi/`.** Bản ở repo root đã
+  bị xoá: nó không bao giờ được đọc, và sự tồn tại của nó khiến người ta sửa nhầm
+  file rồi tưởng đã xong.
 - Tài liệu Vercel ghi giới hạn tiêu chuẩn là 500 MB, nhưng build thực tế của dự
   án này bị chặn ở **225 MB**. Lấy con số trong log build làm chuẩn.
 - Giải pháp triệt để hơn là cho Vercel serve `/webapp/*` như static hosting và
