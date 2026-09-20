@@ -8,7 +8,8 @@ Quick start:
 
 ```powershell
 cd backend/fastapi
-python -m pip install -r requirements.txt
+# alembic lives in requirements-dev.txt, not the runtime file
+python -m pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 2. Generate a new migration (autogenerate based on SQLAlchemy models):

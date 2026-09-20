@@ -1,4 +1,12 @@
+# Runtime dependencies — everything the deployed app imports.
+#
+# Keep this list to what `src/` actually needs. A Vercel Python function bundles
+# every installed package, and the bundle has a hard size limit; test and
+# migration tooling belong in requirements-dev.txt instead.
+
 fastapi>=0.95.0
+# Serves the app locally (run_fastapi.ps1). Vercel supplies its own ASGI server,
+# but the cost of keeping this is small next to the cost of guessing wrong.
 uvicorn[standard]>=0.22.0
 
 # Core ORM (SQLAlchemy v2) with asyncio support
@@ -39,13 +47,3 @@ httpx>=0.24
 # Enable HTTP/2 support for httpx when available
 h2>=4.1
 tenacity>=8.2
-
-# Testing
-pytest>=7.0
-pytest-asyncio>=0.22
-respx>=0.20
-pytest-cov>=4.0
-
-# Migrations
-alembic>=1.10
-google-auth>=2.20.0

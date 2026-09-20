@@ -9,14 +9,15 @@ to mirror the existing Java Spring Boot backend. It's a scaffold with:
 - app/application/: ports and usecases
 - app/adapters/: controllers, repositories, gemini client
 
-See `requirements.txt` and the quick start below.
+See `requirements.txt` (runtime) and `requirements-dev.txt` (tests, migrations), plus the quick start below.
 
 Quick start (PowerShell):
 
 ```powershell
 cd 'c:\Users\tranphuc8a\Desktop\gemini_proxy\backend\fastapi'
 python -m venv .venv; .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+# requirements.txt is runtime only; -dev.txt adds pytest and alembic
+pip install -r requirements.txt -r requirements-dev.txt
 # copy and edit the example env file, then activate it
 # copy .env.example to .env and set your secrets (or set env vars directly)
 # cp .env.example .env  (on PowerShell: Copy-Item .env.example .env)

@@ -27,4 +27,12 @@ if (Test-Path $req) {
     Write-Host "requirements.txt not found in current directory. Skipping install."
 }
 
+# Tests and migrations live in a separate file so the deployed function does not
+# have to carry them.
+$dev = Join-Path (Get-Location) 'requirements-dev.txt'
+if (Test-Path $dev) {
+    Write-Host "Installing development requirements (pytest, alembic)"
+    pip install -r $dev
+}
+
 Write-Host "Done. Use '.\\$venvPath\\Scripts\\Activate.ps1' to activate the venv in new shells."

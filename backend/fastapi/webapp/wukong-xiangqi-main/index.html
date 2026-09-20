@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wukong Xiangqi</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f3ee;
+        --card: #fffdf9;
+        --ink: #2b2118;
+        --muted: #6b5c4c;
+        --line: #ddd0be;
+        --accent: #a8331d;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #171310;
+          --card: #221c17;
+          --ink: #efe6db;
+          --muted: #a3927f;
+          --line: #3a2f26;
+          --accent: #e0674c;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 40px 16px 56px;
+        background: var(--bg);
+        color: var(--ink);
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main { max-width: 860px; margin: 0 auto; }
+      header { text-align: center; margin-bottom: 36px; }
+      .piece {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 3px solid var(--accent);
+        background: var(--card);
+        color: var(--accent);
+        font-size: 34px;
+        font-weight: 700;
+        margin-bottom: 14px;
+      }
+      h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.3px; }
+      .sub { margin: 0; color: var(--muted); }
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+      a.card {
+        display: block;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+        color: inherit;
+        text-decoration: none;
+        transition: border-color 0.15s ease, transform 0.15s ease;
+      }
+      a.card:hover,
+      a.card:focus-visible {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+      }
+      a.card h2 { margin: 0 0 6px; font-size: 18px; }
+      a.card p { margin: 0; color: var(--muted); font-size: 14px; }
+      .icon { font-size: 26px; display: block; margin-bottom: 10px; }
+      footer {
+        margin-top: 36px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+      footer a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="piece">帥</div>
+        <h1>Wukong Xiangqi</h1>
+        <p class="sub">Engine cờ tướng viết bằng JavaScript, chạy hoàn toàn trong trình duyệt</p>
+      </header>
+
+      <div class="grid">
+        <a class="card" href="./src/gui/xiangqi.html">
+          <span class="icon">♟️</span>
+          <h2>Chơi với máy</h2>
+          <p>Đấu với engine Wukong, chọn nhiều cấp độ đối thủ và kiểu bàn cờ.</p>
+        </a>
+
+        <a class="card" href="./apps/wukong/gui/game_viewer.html">
+          <span class="icon">📖</span>
+          <h2>Xem ván cờ</h2>
+          <p>Duyệt lại các ván đấu đã lưu, đi từng nước một để phân tích.</p>
+        </a>
+
+        <a class="card" href="./apps/puzzle_solver/gui/puzzle_solver.html">
+          <span class="icon">🧩</span>
+          <h2>Giải thế cờ</h2>
+          <p>Bộ sưu tập thế cờ để luyện tập, có kiểm tra nước đi đúng/sai.</p>
+        </a>
+      </div>
+
+      <footer>
+        Engine và giao diện của
+        <a href="https://github.com/maksimkorzh/wukong-xiangqi" rel="noopener noreferrer" target="_blank">
+          Code Monkey King
+        </a>.
+        Bản trong bộ sưu tập này chỉ gồm phần chạy được trên web; công cụ sinh dữ liệu
+        và cơ sở dữ liệu ván cờ không được đóng gói khi triển khai.
+      </footer>
+    </main>
+  </body>
+</html>
