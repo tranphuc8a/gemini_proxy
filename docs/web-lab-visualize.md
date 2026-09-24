@@ -1,6 +1,6 @@
 # Web Lab visualize — ngữ cảnh & trạng thái
 
-Tài liệu bàn giao cho phiên làm việc sau. Cập nhật: 2026-09-20.
+Tài liệu bàn giao cho phiên làm việc sau. Cập nhật: 2026-09-24 (sau đợt 5).
 
 ## Mục tiêu
 
@@ -85,6 +85,138 @@ bản tham chiếu. Bốn chế độ trong một lab: quỹ đạo · cây ngư
 bản đồ thời gian dừng. Có 6 preset, tham số ẩn/hiện theo chế độ, hover đọc ô trên
 bản đồ, bộ đệm tích luỹ cho hai chế độ vẽ chồng.
 
+### Đợt 1 của lộ trình — đã xong
+
+5 lab mới: **logistic map** (3 chế độ) · **Fourier epicycles** (vẽ tay bằng chuột) ·
+**xoắn ốc Ulam** (Ulam + Sacks) · **Monte Carlo π** (ném điểm + kim Buffon) ·
+**giới hạn trung tâm** (5 nguồn, có một nguồn làm định lý gãy). Site hiện 6 lab.
+
+Engine mọc thêm: `B.cot()` / `B.cotDay()`, nhãn số trục ngang, `x.hienSo` /
+`y.hienSo` / `x.vach`, `datTocDo()` đồng bộ thanh trượt.
+
+**Hai bug thật lộ ra khi làm đợt này:**
+
+1. **Thanh tua chưa từng tồn tại ở 5/6 lab.** `dk()` chỉ dựng nó khi `toiDa` đã
+   biết lúc dựng giao diện, nhưng hầu hết lab gọi `datToiDa()` sau đó trong
+   `apDung()`. Nay luôn dựng sẵn rồi ẩn, `datToiDa()` mở ra.
+2. **Harness kéo nhầm slider.** Nó lấy `input[type=range]` cuối cùng làm thanh tua,
+   trong khi thứ tự thật là `[tua] [tốc độ]` rồi mới tới tham số. Test "tua" xưa nay
+   kéo nhầm một slider tham số — và chính nó che mất bug số 1.
+
+### Tầng kiểm tra thứ ba: đối chiếu số
+
+`lab-visual/kiem-so.js` chạy xuyên qua **mã lab thật**, đọc bảng số liệu trên màn
+hình rồi so với giá trị tính độc lập: π(60000) = 6057 bằng sàng riêng, Collatz 27
+→ 111 bước đỉnh 9232, chu kỳ logistic tại r = 2,8 / 3,2 / 3,5 / 3,83, σ của phân
+phối đều = 1/√12, sai số Fourier khi dùng 1 vòng so với 100 vòng. **17 phép, tất
+cả khớp.** Đã kiểm tra ngược: chèn lỗi sàng → exit 1.
+
+`thu-nhanh.js` giờ dùng được như **thư viện** (`require` nó thì không chạy test),
+đó là cách `kiem-so.js` mượn lại bộ DOM giả.
+
+### Đợt 2 — đã xong
+
+6 lab mới: **Schelling** · **Game of Life** · **256 luật một chiều** · **thấm** ·
+**đống cát** · **kiến Langton**. Site hiện **12 lab**.
+
+Engine mọc thêm `V.luoiO`: mỗi ô là một điểm ảnh trong một `ImageData` nhỏ, phóng
+to lên canvas bằng **một** lệnh `drawImage`. Lưới 400×400 vẽ hết một lệnh thay vì
+160 000 lệnh `fillRect`. Kèm `V.mauSo` và tuỳ chọn `leDuoi`.
+
+**Một bug thật lộ ra:** lab thấm ban đầu dùng nút ảo bờ trên/bờ dưới trong
+union-find. Nút ảo **gộp mọi cụm chạm bờ trên thành một**, làm "cụm lớn nhất"
+sai hẳn. Thay bằng cờ chạm-bờ trên mỗi gốc cụm.
+
+**Một phép thử ngược vô hiệu:** lần đầu mình định kiểm tra tầng đối chiếu bằng
+cách đảo hai lân cận của luật 90 — nhưng luật 90 đối xứng trái-phải nên đó là
+một thay đổi vô nghĩa. Phải chọn chỗ thực sự bất đối xứng (luật bảo toàn hạt
+của đống cát) thì test mới đỏ.
+
+### Đợt 3 — đã xong
+
+5 lab mới: **đàn chim** · **dịch tễ SIR** · **kẹt xe ma + nghịch lý Braess** ·
+**nấm nhầy** · **sinh tồn xã hội**. Site hiện **17 lab**.
+
+Engine mọc thêm `V.hat`: mảng tác tử + băm không gian, truy vấn láng giềng O(n).
+
+**Hai bug thật lộ ra:**
+
+1. **Băm không gian bỏ sót láng giềng tại chỗ nối vòng** — 319/2500 tác tử. Nguyên
+   nhân: ô băm không lát đúng miền. Bắt được nhờ `thu-engine.js` đối chiếu với duyệt
+   vét cạn trên 10 cấu hình.
+2. **Tua đóng băng tab tới 140 giây.** Chi phí mỗi bước phụ thuộc tham số, nên
+   chỉnh `toiDa` từng lab không giải quyết được. Sửa ở engine bằng **ngân sách 3 giây**
+   cho mỗi lần tua.
+
+**Hai bài học về phương pháp:**
+
+- **Đo một lần là không đủ.** Lần đo đầu (tất cả lab trong một tiến trình) báo
+  rằng tối ưu hoá làm mọi thứ chậm đi. Đo lại độc lập, trung vị 3 lần: boids thực
+  ra nhanh lên 7,0 → 2,9 ms/bước.
+- **Phép thử có thể chạy sai tham số mà vẫn xanh.** Hàm `dat()` trong `kiem-so.js`
+  đặt `.value` cho ô **danh dấu** — vô tác dụng, vì ô danh dấu đọc `.checked`. Ba phép
+  đối chiếu đã chạy với tham số sai. Nay `chayToi()` cũng xác nhận đã tới đúng bước,
+  vì ngân sách tua có thể cắt ngắn **âm thầm**.
+
+### Tầng kiểm tra thứ tư: tự kiểm tra nguyên hàm engine
+
+`engine/thu-engine.js` kiểm thẳng các nguyên hàm, không qua lab nào: băm không gian
+đối chiếu với duyệt vét cạn trên 10 cấu hình (kể cả ô to hơn cả miền, miền dẹt),
+số ngẫu nhiên tái lập được, đổi màu CSS, thang màu. **25 mục.**
+
+### Đợt 4 — đã xong
+
+4 lab mới: **băm nhất quán** · **thế giới nhỏ & mạng vô hướng tỉ lệ** ·
+**lan truyền trên mạng** · **đồng thuận Raft**. Site hiện **21 lab**.
+
+Engine mọc thêm `V.doThi`: nút/cạnh với tra cứu cạnh O(1), bố cục tròn và bố cục
+lò xo, đổi toạ độ, bắt chuột.
+
+**Không có bug lớn nào ở đợt này** — khác hẳn ba đợt trước. Lý do có vẻ là
+`thu-engine.js`: nguyên hàm `V.doThi` được kiểm 16 mục *trước khi* lab nào dựng
+lên nó, nên các lỗi kiểu như băm không gian ở đợt 3 không có cơ hội lọt xuống lab.
+
+**Lab tự kiểm tra lời hứa của chính nó.** Lab Raft đếm số lần vi phạm tính an
+toàn cốt lõi (hai lãnh đạo cùng nhiệm kỳ) và in ra bảng số liệu. `kiem-so.js` kiểm
+con số đó ở ba mức mất tin. Thử ngược: bỏ luật quá bán → 32 lần vi phạm ở mạng tệ.
+Đây là kiểu kiểm tra mạnh nhất trong cả dự án, vì nó kiểm **tính chất**, không
+phải một con số cụ thể.
+
+**Vài con số đối chiếu:** bỏ 1 trong 6 máy — `băm % N` chuyển 83,1% (lý thuyết
+83,33), băm nhất quán 16,9% (lý thuyết 16,67). Hệ số cụm vòng thuần khớp *chính
+xác* `3(k−2)/(4(k−1))` ở k = 4, 6, 8, 10.
+
+### Đợt 5 — đã xong
+
+4 lab mới: **Mandelbrot & Julia** · **phản ứng khuếch tán Gray–Scott** ·
+**hiệu ứng cánh bướm** (con lắc kép + Lorenz) · **N-body & điểm Lagrange**.
+Site hiện **25 lab**.
+
+**Web Worker đã bị bỏ, có lý do.** Worker không tạo được từ trang `file://`, mà
+chạy offline là lời hứa của dự án. Đo lại thì chỉ Mandelbrot mới nặng thật (~2,5
+*giây* cho cả khung), và chia nhỏ theo hàng giải quyết trọn vẹn — bộ phát sẵn có
+đã làm đúng việc đó.
+
+**Thay vào đó sửa một lỗ hổng thật:** `phat` tính số bước mỗi khung hình mà không
+xem đồng hồ. Nay có `hanKhung` (mặc định 12 ms). Khung hình tệ nhất của cả 25 lab
+sau khi sửa: **6,7 ms**.
+
+**Lần đầu tầng đối chiếu bắt được LỖI NỘI DUNG.** Preset Julia tên "liền khối"
+dùng `c = −0,8 + 0,156i` — giá trị đó nằm *ngoài* tập Mandelbrot, nên tập Julia
+của nó là bụi chứ không liền khối. Nhìn hình không phân biệt được. Đã đổi sang thỏ
+Douady, và giữ giá trị cũ làm preset dạy học *"⚠ Trông liền mà là bụi"*.
+
+**Hai bẫy khác của phép thử, cùng một gốc — hàm parse số:**
+
+- `soThuc()` nuốt chữ `e`, nên đọc `"4.10e-12"` thành `4.10` — sai 12 bậc độ lớn
+  mà phép thử vẫn im lặng. Thêm `soKhoaHoc()`.
+- Harness **bấm nút phát vô điều kiện**; với lab `tuTin: true` (tự chạy ngay) thì
+  một cái bấm là *tạm dừng*, và phép thử kết luận ngược. Nay `batDauChay()` xem
+  class `dang` trên nút trước khi bấm.
+
+Tính cả đợt trước, **mọi lần phép thử báo sai đều là lỗi của phép thử hoặc của
+nội dung — chưa lần nào là lỗi engine.** Có vẻ `thu-engine.js` đang làm đúng việc.
+
 ## Kiểm tra — trạng thái hiện tại
 
 ```bash
@@ -94,20 +226,21 @@ cd lab-visual && python check.py --tinh     # đầy đủ, không cần trình 
 python engine/sync.py --kiem                # bản sao có lệch nguồn không
 ```
 
-Kết quả lần chạy cuối — **69 lab trên 4 site, tất cả xanh**:
+Kết quả lần chạy cuối — **93 lab trên 4 site, tất cả xanh** (cộng 41 mục tự kiểm
+tra nguyên hàm engine):
 
-| Site | Số mục đạt | Lỗi |
-|---|:--:|:--:|
-| `lab-visual` | 6 | 0 |
-| `heuristic-visual` | 33 | 0 |
-| `ai-everything-visual` | 63 | 0 |
-| `system-design-visual` | 16 | 0 |
+| Site | Chạy thử | Đối chiếu số | Lỗi |
+|---|:--:|:--:|:--:|
+| `lab-visual` (25 lab) | 71 | 87 | 0 |
+| `heuristic-visual` (21 lab) | 53 | — | 0 |
+| `ai-everything-visual` (39 lab) | 101 | — | 0 |
+| `system-design-visual` (8 lab) | 23 | — | 0 |
 
 Đã kiểm tra ngược: chèn lỗi runtime cố ý → `check.py` trả exit 1 và chỉ đúng chỗ.
 
-Ba tầng kiểm tra: **tĩnh** (Python) → **DOM giả** (Node) → **Chromium** (playwright,
-chưa cài nên tự bỏ qua). Tầng DOM giả không bắt được lỗi hình học — canvas ở đó chỉ
-đếm số lần gọi.
+Năm tầng: **tĩnh** (Python) → **nguyên hàm engine** (`thu-engine.js`) → **DOM giả**
+(`thu-nhanh.js`) → **đối chiếu số** (`kiem-so.js`) → **Chromium** (playwright, chưa cài nên tự bỏ qua). Tầng DOM giả không bắt được
+lỗi hình học — canvas ở đó chỉ đếm số lần gọi.
 
 ## Việc còn lại
 

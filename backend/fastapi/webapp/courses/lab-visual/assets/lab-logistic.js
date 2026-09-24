@@ -11,19 +11,18 @@
   function buocTiep(r, x) { return r * x * (1 - x); }
 
   /** Uoc luong chu ky cua quy dao sau khi da qua giai doan chuyen tiep.
-      Tra ve 0 neu khong tim thay chu ky <= toiDa (coi nhu hon loan). */
+      Chu ky p dung khi x[j+p] == x[j] lap lai on dinh qua ba vong.
+      Tra ve 0 khi khong co chu ky <= toiDa — coi nhu hon loan. */
   function chuKy(r, x0, boQua, toiDa) {
     var x = x0, i;
     for (i = 0; i < boQua; i++) x = buocTiep(r, x);
-    var moc = x, mau = [];
-    for (i = 0; i < toiDa * 4; i++) { x = buocTiep(r, x); mau.push(x); }
+    var mau = [];
+    for (i = 0; i < toiDa * 4 + 4; i++) { x = buocTiep(r, x); mau.push(x); }
     for (var p = 1; p <= toiDa; p++) {
       var khop = true;
-      for (var j = 0; j < 3; j++) {
-        if (Math.abs(mau[p * j + p - 1] - mau[p - 1]) > 1e-9) { khop = false; break; }
+      for (var j = 0; j < p * 3 && j + p < mau.length; j++) {
+        if (Math.abs(mau[j + p] - mau[j]) > 1e-9) { khop = false; break; }
       }
-      /* Chu ky p dung khi quay lai dung moc sau p buoc, lap lai on dinh. */
-      if (khop && Math.abs(mau[p - 1] - moc) < 1e-6 === false) { /* chi de ro y */ }
       if (khop) return p;
     }
     return 0;
@@ -174,11 +173,13 @@
         var n = Math.min(k, D.length - 1);
         for (i = 0; i < n; i++) {
           var a = D[i], b = D[i + 1];
-          var mo = 0.25 + 0.75 * (i / Math.max(1, n));
+          /* Buoc dau di len tu truc hoanh; cac buoc sau xuat phat tu duong
+             cheo, tuc tu do cao dung bang a. */
+          var duoi = (i === 0) ? 0 : a;
           g.save();
-          g.globalAlpha = mo;
-          B.doan(a, a === D[0] && i === 0 ? 0 : a, a, b, V.mau("ac"), 1.2);
-          B.doan(a, b, b, b, V.mau("ac"), 1.2);
+          g.globalAlpha = 0.25 + 0.75 * (i / Math.max(1, n));
+          B.doan(a, duoi, a, b, V.mau("ac"), 1.2);   /* doc len parabol */
+          B.doan(a, b, b, b, V.mau("ac"), 1.2);      /* ngang sang duong cheo */
           g.restore();
         }
         if (n >= 0 && D[n] !== undefined) B.diem(D[n], D[n], V.mau("ac2"), 4);
@@ -269,18 +270,18 @@
           if (G.rMax <= G.rMin) TS.dat("rMax", Math.min(4, G.rMin + 0.1), true);
           sdChuanBi();
           P.datToiDa(cot);
-          P.datTocDoUI(220);
+          P.datTocDo(220);
           chuThich([[V.mau("ac"), "giá trị x mà quỹ đạo lui tới sau khi ổn định"]]);
         } else if (G.che === "mang-nhen") {
           mnChuanBi();
           P.datToiDa(120);
-          P.datTocDoUI(3);
+          P.datTocDo(3);
           chuThich([[V.mau("ba"), "parabol y = r·x·(1−x)"], [V.mau("tx3"), "đường chéo y = x"],
                     [V.mau("ac"), "đường đi"], [V.mau("loi"), "điểm cố định x*"]]);
         } else {
           dsChuanBi();
           P.datToiDa(SO_BUOC);
-          P.datTocDoUI(12);
+          P.datTocDo(12);
           chuThich([[V.mau("ac"), "x₀"], [V.mau("ba"), "x₀ + 0,001"]]);
         }
         P.datLai();

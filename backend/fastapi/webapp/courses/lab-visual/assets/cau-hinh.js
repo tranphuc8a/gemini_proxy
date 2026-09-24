@@ -21,8 +21,12 @@ window.CAU_HINH_VIS = {
              [0.65, [  8, 145, 178]],
              [1.00, [  8,  51,  68]]],
 
-  nhomThuTu: ["Giả thuyết Collatz", "Tối ưu hoá & heuristic",
-              "Hệ động lực & hỗn loạn", "Xã hội & trò chơi"],
+  nhomThuTu: ["Giả thuyết Collatz", "Hệ động lực & hỗn loạn",
+              "Tự động tế bào", "Bầy đàn & tác tử",
+              "Toán & số học", "Xác suất & ngẫu nhiên",
+              "Mạng lưới & phân tán",
+              "Xã hội & trò chơi", "Tối ưu hoá & heuristic",
+              "Học máy & dữ liệu"],
 
   chanTrang: 'Web Lab trực quan · <a href="../../index.html">về trang chủ</a> · ' +
              'không dùng thư viện ngoài · chạy được offline',

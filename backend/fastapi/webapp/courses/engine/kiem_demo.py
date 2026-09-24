@@ -193,6 +193,62 @@ def kiem_chay_thu(thu_muc, B):
         B.duoc("chay thu tren DOM gia: %d muc dat" % so_ok)
 
 
+def kiem_engine(B):
+    """Chay engine/thu-engine.js — tu kiem tra cac nguyen ham cua engine.
+
+    Bam khong gian, so ngau nhien, doi mau: nhung thu hong am tham, khong
+    lab nao bao loi ma ket qua thi sai. Kiem thang o day.
+    """
+    kich_ban = os.path.join(HERE, "thu-engine.js")
+    if not os.path.exists(kich_ban):
+        return
+    try:
+        subprocess.run(["node", "--version"], capture_output=True, check=True)
+    except Exception:
+        return
+    r = subprocess.run(["node", kich_ban], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    ra = (r.stdout or "") + (r.stderr or "")
+    for d in ra.splitlines():
+        d = d.strip()
+        if d.startswith("[SAI]"):
+            B.sai("nguyen ham engine: " + d[5:].strip())
+    if r.returncode == 0:
+        B.duoc("nguyen ham engine: %d muc dat" % ra.count("[ok]"))
+    elif not any("nguyen ham engine" in m for m, _ in B.loi):
+        dong = ra.strip().splitlines()
+        B.sai("thu-engine.js that bai", dong[-1] if dong else "khong ro")
+
+
+def kiem_so(thu_muc, B):
+    """Chay <trang>/kiem-so.js neu trang co — doi chieu CON SO voi gia tri chuan.
+
+    Tang 'chay thu' chi chung minh lab khong nem loi. Tang nay tra loi cau
+    hoi khac: con so lab in ra co dung khong. Trang nao chua co tep thi bo
+    qua, khong coi la loi.
+    """
+    kich_ban = os.path.join(thu_muc, "kiem-so.js")
+    if not os.path.exists(kich_ban):
+        return
+    try:
+        subprocess.run(["node", "--version"], capture_output=True, check=True)
+    except Exception:
+        B.nhac("khong tim thay Node — bo qua doi chieu so")
+        return
+    r = subprocess.run(["node", kich_ban], capture_output=True, text=True,
+                       cwd=thu_muc, encoding="utf-8", errors="replace")
+    ra = (r.stdout or "") + (r.stderr or "")
+    for d in ra.splitlines():
+        d = d.strip()
+        if d.startswith("[SAI]"):
+            B.sai("doi chieu so: " + d[5:].strip())
+    if r.returncode == 0:
+        B.duoc("doi chieu so: %d phep khop gia tri chuan" % ra.count("[ok]"))
+    elif not any("doi chieu so" in m for m, _ in B.loi):
+        dong = ra.strip().splitlines()
+        B.sai("doi chieu so that bai", dong[-1] if dong else "khong ro")
+
+
 RE_KHAI_BAO = re.compile(r'\b(?:demo|lab)\s*\(\s*\{')
 
 
@@ -342,7 +398,9 @@ def chay(thu_muc, cong=8791, argv=None):
     kiem_cu_phap(thu_muc, srcs, B)
     kiem_ban_sao_engine(thu_muc, B)
     ds = gom_lab(thu_muc, srcs, B)
+    kiem_engine(B)
     kiem_chay_thu(thu_muc, B)
+    kiem_so(thu_muc, B)
 
     if mo_trinh_duyet and ds:
         kiem_trinh_duyet(thu_muc, cong, ds, B, loc_nhom)

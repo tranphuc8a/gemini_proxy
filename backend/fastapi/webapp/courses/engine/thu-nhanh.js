@@ -232,6 +232,88 @@ function bomKhung(n) {
   }
 }
 
+function moLab(id) {
+  window.location.hash = "#/" + id;
+  (skWindow.hashchange || []).forEach((f) => f());
+  bomKhung(5);
+}
+
+function nutChayCua(main) {
+  /* Bam vao CLASS chu khong phai chu tren nut: lab dat `tuTin: true` se tu
+     chay ngay, va luc do nut ghi "Tam dung" chu khong phai "Chay". */
+  const theoLop = gomTrong(main, ".chinh").find((b) => b._tag === "button");
+  if (theoLop) return theoLop;
+  return gomTrong(main, "button").find((b) => /Chạy/.test(b._text));
+}
+
+/** Dam bao bo phat DANG CHAY, khong phai chi bam nut mot cai.
+    Engine gan class `dang` len nut khi dang chay; lab `tuTin: true` da chay
+    san, nen bam them mot cai la tam dung — va phep thu se ket luan nguoc. */
+function batDauChay(main) {
+  const nut = nutChayCua(main);
+  if (!nut) return null;
+  if (!nut._lop.has("dang")) nut._ban("click");
+  return nut;
+}
+
+/** Gom toan bo chu trong mot nhanh DOM (ke ca nut van ban). */
+function chuTrong(e) {
+  let s = e._text || "";
+  for (const c of e.children || []) s += " " + chuTrong(c);
+  return s;
+}
+
+/** Thanh tua cua bo phat.
+    KHONG duoc lay `input[type=range]` cuoi cung trong #main: thu tu that la
+    [tua] [toc do] roi moi den cac slider THAM SO, nen cai cuoi cung la tham so.
+    Nhan dien bang nhan cua no moi dung. */
+function thanhTua(main) {
+  for (const lab of gomTrong(main, "label")) {
+    if (/Tua tới bước/.test(chuTrong(lab))) {
+      return gomTrong(lab, "input").find((i) => i._attr.type === "range") || null;
+    }
+  }
+  return null;
+}
+
+/** Chu trong bang so lieu — de soi NaN / Infinity / undefined. */
+function soLieuCua(main) {
+  const hop = timTrong(main, ".so-lieu");
+  return hop ? chuTrong(hop) : "";
+}
+
+
+/** Nap dung nhung tep index.html khai bao, dung thu tu do, roi khoi dong
+    engine. Khong doan ten tep: moi trang dat ten lab mot kieu. */
+function napTheoIndex() {
+  const html = fs.readFileSync(path.join(TM, "index.html"), "utf8");
+  const srcs = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
+    .map((m) => m[1]).filter((x) => !/^https?:/i.test(x));
+  for (const x of srcs) nap(x);
+  return srcs;
+}
+
+/** Khoi dong engine roi tra ve danh sach ma lab doc tu muc luc. */
+function khoiDong() {
+  (skWindow.DOMContentLoaded || []).forEach((f) => f());
+  bomKhung(3);
+  return gomTrong(document.querySelector("#nav"), ".nav-i")
+    .map((a) => a.getAttribute("data-id")).filter(Boolean);
+}
+
+/* ------------------------------------------------------------------
+   Dung lam THU VIEN: `require(".../thu-nhanh.js")` tra ve bo DOM gia va
+   cac tien ich ma khong chay test (kiem-so.js dung duong nay). Chay truc
+   tiep `node thu-nhanh.js <trang>` thi phan duoi moi thuc thi.
+   Trong CommonJS, `return` o cap module la hop le.
+   ------------------------------------------------------------------ */
+module.exports = {
+  document, window, skWindow, ctx, TM, loiConsole,
+  nap, napTheoIndex, khoiDong, bomKhung, timTrong, gomTrong,
+  moLab, nutChayCua, batDauChay, chuTrong, thanhTua, soLieuCua
+};
+if (require.main !== module) return;
+
 /* ---------------- Chay ---------------- */
 const loi = [];
 function kiem(ten, f) {
@@ -242,16 +324,11 @@ function kiem(ten, f) {
 
 console.log("\nChay thu " + TRANG + " bang DOM gia (Node)\n" + "-".repeat(58));
 
-/* Nap dung nhung tep ma index.html khai bao, dung thu tu do — khong doan
-   ten tep, vi moi trang dat ten lab mot kieu (lab-*.js, vis-*.js...). */
-const html = fs.readFileSync(path.join(TM, "index.html"), "utf8");
-const srcs = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
-  .map((m) => m[1]).filter((s) => !/^https?:/i.test(s));
+const srcs = napTheoIndex();
 if (!srcs.length) {
   console.error("  [LOI]  index.html khong nap tep script cuc bo nao");
   process.exit(1);
 }
-for (const s of srcs) nap(s);
 
 kiem("engine gan window.VIS voi day du API loi", () => {
   const V = ctx.window.VIS;
@@ -264,22 +341,14 @@ kiem("engine gan window.VIS voi day du API loi", () => {
 
 let dsLab = [];
 kiem("DOMContentLoaded dung muc luc + trang chu", () => {
-  (skWindow.DOMContentLoaded || []).forEach((f) => f());
-  bomKhung(3);
-  dsLab = gomTrong(document.querySelector("#nav"), ".nav-i")
-    .map((a) => a.getAttribute("data-id")).filter(Boolean);
+  dsLab = khoiDong();
   if (!dsLab.length) throw new Error("muc luc rong — khong lab nao dang ky duoc");
   if (!timTrong(document.querySelector("#main"), ".hero")) throw new Error("trang chu khong ve");
 });
 
-function moLab(id) {
-  window.location.hash = "#/" + id;
-  (skWindow.hashchange || []).forEach((f) => f());
-  bomKhung(5);
-}
-function nutChayCua(main) {
-  return gomTrong(main, "button").find((b) => /Chạy/.test(b._text));
-}
+
+
+
 
 console.log("  ---- " + dsLab.length + " lab ----");
 
@@ -293,8 +362,8 @@ for (const id of dsLab) {
 
     const cv = timTrong(main, "canvas");
     const truoc = cv ? cv._ctx._goi : 0;
-    const nc = nutChayCua(main);
-    if (nc) { nc._ban("click"); bomKhung(20); } else { bomKhung(4); }
+    const nc = batDauChay(main);
+    if (nc) { bomKhung(20); } else { bomKhung(4); }
 
     if (cv) {
       if (nc && cv._ctx._goi <= truoc) throw new Error("bam Chay nhung canvas khong ve them gi");
@@ -323,16 +392,46 @@ for (const id of dsLab) {
   });
 }
 
-kiem("tua ve giua roi ve lai", () => {
-  moLab(dsLab[0]);
-  const main = document.querySelector("#main");
-  const tua = gomTrong(main, "input").filter((i) => i._attr.type === "range");
-  if (!tua.length) throw new Error("khong co thanh truot nao");
-  const t = tua[tua.length - 1];
-  t.value = "50"; t._ban("input");
-  bomKhung(3);
-  if (loiConsole.length) throw new Error("console.error: " + loiConsole[0]);
-});
+for (const id of dsLab) {
+  kiem("lab '" + id + "': chay het, so lieu sach", () => {
+    moLab(id);
+    const main = document.querySelector("#main");
+    const t = thanhTua(main);
+
+    if (t) {
+      /* Tua toi cuoi chay TOAN BO cac buoc mot mach — day la luc cong thuc
+         hong hien ra thanh NaN, chu khong phai o vai khung dau. */
+      t.value = String(t._attr.max);
+      t._ban("input");
+      bomKhung(3);
+      if (loiConsole.length) throw new Error("console.error khi tua: " + loiConsole[0]);
+    } else {
+      /* Lab tinh, khong co bo phat — chay bang khung hinh. Day la truong
+         hop hop le, khong phai loi. */
+      batDauChay(main);
+      bomKhung(120);
+      if (loiConsole.length) throw new Error("console.error khi chay: " + loiConsole[0]);
+    }
+
+    /* Bang so lieu la tuy chon, nhung co thi khong duoc chua NaN. */
+    const so = soLieuCua(main);
+    if (so.trim()) {
+      const xau = so.match(/\bNaN\b|\bInfinity\b|\bundefined\b/);
+      if (xau) throw new Error("so lieu co '" + xau[0] + "': " + so.trim().slice(0, 150));
+    }
+
+    if (t) {
+      /* Tua ve giua roi ve 0 — phuc hoi trang thai phai khong nem loi. */
+      t.value = String(Math.floor(Number(t._attr.max) / 2));
+      t._ban("input");
+      bomKhung(2);
+      t.value = "0";
+      t._ban("input");
+      bomKhung(2);
+      if (loiConsole.length) throw new Error("tua nguoc: " + loiConsole[0]);
+    }
+  });
+}
 
 if (ctx.window.VIS && ctx.window.VIS.thamSo) {
   kiem("permalink ghi tham so vao URL", () => {
