@@ -1294,13 +1294,23 @@ mong("Markov · và tích ấy dao động chưa tới 1,6 lần dù t_trộn ph
 
 /* Mọi khởi đầu về cùng một chỗ — trừ khi tuần hoàn. */
 dat("Cầu nối", -1);
-/* |λ₂| = 0,818 nên sau 60 bước còn 8e−6 — chưa đủ nhỏ để gọi là “chập”.
-   160 bước đưa nó xuống dưới 1e−13. */
-chayToi(160);
+/* Thanh tua của lab chỉ dài 2·t_trộn + 10 = 50 bước, nên xin 160 bước là
+   vô nghĩa. Và một ngưỡng tuyệt đối cũng không phải điều lab khẳng định —
+   nó khẳng định ba khởi đầu HỘI TỤ THEO CẤP SỐ NHÂN. Nên đo ở hai mốc và
+   xem khoảng cách co bao nhiêu lần. */
+function lechKhoiDau() {
+  const o = oSo(soLieu(), "Ba khởi đầu còn lệch nhau");
+  return String(o).includes("\u2248 0") ? 0 : soKhoaHoc(o);
+}
+chayToi(10);
+const lech10 = lechKhoiDau();
+chayHet();
+const lechCuoi = lechKhoiDau();
 S = soLieu();
-mong("Markov · ba khởi đầu khác hẳn nhau đã chập vào nhau",
-  String(oSo(S, "Ba khởi đầu còn lệch nhau")).includes("\u2248 0") ||
-  soKhoaHoc(oSo(S, "Ba khởi đầu còn lệch nhau")) < 1e-8, true);
+mong("Markov · ba khởi đầu đã gần như chập vào nhau", lechCuoi < 1e-3, true);
+/* |λ₂| = 0,818 thì 40 bước nữa phải co khoảng 0,818^40 ≈ 3,6e−4 lần. */
+mong("Markov · và co theo cấp số nhân — ít nhất 1000 lần trong 40 bước",
+  lechCuoi === 0 || lech10 / lechCuoi > 1000, true);
 mong("Markov · và đã tới sát phân phối dừng",
   soKhoaHoc(oSo(S, "Xa phân phối dừng nhất")) < 1e-3, true);
 

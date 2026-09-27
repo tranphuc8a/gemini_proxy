@@ -380,13 +380,48 @@ phép đối chiếu**. Tầng hình: **328 phép, 0 nhắc nhở**.
 dựng đồ thị Sierpinski chứ không lan sóng. Chưa đủ hai lab thì chưa tách.
 Thứ duy nhất thêm vào engine là `p.sau` cho preset (đã làm ở đợt 7, xem dưới).
 
-### Đợt 9 — Ngẫu nhiên và hội tụ
+### ✅ Đợt 9 — XONG (2026-09-28)
 
-| Lab | Điều nó cho thấy | Công |
-|---|---|:--:|
-| **Chuỗi Markov — hội tụ** | Phân phối dừng, **thời gian trộn**, khe phổ. ★ khởi đầu nào cũng về cùng một chỗ — trừ khi xích tuần hoàn | M |
-| **Bloom filter** | ★ đọc "có" mà không có; tỉ lệ dương tính giả đo được khớp công thức `(1−e^(−kn/m))^k` | M |
-| **Địa hình thật cho heuristic** | ⚠ **chồng lấn nặng** — xem ghi chú bên dưới | S |
+Hai lab: **L37 chuỗi Markov**, **L38 Bloom filter**. Lab-visual: 36 → **38 lab**.
+`kiem-so.js`: 190 → **221 phép**. Tầng hình: **346 phép, 0 nhắc nhở**.
+*(“Địa hình thật cho heuristic” vẫn bỏ — chồng lấn nặng với L27/L28.)*
+
+| Lab | Điều nó cho thấy | Đã đo |
+|---|---|---|
+| **L37 chuỗi Markov** | một con số của **ma trận** đoán trước được hành vi của **quá trình** | kéo cầu nối cho khe phổ chạy qua **bốn bậc độ lớn** (0,667 → 0,002) thì t_trộn phình **489 lần** (4 → 1957), mà tích `t_trộn × khe` vẫn kẹt trong **[2,7 ; 3,9]** |
+| **L38 Bloom filter** | công thức mô tả **trung bình**, không phải **lời hứa** | băm tốt: dao động 9%, lệch công thức >10% ở **29%** số lần · băm xấu: dao động **39%**, lệch >10% ở **81%** số lần — mà trung bình chỉ lệch 15% |
+
+**Engine không mọc thêm gì.** `V.lanSong` lại được cân nhắc rồi lại bỏ: Markov
+không lan sóng BFS, nó lặp luỹ thừa ma trận. Vẫn chưa đủ hai lab chép tay.
+
+**Bốn lần đo bác bỏ điều đã định viết** — nhiều nhất trong một đợt:
+
+1. *“Băm xấu đắt hơn công thức 4–8%.”* Đo **một** hạt giống. Ở hạt 3 nó lại
+   **rẻ hơn gấp đôi**. Qua 160 hạt: trung bình chỉ lệch 15%, còn **43%** số
+   hạt thì băm xấu rẻ hơn thật. Luận điểm đúng là **“không đoán trước được”**,
+   không phải “đắt hơn”.
+2. *Đo bằng dải min–max.* Sai lần hai, ngay khi đang sửa lần một. min–max là
+   thống kê **cực trị** — nó chỉ phình ra khi lấy thêm mẫu (đo được: 22% ở 8
+   hạt → 48% ở 80 hạt), nên con số hiện trên màn hình đổi theo `SO_HAT` mà
+   người đọc không biết. Tệ nhất là ô *“số k mà băm xấu rẻ hơn”*: lật từ
+   **11/12** xuống **8/12** rồi **1/12** chỉ vì tăng số hạt — nhiễu đội lốt sự
+   thật. Nay dùng **hệ số biến thiên** (σ/trung bình), là ước lượng có hội tụ.
+3. *“Khe phổ = 2ε.”* Đo trên xích **2 đỉnh** rồi đem áp cho vòng **n đỉnh**.
+   Công thức đúng là `1 − |ε + (1−ε)·e^(2πi/n)|`; ở n = 6, ε = 0,01 thì ra
+   **0,0050** chứ không phải 0,0200 — **lệch gấp bốn**. Và ô *Kiểm* của lab chỉ
+   in “thực tế …” chứ không báo SAI, nên nó lệch ở **mọi** giá trị mà không ai
+   để ý. Một ô kiểm không biết kêu thì không phải ô kiểm.
+4. *Hai hàm đo `|λ₂|` và `thoiGianTron` đều hỏng ở lần viết đầu.* `|λ₂|` không
+   trừ trung bình mỗi vòng → thành phần dọc theo phân phối dừng rò rỉ vào, mà
+   nó có trị riêng 1 nên không bao giờ tắt → **mọi** xích đều báo |λ₂| = 1, kể
+   cả xích trộn trong 3 bước. Và vector khởi đầu cố định `[1,−1,0,…]` **trực
+   giao sẵn** với mode chậm của xích hai cụm (các đỉnh cùng cụm có hàng giống
+   hệt nhau), nên phép đo báo khe = 1 cho đúng cái xích trộn chậm nhất.
+
+**Và ba lần phép thử đo đúng thứ không đáng đo:** `chayToi(160)` trên lab có
+thanh tua dài 50 bước; một ngưỡng tuyệt đối đặt lên **một lần chạy đơn** của
+Bloom (800 phép thử, biên độ ±2 điểm phần trăm); và `10^0 = 1` dùng làm “cầu
+nối yếu” trong khi nó nặng **bằng** cạnh trong cụm.
 
 ### Đợt 10 — Nhận dạng chữ số viết tay, đầu cuối
 
