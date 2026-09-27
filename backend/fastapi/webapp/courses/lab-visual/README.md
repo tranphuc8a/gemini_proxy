@@ -22,7 +22,7 @@ python -m http.server 8792 --bind 127.0.0.1
 
 ---
 
-## 28 lab
+## 32 lab
 
 | Nhóm | Lab | Điều nó cho thấy |
 |---|---|---|
@@ -51,12 +51,37 @@ python -m http.server 8792 --bind 127.0.0.1
 | | Đồng thuận Raft | ★ bấm chuột **giết máy** và **cắt mạng**; giết quá nửa thì cụm đứng hình |
 | **Xã hội & trò chơi** | Schelling — phân ly | ★ ngưỡng **3/8** (ai cũng chịu làm thiểu số) vẫn phân ly hoàn toàn |
 | | Sinh tồn xã hội (Sugarscape) | ★ Gini **0,48** dù không ai bóc lột ai; tắt chênh lệch bẩm sinh + địa lý → **0,26** |
+| **Câu đố quyết định** | Cân xu tìm xu giả | ★ vét cạn thật: 13 xu cần **4** lần dù cận nói 3 · ★ thêm một xu **đã biết là thật** thì tụt về 3 |
+| | Thả trứng tìm tầng cao nhất | ★ 100 tầng 2 trứng = **14**, không phải √100 = 10 · từ **5 trứng** trở đi thêm nữa vô ích |
+| | Đoán chuỗi (Mastermind) | ★ đoán một chuỗi **bạn biết chắc là sai** lại hạ được xấu-nhất từ 6 xuống 5 |
+| **Tối ưu hoá & heuristic** | Dồn hạt | ★ entropy trông như tốn N² mà tính đúng bằng **O(H+W)** · ★ dồn về đâu cũng **cho cùng một đáp số** |
 | **Tối ưu hoá & heuristic** | Đua optimizer | SGD · Momentum · RMSProp · Adam trên cùng mặt lỗi · ★ bước 60 trên yên ngựa: SGD còn ở **f ≈ 1,1**, RMSProp đã **2×10⁻²⁰** |
 | | Đấu trường metaheuristic | leo đồi · tôi luyện · GA · PSO, **cùng ngân sách gọi hàm** · ★ chỉ đổi ngân sách là **người thắng đổi** |
 | **Học máy & dữ liệu** | Giảm chiều | PCA · MDS · t-SNE · chiếu ngẫu nhiên · ★ bộ **"quả cầu đều"** không có cụm nào, t-SNE vẫn vẽ ra cụm |
 
 ### Chi tiết vài chỗ đáng chú ý
 
+- **Cân xu** — bấm preset *★ 2 xu — vô nghiệm*: hai đồng xu, không số lần cân nào
+  đủ. Thêm **một đồng bạn đã biết chắc là thật** — đồng không thể là xu giả, không
+  chứa một chút thông tin nào — và bài giải được trong 2 lần. Lý do: hai đĩa phải
+  bằng nhau, nên xu độn **mở ra những câu hỏi trước đó không hỏi nổi**.
+  Lab **vét cạn thật** (gom xu theo lớp để không gian từ hàng tỷ còn vài nghìn), nên
+  mọi con số là đáp số đúng chứ không phải xấp xỉ. Xác nhận cả công thức
+  `(3^w−3)/2`: 39 xu vừa đủ 4 lần, 40 xu phải 5.
+- **Thả trứng** — kéo thanh *số quả trứng*: 1 → 100 lần, 2 → 14, 3 → 9, 4 → 8,
+  **5 → 7**. Tới đó nó chạm cận nhị phân và **nằm ì**: trứng thứ 6, 7, 8 không giúp
+  thêm gì. Một điểm bão hoà sắc nét — tài nguyên thêm vào có ích, có ích, rồi
+  *đột ngột* vô ích hoàn toàn.
+- **Đoán chuỗi** — bốn chiến lược đấu trên **cùng một bí mật mỗi ván**. Chỉ khác
+  nhau ở chỗ được phép đoán gì: chỉ đoán ứng viên còn lại → xấu nhất **6**; được
+  đoán cả chuỗi đã biết chắc là sai → **5**. Nhưng chỉ khi trần tìm kiếm ≥ 600:
+  hạ xuống 300 thì khác biệt biến mất. **Lợi ích của việc dám hỏi câu mình biết là
+  sai chỉ hiện ra khi bạn thực sự cân nhắc chúng.**
+- **Dồn hạt** — entropy = tổng khoảng cách Manhattan của **mọi cặp** (tới 10⁸ phép),
+  nhưng Manhattan tách theo trục nên tính đúng bằng **O(H+W)** — lab tự chạy cả hai
+  cách rồi so, khớp tuyệt đối. Và thứ tưởng phải tối ưu — **dồn về đâu** — hoá ra
+  không ảnh hưởng gì: đại lượng này **bất biến theo tịnh tiến**. Tâm chỉ đổi **số
+  nước đi**.
 - **Đấu trường metaheuristic** — bấm preset *★ Cầu · ngân sách 2 000* rồi *★ Cầu ·
   ngân sách 20 000*. Địa hình y nguyên, hạt giống y nguyên, thuật toán y nguyên —
   chỉ ngân sách đổi, và **người thắng đổi**. Đo trên 8 hạt giống: leo đồi
@@ -160,7 +185,7 @@ tại r = 2,8 / 3,2 / 3,5 / 3,83, σ của phân phối đều = 1/√12, luật
 2^popcount(n) ô đen ở hàng n, đống cát bảo toàn hạt, kiến Langton đối chiếu với một
 bản cài đặt độc lập, Braess ra đúng 65 và 80 phút, hệ số cụm vòng thuần khớp
 `3(k−2)/(4(k−1))`, Raft không bao giờ có hai lãnh đạo cùng nhiệm kỳ, tỉ lệ điểm
-trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lại đúng một mặt phẳng bị quay lên 30 chiều, ứng suất SMACOF chưa bao giờ tăng, không thuật toán nào trong đấu trường tiêu quá ngân sách…  **112 phép, tất cả khớp.**
+trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lại đúng một mặt phẳng bị quay lên 30 chiều, ứng suất SMACOF chưa bao giờ tăng, không thuật toán nào trong đấu trường tiêu quá ngân sách…  13 xu cần đúng 4 lần cân, 100 tầng 2 trứng cần đúng 14 lần thả, entropy N² khớp công thức O(H+W) tới từng đơn vị…  **141 phép, tất cả khớp.**
 
 > **Bẫy đã gặp:** `chayToi(k)` có thể **không tới được bước k** — bộ phát có ngân
 > sách 3 giây cho mỗi lần tua để không đóng băng tab. Nay nó xác nhận và báo lỗi rõ

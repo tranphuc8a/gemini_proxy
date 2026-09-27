@@ -847,6 +847,166 @@ mong("Giảm chiều · quả cầu đều: vậy mà t-SNE vẫn cao điểm gi
   soThuc(S["t-SNE · giữ láng giềng"]) >
   soThuc(S["PCA · giữ láng giềng"]), true);
 
+/* ================================================================
+   ĐỢT 7 — câu đố quyết định
+   ================================================================ */
+
+/* --- Cân xu: bộ giải VÉT CẠN, nên mọi con số đều là đáp số đúng, không
+   phải xấp xỉ. Đối chiếu với công thức đã biết: w lần cân giải được
+   (3^w−3)/2 xu khi không có xu thật, và (3^w−1)/2 khi có. --- */
+H.moLab("can-xu");
+
+function canXu(soXu, xuThat) {
+  dat("Số đồng xu", soXu);
+  dat("Số đồng đã biết chắc là thật", xuThat);
+  return soLieu();
+}
+
+S = canXu(12, 0);
+mong("Cân xu · 12 xu — bài kinh điển cần 3 lần",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 3);
+mongChuoi("Cân xu · 12 xu thì cận dưới đạt được",
+  oSo(S, "Cận có đạt được không"), "\u2714");
+
+/* ĐÂY LÀ PHÉP QUAN TRỌNG NHẤT: cận nói 3, vét cạn nói 4. */
+S = canXu(13, 0);
+mong("Cân xu · 13 xu — cận dưới vẫn là 3",
+  soDemDau(oSo(S, "Cận dưới lý thuyết")), 3);
+mong("Cân xu · 13 xu — nhưng vét cạn ra 4: cận KHÔNG đạt tới được",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 4);
+
+/* Thêm một đồng xu KHÔNG CHỨA THÔNG TIN NÀO mà đáp số tụt từ 4 xuống 3. */
+S = canXu(13, 1);
+mong("Cân xu · 13 xu + 1 xu thật — tụt về 3 lần",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 3);
+
+/* Bản nhỏ nhất của cùng hiện tượng — 4 xu, soí được bằng tay. */
+S = canXu(4, 0);
+mong("Cân xu · 4 xu — cận nói 2", soDemDau(oSo(S, "Cận dưới lý thuyết")), 2);
+mong("Cân xu · 4 xu — thực tế 3", soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 3);
+
+/* 2 xu không có xu thật: không phải “nhiều lần cân” mà là VÔ NGHIỆM. */
+S = canXu(2, 0);
+mongChuoi("Cân xu · 2 xu không có xu thật thì vô nghiệm",
+  oSo(S, "Tối ưu THỰC TẾ"), "V\u00d4 NGHI\u1ec6M");
+S = canXu(2, 1);
+mong("Cân xu · 2 xu + 1 xu thật thì lại giải được trong 2 lần",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 2);
+
+/* Công thức (3^w−3)/2: w = 3 → 12 giải được, 13 thì không.
+   w = 4 → 39 giải được trong 4, 40 thì phải 5. */
+dat("Tìm tới tối đa mấy lần cân", 5);
+S = canXu(39, 0);
+mong("Cân xu · 39 = (3⁴−3)/2 xu vừa đủ 4 lần",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 4);
+S = canXu(40, 0);
+mong("Cân xu · 40 xu thì phải 5 lần — đúng chỗ công thức gãy",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 5);
+
+/* --- Thả trứng: quy hoạch động, đối chiếu với số tam giác --- */
+H.moLab("tha-trung");
+
+function thaTrung(tang, trung) {
+  dat("Số tầng", tang);
+  dat("Số quả trứng", trung);
+  return soLieu();
+}
+
+S = thaTrung(100, 2);
+mong("Thả trứng · 100 tầng 2 trứng = 14, không phải √100 = 10",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 14);
+mongChuoi("Thả trứng · số tam giác 14·15/2 = 105 ≥ 100 khớp",
+  oSo(S, "Kiểm bằng công thức"), "d(d+1)/2 = 105");
+mong("Thả trứng · cận nhị phân chỉ là 7 — cận lỏng gấp đôi",
+  soDemDau(oSo(S, "Cận dưới nhị phân")), 7);
+
+S = thaTrung(100, 1);
+mong("Thả trứng · 1 trứng thì không còn cách nào ngoài dò từng tầng",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 100);
+
+S = thaTrung(100, 5);
+mong("Thả trứng · 5 trứng đã chạm cận nhị phân",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 7);
+S = thaTrung(100, 10);
+mong("Thả trứng · 10 trứng cũng vẫn 7 — thêm trứng vô ích",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 7);
+mong("Thả trứng · điểm bão hoà đúng ở 5 trứng",
+  soDemDau(oSo(S, "Từ bao nhiêu trứng thì bão hoà")), 5);
+
+S = thaTrung(200, 2);
+mong("Thả trứng · 200 tầng 2 trứng = 20  (20·21/2 = 210 ≥ 200)",
+  soDemDau(oSo(S, "Tối ưu THỰC TẾ")), 20);
+
+/* --- Dồn hạt: công thức O(H+W) phải khớp vét cạn N² TUYỆT ĐỐI --- */
+H.moLab("don-hat");
+dat("Cạnh lưới", 40);
+dat("Cách gieo hạt ban đầu", "deu");
+dat("Ngân sách = mấy lần số ô", 40);
+chayToi(260);
+S = soLieu();
+mongChuoi("Dồn hạt · entropy O(H+W) khớp vét cạn N² tuyệt đối",
+  oSo(S, "Kiểm công thức"), "\u2714");
+
+/* BẤT BIẾN THEN CHỐT: tổng khoảng cách mọi cặp BẤT BIẾN THEO TỊNH TIẾN.
+   Hai tâm khác nhau phải cho entropy gần như y hệt. */
+mong("Dồn hạt · hai tâm khác nhau cho entropy như nhau (bất biến tịnh tiến)",
+  String(oSo(S, "Entropy hai bên")).indexOf("lệch hẳn") < 0, true);
+
+/* Một khối luôn thắng ba cụm — kể cả khi dữ liệu VỐN DĨ là hai cụm. */
+function conLaiCua(bang, manh) {
+  for (const k of Object.keys(bang)) {
+    if (k.includes(manh)) {
+      const m = String(bang[k]).match(/c\u00f2n ([\d.,]+)%/);
+      if (m) return parseFloat(m[1].replace(",", "."));
+    }
+  }
+  throw new Error("khong thay '" + manh + "'");
+}
+dat("Cách gieo hạt ban đầu", "hai-cum");
+chayToi(260);
+S = soLieu();
+mong("Dồn hạt · dữ liệu vốn là hai cụm, gộp một khối vẫn thắng đậm ba cụm",
+  conLaiCua(S, "Về trung vị") < conLaiCua(S, "Ba cụm") - 20, true);
+
+/* --- Đoán chuỗi: đấu vài trăm ván rồi đọc thống kê --- */
+H.moLab("doan-chuoi");
+dat("Độ dài chuỗi (n)", 4);
+dat("Số ký tự khác nhau", 6);
+S = soLieu();
+mong("Đoán chuỗi · 4×6 có 1 296 chuỗi",
+  soDemDau(oSo(S, "Không gian chuỗi")), 1296);
+mong("Đoán chuỗi · n = 4 có 14 phản hồi khác nhau",
+  soDemDau(oSo(S, "Số phản hồi khác nhau")), 14);
+mong("Đoán chuỗi · cận dưới chỉ là 3 lần đoán",
+  soDemDau(oSo(S, "Cận dưới lý thuyết")), 3);
+
+dat("Xét tối đa bao nhiêu nước mỗi lượt", 600);
+chayMotIt(400);
+S = soLieu();
+const vanDaDau = soDem(oSo(S, "Số ván đã đấu"));
+mong("Đoán chuỗi · giải đấu chạy thật — ít nhất 100 ván",
+  vanDaDau >= 100, true);
+
+function xauNhat(bang, manh) {
+  for (const k of Object.keys(bang)) {
+    if (k.includes(manh)) {
+      const m = String(bang[k]).match(/x\u1ea5u nh\u1ea5t (\d+)/);
+      if (m) return parseInt(m[1], 10);
+    }
+  }
+  throw new Error("khong thay '" + manh + "'");
+}
+mong("Đoán chuỗi · thực tế vượt xa cận dưới 3",
+  xauNhat(S, "Entropy — lấy nhiều thông tin") >= 5, true);
+/* Đuôi của “đoán đại” dài hơn HẴN — đo được 8 so với 5–6. */
+mong("Đoán chuỗi · “đoán đại” có đuôi dài hơn entropy",
+  xauNhat(S, "Đoán đại") > xauNhat(S, "Entropy — lấy nhiều thông tin"), true);
+/* LUẬN ĐIỂM CHÍNH: được đoán cả chuỗi đã biết là sai thì xấu-nhất
+   TỐT HƠN. Chỉ hiện ra khi trần tìm kiếm ≥ 600 — xem ghi chú trong lab. */
+mong("Đoán chuỗi · được đoán cả chuỗi sai thì xấu-nhất không tệ hơn",
+  xauNhat(S, "được đoán cả chuỗi sai") <=
+  xauNhat(S, "Entropy — lấy nhiều thông tin"), true);
+
 /* ---------------------------------------------------------------- kết */
 console.log("");
 if (H.loiConsole.length) {

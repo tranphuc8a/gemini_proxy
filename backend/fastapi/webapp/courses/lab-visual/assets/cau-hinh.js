@@ -26,7 +26,8 @@ window.CAU_HINH_VIS = {
               "Toán & số học", "Xác suất & ngẫu nhiên",
               "Mạng lưới & phân tán",
               "Xã hội & trò chơi", "Tối ưu hoá & heuristic",
-              "Học máy & dữ liệu"],
+              "Học máy & dữ liệu",
+              "Câu đố quyết định"],
 
   chanTrang: 'Web Lab trực quan · <a href="../../index.html">về trang chủ</a> · ' +
              'không dùng thư viện ngoài · chạy được offline',

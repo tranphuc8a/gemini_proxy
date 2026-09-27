@@ -7,6 +7,16 @@ Moi trang co mot check.py mong manh goi vao day:
     import kiem_demo
     kiem_demo.chay(HERE, 8791)
 
+# Console Windows mac dinh la cp1252 va KHONG in duoc tieng Viet: khi
+# chuyen huong ra tep, mot dong bao loi co dau se lam ca script chet
+# bang UnicodeEncodeError — va ta mat luon noi dung loi that.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+
 Hai tang kiem tra:
 
   TANG 1 — tinh, khong can gi ngoai Python (luon chay)
@@ -21,11 +31,11 @@ Hai tang kiem tra:
      - kiem tra lab co ve ra gi khong (khung .d-body khong rong)
 
      pip install playwright && python -m playwright install chromium
-     python -m http.server 8791 --bind 127.0.0.1    # o mot cua so khac
-     python check.py
+     python check.py        # tu dung may chu tinh, khong phai mo cua so khac
 
 Tra ve exit code khac 0 khi co loi — dung duoc trong CI.
 """
+import http.server
 import io
 import json
 import os
@@ -340,6 +350,47 @@ def kiem_cau_hinh(thu_muc, B):
 # Tang 2 — mo that bang trinh duyet (tuy chon)
 # ----------------------------------------------------------------------
 
+class _ImLang(http.server.SimpleHTTPRequestHandler):
+    """Khong in tung yeu cau ra man hinh — 32 lab la hang tram dong rac."""
+
+    def log_message(self, *a):
+        pass
+
+
+def _dung_may_chu(thu_muc, cong):
+    """Dung may chu tinh trong mot luong nen.
+
+    Truoc day tep nay KHONG dung may chu: tai lieu bao nguoi dung tu chay
+    `python -m http.server` o cua so khac. Quen mot cai la ca tang bao
+    ERR_CONNECTION_REFUSED cho moi lab, va thong bao do khong he cho thay
+    nguyen nhan that. Tu dung lay thi khong quen duoc.
+
+    Tra ve (server, cong_that) hoac (None, 0) neu khong mo noi cong nao.
+    """
+    import socketserver
+    import threading
+
+    for thu in range(cong, cong + 12):
+        try:
+            hd = lambda *a, **k: _ImLang(*a, directory=thu_muc, **k)
+
+            # PHAI la ThreadingTCPServer: mot trang lab nap ~36 tep va
+            # Chromium mo 6 ket noi song song. May chu tran (mot yeu cau
+            # mot luc) se tu choi bot, va lab bi bao hong oan bang
+            # ERR_CONNECTION_REFUSED.
+            class _MayChu(socketserver.ThreadingTCPServer):
+                daemon_threads = True
+                allow_reuse_address = True
+                request_queue_size = 128
+
+            sv = _MayChu(("127.0.0.1", thu), hd)
+        except OSError:
+            continue        # cong dang ban, thu cong ke tiep
+        threading.Thread(target=sv.serve_forever, daemon=True).start()
+        return sv, thu
+    return None, 0
+
+
 def kiem_trinh_duyet(thu_muc, cong, ds, B, loc_nhom=None):
     try:
         from playwright.sync_api import sync_playwright
@@ -348,11 +399,24 @@ def kiem_trinh_duyet(thu_muc, cong, ds, B, loc_nhom=None):
                "pip install playwright && python -m playwright install chromium")
         return
 
-    goc = "http://127.0.0.1:%d/index.html" % cong
+    sv, cong_that = _dung_may_chu(thu_muc, cong)
+    if sv is None:
+        B.sai("khong mo duoc cong nao tu %d den %d" % (cong, cong + 11))
+        return
+
+    goc = "http://127.0.0.1:%d/index.html" % cong_that
     can = [d for d in ds if not loc_nhom or d["nhom"] == loc_nhom]
     print("")
     print("  %sMo %d lab bang Chromium tai %s%s" % (MO, len(can), goc, HET))
 
+    try:
+        _kiem_qua_trinh_duyet(sync_playwright, goc, can, B)
+    finally:
+        sv.shutdown()
+        sv.server_close()
+
+
+def _kiem_qua_trinh_duyet(sync_playwright, goc, can, B):
     with sync_playwright() as pw:
         tb = pw.chromium.launch()
         trang = tb.new_page(viewport={"width": 1440, "height": 900})

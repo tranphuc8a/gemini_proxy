@@ -213,6 +213,45 @@ var B = V.bieuDo(cv, { le: K[0].le, x: {...}, y: {...} });
 if (K[0].chua(chuột.x, chuột.y)) { ... }
 ```
 
+**Cây quyết định** — `V.cayQuyetDinh(cv, {le, leTren, leDuoi})` cho nhóm lab câu
+đố: dựng cây, bố cục theo tầng, vẽ, đo chiều sâu, tô đường từ gốc tới một nút.
+Bố cục: lá trải đều ngang, nút cha lấy trung bình các con — ổn định và không cần
+thư viện.
+
+```js
+var C = V.cayQuyetDinh(cv, { le: 12, leTren: 26, leDuoi: 30 });
+var goc = C.goc({ nhan: "12 xu" });
+var con = C.them(goc, { nhan: "3 xu", canh: "trái nặng" });
+C.boCuc().ve({ banKinh: 12 });
+C.chieuSau();  C.soLa();  C.toDuong(n);  C.nutTai(x, y);
+```
+
+**Cận dưới lý thuyết thông tin** — `V.canThongTin(soTruongHop, soKetCuc)`: một lần
+hỏi cho `b` kết cục thì k lần hỏi phân biệt được nhiều nhất `b^k` trường hợp.
+
+> **Cẩn thận với `Math.ceil(Math.log(n)/Math.log(b))`.** `Math.log(27)/Math.log(3)`
+> ra `3.0000000000000004`, nên `ceil` cho **4** thay vì 3. Sai đúng một đơn vị, đúng
+> ở luỹ thừa chẵn — chỗ người ta tin nhất. `V.canThongTin` chuẩn hoá lại bằng
+> phép nhân nguyên, và `thu-engine.js` có phép thử riêng cho bẫy này.
+
+**Người dùng tự chơi** — `V.choiThu({batDau, nuocDi, xong, diem, toiUu})`. Không vẽ
+gì cả: chỉ giữ luật chơi, lịch sử, hoàn tác, và chấm điểm so với chính sách tối ưu.
+
+```js
+var CT = V.choiThu({
+  batDau: function () { return {...}; },
+  nuocDi: function (tt, nuoc) { return ttMoi; },   // null = nước sai luật
+  xong:   function (tt) { return ...; },
+  toiUu:  function (tt0) { return soNuocToiUu; }
+});
+CT.di(nuoc);  CT.hoanTac();  CT.tt();  CT.soNuoc();
+S.dat(CT.bang());          // bảng so sánh với tối ưu, dọc thẳng vào V.soLieu()
+```
+
+`nuocDi` cũng là chỗ đặt **đối thủ ác ý**: các lab câu đố cho máy chọn kết cục
+tệ nhất, nên số nước người chơi dùng đúng là số nước chiến lược của họ *bảo đảm*
+được — chứ không phải số nước họ gặp may.
+
 **Số** — `V.soGon(v)` nhãn gọn cho trục: `12,3k` · `4,5 triệu` · `1,2×10¹²`
 
 **Bộ phát** — `V.phat({datLai, buoc, ve, toiDa, tocDo, nhan, lap, bang, tua, hanTua, anh, phucHoi, chuKy})`.
