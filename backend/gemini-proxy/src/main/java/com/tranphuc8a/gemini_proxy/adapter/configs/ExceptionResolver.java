@@ -5,7 +5,7 @@ import com.tranphuc8a.gemini_proxy.domain.exceptions.user.BadRequestException;
 import com.tranphuc8a.gemini_proxy.domain.exceptions.system.InternalServerErrorException;
 import com.tranphuc8a.gemini_proxy.domain.vo.response.ResponseError;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
