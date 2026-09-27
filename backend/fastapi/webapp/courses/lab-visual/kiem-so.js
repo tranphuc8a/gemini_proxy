@@ -1221,6 +1221,119 @@ S = soLieu();
 mong("Hà Nội · cấu hình ngẫu nhiên thường ngắn hơn 2⁶−1 (không chạy dọc cạnh)",
   soDemDau(oSo(S, "Từ cấu hình đầu cần")) < 63, true);
 
+/* ================================================================ đợt 9 */
+
+/* --- Chuỗi Markov ---
+
+   Ba điều, mỗi điều kiểm được bằng một nguồn khác với chính lab:
+     1. xích tuần hoàn thì khe phổ ĐÚNG BẰNG 0 (không xấp xỉ);
+     2. thêm ε tự lập thì khe = 2ε — công thức đóng, tính ngay tại đây;
+     3. t_trộn × khe gần như hằng số qua bốn bậc độ lớn của khe.       */
+
+H.moLab("markov");
+dat("Xích", "vong");
+dat("Xác suất tự lập (ở lại chỗ cũ)", 0);
+dat("Số đỉnh", 6);
+S = soLieu();
+mong("Markov · vòng tuần hoàn: |λ₂| đúng bằng 1", soThuc(oSo(S, "|λ₂|")), 1, 1e-6);
+mongChuoi("Markov · vòng tuần hoàn thì không trộn nổi",
+  oSo(S, "Thời gian trộn"), "không trộn nổi");
+
+/* Thêm tự lập ε: khe phổ phải bằng ĐÚNG 2ε. Công thức đóng, nên đây là
+   phép đối chiếu thật chứ không phải so lab với chính nó. */
+for (const e of [0.01, 0.05, 0.2, 0.5]) {
+  dat("Xác suất tự lập (ở lại chỗ cũ)", e);
+  S = soLieu();
+  mong("Markov · tự lập " + e + " → khe phổ = 2ε = " + (2 * e).toFixed(3),
+    soThuc(oSo(S, "Khe phổ")), 2 * e, 3e-3);
+}
+
+/* Nút cổ chai: khe co bốn bậc độ lớn, t_trộn phình 500 lần, TÍCH đứng yên. */
+H.moLab("markov");
+dat("Xích", "hai-cum");
+dat("Xác suất tự lập (ở lại chỗ cũ)", 0);
+dat("Số đỉnh", 6);
+const TICH = [];
+for (const [mu, kheMong, tMong] of [[0, 0.666667, 4], [-1, 0.181818, 20],
+                                    [-1.7, 0.039216, 98], [-2.3, 0.009950, 392],
+                                    [-3, 0.001998, 1957]]) {
+  dat("Cầu nối", mu);
+  S = soLieu();
+  const khe = soThuc(oSo(S, "Khe phổ"));
+  const t = soThuc(oSo(S, "Thời gian trộn"));
+  mong("Markov · cầu 10^" + mu + ": khe phổ khớp giá trị đã đo",
+    khe, kheMong, Math.max(1e-5, kheMong * 0.02));
+  mong("Markov · cầu 10^" + mu + ": thời gian trộn khớp giá trị đã đo",
+    t, tMong, Math.max(1, tMong * 0.03));
+  TICH.push(t * khe);
+}
+/* LUẬN ĐIỂM CHÍNH: khe chạy qua bốn bậc độ lớn mà tích vẫn bị kẹp. */
+mong("Markov · khe phổ thật sự chạy qua bốn bậc độ lớn",
+  0.666667 / 0.001998 > 300, true);
+mong("Markov · t_trộn × khe bị kẹp trong [2,5 ; 4,2] ở CẢ NĂM giá trị cầu",
+  TICH.every((x) => x >= 2.5 && x <= 4.2), true);
+mong("Markov · và tích ấy dao động chưa tới 1,6 lần dù t_trộn phình 489 lần",
+  Math.max(...TICH) / Math.min(...TICH) < 1.6, true);
+
+/* Mọi khởi đầu về cùng một chỗ — trừ khi tuần hoàn. */
+dat("Cầu nối", -1);
+chayToi(60);
+S = soLieu();
+mong("Markov · ba khởi đầu khác hẳn nhau đã chập vào nhau",
+  String(oSo(S, "Ba khởi đầu còn lệch nhau")).includes("\u2248 0") ||
+  soKhoaHoc(oSo(S, "Ba khởi đầu còn lệch nhau")) < 1e-6, true);
+mong("Markov · và đã tới sát phân phối dừng",
+  soKhoaHoc(oSo(S, "Xa phân phối dừng nhất")) < 1e-3, true);
+
+/* --- Bloom filter --- */
+
+H.moLab("bloom");
+dat("Số bit (m)", 1024);
+dat("Số hàm băm (k)", 5);
+dat("Số khoá sẽ thêm (n)", 200);
+dat("Hạt giống", 3);
+
+/* Tính công thức ĐỘC LẬP ngay tại đây, không đọc của lab. */
+const ctBloom = (m, k, n) => Math.pow(1 - Math.exp(-k * n / m), k);
+chayHet();
+S = soLieu();
+mong("Bloom · công thức (1−e^(−kn/m))^k khớp giá trị tính độc lập",
+  soThuc(oSo(S, "Công thức")) / 100, ctBloom(1024, 5, 200), 1e-4);
+mongChuoi("Bloom · KHÔNG BAO GIỜ bỏ sót — tra lại khoá đã thêm",
+  oSo(S, "Không bao giờ bỏ sót"), "\u2714");
+
+/* Băm tốt phải bám công thức; băm xấu thì không hứa gì cả. */
+const pTot = soThuc(oSo(S, "Dương tính giả · băm TỐT")) / 100;
+mong("Bloom · băm tốt bám công thức trong 25%",
+  Math.abs(pTot / ctBloom(1024, 5, 200) - 1) < 0.25, true);
+
+/* LUẬN ĐIỂM CHÍNH: băm xấu dao động rộng hơn HẲN. Đọc hệ số biến thiên,
+   KHÔNG đọc bề rộng min–max — min–max là thống kê cực trị, nó phình ra
+   theo số hạt giống nên một ngưỡng cố định đặt lên nó là vô nghĩa. */
+function haiSo(chuoi) {
+  const m = String(chuoi).match(/(-?[\d.]+)%[^\d-]*(-?[\d.]+)%/);
+  if (!m) throw new Error("khong doc duoc hai so tu '" + chuoi + "'");
+  return [parseFloat(m[1]), parseFloat(m[2])];
+}
+const [btTot, btXau] = haiSo(oSo(S, "Hệ số biến thiên"));
+mong("Bloom · băm tốt dao động ít (hệ số biến thiên dưới 25%)", btTot < 25, true);
+mong("Bloom · băm XẤU dao động rộng gấp ít nhất 2 lần băm tốt",
+  btXau > btTot * 2, true);
+
+/* Và “xấu” KHÔNG có nghĩa là luôn tệ: ở hạt 3 nó lại rẻ hơn. Nếu ai đó
+   sửa lab thành “xấu luôn đắt hơn” thì phép thử này đổ — đúng như ý. */
+const pXau3 = soThuc(oSo(S, "Dương tính giả · băm XẤU")) / 100;
+mong("Bloom · ở hạt 3, băm xấu lại RẺ hơn băm tốt (nên “xấu” ≠ “luôn tệ”)",
+  pXau3 < pTot, true);
+
+dat("Hạt giống", 7);
+chayHet();
+S = soLieu();
+const pTot7 = soThuc(oSo(S, "Dương tính giả · băm TỐT")) / 100;
+const pXau7 = soThuc(oSo(S, "Dương tính giả · băm XẤU")) / 100;
+mong("Bloom · nhưng ở hạt 7 thì ngược lại — người thắng đổi chỗ",
+  pXau7 > pTot7, true);
+
 /* ---------------------------------------------------------------- kết */
 console.log("");
 if (H.loiConsole.length) {

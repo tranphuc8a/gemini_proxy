@@ -19,10 +19,11 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        init_db()
-    except Exception:
-        logger.exception("Database initialisation failed; continuing without it")
+    if not settings.TESTING:
+        try:
+            init_db()
+        except Exception:
+            logger.exception("Database initialisation failed; continuing without it")
     yield
     # Close the connection pools the SQL administrator opened against user servers.
     await shutdown_sql_admin()

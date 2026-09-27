@@ -206,7 +206,7 @@
       thu = JSON.parse(s);
     } catch (e) {
       /* Chua phai JSON hop le — co the la chuoi thieu ngoac ngoai. */
-      try { thu = JSON.parse('"' + s.replace(/"/g, '\\"') + '"'); }
+      try { thu = JSON.parse('"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'); }
       catch (e2) { bao("Không gỡ được — nội dung không phải chuỗi JSON hợp lệ"); return; }
     }
     if (typeof thu !== "string") {

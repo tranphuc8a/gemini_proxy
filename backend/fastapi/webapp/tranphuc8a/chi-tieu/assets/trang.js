@@ -49,7 +49,11 @@
     CT.NHOM.forEach(function (n) {
       var b = document.createElement("div");
       b.className = "o-nhom" + (n.ma === nhomDang ? " dang" : "");
-      b.innerHTML = '<span class="b">' + n.bieu + "</span>" + n.ten;
+      var bieu = document.createElement("span");
+      bieu.className = "b";
+      bieu.textContent = n.bieu;
+      b.appendChild(bieu);
+      b.appendChild(document.createTextNode(n.ten));
       b.onclick = function () {
         nhomDang = n.ma;
         veLuoiNhom();
@@ -188,13 +192,31 @@
       var thu = CT.laThu(g);
       var d = document.createElement("div");
       d.className = "khoan";
-      d.innerHTML =
-        '<span class="bieu2" style="background:' + n.mau + '22;color:' + n.mau + '">' +
-          n.bieu + "</span>" +
-        '<span class="giua"><div class="ten2">' + thoat(g.ghiChu || n.ten) + "</div>" +
-        '<div class="ngay2">' + n.ten + " · " + ngayViet(g.ngay) + "</div></span>" +
-        '<span class="tien2' + (thu ? " thu" : "") + '">' +
-          (thu ? "+" : "−") + CT.dinhDangTien(g.tien) + "</span>";
+      var mau = /^#[0-9a-f]{6}$/i.test(n.mau) ? n.mau : "#888888";
+      var bieu = document.createElement("span");
+      bieu.className = "bieu2";
+      bieu.style.backgroundColor = mau + "22";
+      bieu.style.color = mau;
+      bieu.textContent = String(n.bieu || "•");
+
+      var giua = document.createElement("span");
+      giua.className = "giua";
+      var ten = document.createElement("div");
+      ten.className = "ten2";
+      ten.textContent = String(g.ghiChu || n.ten);
+      var ngay = document.createElement("div");
+      ngay.className = "ngay2";
+      ngay.textContent = String(n.ten) + " · " + ngayViet(g.ngay);
+      giua.appendChild(ten);
+      giua.appendChild(ngay);
+
+      var tien = document.createElement("span");
+      tien.className = "tien2" + (thu ? " thu" : "");
+      tien.textContent = (thu ? "+" : "−") + CT.dinhDangTien(g.tien);
+
+      d.appendChild(bieu);
+      d.appendChild(giua);
+      d.appendChild(tien);
       var x = document.createElement("button");
       x.className = "xoa"; x.textContent = "×"; x.title = "Xoá khoản này";
       x.onclick = function () {
