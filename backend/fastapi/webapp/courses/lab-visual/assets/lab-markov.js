@@ -429,8 +429,20 @@
             "không có phân phối giới hạn";
         }
         if (G.kieu === "vong" && G.tuLap > 0) {
-          bang["Kiểm: khe = 2 × tự lập"] = (2 * G.tuLap).toFixed(4) +
-            (Math.abs(khe - 2 * G.tuLap) < 2e-3 ? "   ✔ khớp" : "   thực tế " + khe.toFixed(4));
+          /* Cong thuc dong cho vong n dinh: tri rieng la e + (1-e)*w^j voi
+             w = e^(2*pi*i/n), nen khe = 1 - |e + (1-e)*w|.
+
+             KHONG phai 2e — do la truong hop rieng n = 2 (luc do w = -1).
+             Lab tung viet 2e, va vi o kiem chi in "thuc te ..." chu khong
+             bao SAI nen no lech o moi gia tri ma khong ai de y. */
+          var goc = 2 * Math.PI / n;
+          var re = G.tuLap + (1 - G.tuLap) * Math.cos(goc);
+          var im = (1 - G.tuLap) * Math.sin(goc);
+          var kheLT = 1 - Math.sqrt(re * re + im * im);
+          bang["Kiểm: công thức đóng 1−|ε+(1−ε)ω|"] = kheLT.toFixed(6) +
+            (Math.abs(khe - kheLT) < Math.max(2e-4, kheLT * 0.05)
+              ? "   ✔ khớp giá trị đo được"
+              : "   ✘ LỆCH — đo được " + khe.toFixed(6));
         }
         S.dat(bang);
       }
@@ -502,9 +514,18 @@
           "tụ</b> về nó. “Có phân phối dừng” và “hội tụ về phân phối " +
           "dừng” là hai chuyện khác nhau — và chỗ này là phản ví dụ.</li>" +
           "<li>Bấm preset kế tiếp: <b>thêm 1% tự lập</b>, tức chỉ cần một phần trăm " +
-          "khả năng đứng yên. Tuần hoàn vỡ ngay, và khe phổ nhảy lên đúng " +
-          "<b>2 × 1%</b>. Kéo thanh <i>tự lập</i> mà xem — ô <i>Kiểm: khe = 2 × tự " +
-          "lập</i> khớp ở mọi giá trị.</li>" +
+          "khả năng đứng yên. Tuần hoàn <b>vỡ ngay</b>, khe phổ bật khỏi 0, và xích " +
+          "trộn được. Một phần trăm là đủ để đổi hẳn bản chất của quá trình.</li>" +
+          "<li>Khe phổ khi đó có <b>công thức đóng</b>: vòng n đỉnh với tự lập ε có " +
+          "trị riêng <code>ε + (1−ε)ω<sup>j</sup></code> với <code>ω = e^(2πi/n)</code>, " +
+          "nên <code>khe = 1 − |ε + (1−ε)ω|</code>. Ô <i>Kiểm</i> đối chiếu công thức " +
+          "ấy với giá trị <b>đo được bằng lặp luỹ thừa</b> — hai đường tính hoàn toàn " +
+          "khác nhau, phải gặp nhau.</li>" +
+          "<li><b>Cẩn thận với “khe = 2ε”.</b> Đó là công thức người ta hay nhớ, nhưng " +
+          "nó chỉ đúng cho vòng <b>2 đỉnh</b> (khi ấy ω = −1). Lab này từng viết 2ε rồi " +
+          "để mặc định n = 6 — lệch gấp bốn lần, và ô <i>Kiểm</i> lúc đó chỉ in “thực " +
+          "tế …” chứ không báo SAI, nên nó lệch ở mọi giá trị mà không ai để ý. Đo được: " +
+          "ở ε = 0,01 thì n = 2 cho <b>0,0200</b> còn n = 6 chỉ cho <b>0,0050</b>.</li>" +
           "</ul>" +
           "<b>Hai bẫy khi tự cài lại phép đo này</b> (đã mắc đủ cả hai): tính |λ₂| " +
           "bằng lặp luỹ thừa thì phải <b>trừ trung bình mỗi vòng</b>, không thì thành " +
