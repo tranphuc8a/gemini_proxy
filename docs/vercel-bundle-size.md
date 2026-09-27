@@ -149,11 +149,15 @@ Large Functions là **beta**. Deploy hiện phụ thuộc vào nó: tắt biến
 đó, hoặc beta kết thúc, là vỡ lại. `check-vercel-bundle.mjs` nhắc điều này mỗi
 lần chạy, kèm số MB cần cắt để không còn phụ thuộc (hiện ~9 MB).
 
-Muốn độc lập hoàn toàn với beta: chuyển
-`webapp/wukong-xiangqi-main/{xqdb,res,pgn,docs,integration,puzzle_generator,
-opening_book_generator,xiangqi_pgn_parser}` (73 MB dữ liệu nguồn, không phục vụ
-web) ra ngoài `backend/fastapi/`. File vẫn trong repo, vẫn xem được trên GitHub,
-nhưng ngoài Root Directory thì không vào bundle: 234 → 161 MB.
+Để không phụ thuộc vào beta, database cờ `xqdb` và tài liệu tham khảo `res` (PDF,
+text) đã được chuyển ra `backend/wukong-xiangqi-source/`. Chúng vẫn ở trong repo
+nhưng ngoài Root Directory nên không vào bundle. Giữ `src/`, `apps/`, cùng các
+generator/parser và input data của chúng trong webapp; đây là các file nhỏ và
+giữ nguyên các đường dẫn tương đối của công cụ.
+
+Sau khi chuyển, chạy `node scripts/check-vercel-bundle.mjs --limit 225` để xác
+nhận bundle dưới ngưỡng chuẩn. Large Functions vẫn là phương án dự phòng nếu
+bundle vượt ngưỡng sau này, nhưng deploy hiện tại không cần dựa vào beta đó.
 
 Large Functions cũng không dùng được nếu project bật Secure Compute hoặc
 Static IPs.
