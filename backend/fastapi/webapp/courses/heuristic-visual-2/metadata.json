@@ -1,0 +1,16 @@
+{
+  "title": "Phụ lục trực quan — Học Heuristic",
+  "description": "21 mô phỏng cho tối ưu hoá tổ hợp: leo đồi, tôi luyện mô phỏng, tabu, beam search, LNS/ALNS, đàn kiến, di truyền, tiến hoá vi phân, bầy hạt — và một đấu trường cho bốn thuật toán chạy cùng hàm, cùng ngân sách đánh giá. Thấy được vì sao leo đồi kẹt và nhiệt độ làm gì trong SA.",
+  "category": "Lab trực quan",
+  "tags": [
+    "truc-quan-hoa",
+    "mo-phong",
+    "heuristic",
+    "toi-uu-hoa",
+    "dan-kien",
+    "di-truyen",
+    "tabu",
+    "tuong-tac"
+  ],
+  "icon": "🐜"
+}

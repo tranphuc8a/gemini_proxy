@@ -297,7 +297,13 @@
         con.push(el("div", { class: "chip-hang" }, o.preset.map(function (p) {
           return el("button", {
             class: "chip", text: p.ten, title: p.moTa || "",
-            onclick: function () { apDung(p.gt); }
+            /* `sau` cho lab dat lai nhung trang thai KHONG nam trong tham
+               so (vi tri quan co, cau hinh dia...). Thieu no thi preset
+               chi doi duoc tham so, va lab im lang bo qua phan con lai. */
+            onclick: function () {
+              apDung(p.gt);
+              if (p.sau) { try { p.sau(); } catch (e) {} }
+            }
           });
         })));
       }

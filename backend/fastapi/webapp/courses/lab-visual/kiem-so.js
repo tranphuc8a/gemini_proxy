@@ -1007,6 +1007,220 @@ mong("Đoán chuỗi · được đoán cả chuỗi sai thì xấu-nhất khôn
   xauNhat(S, "được đoán cả chuỗi sai") <=
   xauNhat(S, "Entropy — lấy nhiều thông tin"), true);
 
+/* ================================================================ đợt 8 */
+
+/* --- Quân mã: BFS độc lập ngay tại đây, rồi so với màn hình --- */
+function maBFS(N, x0, y0) {
+  const d = new Int32Array(N * N).fill(-1);
+  const B = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
+  d[y0 * N + x0] = 0;
+  const q = [[x0, y0]];
+  for (let h = 0; h < q.length; h++) {
+    const [x, y] = q[h];
+    for (const [dx, dy] of B) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+      if (d[ny * N + nx] >= 0) continue;
+      d[ny * N + nx] = d[y * N + x] + 1;
+      q.push([nx, ny]);
+    }
+  }
+  return d;
+}
+/* Toạ độ màn hình: y = 0 là hàng TRÊN, nên a1 = (0, N-1), b2 = (1, N-2). */
+const d8 = maBFS(8, 0, 7);
+const KC_B2 = d8[6 * 8 + 1];      // b2
+const KC_E3 = d8[5 * 8 + 4];      // e3
+const KC_H8 = d8[0 * 8 + 7];      // h8
+const KC_XA = Math.max(...d8);
+
+H.moLab("quan-ma");
+S = soLieu();
+/* “a1 → b2   4 nước” — lấy số đứng ngay trước chữ “nước”. */
+function soNuoc(o) {
+  const m = String(o).match(/(\d+)\s+n\u01b0\u1edbc/);
+  return m ? parseInt(m[1], 10) : NaN;
+}
+mong("Quân mã · a1 → b2 (kề chéo) mất đúng số nước BFS tính được",
+  soNuoc(oSo(S, "Mã trắng")), KC_B2);
+mong("Quân mã · a1 → e3 (xa gấp bốn) mất đúng số nước BFS tính được",
+  soNuoc(oSo(S, "Mã đen")), KC_E3);
+/* LUẬN ĐIỂM CHÍNH của lab: gần hơn về hình học mà TỐN HƠN về nước đi. */
+mong("Quân mã · nghịch lý có thật — ô kề chéo tốn nhiều nước hơn ô xa gấp bốn",
+  KC_B2 > KC_E3, true);
+mong("Quân mã · ô xa nhất trên bàn 8×8 khớp BFS",
+  soDemDau(oSo(S, "Ô xa nhất trên bàn")), KC_XA);
+
+/* Ô chết: ĐO chứ không đoán. Bàn 4×4 LIÊN THÔNG (0 ô chết) — lab từng
+   viết ngược lại, và phép thử này là cái bắt được. Chỉ 3×3 mới có ô cô
+   lập: ô giữa, vì cả tám nước mã từ đó đều rơi ra ngoài bàn. */
+function demOChet(N) {
+  const d = maBFS(N, 0, N - 1);
+  let c = 0;
+  for (let i = 0; i < N * N; i++) if (d[i] < 0) c++;
+  return c;
+}
+mong("Quân mã · bàn 4×4 KHÔNG có ô chết (đồ thị nước đi vẫn liền)",
+  demOChet(4), 0);
+mong("Quân mã · bàn 3×3 có đúng một ô chết — ô giữa", demOChet(3), 1);
+
+/* Ô xa nhất theo cỡ bàn — KHÔNG đơn điệu theo diện tích.
+   4×4 (16 ô) → 5 nước, 5×5 (25 ô) → 4 nước, 8×8 (64 ô) → 6 nước.
+
+   PHẢI đi từ bàn LỚN xuống bàn NHỎ. Lab kẹp quân mã vào trong bàn khi ta
+   thu nhỏ, và không trả nó về chỗ cũ khi phóng to lại — nên nếu xuống 3×3
+   trước rồi lên 8×8, quân mã còn nằm ở (0,2) chứ không ở góc, và mọi số
+   đo sau đó là của một thế cờ khác. (Đã mắc đúng lỗi này một lần: ba ô
+   lệch 1 nước, và suýt nữa thì đổ tội cho lab.) */
+const XA = {};
+for (const N of [8, 5, 4]) {
+  dat("Cạnh bàn cờ", N);
+  XA[N] = soDemDau(oSo(soLieu(), "Ô xa nhất trên bàn"));
+  mong("Quân mã · bàn " + N + "×" + N + ": ô xa nhất khớp BFS độc lập",
+    XA[N], Math.max(...maBFS(N, 0, N - 1)));
+}
+mong("Quân mã · bàn 5×5 TO HƠN 4×4 mà lại DỄ ĐI HƠN", XA[5] < XA[4], true);
+mong("Quân mã · bàn 8×8 rộng gấp bốn 4×4 mà chỉ tốn thêm một nước",
+  XA[8] - XA[4], 1);
+
+dat("Cạnh bàn cờ", 3);
+S = soLieu();
+mong("Quân mã · lab cũng báo đúng một ô không tới được trên bàn 3×3",
+  soDemDau(oSo(S, "Ô không tới được")), demOChet(3));
+
+/* --- Thử chìa khoá: cận dưới ⌈log₃(n!)⌉ tính lại bằng lgamma thủ công --- */
+function logGiaiThua(n) { let s = 0; for (let i = 2; i <= n; i++) s += Math.log(i); return s; }
+const canChia = (n) => Math.ceil(logGiaiThua(n) / Math.log(3) - 1e-9);
+
+H.moLab("chia-khoa");
+dat("Số chìa khoá", 24);
+S = soLieu();
+mong("Chìa khoá · cận dưới ⌈log₃(24!)⌉ khớp tính độc lập",
+  soDemDau(oSo(S, "Cận dưới")), canChia(24));
+mongChuoi("Chìa khoá · cả hai cách đều ghép ĐÚNG toàn bộ (không chỉ ít phép)",
+  oSo(S, "Ghép đúng hết chưa"), "\u2714");
+const vc24 = soDem(String(oSo(S, "Vét cạn")).split("(")[0]);
+const nn24 = soDem(String(oSo(S, "Ngẫu nhiên")).split("(")[0]);
+mong("Chìa khoá · cả hai cách đều ≥ cận dưới (không cách nào phá được cận)",
+  Math.min(vc24, nn24) >= canChia(24), true);
+/* ĐO TRƯỚC, VIẾT SAU: ở n nhỏ vét cạn THẮNG — điểm cắt đo được quanh n ≈ 48.
+   Nếu ai đó “tối ưu” lại lab cho ngẫu nhiên thắng mọi cỡ thì phép thử này đổ. */
+mong("Chìa khoá · n = 24 còn nhỏ nên VÉT CẠN vẫn ít phép hơn", vc24 < nn24, true);
+
+/* Ở n = 120 ngẫu nhiên phải thắng ở MỌI hạt giống, không phải trung bình
+   thì thắng. Ngưỡng "nhanh hơn gấp đôi" từng được dùng ở đây, nhưng nó
+   phụ thuộc hạt giống (đo được 1,94× ở hạt mặc định, 2,20× khi lấy trung
+   bình 8 hạt) — một phép thử xanh-đỏ theo hạt giống thì không kiểm gì cả. */
+dat("Số chìa khoá", 120);
+let thang120 = 0, tiLeTong = 0;
+for (const hat of [1, 2, 3, 4, 5, 6]) {
+  dat("Hạt giống", hat);
+  S = soLieu();
+  const a = soDem(String(oSo(S, "Vét cạn")).split("(")[0]);
+  const b = soDem(String(oSo(S, "Ngẫu nhiên")).split("(")[0]);
+  if (b < a) thang120++;
+  tiLeTong += a / b;
+}
+mong("Chìa khoá · n = 120: ngẫu nhiên thắng ở CẢ SÁU hạt giống", thang120, 6);
+mong("Chìa khoá · n = 120: trung bình nhanh hơn ít nhất 1,8 lần",
+  tiLeTong / 6 >= 1.8, true);
+
+/* Và ở n = 40 thì KHÔNG — chỗ đó là dải hoà, người thắng đổi theo hạt.
+   Đây mới là điều lab dạy, nên nó phải được kiểm chứ không chỉ được kể. */
+dat("Số chìa khoá", 40);
+let thang40 = 0;
+for (const hat of [1, 2, 3, 4, 5, 6, 7, 8]) {
+  dat("Hạt giống", hat);
+  S = soLieu();
+  const a = soDem(String(oSo(S, "Vét cạn")).split("(")[0]);
+  const b = soDem(String(oSo(S, "Ngẫu nhiên")).split("(")[0]);
+  if (b < a) thang40++;
+}
+mong("Chìa khoá · n = 40 là dải hoà — cả hai bên đều thắng được vài hạt",
+  thang40 > 0 && thang40 < 8, true);
+
+/* --- Thuốc độc: k × r ≥ log₂ n, và đọc ra đúng chai --- */
+H.moLab("thuoc-doc");
+dat("Số chai", 1000);
+dat("Số người thử", 10);
+dat("Số vòng (mỗi vòng một ngày)", 1);
+dat("Số chai có độc", 1);
+S = soLieu();
+mong("Thuốc độc · 1000 chai cần ⌈log₂ 1000⌉ = 10 bit",
+  soDemDau(oSo(S, "Cần ít nhất")), Math.ceil(Math.log2(1000)));
+mongChuoi("Thuốc độc · 10 người × 1 vòng là vừa đủ", oSo(S, "Đủ chưa"), "\u2714");
+mong("Thuốc độc · đọc ra đúng chai đã bị đầu độc",
+  soDemDau(oSo(S, "Đọc ra")), soDemDau(oSo(S, "Chai độc thật")));
+
+/* Người và ngày đổi cho nhau được: 2 người × 5 vòng cũng ra 10 bit. */
+dat("Số người thử", 2);
+dat("Số vòng (mỗi vòng một ngày)", 5);
+S = soLieu();
+mongChuoi("Thuốc độc · 2 người × 5 vòng vẫn đủ — người và ngày đổi cho nhau được",
+  oSo(S, "Đủ chưa"), "\u2714");
+mong("Thuốc độc · và vẫn đọc ra đúng chai",
+  soDemDau(oSo(S, "Đọc ra")), soDemDau(oSo(S, "Chai độc thật")));
+
+/* Thiếu một bit là hỏng — cận dưới phải CẮN, không phải trang trí. */
+dat("Số người thử", 9);
+dat("Số vòng (mỗi vòng một ngày)", 1);
+S = soLieu();
+mongChuoi("Thuốc độc · 9 bit cho 1000 chai là THIẾU — cận dưới cắn thật",
+  oSo(S, "Đủ chưa"), "\u2718");
+
+/* Hai chai độc: phép OR làm mất thông tin, nên cần nhiều hơn hẳn cận dưới. */
+dat("Số người thử", 10);
+dat("Số chai", 16);
+dat("Số chai có độc", 2);
+S = soLieu();
+const canCap = Math.ceil(Math.log2(16 * 15 / 2));
+mong("Thuốc độc · cận dưới hai chai là ⌈log₂ C(16,2)⌉",
+  soDemDau(oSo(S, "Cận dưới lý thuyết")), canCap);
+mong("Thuốc độc · 10 bit chưa chạm cận 2× — mã ngẫu nhiên đo được cần 18 bit",
+  canCap < 10, true);
+
+/* --- Tháp Hà Nội: 2ⁿ−1, 3ⁿ trạng thái, và đi hết thì về đúng 0 --- */
+H.moLab("ha-noi");
+for (const nDia of [3, 5, 8, 10]) {
+  dat("Số đĩa", nDia);
+  S = soLieu();
+  mong("Hà Nội · " + nDia + " đĩa, bài cổ điển cần đúng 2ⁿ−1 nước",
+    soDemDau(oSo(S, "Từ cấu hình đầu cần")), Math.pow(2, nDia) - 1);
+  mong("Hà Nội · " + nDia + " đĩa có đúng 3ⁿ cấu hình",
+    soDemDau(oSo(S, "Số cấu hình")), Math.pow(3, nDia));
+}
+
+/* Đi hết đường máy chọn: phải về 0 nước còn lại, và KHÔNG thừa nước nào.
+   Đây là phép đối chiếu giữa HAI hàm khác nhau trong lab — nuocTiep() đi
+   từng bước, toiThieu() tính bằng công thức. Chúng phải gặp nhau ở 0. */
+dat("Số đĩa", 6);
+chayHet();
+S = soLieu();
+mong("Hà Nội · đi hết đường ngắn nhất thì còn 0 nước",
+  soDemDau(oSo(S, "Còn cần ít nhất")), 0);
+mong("Hà Nội · và đã đi đúng 2⁶−1 = 63 nước, không thừa nước nào",
+  soDemDau(oSo(S, "Bạn đã đi")), 63);
+mongChuoi("Hà Nội · vẫn nằm trên đường ngắn nhất suốt chặng",
+  String(oSo(S, "Tổng nếu đi tiếp tối ưu")).split("nước")[1].trim(), "\u2714");
+
+/* BÀI TỔNG QUÁT — cấu hình đầu lung tung, công thức vẫn phải dẫn về 0. */
+dat("Cấu hình ban đầu", "ngau-nhien");
+for (const hat of [1, 2, 3, 4, 5]) {
+  dat("Hạt giống", hat);
+  const canTruoc = soDemDau(oSo(soLieu(), "Từ cấu hình đầu cần"));
+  chayHet();
+  S = soLieu();
+  mong("Hà Nội · cấu hình ngẫu nhiên #" + hat + ": đi hết thì còn 0 nước",
+    soDemDau(oSo(S, "Còn cần ít nhất")), 0);
+  mong("Hà Nội · cấu hình ngẫu nhiên #" + hat + ": số nước đi khớp công thức",
+    soDemDau(oSo(S, "Bạn đã đi")), canTruoc);
+}
+/* Cấu hình ngẫu nhiên hầu như luôn GẦN đích hơn góc đối diện. */
+dat("Hạt giống", 3);
+S = soLieu();
+mong("Hà Nội · cấu hình ngẫu nhiên thường ngắn hơn 2⁶−1 (không chạy dọc cạnh)",
+  soDemDau(oSo(S, "Từ cấu hình đầu cần")) < 63, true);
+
 /* ---------------------------------------------------------------- kết */
 console.log("");
 if (H.loiConsole.length) {
