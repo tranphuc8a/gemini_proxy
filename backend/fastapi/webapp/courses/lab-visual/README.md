@@ -22,7 +22,7 @@ python -m http.server 8792 --bind 127.0.0.1
 
 ---
 
-## 32 lab
+## 36 lab
 
 | Nhóm | Lab | Điều nó cho thấy |
 |---|---|---|
@@ -54,6 +54,10 @@ python -m http.server 8792 --bind 127.0.0.1
 | **Câu đố quyết định** | Cân xu tìm xu giả | ★ vét cạn thật: 13 xu cần **4** lần dù cận nói 3 · ★ thêm một xu **đã biết là thật** thì tụt về 3 |
 | | Thả trứng tìm tầng cao nhất | ★ 100 tầng 2 trứng = **14**, không phải √100 = 10 · từ **5 trứng** trở đi thêm nữa vô ích |
 | | Đoán chuỗi (Mastermind) | ★ đoán một chuỗi **bạn biết chắc là sai** lại hạ được xấu-nhất từ 6 xuống 5 |
+| | Quân mã — hai ô kề nhau mà tốn 4 nước | ★ a1→b2 *kề chéo* mất **4 nước**, a1→e3 *xa gấp bốn* mất **2** · ★ bàn 3×3 có ô mã **không bao giờ tới được** |
+| | Thử chìa khoá — không so được hai chìa với nhau | Θ(n²) vs Θ(n log n) chạy thật · ★ chỗ lật **không phải một điểm mà là một dải**: n = 24 vét cạn thắng 8/8, n = 40 hoà 4/8, n = 56 trở lên thua 0/8 |
+| | Tìm chai thuốc độc — mỗi người thử là một bit | 1000 chai · 10 người · ★ **người và ngày đổi cho nhau được** · ★ đặt 2 chai độc thì phép OR làm mất thông tin, cận dưới **nói dối gấp 2,5 lần** |
+| | Tháp Hà Nội — đồ thị trạng thái là tam giác Sierpinski | cấu hình đầu tuỳ ý · ★ nối hai cấu hình cách nhau một nước đi thì hình hiện ra **đúng bằng** tam giác Sierpinski, và **2ⁿ−1 chính là độ dài một cạnh** |
 | **Tối ưu hoá & heuristic** | Dồn hạt | ★ entropy trông như tốn N² mà tính đúng bằng **O(H+W)** · ★ dồn về đâu cũng **cho cùng một đáp số** |
 | **Tối ưu hoá & heuristic** | Đua optimizer | SGD · Momentum · RMSProp · Adam trên cùng mặt lỗi · ★ bước 60 trên yên ngựa: SGD còn ở **f ≈ 1,1**, RMSProp đã **2×10⁻²⁰** |
 | | Đấu trường metaheuristic | leo đồi · tôi luyện · GA · PSO, **cùng ngân sách gọi hàm** · ★ chỉ đổi ngân sách là **người thắng đổi** |
@@ -185,12 +189,18 @@ tại r = 2,8 / 3,2 / 3,5 / 3,83, σ của phân phối đều = 1/√12, luật
 2^popcount(n) ô đen ở hàng n, đống cát bảo toàn hạt, kiến Langton đối chiếu với một
 bản cài đặt độc lập, Braess ra đúng 65 và 80 phút, hệ số cụm vòng thuần khớp
 `3(k−2)/(4(k−1))`, Raft không bao giờ có hai lãnh đạo cùng nhiệm kỳ, tỉ lệ điểm
-trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lại đúng một mặt phẳng bị quay lên 30 chiều, ứng suất SMACOF chưa bao giờ tăng, không thuật toán nào trong đấu trường tiêu quá ngân sách…  13 xu cần đúng 4 lần cân, 100 tầng 2 trứng cần đúng 14 lần thả, entropy N² khớp công thức O(H+W) tới từng đơn vị…  **141 phép, tất cả khớp.**
+trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lại đúng một mặt phẳng bị quay lên 30 chiều, ứng suất SMACOF chưa bao giờ tăng, không thuật toán nào trong đấu trường tiêu quá ngân sách…  13 xu cần đúng 4 lần cân, 100 tầng 2 trứng cần đúng 14 lần thả, entropy N² khớp công thức O(H+W) tới từng đơn vị, khoảng cách quân mã đối chiếu với một BFS viết riêng ngay trong tệp kiểm, và công thức Hà Nội tổng quát dẫn về đúng 0 nước ở năm cấu hình ngẫu nhiên khác nhau…  **190 phép, tất cả khớp.**
 
 > **Bẫy đã gặp:** `chayToi(k)` có thể **không tới được bước k** — bộ phát có ngân
 > sách 3 giây cho mỗi lần tua để không đóng băng tab. Nay nó xác nhận và báo lỗi rõ
 > thay vì im lặng đo sai. Tương tự, `dat()` phải đặt `.checked` cho ô danh dấu — đặt
 > `.value` là không làm gì cả, và ba phép đối chiếu đã từng chạy với tham số sai.
+>
+> **Bẫy đợt 8:** lab quân mã **kẹp** quân cờ vào trong bàn khi ta thu nhỏ bàn, và
+> không trả nó về chỗ cũ khi phóng to lại. Phép thử đo bàn 3×3 trước rồi mới đo
+> 8×8 nên quân mã không còn ở góc — ba ô lệch đúng 1 nước, và suýt nữa thì đổ tội
+> cho lab. Nay phép thử đi từ bàn **lớn xuống nhỏ**, vì kẹp luôn đưa quân về đúng
+> góc của bàn mới.
 
 Tầng "chạy thử" chỉ chứng minh lab **không nổ**; tầng này chứng minh nó **tính đúng**.
 

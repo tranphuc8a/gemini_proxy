@@ -344,20 +344,41 @@ Bốn điểm đáng dựng:
 > mô tả nó như *một bài thi lập trình tối ưu hoá*, không quy cho bên nào — vừa
 > tránh lộ nguồn, vừa không ngụ ý liên kết với một sản phẩm thương mại nào.
 
-### Đợt 8 — Trạng thái và đường đi
+### ✅ Đợt 8 — XONG (2026-09-27)
 
-Hai nguyên hàm của đợt 7 đã có, nên bốn lab này rẻ hơn hẳn.
+Bốn lab: **L33 quân mã**, **L34 thử chìa khoá**, **L35 tìm thuốc độc**,
+**L36 tháp Hà Nội**. Lab-visual: 32 → **36 lab**. `kiem-so.js`: 141 → **190
+phép đối chiếu**. Tầng hình: **328 phép, 0 nhắc nhở**.
 
-| Lab | Điều nó cho thấy | Công |
-|---|---|:--:|
-| **Tìm thuốc độc** | 1 000 chai + 10 người thử = mã nhị phân. Biến thể **2 chai độc**, **cặp độc–giải** làm cận đổi hẳn | M |
-| **Thử chìa khoá** | n chìa, n ổ, chỉ so được chìa-với-ổ. Thuật toán ngẫu nhiên Θ(n log n) vs so tất cả Θ(n²) | M |
-| **Tháp Hà Nội** | Cấu hình đầu tùy ý + chỉ dẫn nước đi. ★ **đồ thị trạng thái là tam giác Sierpinski** | L |
-| **Hai quân mã, hai ô đích** | Hai sóng BFS lan trên bàn cờ; khoảng cách mã không phải khoảng cách hình học | M |
+| Lab | Điều nó cho thấy | Đã đo |
+|---|---|---|
+| **L33 quân mã** | khoảng cách trên đồ thị ≠ khoảng cách hình học | a1→b2 (kề chéo) = **4 nước**, a1→e3 (xa gấp bốn) = **2**. Ô xa nhất: 4×4 → 5, 5×5 → 4, 8×8 → 6 |
+| **L34 thử chìa khoá** | Θ(n log n) không nói gì về n nhỏ | n = 24 vét cạn thắng **8/8** hạt; n = 40 hoà **4/8**; n ≥ 56 thua **0/8**; n = 120 chậm hơn **2,2×** |
+| **L35 tìm thuốc độc** | người × vòng ≥ log₂(số chai) | 1000 chai: 10×1, 2×5, 1×10 đều đủ; 9 bit **thiếu**. Hai chai độc: cận 7 bit, mã ngẫu nhiên cần **18** |
+| **L36 tháp Hà Nội** | đồ thị trạng thái **đúng bằng** tam giác Sierpinski | công thức tổng quát khớp BFS ở **cả 6561** cấu hình n = 8; đường ngắn nhất giữa hai góc chạy dọc **một cạnh**, dài đúng 2ⁿ−1 |
 
-**Engine có thể mọc:** `V.lanSong` — hiện sóng BFS theo từng lớp trên lưới
-hoặc đồ thị. Cần bởi 3 lab (hai quân mã, Hà Nội, chuỗi Markov ở đợt 9).
-**Chưa chốt** — chỉ tách ra engine nếu đếm được đúng ≥ 2 lab chép tay.
+**Ba điều đo được đã bác bỏ điều định viết:**
+
+1. *"Preset bàn 4×4 có ô quân mã không bao giờ tới được"* — **sai**. Bàn 4×4
+   **liên thông**, 0 ô chết. Chỉ 3×3 mới có ô cô lập (ô giữa, vì cả tám nước
+   mã từ đó đều rơi ra ngoài bàn), mà `min` cạnh bàn lại đang là 4 — tức
+   người dùng **không kiểm chứng được điều lab nói**. Đã hạ min về 3, đổi
+   preset, và thay đoạn chữ bằng thứ đo được: bàn 5×5 (25 ô) **dễ đi hơn**
+   bàn 4×4 (16 ô).
+2. *"Chỗ hai đường cắt nhau ở n ≈ 48"* — chỗ lật **không phải một điểm mà là
+   một dải**, và nó xê dịch theo hạt giống. Biểu đồ từng đánh dấu chỗ giao
+   **đầu tiên**, vốn nhảy lung tung. Nay đánh dấu chỗ **dứt khoát**: n nhỏ
+   nhất mà từ đó trở lên ngẫu nhiên thắng ở mọi cỡ đã đo.
+3. *Phép nhúng Sierpinski của Hà Nội* — tập **điểm** đúng, nên tấm hình
+   *trông* đúng, nhưng **cạnh** thì nối lung tung qua cả hình: cạnh dài nhất
+   0,577 (hơn nửa chiều ngang tam giác) thay vì 0,036. Mắt thường không bắt
+   được vì đám điểm không đổi; cái bắt được là **đường đi ngắn nhất** — nó
+   phải chạy dọc một cạnh, mà ảnh chụp cho thấy nó zic-zac xuyên ruột.
+
+**Engine không mọc thêm gì.** `V.lanSong` từng được đề xuất cho đợt này:
+đếm lại thì chỉ **một** lab (quân mã) thật sự lan sóng BFS trên lưới — Hà Nội
+dựng đồ thị Sierpinski chứ không lan sóng. Chưa đủ hai lab thì chưa tách.
+Thứ duy nhất thêm vào engine là `p.sau` cho preset (đã làm ở đợt 7, xem dưới).
 
 ### Đợt 9 — Ngẫu nhiên và hội tụ
 
