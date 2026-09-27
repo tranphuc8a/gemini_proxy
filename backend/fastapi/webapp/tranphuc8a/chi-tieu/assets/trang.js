@@ -66,10 +66,14 @@
     var s = $("#chon-thang");
     var ds = CT.cacThang(gd);
     if (ds.indexOf(thangDang) < 0) ds.unshift(thangDang);
-    s.innerHTML = ds.map(function (t) {
-      return '<option value="' + t + '"' + (t === thangDang ? " selected" : "") + ">" +
-        CT.tenThang(t) + "</option>";
-    }).join("");
+    s.replaceChildren();
+    ds.forEach(function (t) {
+      var option = document.createElement("option");
+      option.value = t;
+      option.textContent = CT.tenThang(t);
+      option.selected = t === thangDang;
+      s.appendChild(option);
+    });
   }
 
   function veTomTat() {

@@ -1239,13 +1239,27 @@ mong("Markov · vòng tuần hoàn: |λ₂| đúng bằng 1", soThuc(oSo(S, "|λ
 mongChuoi("Markov · vòng tuần hoàn thì không trộn nổi",
   oSo(S, "Thời gian trộn"), "không trộn nổi");
 
-/* Thêm tự lập ε: khe phổ phải bằng ĐÚNG 2ε. Công thức đóng, nên đây là
-   phép đối chiếu thật chứ không phải so lab với chính nó. */
+/* Thêm tự lập ε thì tuần hoàn vỡ, và khe phổ có CÔNG THỨC ĐÓNG:
+   vòng n đỉnh có trị riêng ε + (1−ε)ω^j với ω = e^(2πi/n), nên
+   khe = 1 − |ε + (1−ε)ω|. Tính ngay tại đây, đối chiếu với lặp luỹ thừa
+   của lab — hai đường tính khác hẳn nhau.
+
+   KHÔNG phải 2ε: đó là trường hợp riêng n = 2 (lúc ấy ω = −1). Phép thử
+   này từng viết 2ε và đổ ở cả bốn giá trị — lab cũng từng viết thế. */
+function kheVong(n, e) {
+  const goc = 2 * Math.PI / n;
+  const re = e + (1 - e) * Math.cos(goc), im = (1 - e) * Math.sin(goc);
+  return 1 - Math.hypot(re, im);
+}
+mong("Markov · công thức vòng: n = 2 mới cho khe = 2ε", kheVong(2, 0.01), 0.02, 1e-9);
+mong("Markov · còn n = 6 thì chỉ cho một phần tư chừng ấy",
+  kheVong(6, 0.01), 0.00496, 1e-4);
 for (const e of [0.01, 0.05, 0.2, 0.5]) {
   dat("Xác suất tự lập (ở lại chỗ cũ)", e);
   S = soLieu();
-  mong("Markov · tự lập " + e + " → khe phổ = 2ε = " + (2 * e).toFixed(3),
-    soThuc(oSo(S, "Khe phổ")), 2 * e, 3e-3);
+  const mongKhe = kheVong(6, e);
+  mong("Markov · vòng 6 đỉnh, tự lập " + e + " → khe phổ khớp công thức đóng",
+    soThuc(oSo(S, "Khe phổ")), mongKhe, Math.max(2e-4, mongKhe * 0.05));
 }
 
 /* Nút cổ chai: khe co bốn bậc độ lớn, t_trộn phình 500 lần, TÍCH đứng yên. */
@@ -1254,7 +1268,10 @@ dat("Xích", "hai-cum");
 dat("Xác suất tự lập (ở lại chỗ cũ)", 0);
 dat("Số đỉnh", 6);
 const TICH = [];
-for (const [mu, kheMong, tMong] of [[0, 0.666667, 4], [-1, 0.181818, 20],
+/* mu là số mũ: cầu = 10^mu. Giá trị đo offline là cầu 0,5 → mu = −0,301.
+   Dùng mu = 0 là cầu = 1, tức cầu nặng BẰNG cạnh trong cụm — xích thành
+   đều tăm tắp, khe = 1, và chẳng còn nút cổ chai nào để nói tới. */
+for (const [mu, kheMong, tMong] of [[-0.3, 0.666667, 4], [-1, 0.181818, 20],
                                     [-1.7, 0.039216, 98], [-2.3, 0.009950, 392],
                                     [-3, 0.001998, 1957]]) {
   dat("Cầu nối", mu);
@@ -1277,11 +1294,13 @@ mong("Markov · và tích ấy dao động chưa tới 1,6 lần dù t_trộn ph
 
 /* Mọi khởi đầu về cùng một chỗ — trừ khi tuần hoàn. */
 dat("Cầu nối", -1);
-chayToi(60);
+/* |λ₂| = 0,818 nên sau 60 bước còn 8e−6 — chưa đủ nhỏ để gọi là “chập”.
+   160 bước đưa nó xuống dưới 1e−13. */
+chayToi(160);
 S = soLieu();
 mong("Markov · ba khởi đầu khác hẳn nhau đã chập vào nhau",
   String(oSo(S, "Ba khởi đầu còn lệch nhau")).includes("\u2248 0") ||
-  soKhoaHoc(oSo(S, "Ba khởi đầu còn lệch nhau")) < 1e-6, true);
+  soKhoaHoc(oSo(S, "Ba khởi đầu còn lệch nhau")) < 1e-8, true);
 mong("Markov · và đã tới sát phân phối dừng",
   soKhoaHoc(oSo(S, "Xa phân phối dừng nhất")) < 1e-3, true);
 
@@ -1302,10 +1321,15 @@ mong("Bloom · công thức (1−e^(−kn/m))^k khớp giá trị tính độc l
 mongChuoi("Bloom · KHÔNG BAO GIỜ bỏ sót — tra lại khoá đã thêm",
   oSo(S, "Không bao giờ bỏ sót"), "\u2714");
 
-/* Băm tốt phải bám công thức; băm xấu thì không hứa gì cả. */
+/* Băm tốt phải bám công thức — nhưng đọc TRUNG BÌNH 20 HẠT, không đọc
+   lần chạy đơn. Lần chạy đơn dùng 800 phép thử nên biên độ lấy mẫu đã là
+   ±2 điểm phần trăm, cộng thêm biến thiên theo hạt giống: ở hạt 3 đo được
+   12,375% so với công thức 9,415%, lệch 31%. Một ngưỡng đặt lên con số ấy
+   chỉ kiểm được vận may. */
 const pTot = soThuc(oSo(S, "Dương tính giả · băm TỐT")) / 100;
-mong("Bloom · băm tốt bám công thức trong 25%",
-  Math.abs(pTot / ctBloom(1024, 5, 200) - 1) < 0.25, true);
+const tbTot = soThuc(oSo(S, "Băm TỐT: trung bình")) / 100;
+mong("Bloom · băm tốt, trung bình 20 hạt, bám công thức trong 10%",
+  Math.abs(tbTot / ctBloom(1024, 5, 200) - 1) < 0.10, true);
 
 /* LUẬN ĐIỂM CHÍNH: băm xấu dao động rộng hơn HẲN. Đọc hệ số biến thiên,
    KHÔNG đọc bề rộng min–max — min–max là thống kê cực trị, nó phình ra
