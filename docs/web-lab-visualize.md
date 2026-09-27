@@ -226,12 +226,12 @@ cd lab-visual && python check.py --tinh     # đầy đủ, không cần trình 
 python engine/sync.py --kiem                # bản sao có lệch nguồn không
 ```
 
-Kết quả lần chạy cuối — **100 lab trên 4 site, tất cả xanh** (cộng 96 mục tự kiểm
+Kết quả lần chạy cuối — **104 lab trên 4 site, tất cả xanh** (cộng 96 mục tự kiểm
 tra nguyên hàm engine):
 
 | Site | Chạy thử | Đối chiếu số | Lỗi |
 |---|:--:|:--:|:--:|
-| `lab-visual` (32 lab) | 89 | 141 | 0 |
+| `lab-visual` (36 lab) | 99 | 190 | 0 |
 | `heuristic-visual` (21 lab) | 53 | — | 0 |
 | `ai-everything-visual` (39 lab) | 101 | — | 0 |
 | `system-design-visual` (8 lab) | 23 | — | 0 |
