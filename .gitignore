@@ -48,3 +48,8 @@ backend/fastapi/data/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Anh chup cua tang kiem hinh anh (engine/kiem_hinh.py --anh).
+# 96 tam PNG ~33 MB moi lan chay — la ket qua kiem tra, khong phai ma nguon.
+backend/fastapi/webapp/courses/*/anh-kiem/
+backend/fastapi/webapp/tranphuc8a/anh-kiem/

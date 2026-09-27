@@ -186,7 +186,12 @@ main{padding:26px 30px 80px;min-width:0}
   font:400 13px/1.8 var(--fm);color:var(--tx2);
 }
 .so-lieu b{color:var(--ac);font-weight:600}
-.so-lieu .d{display:flex;justify-content:space-between;gap:10px}
+/* Cot nhan phai duoc rong hon cot so. Truoc day ca hai co gian tu do,
+   nen nhan dai ("Kiem bang cong thuc") bi bop xuong con mot tu moi
+   dong trong khi cot so bo trong. Anh chup Chromium bat duoc. */
+.so-lieu .d{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.so-lieu .d>span{flex:1 1 auto;min-width:0}
+.so-lieu .d>b{flex:0 1 auto;text-align:right;min-width:0;word-break:break-word}
 
 .gt-box{
   margin-top:20px;max-width:880px;background:var(--surf2);

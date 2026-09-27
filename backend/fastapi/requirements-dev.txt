@@ -14,6 +14,14 @@ pytest-asyncio>=0.22
 respx>=0.20
 pytest-cov>=4.0
 
+# Browser checks for webapp/courses/*-visual and webapp/tranphuc8a/*.
+# `python <trang>/check.py` auto-detects this and enables the Chromium tier;
+# without it that tier skips itself. Needs one extra step after install:
+#
+#   python -m playwright install chromium
+#
+playwright>=1.40
+
 # Migrations (see README_MIGRATIONS.md). The alembic/ folder is excluded from
 # the deployed bundle, so the package is not needed there either.
 alembic>=1.10

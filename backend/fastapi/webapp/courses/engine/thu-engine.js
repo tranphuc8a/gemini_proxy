@@ -22,7 +22,14 @@ const ctx = {
         createImageData: (w, h) => ({
           width: w, height: h, data: new Uint8ClampedArray(w * h * 4)
         }),
-        setTransform() {}, putImageData() {}, drawImage() {}, save() {}, restore() {}
+        setTransform() {}, putImageData() {}, drawImage() {}, save() {}, restore() {},
+        /* Cac lenh ve that su — cayQuyetDinh.ve() goi den chung. Canvas gia
+           chi can KHONG NEM LOI; no khong dung hinh, nen tang nay khong bao
+           gio bat duoc loi hinh hoc (xem muc "Rui ro da biet" trong ke hoach). */
+        beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, arc() {},
+        fill() {}, stroke() {}, fillRect() {}, strokeRect() {}, clearRect() {},
+        fillText() {}, setLineDash() {}, translate() {}, rotate() {},
+        measureText: (t) => ({ width: String(t).length * 6 })
       })
     }),
     createElementNS: () => ({ setAttribute() {} }),
@@ -307,6 +314,170 @@ for (const vien of ["vong", "chan"]) {
 
   kiem("khungNhieu · chua() nhan dung diem trong khung",
        K[0].chua(K[0].x0 + 2, K[0].y0 + 2) && !K[0].chua(K[0].x0 - 5, K[0].y0 - 5));
+}
+
+
+/* ==================================================================
+   7. Cay quyet dinh + can duoi ly thuyet thong tin
+   ================================================================== */
+{
+  const cvGia = { W: 600, H: 400, g: ctx.document.createElement("canvas").getContext("2d") };
+  const C = V.cayQuyetDinh(cvGia, { le: 12, leTren: 26, leDuoi: 30 });
+
+  const goc = C.goc({ nhan: "12" });
+  kiem("cayQuyetDinh · chỉ có gốc thì chiều sâu = 0", C.chieuSau() === 0, "sâu = " + C.chieuSau());
+  kiem("cayQuyetDinh · gốc đơn độc cũng là lá", C.soLa() === 1);
+
+  /* Cay tam phan day du, sau 3 — dung hinh cua bai can xu. */
+  C.goc({ nhan: "r" });
+  (function moc(n, sau) {
+    if (sau === 0) return;
+    for (let i = 0; i < 3; i++) moc(C.them(n, { canh: ["<", "=", ">"][i] }), sau - 1);
+  })(C.nuts[0], 3);
+
+  kiem("cayQuyetDinh · cây tam phân sâu 3 đúng chiều sâu", C.chieuSau() === 3);
+  kiem("cayQuyetDinh · cây tam phân sâu 3 có 3³ = 27 lá",
+       C.soLa() === 27, C.soLa() + " lá");
+  kiem("cayQuyetDinh · tổng số nút = (3⁴−1)/2 = 40",
+       C.nuts.length === 40, C.nuts.length + " nút");
+
+  C.boCuc();
+
+  /* La phai tang nghiem ngat theo x — chong nhau la bo cuc hong. */
+  const la = C.nuts.filter((n) => n.la);
+  let tangDan = true;
+  for (let i = 1; i < la.length; i++) if (la[i].x <= la[i - 1].x) tangDan = false;
+  kiem("cayQuyetDinh · lá xếp tăng nghiêm ngặt, không chồng nhau", tangDan);
+
+  /* Nut cha phai nam giua cac con — neu khong, canh se cat cheo qua cay. */
+  let chaGiuaCon = true;
+  for (const n of C.nuts) {
+    if (n.la) continue;
+    const xs = n.con.map((c) => c.x);
+    if (n.x < Math.min(...xs) - 1e-9 || n.x > Math.max(...xs) + 1e-9) chaGiuaCon = false;
+  }
+  kiem("cayQuyetDinh · nút cha luôn nằm giữa các con", chaGiuaCon);
+
+  /* Cung tang thi cung y. */
+  const theoTang = {};
+  let cungTangCungY = true;
+  for (const n of C.nuts) {
+    if (theoTang[n.sau] === undefined) theoTang[n.sau] = n.y;
+    else if (Math.abs(theoTang[n.sau] - n.y) > 1e-9) cungTangCungY = false;
+  }
+  kiem("cayQuyetDinh · mọi nút cùng tầng có cùng y", cungTangCungY);
+
+  /* Khong tran ra ngoai le. */
+  let trongLe = true;
+  for (const n of C.nuts) {
+    if (n.x < 12 - 1e-9 || n.x > cvGia.W - 12 + 1e-9) trongLe = false;
+    if (n.y < 26 - 1e-9 || n.y > cvGia.H - 30 + 1e-9) trongLe = false;
+  }
+  kiem("cayQuyetDinh · không nút nào tràn ra ngoài lề", trongLe);
+
+  /* toDuong danh dau DUNG duong goc -> nut, khong thua khong thieu. */
+  const sauNhat = C.nuts.filter((n) => n.sau === 3)[5];
+  C.toDuong(sauNhat);
+  const soDanhDau = C.nuts.filter((n) => n.danhDau).length;
+  kiem("cayQuyetDinh · toDuong đánh dấu đúng sâu+1 nút",
+       soDanhDau === sauNhat.sau + 1, soDanhDau + " nút được đánh dấu");
+
+  C.toDuong(C.nuts[0]);
+  kiem("cayQuyetDinh · toDuong xoá sạch dấu cũ trước khi tô",
+       C.nuts.filter((n) => n.danhDau).length === 1);
+
+  kiem("cayQuyetDinh · nutTai tìm thấy nút tại đúng toạ độ của nó",
+       C.nutTai(sauNhat.x, sauNhat.y) === sauNhat);
+  kiem("cayQuyetDinh · nutTai trả null khi trỏ ra chỗ trống",
+       C.nutTai(-500, -500) === null);
+
+  C.ve();
+  kiem("cayQuyetDinh · ve() chạy không ném lỗi", true);
+}
+
+/* --- Can duoi ly thuyet thong tin ---
+   BAY: ceil(log_b N) tinh thang bang so thuc SAI o dung luy thua chan.
+   Math.log(27)/Math.log(3) = 3.0000000000000004 -> ceil = 4, trong khi
+   dap so dung la 3. Sai mot don vi o dung cho de bi tin nhat. */
+{
+  kiem("canThongTin · 12 xu, cân 3 kết cục → 3 lần (bài kinh điển)",
+       V.canThongTin(24, 3) === 3, "được " + V.canThongTin(24, 3));
+  kiem("canThongTin · luỹ thừa chẵn 3³ = 27 vẫn ra 3, không phải 4 (bẫy dấu chấm động)",
+       V.canThongTin(27, 3) === 3, "được " + V.canThongTin(27, 3));
+  kiem("canThongTin · 3⁴ = 81 ra 4, không phải 5",
+       V.canThongTin(81, 3) === 4, "được " + V.canThongTin(81, 3));
+  kiem("canThongTin · 5³ = 125 ra 3, không phải 4",
+       V.canThongTin(125, 5) === 3, "được " + V.canThongTin(125, 5));
+  kiem("canThongTin · 28 trường hợp thì phải thêm một lần nữa",
+       V.canThongTin(28, 3) === 4, "được " + V.canThongTin(28, 3));
+  kiem("canThongTin · 100 trường hợp nhị phân → 7",
+       V.canThongTin(100, 2) === 7);
+  kiem("canThongTin · 1 trường hợp thì không cần hỏi", V.canThongTin(1, 2) === 0);
+  kiem("canThongTin · 2 trường hợp nhị phân → 1", V.canThongTin(2, 2) === 1);
+
+  /* Bat bien tong quat: b^k >= N > b^(k-1) voi moi N, b thu duoc. */
+  let dungHet = true, viPham = "";
+  for (let b = 2; b <= 6; b++) {
+    for (let n = 2; n <= 400; n++) {
+      const k = V.canThongTin(n, b);
+      if (!(Math.pow(b, k) >= n && Math.pow(b, k - 1) < n)) {
+        dungHet = false; viPham = "N=" + n + " b=" + b + " k=" + k;
+      }
+    }
+  }
+  kiem("canThongTin · b^k ≥ N > b^(k−1) đúng với mọi N ≤ 400, b ≤ 6",
+       dungHet, viPham || "1 995 trường hợp");
+}
+
+/* ==================================================================
+   8. Che do nguoi dung tu choi
+   ================================================================== */
+{
+  /* Tro choi thu: dem tu 0 len 5, moi nuoc cong 1 hoac 2. Toi uu = 3. */
+  const CT = V.choiThu({
+    batDau: () => 0,
+    nuocDi: (tt, n) => (n === 1 || n === 2) && tt + n <= 5 ? tt + n : null,
+    xong: (tt) => tt === 5,
+    diem: (tt, soNuoc) => tt * 100 - soNuoc,
+    toiUu: () => 3
+  });
+
+  kiem("choiThu · bắt đầu ở trạng thái đầu, chưa đi nước nào",
+       CT.tt() === 0 && CT.soNuoc() === 0 && !CT.xong());
+  kiem("choiThu · toiUu được tính ngay lúc bắt đầu", CT.toiUu() === 3);
+
+  kiem("choiThu · nước hợp lệ được nhận", CT.di(2) === true && CT.tt() === 2);
+  kiem("choiThu · nước sai luật bị từ chối, trạng thái không đổi",
+       CT.di(7) === false && CT.tt() === 2 && CT.soNuoc() === 1);
+
+  CT.di(2); CT.di(1);
+  kiem("choiThu · tới đích thì xong()", CT.tt() === 5 && CT.xong());
+  kiem("choiThu · xong rồi thì không đi thêm được", CT.di(1) === false);
+  kiem("choiThu · đi đúng 3 nước", CT.soNuoc() === 3);
+
+  const b = CT.bang();
+  kiem("choiThu · bảng báo đúng bằng tối ưu",
+       String(b["Kết quả"]).indexOf("ĐÚNG BẰNG") >= 0, JSON.stringify(b["Kết quả"]));
+  kiem("choiThu · bảng tính điểm theo hàm của lab", b["Điểm"] === 5 * 100 - 3);
+
+  /* Hoan tac phai khoi phuc CHINH XAC trang thai truoc do. */
+  CT.hoanTac();
+  kiem("choiThu · hoàn tác lùi đúng một nước", CT.tt() === 4 && CT.soNuoc() === 2);
+  CT.hoanTac(); CT.hoanTac();
+  kiem("choiThu · hoàn tác hết thì về đúng trạng thái đầu",
+       CT.tt() === 0 && CT.soNuoc() === 0);
+  kiem("choiThu · hoàn tác khi chưa đi nước nào trả false", CT.hoanTac() === false);
+
+  /* Di thua roi hoan tac ve — phai giong het luc dau. */
+  CT.di(1); CT.di(1); CT.di(1); CT.di(1); CT.di(1);
+  kiem("choiThu · đi 5 nước một cũng tới đích, nhưng thừa 2 nước",
+       CT.xong() && CT.soNuoc() === 5 &&
+       String(CT.bang()["Kết quả"]).indexOf("thừa 2") >= 0,
+       JSON.stringify(CT.bang()["Kết quả"]));
+
+  CT.batDauLai();
+  kiem("choiThu · batDauLai xoá sạch lịch sử",
+       CT.tt() === 0 && CT.soNuoc() === 0 && !CT.xong());
 }
 
 /* ================================================================== */

@@ -19,6 +19,7 @@
 
    TUONG THICH NGUOC: moi API cua v1 — demo(), V.el, V.truot, V.nut,
    V.chon, V.danhDau, V.veBang, V.veLuoi, V.mau, V.thangMau, V.rng,
+   V.cayQuyetDinh, V.canThongTin, V.choiThu,
    V.vongLap, V.phat, V.dungHet, V.khung — giu nguyen chu ky va hanh vi.
    Toan bo phan them deu la tuy chon.
    ===================================================================== */
@@ -382,7 +383,28 @@
         var cv = V.veBangCo({ rong: 760, tiLe: 0.62, veLai: veLai });
       tiLe = cao / rong. veLai() se duoc goi sau moi lan doi kich thuoc. */
   function veBangCo(o) {
-    var cv = veBang(o.rong || 760, Math.round((o.rong || 760) * (o.tiLe || 0.62)));
+    /* Ti le PHAI cao hon khi khung hep.
+
+       Nhieu lab xep chong vai thu theo chieu doc: bieu do + luoi + cay. O
+       be ngang 1440 thi ti le 0,74 cho 1 065 px chieu cao — du. O 420 px
+       (dien thoai) no chi con 310 px, va ba thu do bi nhoi vao day den
+       muc khong doc noi. Anh chup che do hep bat duoc dieu nay; tang DOM
+       gia thi khong, vi khong co gi "de len nhau" theo nghia hinh hoc ca
+       — chi la qua nho de dung.
+
+       Nen: khung cang hep thi canvas cang cao, toi thieu 1,15 lan be
+       ngang duoi 620 px. */
+    function tiLeTheoBeNgang(w) {
+      var t = o.tiLe || 0.62;
+      if (w >= 900) return t;
+      if (w <= 620) return Math.max(t, 1.15);
+      /* Noi tron giua 620 va 900 de khong giat khi keo cua so. */
+      var k = (w - 620) / 280;
+      return Math.max(t, 1.15 + (t - 1.15) * k);
+    }
+
+    var rong0 = o.rong || 760;
+    var cv = veBang(rong0, Math.round(rong0 * tiLeTheoBeNgang(rong0)));
     cv.style.width = "100%";
     cv.style.maxWidth = (o.toiDa || 1400) + "px";
     var hienTai = 0;
@@ -391,7 +413,7 @@
       var w = Math.round(cv.clientWidth || o.rong || 760);
       if (!w || Math.abs(w - hienTai) < 2) return false;
       hienTai = w;
-      datKichThuoc(cv, w, Math.round(w * (o.tiLe || 0.62)));
+      datKichThuoc(cv, w, Math.round(w * tiLeTheoBeNgang(w)));
       cv.style.width = "100%";     /* datKichThuoc dat lai px — ep ve 100% */
       return true;
     };
@@ -1556,7 +1578,10 @@
     function khung(t) {
       if (!dangChay) return;
       if (!tTruoc) tTruoc = t;
-      var dt = Math.min(0.2, (t - tTruoc) / 1000); tTruoc = t;
+      /* Chan dt AM. Math.min khong chan duoc, ma mot dau thoi gian lui
+         (doi tab, dong ho he thong nhay) se lam `du` tut xuong am va bo
+         phat dung han khong ro ly do. */
+      var dt = Math.max(0, Math.min(0.2, (t - tTruoc) / 1000)); tTruoc = t;
       du += dt * tocDo;
       var n = Math.min(Math.floor(du), 400000);
       du -= n;
@@ -1751,6 +1776,280 @@
     };
   }
 
+
+  /* ---------- 9b. Cay quyet dinh --------------------------------------
+     Mot LOAT lab la cung mot bai toan: moi lan hoi tra ve mot trong b ket
+     cuc, va cau hoi la "toi thieu bao nhieu lan hoi thi phan biet duoc N
+     truong hop". Cay quyet dinh la hinh ve dung cua bai toan do, va can
+     duoi ly thuyet thong tin la log_b(N) — mot dong cong thuc ma lab nao
+     cung phai ve.
+
+       var C = V.cayQuyetDinh(cv, { le: 12, leTren: 26, leDuoi: 30 });
+       var goc = C.goc({ nhan: "12 xu" });
+       var con = C.them(goc, { nhan: "3 xu", canh: "trai nang" });
+       C.boCuc();  C.ve();  C.chieuSau();  C.canDuoi(24, 3);
+
+     Bo cuc: sap theo TANG (chieu sau), moi tang trai deu ngang. Nut la
+     duoc chia deu trong tang cuoi roi nut cha lay trung binh cac con —
+     bo cuc cay kinh dien, on dinh va khong can thu vien.
+     -------------------------------------------------------------------- */
+  function cayQuyetDinh(cv, o) {
+    o = o || {};
+    var le = o.le === undefined ? 12 : o.le;
+    var lt = o.leTren === undefined ? 24 : o.leTren;
+    var ld = o.leDuoi === undefined ? 24 : o.leDuoi;
+    var nuts = [];                    /* tat ca nut, chi so = id */
+
+    function taoNut(cha, thuoc) {
+      var n = {
+        id: nuts.length, cha: cha, con: [], sau: cha === null ? 0 : cha.sau + 1,
+        x: 0, y: 0, nhan: "", canh: "", mau: null, la: true, danhDau: false
+      };
+      if (thuoc) {
+        if (thuoc.nhan !== undefined) n.nhan = String(thuoc.nhan);
+        if (thuoc.canh !== undefined) n.canh = String(thuoc.canh);
+        if (thuoc.mau !== undefined) n.mau = thuoc.mau;
+        if (thuoc.danhDau !== undefined) n.danhDau = !!thuoc.danhDau;
+        if (thuoc.duLieu !== undefined) n.duLieu = thuoc.duLieu;
+      }
+      nuts.push(n);
+      if (cha) { cha.con.push(n); cha.la = false; }
+      return n;
+    }
+
+    /** Khoang trong ngang ma nhan cua canh `n` duoc phep chiem: khoang
+        cach toi nut gan nhat CUNG TANG. Cay cang sau thi cho cang hep,
+        va den luc khong du thi tot hon la khong ve gi ca. */
+    function khoangNgang(n) {
+      var gan = Infinity;
+      for (var i = 0; i < nuts.length; i++) {
+        var m = nuts[i];
+        if (m === n || m.sau !== n.sau) continue;
+        var d = Math.abs(m.x - n.x);
+        if (d < gan) gan = d;
+      }
+      return gan === Infinity ? 1e9 : gan;
+    }
+
+    var api = {
+      nuts: nuts,
+
+      xoa: function () { nuts.length = 0; return api; },
+
+      goc: function (thuoc) {
+        nuts.length = 0;
+        return taoNut(null, thuoc);
+      },
+
+      them: function (cha, thuoc) { return taoNut(cha, thuoc); },
+
+      /** Chieu sau = so lan hoi o nhanh dai nhat. Cay chi co goc -> 0. */
+      chieuSau: function () {
+        var m = 0;
+        for (var i = 0; i < nuts.length; i++) if (nuts[i].sau > m) m = nuts[i].sau;
+        return m;
+      },
+
+      soLa: function () {
+        var c = 0;
+        for (var i = 0; i < nuts.length; i++) if (nuts[i].la) c++;
+        return c;
+      },
+
+      /** Bo cuc theo tang. Goi lai moi khi cay doi hoac canvas doi co. */
+      boCuc: function () {
+        if (!nuts.length) return api;
+        var sauMax = api.chieuSau();
+        var W = Math.max(1, cv.W - le * 2);
+        var H = Math.max(1, cv.H - lt - ld);
+        var buocY = sauMax ? H / sauMax : 0;
+
+        /* La chia deu ngang theo dung thu tu duyet truoc-giua-sau. */
+        var la = [];
+        (function duyet(n) {
+          if (n.la) { la.push(n); return; }
+          for (var i = 0; i < n.con.length; i++) duyet(n.con[i]);
+        })(nuts[0]);
+        for (var i = 0; i < la.length; i++) {
+          la[i].x = le + (la.length === 1 ? W / 2 : W * (i + 0.5) / la.length);
+        }
+        /* Nut trong lay trung binh con — tinh tu tang sau len tang truoc. */
+        for (var sau = sauMax; sau >= 0; sau--) {
+          for (var j = 0; j < nuts.length; j++) {
+            var n = nuts[j];
+            if (n.sau !== sau || n.la) continue;
+            var t = 0;
+            for (var k = 0; k < n.con.length; k++) t += n.con[k].x;
+            n.x = t / n.con.length;
+          }
+        }
+        for (j = 0; j < nuts.length; j++) nuts[j].y = lt + nuts[j].sau * buocY;
+        return api;
+      },
+
+      ve: function (tuyChon) {
+        var t = tuyChon || {};
+        var g = cv.g;
+        var bk = t.banKinh === undefined ? 13 : t.banKinh;
+        g.save();
+        g.lineWidth = t.dayCanh || 1.2;
+        /* Canh truoc, de nut de len tren. */
+        for (var i = 0; i < nuts.length; i++) {
+          var n = nuts[i];
+          if (!n.cha) continue;
+          g.strokeStyle = n.danhDau ? (t.mauDanhDau || mau("ac")) : (t.mauCanh || mau("bd"));
+          g.lineWidth = n.danhDau ? (t.dayCanh || 1.2) * 2.2 : (t.dayCanh || 1.2);
+          g.beginPath();
+          g.moveTo(n.cha.x, n.cha.y + bk);
+          g.lineTo(n.x, n.y - bk);
+          g.stroke();
+          /* Nhan canh CHI ve khi con cho. O tang sau cac nut xit lai
+             gan nhau va nhan cua chung chong len thanh mot khoi chu
+             dinh lien ("trai nangcan bangphai nang"). Tang DOM gia
+             khong bao gio thay duoc, vi no khong do be rong chu. */
+          if (n.canh && t.hienCanh !== false) {
+            g.font = "10px ui-monospace,monospace";
+            if (g.measureText(n.canh).width <= khoangNgang(n) - 4) {
+              g.fillStyle = mau("tx3");
+              g.textAlign = "center"; g.textBaseline = "middle";
+              g.fillText(n.canh, (n.cha.x + n.x) / 2, (n.cha.y + n.y) / 2);
+            }
+          }
+        }
+        for (i = 0; i < nuts.length; i++) {
+          var m = nuts[i];
+          g.fillStyle = m.mau || (m.la ? mau("ok") : mau("surf2"));
+          g.strokeStyle = m.danhDau ? (t.mauDanhDau || mau("ac")) : mau("bd");
+          g.lineWidth = m.danhDau ? 2.5 : 1;
+          g.beginPath(); g.arc(m.x, m.y, bk, 0, 6.2832);
+          g.fill(); g.stroke();
+          if (m.nhan && t.hienNhan !== false) {
+            g.font = "600 10px ui-monospace,monospace";
+            g.fillStyle = mau("tx");
+            g.textAlign = "center"; g.textBaseline = "middle";
+            g.fillText(m.nhan, m.x, m.y);
+          }
+        }
+        g.restore();
+        return api;
+      },
+
+      /** Nut duoi con tro, hoac null. */
+      nutTai: function (x, y, bk) {
+        bk = bk === undefined ? 14 : bk;
+        for (var i = 0; i < nuts.length; i++) {
+          var dx = nuts[i].x - x, dy = nuts[i].y - y;
+          if (dx * dx + dy * dy <= bk * bk) return nuts[i];
+        }
+        return null;
+      },
+
+      /** Xoa moi danh dau roi to lai duong tu goc toi `n`. */
+      toDuong: function (n) {
+        for (var i = 0; i < nuts.length; i++) nuts[i].danhDau = false;
+        while (n) { n.danhDau = true; n = n.cha; }
+        return api;
+      }
+    };
+    return api;
+  }
+
+  /** CAN DUOI LY THUYET THONG TIN: mot lan hoi cho `b` ket cuc thi khong
+      the phan biet noi hon b^k truong hop sau k lan hoi. Nen so lan hoi
+      toi thieu la ceil(log_b N).
+
+      Day la con so ma moi lab cau do phai in len man hinh — no bien
+      "toi doan the nay chac du" thanh mot phat bieu KIEM DUOC. */
+  function canThongTin(soTruongHop, soKetCuc) {
+    if (soTruongHop <= 1) return 0;
+    var b = soKetCuc || 2;
+    if (b < 2) return Infinity;
+    var k = Math.ceil(Math.log(soTruongHop) / Math.log(b));
+    /* Chong sai so dau cham dong: log(27)/log(3) co the ra 3.0000000000000004. */
+    while (Math.pow(b, k - 1) >= soTruongHop) k--;
+    while (Math.pow(b, k) < soTruongHop) k++;
+    return k;
+  }
+
+  /* ---------- 9c. Che do nguoi dung tu choi -----------------------------
+     Lab cau do chi thuc su day duoc khi nguoi xem TU THU. Nguyen ham nay
+     lo phan chung: nhan nuoc di, ghi lich su, hoan tac, va cham diem so
+     voi chinh sach toi uu.
+
+       var CT = V.choiThu({
+         batDau: function () { return {...trang thai...}; },
+         nuocDi: function (tt, nuoc) { ... tra ve trang thai moi ... },
+         xong:   function (tt) { return true/false; },
+         diem:   function (tt, soNuoc) { return <so>; },
+         toiUu:  function (tt0) { return <so nuoc toi uu>; }   // tuy chon
+       });
+       CT.batDauLai();  CT.di(nuoc);  CT.hoanTac();  CT.tt();  CT.bang();
+
+     Khong ve gi ca — lab tu ve trang thai cua no. O day chi co luat choi,
+     lich su, va con so cham diem.
+     -------------------------------------------------------------------- */
+  function choiThu(o) {
+    o = o || {};
+    var lichSu = [];            /* [{tt, nuoc}] — tt TRUOC khi di `nuoc` */
+    var ttNay = null;
+    var ttDau = null;
+    var soToiUu = null;
+
+    var api = {
+      batDauLai: function () {
+        ttDau = o.batDau ? o.batDau() : null;
+        ttNay = ttDau;
+        lichSu.length = 0;
+        soToiUu = o.toiUu ? o.toiUu(ttDau) : null;
+        return api;
+      },
+
+      tt: function () { return ttNay; },
+      soNuoc: function () { return lichSu.length; },
+      lichSu: function () { return lichSu; },
+      toiUu: function () { return soToiUu; },
+      xong: function () { return o.xong ? !!o.xong(ttNay) : false; },
+
+      /** Di mot nuoc. Tra ve true neu nuoc hop le. */
+      di: function (nuoc) {
+        if (api.xong()) return false;
+        var moi = o.nuocDi ? o.nuocDi(ttNay, nuoc) : null;
+        if (moi === null || moi === undefined || moi === false) return false;
+        lichSu.push({ tt: ttNay, nuoc: nuoc });
+        ttNay = moi;
+        return true;
+      },
+
+      hoanTac: function () {
+        if (!lichSu.length) return false;
+        ttNay = lichSu.pop().tt;
+        return true;
+      },
+
+      diem: function () {
+        return o.diem ? o.diem(ttNay, lichSu.length) : null;
+      },
+
+      /** Bang so lieu san de do thang vao V.soLieu().dat(). */
+      bang: function () {
+        var b = { "Số nước bạn đã đi": lichSu.length };
+        if (soToiUu !== null && soToiUu !== undefined) {
+          b["Tối ưu cần"] = soToiUu + " nước";
+          if (api.xong()) {
+            var du = lichSu.length - soToiUu;
+            b["Kết quả"] = du === 0 ? "✔ ĐÚNG BẰNG tối ưu"
+                         : du > 0 ? ("thừa " + du + " nước") : "?? ít hơn tối ưu — kiểm lại luật";
+          }
+        }
+        var d = api.diem();
+        if (d !== null && d !== undefined) b["Điểm"] = d;
+        return b;
+      }
+    };
+    api.batDauLai();
+    return api;
+  }
+
   /* ---------- 10. Bo cuc mot lab -------------------------------------- */
   /* V.khung(host, {
        ve: [cv],  dieuKhien: [...],  giaiThich: "...",
@@ -1840,6 +2139,7 @@
     veBang: veBang, veBangCo: veBangCo, veLuoi: veLuoi, mau: mau, thangMau: thangMau,
     bangTichLuy: bangTichLuy, bieuDo: bieuDo, soGon: soGon,
     luoiO: luoiO, mauSo: mauSo, hat: hat, doThi: doThi, khungNhieu: khungNhieu,
+    cayQuyetDinh: cayQuyetDinh, canThongTin: canThongTin, choiThu: choiThu,
     rng: rng, vongLap: vongLap, phat: phat, dungHet: dungHet,
     soLieu: soLieu, xuatAnh: xuatAnh, taiVe: taiVe,
     khung: khungLab,

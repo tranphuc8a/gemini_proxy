@@ -225,10 +225,17 @@ function nap(rel) {
   }
 }
 
+/* Dong ho gia PHAI tang dan qua moi lan goi. Truoc day moi lan goi lai
+   bat dau tu 0, nen `t - tTruoc` trong vong lap cua bo phat thanh AM, `du`
+   tut xuong am va khong bao gio hoi — tuc la duong "Chay" cua MOI lab
+   chua tung chay duoc mot buoc nao trong DOM gia. Chi co duong "tua" la
+   duoc kiem. */
+let dongHoGia = 0;
 function bomKhung(n) {
   for (let i = 0; i < n; i++) {
+    dongHoGia += 16.7;
     const dot = hangRAF.splice(0, hangRAF.length);
-    for (const k of dot) k.f(i * 16.7);
+    for (const k of dot) k.f(dongHoGia);
   }
 }
 
@@ -241,6 +248,15 @@ function moLab(id) {
 function nutChayCua(main) {
   /* Bam vao CLASS chu khong phai chu tren nut: lab dat `tuTin: true` se tu
      chay ngay, va luc do nut ghi "Tam dung" chu khong phai "Chay". */
+  /* Phai tim TRONG khoi dieu khien cua bo phat (.phat-nut), khong phai
+     bat ky nut `.chinh` nao trong #main: lab co nut hanh dong rieng cung
+     dung class `chinh` (vi du "Can", "Doan") va se che mat nut Chay that.
+     Bug do lam moi phep thu dung `chayMotIt()` lang le khong chay gi ca. */
+  const trongPhat = timTrong(main, ".phat-nut");
+  if (trongPhat) {
+    const b = gomTrong(trongPhat, "button")[0];
+    if (b) return b;
+  }
   const theoLop = gomTrong(main, ".chinh").find((b) => b._tag === "button");
   if (theoLop) return theoLop;
   return gomTrong(main, "button").find((b) => /Chạy/.test(b._text));
