@@ -1,14 +1,29 @@
+import atexit
+import asyncio
 import os
 import sys
-import asyncio
+import tempfile
+from pathlib import Path
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession, async_sessionmaker
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 from src.application.config.config import settings
 
 
 # SQLAlchemy async base
 Base = declarative_base()
+_TEST_DATABASE_PATH = Path(tempfile.gettempdir()) / f"gemini_proxy_test_{os.getpid()}.sqlite3"
+
+
+def _remove_test_database() -> None:
+    try:
+        _TEST_DATABASE_PATH.unlink()
+    except FileNotFoundError:
+        pass
+
+
+atexit.register(_remove_test_database)
 
 
 def _mysql_async_url() -> str:
@@ -28,8 +43,7 @@ _AsyncSessionLocal = None
 def _create_engine_and_session() -> None:
     """Internal: create module-level async engine and sessionmaker.
 
-    Falls back to an in-memory sqlite+aiosqlite engine if the async MySQL driver is not available
-    or when running tests.
+    Falls back to a temporary sqlite+aiosqlite database when running tests.
     """
     global _async_engine, _AsyncSessionLocal
 
@@ -39,11 +53,11 @@ def _create_engine_and_session() -> None:
     running_under_pytest = any(k.startswith("pytest") or k == "pytest" for k in sys.modules.keys())
     try:
         if getattr(settings, "TESTING", False) or os.environ.get("PYTEST_CURRENT_TEST") or running_under_pytest:
-            # in-memory sqlite async using a shared StaticPool so DB persists across connections in tests
+            # File-backed SQLite lets tests create connections on separate event loops.
             _async_engine = create_async_engine(
-                "sqlite+aiosqlite:///:memory:",
+                URL.create("sqlite+aiosqlite", database=str(_TEST_DATABASE_PATH)),
                 echo=False,
-                poolclass=StaticPool,
+                poolclass=NullPool,
                 connect_args={"check_same_thread": False},
                 future=True,
             )
