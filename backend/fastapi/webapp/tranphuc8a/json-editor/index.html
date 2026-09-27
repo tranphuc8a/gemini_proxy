@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JSON Editor — soạn, soi và sửa JSON</title>
+<link rel="stylesheet" href="assets/kieu.css">
+</head>
+<body>
+
+<header class="dau">
+  <div class="hieu">
+    <span class="bieu-tuong">{ }</span>
+    <div>
+      <h1>JSON Editor</h1>
+      <p class="phu">Soạn · soi · sửa · so sánh — chạy hoàn toàn trong trình duyệt</p>
+    </div>
+  </div>
+  <div class="cong-cu">
+    <button class="nut" id="nut-dinh-dang" title="Ctrl+Shift+F">⇥ Định dạng</button>
+    <button class="nut" id="nut-nen" title="Bỏ hết khoảng trắng">⇤ Nén</button>
+    <button class="nut" id="nut-sap-khoa">↕ Sắp khoá</button>
+    <button class="nut" id="nut-thoat">⌫ Thoát chuỗi</button>
+    <span class="vach"></span>
+    <button class="nut" id="nut-mo">📂 Mở tệp</button>
+    <button class="nut" id="nut-luu">💾 Tải về</button>
+    <button class="nut" id="nut-chep">📋 Chép</button>
+    <span class="vach"></span>
+    <button class="nut" id="nut-sang-toi" title="Sáng / tối">◑</button>
+  </div>
+</header>
+
+<nav class="tab" role="tablist">
+  <button class="tab-n dang" data-o="soan" role="tab">✎ Soạn</button>
+  <button class="tab-n" data-o="cay" role="tab">🌳 Cây</button>
+  <button class="tab-n" data-o="loc" role="tab">🔎 Truy vấn</button>
+  <button class="tab-n" data-o="sosanh" role="tab">⇄ So sánh</button>
+  <button class="tab-n" data-o="thongke" role="tab">📊 Thống kê</button>
+</nav>
+
+<main>
+  <!-- ======================= SOẠN ======================= -->
+  <section class="o dang" data-o="soan">
+    <div class="soan-khung">
+      <div class="so-dong" id="so-dong" aria-hidden="true"></div>
+      <textarea id="nhap" spellcheck="false" autocomplete="off"
+                placeholder='Dán JSON vào đây, hoặc bấm “Mở tệp”.
+
+Ví dụ:
+{
+  "ten": "Xin chào",
+  "so": 42,
+  "mang": [1, 2, 3],
+  "long": { "sau": true }
+}'></textarea>
+    </div>
+  </section>
+
+  <!-- ======================= CÂY ======================= -->
+  <section class="o" data-o="cay">
+    <div class="thanh-phu">
+      <button class="nut nho" id="cay-mo">⊞ Mở hết</button>
+      <button class="nut nho" id="cay-dong">⊟ Đóng hết</button>
+      <label class="o-chon"><input type="checkbox" id="cay-kieu" checked> Hiện kiểu</label>
+      <span class="phu" id="cay-tom"></span>
+    </div>
+    <div class="cay" id="cay"></div>
+  </section>
+
+  <!-- ======================= TRUY VẤN ======================= -->
+  <section class="o" data-o="loc">
+    <div class="thanh-phu">
+      <input type="text" id="loc-duong" class="nhap-dong"
+             placeholder="Đường dẫn, ví dụ: $.mang[0].ten   ·   $..ten   ·   $.mang[*]">
+      <button class="nut nho" id="loc-chay">▶ Chạy</button>
+    </div>
+    <p class="mach" id="loc-mach">
+      <code>$</code> gốc · <code>.khoa</code> vào khoá · <code>[0]</code> phần tử
+      · <code>[*]</code> mọi phần tử · <code>..khoa</code> tìm sâu mọi cấp
+    </p>
+    <pre class="ket" id="loc-ket"></pre>
+  </section>
+
+  <!-- ======================= SO SÁNH ======================= -->
+  <section class="o" data-o="sosanh">
+    <div class="thanh-phu">
+      <span class="phu">Dán JSON thứ hai vào ô dưới để so với nội dung đang soạn.</span>
+      <button class="nut nho" id="ss-chay">⇄ So sánh</button>
+    </div>
+    <textarea id="ss-nhap" class="ss-nhap" spellcheck="false"
+              placeholder="JSON thứ hai…"></textarea>
+    <div class="ket" id="ss-ket"></div>
+  </section>
+
+  <!-- ======================= THỐNG KÊ ======================= -->
+  <section class="o" data-o="thongke">
+    <div class="ket" id="tk-ket"></div>
+  </section>
+</main>
+
+<footer class="chan">
+  <span class="den" id="den"></span>
+  <span id="trang-thai">Chưa có nội dung</span>
+  <span class="day"></span>
+  <span class="phu" id="vi-tri">dòng 1, cột 1</span>
+  <span class="phu" id="co-tep"></span>
+</footer>
+
+<input type="file" id="tep" accept=".json,.txt,application/json" hidden>
+
+<script src="assets/json-editor.js"></script>
+</body>
+</html>

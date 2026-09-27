@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chi tiêu — sổ thu chi chạy ngay trong máy bạn</title>
+<link rel="stylesheet" href="assets/kieu.css">
+</head>
+<body>
+
+<header class="dau">
+  <div class="hieu">
+    <span class="bieu-tuong">₫</span>
+    <div>
+      <h1>Chi tiêu</h1>
+      <p class="phu">Dữ liệu nằm <b>trong máy bạn</b> — không gửi đi đâu cả</p>
+    </div>
+  </div>
+  <div class="cong-cu">
+    <select id="chon-thang" class="chon"></select>
+    <button class="nut" id="nut-xuat">⬇ Xuất CSV</button>
+    <button class="nut" id="nut-nhap">⬆ Nhập CSV</button>
+    <button class="nut" id="nut-sang-toi" title="Sáng / tối">◑</button>
+  </div>
+</header>
+
+<main>
+  <!-- ---------------------------------------------- cột trái: nhập -->
+  <aside class="ben">
+    <section class="the">
+      <h3>Ghi một khoản</h3>
+      <form id="form" autocomplete="off">
+        <label>Số tiền
+          <input type="text" id="f-tien" inputmode="decimal" required
+                 placeholder="50k · 1.5tr · 250000">
+          <span class="goi-y" id="goi-tien"></span>
+        </label>
+        <label>Nhóm
+          <div class="luoi-nhom" id="luoi-nhom"></div>
+        </label>
+        <label>Ngày
+          <input type="date" id="f-ngay" required>
+        </label>
+        <label>Ghi chú
+          <input type="text" id="f-chu" placeholder="không bắt buộc">
+        </label>
+        <button type="submit" class="nut chinh rong">+ Thêm khoản</button>
+      </form>
+    </section>
+
+    <section class="the">
+      <h3>Hạn mức tháng</h3>
+      <p class="phu nho">Đặt 0 để bỏ theo dõi nhóm đó.</p>
+      <div id="dat-han"></div>
+    </section>
+  </aside>
+
+  <!-- ---------------------------------------------- cột phải -->
+  <div class="chinh-cot">
+    <section class="tom-tat" id="tom-tat"></section>
+
+    <section class="the">
+      <h3>Chi tiêu theo ngày</h3>
+      <div class="bieu" id="bieu-ngay"></div>
+    </section>
+
+    <section class="the">
+      <h3>Theo nhóm</h3>
+      <div id="theo-nhom"></div>
+    </section>
+
+    <section class="the">
+      <h3>Hạn mức</h3>
+      <div id="ngan-sach"></div>
+    </section>
+
+    <section class="the">
+      <h3>Các khoản <span class="phu nho" id="dem-khoan"></span></h3>
+      <div id="danh-sach"></div>
+    </section>
+  </div>
+</main>
+
+<div class="che" id="che" hidden>
+  <div class="hop-che">
+    <h3>Nhập từ CSV</h3>
+    <p class="phu">Dán nội dung CSV, hoặc chọn tệp. Các khoản sẽ được <b>thêm vào</b>,
+      không xoá dữ liệu cũ.</p>
+    <textarea id="csv-nhap" spellcheck="false"
+              placeholder="ngay,nhom,tien,ghiChu&#10;2026-01-05,an-uong,50000,cơm trưa"></textarea>
+    <div class="hang">
+      <input type="file" id="csv-tep" accept=".csv,.txt">
+      <span class="day"></span>
+      <button class="nut" id="csv-huy">Huỷ</button>
+      <button class="nut chinh" id="csv-ok">Nhập</button>
+    </div>
+    <p class="phu" id="csv-bao"></p>
+  </div>
+</div>
+
+<footer class="chan">
+  <span id="trang-thai">—</span>
+  <span class="day"></span>
+  <button class="nut nho" id="nut-xoa-het">Xoá sạch dữ liệu</button>
+</footer>
+
+<script src="assets/loi.js"></script>
+<script src="assets/trang.js"></script>
+</body>
+</html>
