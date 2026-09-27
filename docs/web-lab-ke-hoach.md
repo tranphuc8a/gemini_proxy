@@ -1,6 +1,6 @@
 # Web Lab — kế hoạch đề tài
 
-Lộ trình cho `courses/lab-visual/`. Cập nhật: 2026-09-24 (sau đợt 5).
+Lộ trình cho `courses/lab-visual/`. Cập nhật: 2026-09-25 (sau đợt 6).
 Ngữ cảnh và trạng thái kỹ thuật: [`web-lab-visualize.md`](web-lab-visualize.md).
 
 ---
@@ -48,7 +48,7 @@ lab cần nó.** `V.bieuDo` và `V.bangTichLuy` được thêm vào engine vì �
 | Đồ thị / mạng lưới | ✅ `V.doThi` — đợt 4 đã mở |
 | ~~Web Worker~~ | ⛔ **bỏ có chủ đích** — xem đợt 5 |
 | Ngân sách thời gian cho mỗi khung hình | ✅ đợt 5 đã mở |
-| **Nhiều khung so sánh** | ❌ đợt 6 mở |
+| Nhiều khung so sánh | ✅ `V.khungNhieu` — đợt 6 đã mở |
 
 ---
 
@@ -210,17 +210,79 @@ bước mỗi khung hình mà **không hề xem đồng hồ** — đúng loại
 >
 > Đây là lần đầu tầng đối chiếu bắt được **lỗi nội dung** chứ không phải lỗi mã.
 
-### Đợt 6 — so sánh nhiều khung
+### ✅ Đợt 6 — XONG (2026-09-25)
 
-| Lab | Điều nó cho thấy | Công |
-|---|---|:--:|
-| **Đua optimizer** | SGD vs Momentum vs RMSProp vs Adam trên cùng mặt lỗi | M |
-| **Đấu trường metaheuristic** | Mở rộng bản đã có ở `heuristic-visual`, cho chọn địa hình | L |
-| **t-SNE vs UMAP vs PCA** | Thấy t-SNE "bịa" ra cụm không có thật | L |
+Cả 3 lab đã dựng và kiểm tra. Site hiện có **28 lab**.
 
-**Engine phải mọc:** `V.khungNhieu()` — nhiều canvas chung một bộ phát, chung
-một hạt giống, chung một ngân sách. Đây là thứ khiến site khác biệt: hầu hết
-trang trên mạng chỉ demo từng thuật toán riêng lẻ.
+**Engine đã mọc thêm:** `V.khungNhieu` — chia canvas thành lưới khung con, mỗi
+khung tự mang sẵn `le` (cho `V.bieuDo`) và `leLuoi` (cho `V.luoiO`), cộng
+`nen/vien/nhan/soPhu/trong/chua`. Kèm `leTrai`/`lePhai` cho `V.luoiO`. **19 mục
+tự kiểm tra mới** trong `thu-engine.js` (41 → 59).
+
+#### Các lab đã dựng
+
+| Lab | Điều nó cho thấy |
+|---|---|
+| **Đua optimizer** | SGD · Momentum · RMSProp · Adam trên 5 mặt lỗi. Bước 60 trên yên ngựa: SGD còn ở f ≈ 1,1 trong khi RMSProp đã xuống 2×10⁻²⁰ |
+| **Đấu trường metaheuristic** | Leo đồi · tôi luyện · GA · PSO, **cùng ngân sách gọi hàm**. Cùng địa hình, cùng hạt giống, chỉ đổi ngân sách → **người thắng đổi** |
+| **Giảm chiều** | PCA · MDS · t-SNE · chiếu ngẫu nhiên. Bộ "quả cầu đều" không có cụm nào, t-SNE vẫn vẽ ra cụm |
+
+#### Lệch so với kế hoạch, và vì sao
+
+**Kế hoạch ghi "t-SNE vs UMAP vs PCA". UMAP không có trong bản dựng.** Cài
+UMAP đúng nghĩa cần cả một bộ máy riêng (đại số fuzzy simplicial set + tối ưu
+hoá bằng lấy mẫu âm), và viết tay một thứ gần giống rồi **dán nhãn "UMAP"**
+thì sai với người học. Thay bằng **MDS (SMACOF)** và **chiếu ngẫu nhiên**:
+cả hai cài đúng được trong vài chục dòng, và mỗi cái đẩy được một luận điểm
+riêng (SMACOF có bất biến kiểm được; chiếu ngẫu nhiên cho thấy "không học
+gì" đôi khi đủ tốt).
+
+**Luận điểm của đấu trường đã bị số đo bác bỏ một lần rồi viết lại.** Bản
+đầu viết sẵn "đổi địa hình thì thứ hạng đảo lộn". Đo thật trên 5 địa hình × 8
+hạt giống: **PSO thắng gần như sạch mọi ô**. Phải sửa hai chỗ cài đặt yếu của
+mình (leo đồi → (1+1)-ES với quy tắc 1/5 của Rechenberg; tôi luyện cho bước
+đề xuất **co theo nhiệt độ**) rồi đo lại, và lúc đó mới hiện ra phép đảo
+thật — **theo ngân sách, không phải theo địa hình**:
+
+| Địa hình | ngân sách ≤ 2 000 | ngân sách ≥ 6 000 |
+|---|---|---|
+| Cầu | leo đồi thắng **8/8** | leo đồi thắng **0/8** |
+| Ackley | leo đồi thắng **8/8** | leo đồi thắng **0/8** |
+
+Bài học rút ra cho chính mình: **viết sẵn kết luận vào kế hoạch rồi đi dựng
+lab để minh hoạ nó là làm ngược.** Đo trước, viết sau.
+
+#### Ba bug thật bị lộ ra và đã sửa
+
+1. **Đấu trường ăn gian ngân sách.** GA và PSO đánh giá cả quần thể trong một
+   bước, nên khi ngân sách không chia hết cho cỡ quần thể chúng tiêu **lố tới
+   23 lần gọi hàm** — đúng cái lời hứa mà lab lấy làm nền tảng. Không thấy ở
+   lần đo đầu vì 6 000 / 24 = 250 chẵn. Ô *Vượt ngân sách* trên màn hình bắt
+   được nó ngay khi hạ ngân sách xuống 1 000.
+2. **Mặt "yên ngựa" của lab optimizer không có cận dưới** (`f = x² − 0,6y²`),
+   nên "cuộc đua" chỉ là xem ai chạy ra vô cực nhanh hơn: hai thuật toán
+   "phát nổ", một cái dừng ở −2 640. Thay bằng `f = (x²−1)² + 0,3y²` — vẫn có
+   điểm yên ngựa tại gốc, nhưng có **hai đáy thật** ở (±1, 0).
+3. **DOM giả không đọc được chữ ghi bằng `innerHTML`** — xem phần dưới.
+
+#### Một lỗ hổng trong chính bộ kiểm tra
+
+Đợt 3 thêm chốt chặn chống-tua-bị-cắt vào `chayToi()`: nếu ngân sách tua
+cắt giữa chừng thì ném lỗi thay vì lặng lẽ đọc trạng thái sai. **Nó chưa bao
+giờ chạy.** DOM giả lưu `innerHTML` vào `_html` nhưng `chuTrong()` chỉ đọc
+`_text` và các nút con, nên nhãn bộ phát ("bước 65 / 600") **biến mất hoàn
+toàn** khỏi mọi phép đo — `buocHienTai()` trả `NaN` cho **mọi lab**, kể cả
+Collatz. Sửa `chuTrong()` đọc thêm `_html` (bỏ thẻ). Ngay lập tức bắt được hai
+thứ:
+
+- Phép **N-body** ghi "sau 2 000 bước" nhưng thực tế lâu nay chỉ đọc tới
+  **bước 385** (100 vật = 4 950 cặp/bước, không lọt ngân sách tua 3 giây). Hạ
+  xuống 40 vật để nó chạy trọn thật.
+- Chốt chặn bắt nhầm trường hợp **xong sớm hợp lệ** (Schelling ngưỡng 0 thì
+  không ai chuyển nhà → xong ở bước 1). Thêm `daXong()` để phân biệt.
+
+**Không cần phép thử phủ định nhân tạo ở đợt này**: bộ kiểm đã tự bắt được
+ba lỗi thật ở trên, đó là bằng chứng mạnh hơn.
 
 ---
 
@@ -228,10 +290,10 @@ trang trên mạng chỉ demo từng thuật toán riêng lẻ.
 
 1. ~~`B.cot()` → **logistic map** → **Fourier epicycles**~~ ✅ xong
 2. ~~`V.luoiO` → **Schelling** → **Life** → **percolation**~~ ✅ xong
-3. `V.hat` → **SIR** → **boids** → **sinh tồn xã hội**  ← **tiếp theo**
+3. ~~`V.hat` → **SIR** → **boids** → **sinh tồn xã hội**~~ ✅ xong
 4. ~~`V.thoNen` → **Gray–Scott** → **Mandelbrot**~~ ✅ xong (không cần Worker)
 5. ~~`V.doThi` → **Raft**~~ ✅ xong
-6. `V.khungNhieu` → **đua optimizer**  ← **tiếp theo**
+6. ~~`V.khungNhieu` → **đua optimizer**~~ ✅ xong
 
 Đợt 1–2 xong — 12 lab, site đủ dày để công bố. Đợt 3 trở đi là chiều sâu.
 

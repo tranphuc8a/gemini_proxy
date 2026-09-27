@@ -199,6 +199,20 @@ var ds = DT.danhSachKe();       // duyệt nhiều thì giữ lại, đừng g�
 `boCucLoXo` là O(n²) mỗi vòng — chạy **một lần** lúc dựng đồ thị, đừng gọi trong
 vòng vẽ. Nó nhận hạt giống nên bố cục tái lập được.
 
+**Nhiều khung so sánh** — `V.khungNhieu(cv, {so, cot, le, leTren, leDuoi, khoang,
+caoNhan})` chia canvas thành lưới khung con để đặt **bốn thuật toán cạnh nhau
+trên cùng một bộ phát, cùng hạt giống, cùng ngân sách**. Mỗi khung tự mang sẵn
+`le` (dùng thẳng cho `V.bieuDo`) và `leLuoi` (cho `V.luoiO`), nên không phải tính
+lại toạ độ gì.
+
+```js
+var K = V.khungNhieu(cv, { so: 4, cot: 2, leDuoi: 200 });
+K[0].nen(); K[0].vien(); K[0].nhan("SGD", mau); K[0].soPhu("1,2e−5");
+var t = K[0].trong();           // vùng vẽ thực, đã trừ dòng nhãn
+var B = V.bieuDo(cv, { le: K[0].le, x: {...}, y: {...} });
+if (K[0].chua(chuột.x, chuột.y)) { ... }
+```
+
 **Số** — `V.soGon(v)` nhãn gọn cho trục: `12,3k` · `4,5 triệu` · `1,2×10¹²`
 
 **Bộ phát** — `V.phat({datLai, buoc, ve, toiDa, tocDo, nhan, lap, bang, tua, hanTua, anh, phucHoi, chuKy})`.
@@ -215,6 +229,13 @@ số người dùng đặt** — một lưới 300×300 hay 3000 tác tử có t
 đóng băng tab. Nên mỗi lần tua có ngân sách `hanTua` (mặc định **3000 ms**); hết
 ngân sách thì dừng lại ở đó và thanh tua nhảy về đúng chỗ đã tới. Lab nào một bước
 đã quá đắt (nấm nhầy: 28 ms) thì đặt `tua: false` — tua không cho được gì.
+
+Ngân sách này là để **bảo vệ tab của người dùng**, nên trong bộ kiểm tra tự động nó
+lại thành nguồn **chập chờn**: cùng một mã nguồn, máy rảnh thì tua tới bước 1 210,
+máy bận thì 1 153. Vì vậy `hanTua` đọc được từ `CAU_HINH_VIS.hanTua`, và
+`thu-nhanh.js` nới nó lên **120 giây** trước khi nạp bất kỳ kịch bản nào. Chốt chặn
+chống-tua-bị-cắt trong `kiem-so.js` vẫn giữ nguyên tác dụng — nó bắt lab **không bao
+giờ chạy xong**, chứ không bắt lab chậm.
 
 **Khác** — `V.rng(hat)` ngẫu nhiên tái lập được · `V.soLieu()` bảng số liệu ·
 `V.khung(host, o)` bố cục + thanh công cụ

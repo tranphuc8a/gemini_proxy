@@ -79,10 +79,21 @@ function chayToi(k) {
   t._ban("input");
   H.bomKhung(3);
   const toi = buocHienTai();
-  if (!isNaN(toi) && toi < k - 1) {
+  /* DUNG SOM co hai nguyen nhan, va chung khac han nhau:
+       - mo phong DA XONG (Schelling nguong 0 thi khong ai chuyen nha,
+         nen no xong ngay o buoc 1). Hoan toan hop le.
+       - ngan sach tua cat giua chung. Sai, va phai bao dong.
+     Bo phat gan chu "da xong" vao nhan khi thuoc truong hop dau. */
+  if (!isNaN(toi) && toi < k - 1 && !daXong()) {
     throw new Error("tua bi ngan sach cat: xin " + k + " buoc, chi toi " +
       toi + " \u2014 giam so buoc hoac giam quy mo tham so cua phep thu nay");
   }
+}
+
+/** Mô phỏng đã chạy hết chưa — khác hẳn với bị ngân sách cắt. */
+function daXong() {
+  const nhan = H.timTrong(main(), ".phat-nhan");
+  return !!nhan && H.chuTrong(nhan).includes("\u0111\u00e3 xong");
 }
 
 /** Chạy một số khung hình bằng nút Chạy — cho lab không có thanh tua. */
@@ -162,7 +173,18 @@ console.log("Giá trị chuẩn tính độc lập tại chỗ:");
 console.log("  π(60000) = " + PI_60000 + "  (số nguyên tố ≤ 60000)");
 console.log("");
 
+/* NOI NGAN SACH TUA. Ngan sach 3 giay cua engine la de bao ve tab cua
+   NGUOI DUNG; o day no chi lam phep do chap chon — cung mot ma nguon, may
+   ranh thi tua toi buoc 1 210, may ban thi 1 153. Noi len 120 giay thi ket
+   qua chi con phu thuoc ma nguon. Chot chan chayToi() van giu nguyen tac
+   dung: no bat lab KHONG BAO GIO chay xong, chu khong bat lab cham.
+
+   PHAI goi SAU napTheoIndex(): cau-hinh.js cua trang gan `window.CAU_HINH_VIS`
+   bang mot doi tuong MOI, nen goi truoc thi bi ghi de va khong co tac dung
+   nao ca. (Da mac dung loi nay mot lan: ba lan chay deu xanh, nhung la nho
+   may chu khong nho ban va.) */
 H.napTheoIndex();
+H.noiNganSachTua(120000);       /* PHAI goi SAU napTheoIndex — xem ghi chu tren */
 H.khoiDong();
 
 /* --- Xoắn ốc Ulam: đếm số nguyên tố phải khớp sàng độc lập --- */
@@ -664,6 +686,166 @@ dat("Tỉ lệ khối lượng vật thứ hai", 0.15);
 H.bomKhung(3);
 mongChuoi("N-body · μ = 0,15 vượt ngưỡng 0,0385 nên mất ổn định",
   oSo(soLieu(), "L4 và L5"), "mất ổn định");
+
+/* ================================================================
+   ĐỢT 6 — tối ưu hoá và giảm chiều
+   ================================================================ */
+
+/* --- Đua optimizer: bốn kết cục khác hẳn nhau trên bốn mặt lỗi --- */
+H.moLab("dua-optimizer");
+
+/* Yên ngựa: f = (x²−1)² + 0,3y². Gốc toạ độ là điểm yên ngựa (f = 1), hai
+   đáy thật ở (±1, 0) với f = 0. Xuất phát gần như đúng trên sống yên, nên
+   gradient theo x gần bằng 0: đây là phép thử "ai thoát điểm yên ngựa trước". */
+dat("Mặt lỗi", "yen-ngua");
+chayToi(60);
+S = soLieu();
+mong("Optimizer · bước 60: SGD thuần vẫn còn dính ở điểm yên ngựa (f ≈ 1)",
+  soKhoaHoc(oSo(S, "SGD thuần")) > 0.9, true);
+mong("Optimizer · bước 60: Momentum đã thoát được",
+  soKhoaHoc(oSo(S, "Momentum")) < 0.01, true);
+mong("Optimizer · bước 60: RMSProp thoát sớm nhất",
+  soKhoaHoc(oSo(S, "RMSProp")) < 1e-10, true);
+chayToi(600);
+S = soLieu();
+mong("Optimizer · bước 600: cả SGD cũng về tới đáy thật",
+  soKhoaHoc(oSo(S, "SGD thuần")) < 1e-5, true);
+
+/* Cao nguyên: gradient gần 0 trên một vùng rộng. Đây là chỗ duy nhất việc
+   CHIA CHO ĐỘ LỚN GRADIENT cứu được tình thế — và SGD thuần thì không. */
+dat("Mặt lỗi", "cao-nguyen");
+chayToi(600);
+S = soLieu();
+mong("Optimizer · cao nguyên: SGD thuần vẫn kẹt sau 600 bước",
+  soKhoaHoc(oSo(S, "SGD thuần")) > 1, true);
+mong("Optimizer · cao nguyên: RMSProp về tới đáy",
+  soKhoaHoc(oSo(S, "RMSProp")) < 0.01, true);
+
+/* Rosenbrock với bước học 0,02: quán tính cộng dồn làm Momentum văng ra.
+   Quán tính không miễn phí — đó là nửa còn lại của câu chuyện. */
+dat("Mặt lỗi", "rosenbrock");
+chayToi(600);
+S = soLieu();
+mongChuoi("Optimizer · Rosenbrock: Momentum phát nổ với bước học 0,02",
+  oSo(S, "Momentum"), "phát nổ");
+mong("Optimizer · Rosenbrock: RMSProp vẫn về được đáy thung lũng",
+  soKhoaHoc(oSo(S, "RMSProp")) < 1e-2, true);
+
+/* Nhiều cực trị: bốn thuật toán này đều TẤT ĐỊNH, nên cùng điểm xuất phát
+   thì vào cùng một lòng chảo — khác hẳn bốn thuật toán ngẫu nhiên ở lab
+   đấu trường. Khoảng cách giữa hai lab đó chính là bài học. */
+dat("Mặt lỗi", "nhieu-cuc");
+chayToi(300);
+S = soLieu();
+const bonCuc = ["SGD thuần", "Momentum", "RMSProp", "Adam"]
+  .map((n) => soKhoaHoc(oSo(S, n)));
+mong("Optimizer · nhiều cực trị: cả bốn rơi vào cùng một cực tiểu địa phương",
+  Math.max(...bonCuc) - Math.min(...bonCuc) < 1e-3, true);
+
+/* --- Đấu trường metaheuristic --- */
+H.moLab("dau-truong");
+dat("Vẽ mọi điểm đã thử", false);
+
+/* BẤT BIẾN quan trọng nhất của lab này: không ai được tiêu quá ngân sách.
+   Phải thử ở ngân sách KHÔNG CHIA HẾT cho cỡ quần thể (1 000 / 24), vì đó
+   chính là chỗ GA và PSO từng ăn gian thêm tới 23 lần gọi hàm. */
+dat("Địa hình", "rastrigin");
+dat("Cỡ quần thể (GA và PSO)", 24);
+dat("Ngân sách gọi hàm mỗi thuật toán", 1000);
+chayToi(1500);
+S = soLieu();
+mong("Đấu trường · ngân sách 1 000 không chia hết cho 24: không ai vượt",
+  soDemDau(S["Vượt ngân sách"]), 0);
+mong("Đấu trường · số lần gọi nhiều nhất đúng bằng ngân sách, không hơn",
+  soDem(S["Gọi nhiều nhất"]), 1000);
+dat("Cỡ quần thể (GA và PSO)", 18);
+dat("Ngân sách gọi hàm mỗi thuật toán", 2500);
+chayToi(3000);
+S = soLieu();
+mong("Đấu trường · 2 500 với quần thể 18: vẫn không ai vượt",
+  soDemDau(S["Vượt ngân sách"]), 0);
+
+/* PHÉP ĐẢO THEO NGÂN SÁCH — luận điểm chính của lab.
+   Cùng địa hình, cùng hạt giống, chỉ đổi ngân sách, người thắng đổi. */
+dat("Cỡ quần thể (GA và PSO)", 24);
+dat("Hạt giống", 3);
+dat("Địa hình", "cau");
+dat("Ngân sách gọi hàm mỗi thuật toán", 2000);
+chayToi(2500);
+S = soLieu();
+mongChuoi("Đấu trường · cầu, ngân sách 2 000: leo đồi thắng",
+  S["Thắng"], "Leo đồi");
+dat("Ngân sách gọi hàm mỗi thuật toán", 20000);
+chayToi(4000);
+S = soLieu();
+mongChuoi("Đấu trường · cầu, ngân sách 20 000: PSO thắng — người thắng đổi " +
+  "dù địa hình và hạt giống không đổi",
+  S["Thắng"], "Bầy hạt");
+
+/* Kim đáy bể: hàm phẳng lì (= 10) trừ một giếng bán kính 0,5 (f = r² < 0,25).
+   Nên giá trị tốt nhất hoặc là đúng 10, hoặc là dưới 0,25 — KHÔNG CÓ GÌ Ở GIỮA.
+   Đó là phép kiểm tra địa hình đúng là địa hình mình khai báo. */
+dat("Địa hình", "kim-day-rom");
+dat("Ngân sách gọi hàm mỗi thuật toán", 2000);
+chayToi(2500);
+S = soLieu();
+const bonKim = [1, 2, 3, 4].map((i) => soKhoaHoc(oSo(S, i + ". ")));
+mong("Đấu trường · kim đáy bể: mọi giá trị hoặc = 10 hoặc < 0,25, không có " +
+  "gì ở giữa (hàm phẳng lì, không có dốc để bám)",
+  bonKim.every((v) => v === 10 || v < 0.25), true);
+
+/* --- Giảm chiều --- */
+H.moLab("giam-chieu");
+
+/* Bộ "lưới" là MỘT MẶT PHẲNG thật sự, chỉ bị quay lên 30 chiều. PCA là phép
+   quay + chiếu, nên nó PHẢI tìm lại được chính xác. Đây là giá trị biết trước
+   chặt nhất trong lab này. */
+dat("Bộ dữ liệu", "luoi");
+dat("Hạt giống", 7);
+chayToi(150);
+S = soLieu();
+mong("Giảm chiều · lưới: PCA dựng lại gần như trọn vẹn láng giềng",
+  soThuc(S["PCA · giữ láng giềng"]) > 99.5, true);
+mong("Giảm chiều · lưới: tương quan toàn cục của PCA = 1,000",
+  soThuc(S["PCA · toàn cục"]), 1.0, 0.002);
+mong("Giảm chiều · lưới: MDS cũng dựng lại được",
+  soThuc(S["MDS (SMACOF) · toàn cục"]), 1.0, 0.002);
+mong("Giảm chiều · lưới: chiếu ngẫu nhiên kém hơn hẳn PCA",
+  soThuc(S["Chiếu ngẫu nhiên · giữ láng giềng"]) <
+  soThuc(S["PCA · giữ láng giềng"]) - 20, true);
+mong("Giảm chiều · SMACOF: ứng suất chưa bao giờ tăng (đúng điều SMACOF chứng minh)",
+  soDemDau(S["Ứng suất từng tăng"]), 0);
+
+/* Ba cụm thật: t-SNE được thiết kế để giữ láng giềng gần, nên nó phải thắng
+   ở cột đó; còn PCA thì giữ cấu trúc toàn cục gần như hoàn hảo. */
+dat("Bộ dữ liệu", "ba-cum");
+chayToi(150);
+S = soLieu();
+mong("Giảm chiều · ba cụm: t-SNE giữ láng giềng hơn hẳn PCA",
+  soThuc(S["t-SNE · giữ láng giềng"]) >
+  soThuc(S["PCA · giữ láng giềng"]) + 15, true);
+mong("Giảm chiều · ba cụm: PCA giữ cấu trúc toàn cục gần như hoàn hảo",
+  soThuc(S["PCA · toàn cục"]) > 0.99, true);
+
+/* QUẢ CẦU ĐỀU — trưng bày chính của lab.
+   Dữ liệu là một khối liền, không có cụm nào. Đối chiếu với ba cụm thật ở
+   trên: ở đó PCA đạt 0,99+ toàn cục; ở đây MỌI phương pháp đều sụp xuống
+   dưới 0,45 — nghĩa là KHÔNG CÓ GÌ ĐỂ TÌM. Vậy mà tấm t-SNE vẫn hiện ra
+   những cụm tròn trịa, và điểm giữ-láng-giềng của nó vẫn cao nhất. */
+dat("Bộ dữ liệu", "cau-deu");
+chayToi(150);
+S = soLieu();
+const bonTC = ["PCA", "MDS (SMACOF)", "t-SNE", "Chiếu ngẫu nhiên"]
+  .map((p) => soThuc(S[p + " · toàn cục"]));
+mong("Giảm chiều · quả cầu đều: CẢ BỐN phương pháp đều sụp toàn cục (< 0,45) " +
+  "— không có cấu trúc nào để tìm",
+  bonTC.every((v) => v < 0.45), true);
+mong("Giảm chiều · quả cầu đều: t-SNE bóp méo toàn cục còn nặng hơn PCA",
+  soThuc(S["t-SNE · toàn cục"]) < soThuc(S["PCA · toàn cục"]), true);
+mong("Giảm chiều · quả cầu đều: vậy mà t-SNE vẫn cao điểm giữ láng giềng nhất " +
+  "— tấm hình trông THUYẾT PHỤC nhất lại là tấm sai nhất về toàn cục",
+  soThuc(S["t-SNE · giữ láng giềng"]) >
+  soThuc(S["PCA · giữ láng giềng"]), true);
 
 /* ---------------------------------------------------------------- kết */
 console.log("");

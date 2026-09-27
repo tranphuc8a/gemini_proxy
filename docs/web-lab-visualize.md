@@ -226,21 +226,30 @@ cd lab-visual && python check.py --tinh     # đầy đủ, không cần trình 
 python engine/sync.py --kiem                # bản sao có lệch nguồn không
 ```
 
-Kết quả lần chạy cuối — **93 lab trên 4 site, tất cả xanh** (cộng 41 mục tự kiểm
+Kết quả lần chạy cuối — **96 lab trên 4 site, tất cả xanh** (cộng 59 mục tự kiểm
 tra nguyên hàm engine):
 
 | Site | Chạy thử | Đối chiếu số | Lỗi |
 |---|:--:|:--:|:--:|
-| `lab-visual` (25 lab) | 71 | 87 | 0 |
+| `lab-visual` (28 lab) | 77 | 112 | 0 |
 | `heuristic-visual` (21 lab) | 53 | — | 0 |
 | `ai-everything-visual` (39 lab) | 101 | — | 0 |
 | `system-design-visual` (8 lab) | 23 | — | 0 |
 
 Đã kiểm tra ngược: chèn lỗi runtime cố ý → `check.py` trả exit 1 và chỉ đúng chỗ.
+Đợt 6 không cần phép thử phủ định nhân tạo: bộ kiểm đã tự bắt được ba lỗi thật
+(ăn gian ngân sách trong đấu trường, mặt yên ngựa không có cận dưới, và nhãn bộ
+phát biến mất khỏi DOM giả khiến chốt chặn chống-tua-bị-cắt chưa bao giờ chạy).
 
 Năm tầng: **tĩnh** (Python) → **nguyên hàm engine** (`thu-engine.js`) → **DOM giả**
 (`thu-nhanh.js`) → **đối chiếu số** (`kiem-so.js`) → **Chromium** (playwright, chưa cài nên tự bỏ qua). Tầng DOM giả không bắt được
 lỗi hình học — canvas ở đó chỉ đếm số lần gọi.
+
+**Ngân sách tua trong phép thử.** `hanTua` (mặc định 3 000 ms) tồn tại để bảo vệ
+tab của người dùng, nhưng trong bộ kiểm tự động nó làm kết quả **đổi theo tải
+máy**. Nên `kiem-so.js` gọi `H.noiNganSachTua(120000)` — **sau `napTheoIndex()`**,
+vì `cau-hinh.js` gán `window.CAU_HINH_VIS` bằng đối tượng mới và sẽ ghi đè. Tầng
+DOM giả cố ý **không** nới: nó chỉ cần biết lab không ném lỗi.
 
 ## Việc còn lại
 

@@ -166,7 +166,7 @@
       var TS = V.thamSo([
         { ma: "bo", ten: "Bộ dữ liệu", kieu: "chon", gt: "ba-cum",
           muc: Object.keys(BO).map(function (k) { return { v: k, t: BO[k].ten }; }) },
-        { ma: "soDiem", ten: "Số điểm", kieu: "so", min: 60, max: 600, buoc: 30, gt: 300,
+        { ma: "soDiem", ten: "Số điểm", kieu: "so", min: 60, max: 480, buoc: 30, gt: 150,
           moTa: "t-SNE và MDS đều tốn <b>N² phép</b> mỗi bước, nên tăng số điểm " +
                 "làm chậm rất nhanh." },
         { ma: "soChieu", ten: "Số chiều gốc", kieu: "so", min: 3, max: 100, buoc: 1, gt: 30 },
@@ -183,11 +183,11 @@
       ], {
         doi: function () { apDung(); },
         preset: [
-          { ten: "★ Quả cầu đều — cụm ma", gt: { bo: "cau-deu", soDiem: 300, perp: 30 } },
+          { ten: "★ Quả cầu đều — cụm ma", gt: { bo: "cau-deu", soDiem: 150, perp: 30 } },
           { ten: "Ba cụm — trường hợp dễ", gt: { bo: "ba-cum" } },
           { ten: "Hai vỏ cầu",             gt: { bo: "hai-vo" } },
           { ten: "Dải chữ S",              gt: { bo: "chu-s" } },
-          { ten: "Lưới bị xé",             gt: { bo: "luoi", soDiem: 400, noiLuoi: true } },
+          { ten: "Lưới bị xé",             gt: { bo: "luoi", soDiem: 240, noiLuoi: true } },
           { ten: "Perplexity quá nhỏ",     gt: { bo: "cau-deu", perp: 5 } }
         ]
       });
@@ -384,7 +384,17 @@
           moi[i * 2] = sx / N; moi[i * 2 + 1] = sy / N;
         }
         Y[1] = moi; demXY = y;          /* hoan doi, khong cap phat */
-        trangThai[1].us = ungSuat(moi);
+        var us = ungSuat(moi);
+        /* SMACOF CHUNG MINH duoc rang ung suat khong bao gio tang. Lab tu
+           dem so lan loi hua do bi pha — con so phai luon la 0, va tang
+           kiem so doi chieu dung no thay vi doi chieu mot con so bat ky.
+           (Nguong 1e-9 tuong doi la de bo qua sai so lam tron dau cham
+           dong, chu khong phai de che loi.) */
+        if (trangThai[1].us !== undefined &&
+            us > trangThai[1].us * (1 + 1e-9) + 1e-9) {
+          trangThai[1].tang = (trangThai[1].tang || 0) + 1;
+        }
+        trangThai[1].us = us;
       }
 
       /* ==============================================================
@@ -468,7 +478,7 @@
         }
         s.kl = kl;
 
-        var mm = buocDem < 60 ? 0.5 : 0.8;
+        var mm = buocDem < 30 ? 0.5 : 0.8;
         var lr = 120;
         for (i = 0; i < N * 2; i++) {
           /* Loi hoc rieng tung toa do (Jacobs 1988) — khong co no t-SNE bo. */
@@ -483,7 +493,7 @@
         tx /= N; ty /= N;
         for (i = 0; i < N; i++) { y[i * 2] -= tx; y[i * 2 + 1] -= ty; }
 
-        if (buocDem === 100) s.lai = 1;   /* tat phong dai */
+        if (buocDem === 50) s.lai = 1;    /* tat phong dai */
       }
 
       /* ==============================================================
@@ -647,11 +657,13 @@
           "Vòng lặp": buocDem
         };
         for (p = 0; p < PP.length; p++) {
-          bang[PP[p].ten] = "giữ láng giềng " + (chiSo[p].giu * 100).toFixed(1) +
-                            "%  ·  tương quan toàn cục " + chiSo[p].tuongQuan.toFixed(3);
+          bang[PP[p].ten + " · giữ láng giềng"] = (chiSo[p].giu * 100).toFixed(1) + "%";
+          bang[PP[p].ten + " · toàn cục"] = chiSo[p].tuongQuan.toFixed(3);
         }
         if (trangThai[1].us !== undefined) {
-          bang["Ứng suất MDS"] = trangThai[1].us.toExponential(3) + "  (SMACOF: không bao giờ tăng)";
+          bang["Ứng suất MDS"] = trangThai[1].us.toExponential(3);
+          bang["Ứng suất từng tăng"] = (trangThai[1].tang || 0) +
+                                       " lần  (SMACOF hứa: phải là 0)";
         }
         if (trangThai[2]) {
           bang["KL của t-SNE"] = trangThai[2].kl.toFixed(4) +
@@ -679,7 +691,7 @@
                dinhDang: function (v) { return v.toFixed(1); } },
           luoi: 4
         });
-        P.datToiDa(600);
+        P.datToiDa(250);
         P.datTocDo(12);
         ghiChu.innerHTML = "";
         PP.forEach(function (t, i) {
@@ -707,7 +719,7 @@
           /* Chieu ngau nhien khong lap — no xong ngay tu dau. Do la ca y nghia. */
           /* Cham diem la O(N^2) — lam moi buoc thi tua se khong kip. */
           if (buocDem % 10 === 0) doChiSo();
-          return buocDem < 600;
+          return buocDem < 250;
         },
         datLai: function () { chuanBi(); },
         ve: ve,

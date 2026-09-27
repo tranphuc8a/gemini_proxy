@@ -22,7 +22,7 @@ python -m http.server 8792 --bind 127.0.0.1
 
 ---
 
-## 25 lab
+## 28 lab
 
 | Nhóm | Lab | Điều nó cho thấy |
 |---|---|---|
@@ -51,8 +51,24 @@ python -m http.server 8792 --bind 127.0.0.1
 | | Đồng thuận Raft | ★ bấm chuột **giết máy** và **cắt mạng**; giết quá nửa thì cụm đứng hình |
 | **Xã hội & trò chơi** | Schelling — phân ly | ★ ngưỡng **3/8** (ai cũng chịu làm thiểu số) vẫn phân ly hoàn toàn |
 | | Sinh tồn xã hội (Sugarscape) | ★ Gini **0,48** dù không ai bóc lột ai; tắt chênh lệch bẩm sinh + địa lý → **0,26** |
+| **Tối ưu hoá & heuristic** | Đua optimizer | SGD · Momentum · RMSProp · Adam trên cùng mặt lỗi · ★ bước 60 trên yên ngựa: SGD còn ở **f ≈ 1,1**, RMSProp đã **2×10⁻²⁰** |
+| | Đấu trường metaheuristic | leo đồi · tôi luyện · GA · PSO, **cùng ngân sách gọi hàm** · ★ chỉ đổi ngân sách là **người thắng đổi** |
+| **Học máy & dữ liệu** | Giảm chiều | PCA · MDS · t-SNE · chiếu ngẫu nhiên · ★ bộ **"quả cầu đều"** không có cụm nào, t-SNE vẫn vẽ ra cụm |
+
 ### Chi tiết vài chỗ đáng chú ý
 
+- **Đấu trường metaheuristic** — bấm preset *★ Cầu · ngân sách 2 000* rồi *★ Cầu ·
+  ngân sách 20 000*. Địa hình y nguyên, hạt giống y nguyên, thuật toán y nguyên —
+  chỉ ngân sách đổi, và **người thắng đổi**. Đo trên 8 hạt giống: leo đồi
+  thắng **8/8** ở ngân sách ≤ 2 000, thắng **0/8** ở ≥ 6 000. Ô *Vượt ngân sách*
+  phải luôn bằng 0 — nó có ở đó để bạn kiểm tra rằng cuộc thi thực sự công bằng.
+- **Giảm chiều** — bấm preset *★ Quả cầu đều*. Dữ liệu là một khối liền, **không có
+  cụm nào**; cả bốn phương pháp đều tụt tương quan toàn cục xuống dưới 0,45 (nghĩa
+  là không có gì để tìm) — vậy mà tấm t-SNE vẫn hiện ra các cụm tròn trịa, và điểm
+  giữ-láng-giềng của nó vẫn cao nhất. **Tấm trông thuyết phục nhất lại là tấm sai nhất.**
+  Đối chứng: bộ *Lưới* là một mặt phẳng thật bị quay lên 30 chiều, và PCA dựng lại
+  **100,0%** láng giềng, tương quan **1,000**.
+  *UMAP không có ở đây — xem ghi chú cuối phần giải thích của lab.*
 - **Collatz** — tắt trục log để thấy vì sao cần trục log: một đỉnh duy nhất nuốt
   hết phần còn lại. `n = 27` → 111 bước, vọt lên 9232.
 - **Logistic map** — thu khoảng r về 3,82–3,86: giữa vùng hỗn loạn hiện ra chu kỳ 3,
@@ -144,7 +160,7 @@ tại r = 2,8 / 3,2 / 3,5 / 3,83, σ của phân phối đều = 1/√12, luật
 2^popcount(n) ô đen ở hàng n, đống cát bảo toàn hạt, kiến Langton đối chiếu với một
 bản cài đặt độc lập, Braess ra đúng 65 và 80 phút, hệ số cụm vòng thuần khớp
 `3(k−2)/(4(k−1))`, Raft không bao giờ có hai lãnh đạo cùng nhiệm kỳ, tỉ lệ điểm
-trong tập Mandelbrot khớp diện tích đã biết 1,506…  **87 phép, tất cả khớp.**
+trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lại đúng một mặt phẳng bị quay lên 30 chiều, ứng suất SMACOF chưa bao giờ tăng, không thuật toán nào trong đấu trường tiêu quá ngân sách…  **112 phép, tất cả khớp.**
 
 > **Bẫy đã gặp:** `chayToi(k)` có thể **không tới được bước k** — bộ phát có ngân
 > sách 3 giây cho mỗi lần tua để không đóng băng tab. Nay nó xác nhận và báo lỗi rõ

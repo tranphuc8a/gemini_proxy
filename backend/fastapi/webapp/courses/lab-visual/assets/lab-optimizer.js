@@ -27,10 +27,16 @@
       }
     },
     "yen-ngua": {
-      ten: "Yên ngựa — điểm gần như phẳng, bẫy của xuống dốc",
-      x0: -0.0015, y0: 1.6, pham: 2.2,
-      f: function (x, y) { return x * x - y * y * 0.6; },
-      g: function (x, y) { return [2 * x, -1.2 * y]; }
+      ten: "Yên ngựa — điểm phẳng ở giữa, hai đáy thật ở hai bên",
+      /* f = (x^2-1)^2 + 0,3y^2. Goc toa do la diem yen ngua that (cong
+         xuong theo x, cong len theo y), va co HAI cuc tieu that tai
+         (+-1, 0) voi f = 0. Xuat phat gan nhu dung tren song yen ngua
+         (x = -0,002) nen gradient theo x gan bang 0: thuat toan phai tu
+         thoat ra. Do moi la phep thu — chu mot mat khong co can duoi thi
+         "thang" chi co nghia la chay ra vo cuc nhanh hon. */
+      x0: -0.002, y0: 1.6, pham: 2.2,
+      f: function (x, y) { var a = x * x - 1; return a * a + 0.3 * y * y; },
+      g: function (x, y) { return [4 * x * (x * x - 1), 0.6 * y]; }
     },
     "nhieu-cuc": {
       ten: "Nhiều cực trị — mặt lỗi gợn sóng",
@@ -349,10 +355,21 @@
           "<b>lượn zigzag</b> dữ dội theo chiều dốc trong khi bò rất chậm theo chiều thoải. " +
           "RMSProp và Adam chia theo độ lớn gradient nên đi gần như thẳng. Đây là lý do " +
           "chính khiến Adam phổ biến: nó <i>tự chỉnh bước học riêng cho từng chiều</i>.</li>" +
-          "<li><b>Yên ngựa</b> — điểm xuất phát gần như đúng trên đỉnh yên, gradient bé xíu. " +
-          "SGD gần như <b>đứng im</b>. Momentum và Adam tích luỹ đủ để trượt xuống. Trong " +
-          "không gian nhiều chiều, yên ngựa <i>nhiều hơn cực tiểu địa phương rất nhiều</i> — " +
-          "đó mới là kẻ thù thật của huấn luyện mạng nơ-ron.</li>" +
+          "<li><b>Yên ngựa</b> — <code>f = (x²−1)² + 0,3y²</code>: gốc toạ độ là điểm yên " +
+          "ngựa thật (f = 1), còn hai <b>đáy thật</b> nằm ở (±1, 0) với f = 0. Xuất phát " +
+          "gần như đúng trên sống yên nên gradient theo x bé xíu. Ở <b>bước 60</b>: SGD " +
+          "vẫn còn ở f ≈ 1,1 — tức <i>chưa nhúc nhích khỏi yên ngựa</i>; Momentum đã xuống " +
+          "3×10⁻³, RMSProp xuống 2×10⁻²⁰. Kéo thanh tua qua lại quanh bước 60 để thấy " +
+          "khoảnh khắc đó. Cuối cùng cả bốn đều về đúng đáy — khác biệt là <b>mất bao " +
+          "lâu</b>, chứ không phải đi đâu. Trong không gian nhiều chiều, yên ngựa " +
+          "<i>nhiều hơn cực tiểu địa phương rất nhiều</i> — đó mới là kẻ thù thật của " +
+          "huấn luyện mạng nơ-ron.</li>" +
+          "<li><b>Nhiều cực trị</b> — cả bốn rơi vào <b>cùng một</b> cực tiểu địa phương, " +
+          "giống nhau tới ba chữ số. Không phải lỗi: bốn thuật toán này đều " +
+          "<b>tất định</b>, cùng điểm xuất phát thì cùng lòng chảo. Muốn thoát khỏi " +
+          "cực tiểu địa phương thì phải có <b>ngẫu nhiên</b> — xem lab " +
+          "<i>Đấu trường metaheuristic</i>, nơi bốn thuật toán ngẫu nhiên làm đúng việc " +
+          "đó.</li>" +
           "<li><b>Cao nguyên</b> — gradient gần 0 trên một vùng rộng. RMSProp và Adam chia " +
           "cho một số nhỏ nên <b>vẫn đi được</b>; SGD gần như bất động.</li>" +
           "<li><b>Bước học quá lớn</b> — bấm preset đó. Xem cái nào nổ trước. Ngưỡng chịu " +
@@ -361,8 +378,12 @@
           "<li><b>Tắt quán tính</b> (β₁ = 0): Momentum thoái hoá thành SGD, Adam thành " +
           "RMSProp. Hai cặp đường trùng nhau — cách kiểm tra rằng bạn hiểu đúng công thức.</li>" +
           "</ul>" +
-          "<b>Không có thuật toán nào thắng mọi nơi.</b> Trên Rosenbrock với bước học nhỏ, " +
-          "Momentum thường về đích trước Adam. Đây là điều mà một bảng xếp hạng đơn lẻ " +
+          "<b>Không có thuật toán nào thắng mọi nơi — và đây là số đo.</b> Trên " +
+          "Rosenbrock, kéo bước học xuống 0,002 rồi tua tới bước 2 000: Momentum " +
+          "đạt 10⁻¹⁶ trong khi Adam mới ở 0,66 — <b>hơn nhau mười sáu bậc độ lớn</b>. " +
+          "Nhưng ở bước học 0,02 thì chính Momentum <b>phát nổ</b> còn Adam về đích " +
+          "bình yên. Cùng mặt lỗi, cùng điểm xuất phát, chỉ đổi một con số — và kẻ " +
+          "thắng đổi chỗ cho kẻ thua. Đây là điều mà một bảng xếp hạng đơn lẻ " +
           "không bao giờ nói cho bạn."
       });
       r.trai.classList.add("co");

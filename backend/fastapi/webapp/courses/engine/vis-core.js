@@ -1614,7 +1614,10 @@
          luoi 300x300 co the ngon hang tram giay, dong bang ca tab.
          Nen tua chay toi khi HET NGAN SACH thi dung lai o day; thanh tua
          se nhay ve dung cho da toi. Tha di duoc it con hon la treo may. */
-      var han = o.hanTua === undefined ? 3000 : o.hanTua;
+      /* Uu tien: tham so cua lab > cau hinh cua trang > 3000 ms.
+         Nac cau hinh co de bo kiem tra tu dong noi han len — o do
+         "cham" khong phai loi, chi "khong bao gio xong" moi la loi. */
+      var han = o.hanTua === undefined ? ch("hanTua", 3000) : o.hanTua;
       var batDauLuc = dongHo();
       for (var j = batDau; j < tran; j++) {
         if (!motBuoc()) break;

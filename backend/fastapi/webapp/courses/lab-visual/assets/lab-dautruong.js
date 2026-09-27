@@ -46,6 +46,18 @@
       },
       toiUu: 0
     },
+    "kim-day-rom": {
+      ten: "Kim đáy bể — phẳng lì, một cái giếng tí xíu",
+      f: function (x, y) {
+        /* Phang tuyet doi tru mot gieng ban kinh 0,5 o (-3,7 ; 2,9).
+           KHONG CO DOC nao de bam theo, nen moi meo meo "di xuong" deu
+           vo dung. Bai toan chi con la: ai RAI mau tham do rong hon. */
+        var dx = x + 3.7, dy = y - 2.9;
+        var r2 = dx * dx + dy * dy;
+        return r2 < 0.25 ? r2 : 10;
+      },
+      toiUu: 0
+    },
     "himmelblau": {
       ten: "Himmelblau — bốn cực tiểu toàn cục ngang nhau",
       f: function (x, y) {
@@ -69,8 +81,9 @@
     mon: "L27",
     ten: "Đấu trường metaheuristic — không ai thắng ở mọi địa hình",
     moTa: "Bốn thuật toán, cùng hàm mục tiêu, cùng hạt giống, và quan trọng nhất — " +
-          "<b>cùng ngân sách số lần gọi hàm</b>. Đổi địa hình và xem thứ hạng " +
-          "<b>đảo lộn</b>. Đó là nội dung của định lý “không có bữa ăn trưa miễn phí”.",
+          "<b>cùng ngân sách số lần gọi hàm</b>. Giữ nguyên mọi thứ, chỉ kéo thanh " +
+          "<b>ngân sách</b>: ở 2 000 lần gọi leo đồi thắng tuyệt đối, ở 20 000 nó " +
+          "thua tuyệt đối. <b>Cùng bài toán, người thắng vẫn đổi.</b>",
 
     dung: function (host) {
       var K = null, B = null, P = null, BTL = null;
@@ -84,10 +97,11 @@
             return { v: k, t: DIA_HINH[k].ten };
           }) },
         { ma: "nganSach", ten: "Ngân sách gọi hàm mỗi thuật toán", kieu: "so",
-          min: 500, max: 20000, buoc: 500, gt: 6000,
+          min: 500, max: 20000, buoc: 500, gt: 2000,
           moTa: "<b>Đây mới là đơn vị đo đúng</b> của tối ưu hoá — không phải số vòng " +
                 "lặp, không phải giây. Ngoài đời một lần gọi hàm có thể là cả một " +
-                "mô phỏng chạy mười phút." },
+                "mô phỏng chạy mười phút.<br><b>Kéo riêng thanh này</b> và xem người " +
+                "thắng đổi, dù địa hình và hạt giống không hề đổi." },
         { ma: "quanThe", ten: "Cỡ quần thể (GA và PSO)", kieu: "so",
           min: 6, max: 80, buoc: 2, gt: 24 },
         { ma: "nhietDau", ten: "Nhiệt độ ban đầu (tôi luyện)", kieu: "so",
@@ -101,12 +115,13 @@
       ], {
         doi: function () { apDung(); },
         preset: [
-          { ten: "Rastrigin",       gt: { diaHinh: "rastrigin" } },
-          { ten: "Cầu — trơn tru",  gt: { diaHinh: "cau" } },
-          { ten: "Ackley",          gt: { diaHinh: "ackley" } },
-          { ten: "Schwefel — bẫy",  gt: { diaHinh: "schwefel" } },
-          { ten: "Himmelblau",      gt: { diaHinh: "himmelblau" } },
-          { ten: "Ngân sách ít",    gt: { diaHinh: "rastrigin", nganSach: 1000 } }
+          { ten: "★ Cầu · ngân sách 2 000",  gt: { diaHinh: "cau", nganSach: 2000 } },
+          { ten: "★ Cầu · ngân sách 20 000", gt: { diaHinh: "cau", nganSach: 20000 } },
+          { ten: "Rastrigin",       gt: { diaHinh: "rastrigin", nganSach: 6000 } },
+          { ten: "Ackley",          gt: { diaHinh: "ackley", nganSach: 2000 } },
+          { ten: "Schwefel — bẫy",  gt: { diaHinh: "schwefel", nganSach: 6000 } },
+          { ten: "Himmelblau",      gt: { diaHinh: "himmelblau", nganSach: 6000 } },
+          { ten: "Kim đáy bể",      gt: { diaHinh: "kim-day-rom", nganSach: 2000 } }
         ]
       });
 
@@ -120,7 +135,11 @@
       /* ============================================================
          Ham muc tieu — CO DEM so lan goi
          ============================================================ */
+      /** Tra ve null khi da het ngan sach. Moi noi goi PHAI xu ly truong
+          hop do — neu khong thi loi hua "cung ngan sach" cua lab la gia. */
+      function conNganSach(i) { return soGoi[i] < G.nganSach; }
       function danhGia(i, x, y) {
+        if (soGoi[i] >= G.nganSach) return null;
         soGoi[i]++;
         return dh.f(x, y);
       }
@@ -137,6 +156,7 @@
           s.x = R.khoang(-PHAM, PHAM); s.y = R.khoang(-PHAM, PHAM);
           s.f = danhGia(i, s.x, s.y);
           s.buoc = PHAM * 0.35;
+          s.thang = 0; s.lan = 0;
         } else if (THUAT[i].ma === "toi-luyen") {
           s.x = R.khoang(-PHAM, PHAM); s.y = R.khoang(-PHAM, PHAM);
           s.f = danhGia(i, s.x, s.y);
@@ -149,7 +169,7 @@
           s.pf = new Float64Array(q);
           for (var j = 0; j < q; j++) {
             s.qx[j] = R.khoang(-PHAM, PHAM); s.qy[j] = R.khoang(-PHAM, PHAM);
-            s.qf[j] = danhGia(i, s.qx[j], s.qy[j]);
+            s.qf[j] = conNganSach(i) ? danhGia(i, s.qx[j], s.qy[j]) : Infinity;
             s.vx[j] = R.khoang(-1, 1); s.vy[j] = R.khoang(-1, 1);
             s.px[j] = s.qx[j]; s.py[j] = s.qy[j]; s.pf[j] = s.qf[j];
           }
@@ -163,36 +183,60 @@
         if (soGoi[i] >= G.nganSach) return false;
 
         if (THUAT[i].ma === "leo-doi") {
+          /* (1+1)-ES voi QUY TAC 1/5 cua Rechenberg: cu 10 lan de xuat lai
+             xem ti le thanh cong. Tren 1/5 nghia la dang di de qua -> NOI
+             buoc ra; duoi 1/5 nghia la dang di qua tham -> co buoc lai.
+             Quy tac mot dong nay la thu bien leo doi tu do choi thanh mot
+             doi thu that: tren mat tron no dat do chinh xac may. */
           var nx = kep(s.x + R.chuan() * s.buoc);
           var ny = kep(s.y + R.chuan() * s.buoc);
           var nf = danhGia(i, nx, ny);
+          if (nf === null) return false;
           ghiDau(i, nx, ny);
-          if (nf < s.f) { s.x = nx; s.y = ny; s.f = nf; s.that = 0; }
-          else {
-            s.that = (s.that || 0) + 1;
-            /* Kep lau qua thi thu hep buoc; kep han thi khoi dong lai cho khac. */
-            if (s.that > 25) { s.buoc *= 0.7; s.that = 0; }
-            if (s.buoc < 1e-3) {
-              s.x = R.khoang(-PHAM, PHAM); s.y = R.khoang(-PHAM, PHAM);
-              s.f = danhGia(i, s.x, s.y);
-              s.buoc = PHAM * 0.35;
-            }
+          if (nf < s.f) { s.x = nx; s.y = ny; s.f = nf; s.thang++; }
+          s.lan++;
+          if (s.lan >= 10) {
+            s.buoc *= s.thang > 2 ? 1.5 : 0.817;
+            s.lan = 0; s.thang = 0;
+          }
+          /* Buoc co ve gan nhu khong con -> da vet kiet cho nay, nhay di
+             cho khac. Ky luc van duoc giu, nen khoi dong lai khong mat gi. */
+          if (s.buoc < 1e-11 || s.buoc > PHAM * 2) {
+            s.x = R.khoang(-PHAM, PHAM); s.y = R.khoang(-PHAM, PHAM);
+            var lai = danhGia(i, s.x, s.y);
+            s.f = lai === null ? Infinity : lai;
+            s.buoc = PHAM * 0.35; s.lan = 0; s.thang = 0;
           }
         } else if (THUAT[i].ma === "toi-luyen") {
-          var mx = kep(s.x + R.chuan() * PHAM * 0.15);
-          var my = kep(s.y + R.chuan() * PHAM * 0.15);
+          /* Buoc de xuat phai CO LAI theo nhiet do. Giu buoc lon khi da
+             lanh thi moi de xuat deu bi tu choi, va thuat toan dung yen o
+             mot cho khong tinh chinh them duoc gi — do la ly do ban dau
+             toi luyen ve bet o moi dia hinh. */
+          var bd = PHAM * (0.02 + 0.28 * Math.sqrt(s.T / Math.max(1e-9, G.nhietDau)));
+          var mx = kep(s.x + R.chuan() * bd);
+          var my = kep(s.y + R.chuan() * bd);
           var mf = danhGia(i, mx, my);
+          if (mf === null) return false;
           ghiDau(i, mx, my);
           var d = mf - s.f;
           /* Metropolis: buoc xau van duoc nhan, voi xac suat exp(-d/T). */
           if (d < 0 || R() < Math.exp(-d / Math.max(1e-9, s.T))) {
             s.x = mx; s.y = my; s.f = mf;
           }
-          s.T *= 0.9995;
+          /* Lam lanh theo ti le, dat sao cho het ngan sach thi T ~ 1e-4 T0. */
+          s.T *= Math.pow(1e-4, 1 / Math.max(1, G.nganSach));
         } else if (THUAT[i].ma === "di-truyen") {
           /* Mot the he: chon giai dau, lai ghep, dot bien. */
           var cx = new Float64Array(q), cy = new Float64Array(q), cf = new Float64Array(q);
           for (j = 0; j < q; j++) {
+            /* Het ngan sach giua chung the he: nhung o con lai giu nguyen
+               ca the doi truoc, KHONG danh gia them. Neu cu danh gia cho
+               tron the he thi GA duoc tieu lo toi q-1 lan goi ham so voi
+               ba doi thu — va ca cuoc thi thanh vo nghia. */
+            if (!conNganSach(i)) {
+              cx[j] = s.qx[j]; cy[j] = s.qy[j]; cf[j] = s.qf[j];
+              continue;
+            }
             var a = giaiDau(s, R, q), b = giaiDau(s, R, q);
             var t = R();
             var kx = s.qx[a] * t + s.qx[b] * (1 - t);
@@ -215,6 +259,9 @@
           var gTot = 0;
           for (j = 1; j < q; j++) if (s.pf[j] < s.pf[gTot]) gTot = j;
           for (j = 0; j < q; j++) {
+            /* Cung ly do nhu GA: het ngan sach giua bay thi hat con lai
+               dung yen, khong duoc bay them mot buoc mien phi nao. */
+            if (!conNganSach(i)) break;
             s.vx[j] = w * s.vx[j] + c1 * R() * (s.px[j] - s.qx[j])
                                   + c2 * R() * (s.px[gTot] - s.qx[j]);
             s.vy[j] = w * s.vy[j] + c1 * R() * (s.py[j] - s.qy[j])
@@ -235,6 +282,7 @@
           totNhat = s.f; tx = s.x; ty = s.y;
         } else {
           for (j = 0; j < q; j++) {
+            if (s.qf[j] === null || !isFinite(s.qf[j])) continue;
             if (s.qf[j] < totNhat) { totNhat = s.qf[j]; tx = s.qx[j]; ty = s.qy[j]; }
           }
         }
@@ -359,14 +407,25 @@
         /* Bang xep hang. */
         var xep = THUAT.map(function (t, i2) { return [i2, tt[i2].kyLuc]; })
                        .sort(function (a, b) { return a[1] - b[1]; });
+        /* Loi hua cua lab nay la "cung ngan sach". Nen lab tu dem so thuat
+           toan da VUOT ngan sach va in len — con so do phai luon la 0, va
+           tang kiem so doi chieu dung no. */
+        var vuot = 0, nhieuNhat = 0;
+        for (i = 0; i < THUAT.length; i++) {
+          if (soGoi[i] > G.nganSach) vuot++;
+          if (soGoi[i] > nhieuNhat) nhieuNhat = soGoi[i];
+        }
         var bang = {
           "Địa hình": dh.ten.split(" — ")[0],
-          "Ngân sách": Math.round(G.nganSach).toLocaleString("vi") + " lần gọi hàm"
+          "Ngân sách": Math.round(G.nganSach).toLocaleString("vi") + " lần gọi hàm",
+          "Gọi nhiều nhất": nhieuNhat.toLocaleString("vi"),
+          "Vượt ngân sách": vuot + " thuật toán  (phải luôn là 0)"
         };
         for (i = 0; i < xep.length; i++) {
           bang[(i + 1) + ". " + THUAT[xep[i][0]].ten] =
             xep[i][1] === Infinity ? "—" : xep[i][1].toExponential(3);
         }
+        bang["Thắng"] = THUAT[xep[0][0]].ten;
         bang["⚑ Nhắc"] = "đổi hạt giống vài lần trước khi kết luận";
         S.dat(bang);
       }
@@ -420,30 +479,54 @@
           "<b>Điều kiện thi đấu.</b> Cùng hàm mục tiêu, cùng hạt giống, và quan trọng nhất " +
           "— <b>cùng ngân sách số lần gọi hàm mục tiêu</b>. Đó là đơn vị đo đúng của tối ưu " +
           "hoá: ngoài đời một lần “gọi hàm” có thể là một mô phỏng chạy mười phút, nên so " +
-          "theo số vòng lặp hay theo giây đều vô nghĩa." +
+          "theo số vòng lặp hay theo giây đều vô nghĩa. Ô <i>Vượt ngân sách</i> trong bảng " +
+          "số liệu phải <b>luôn bằng 0</b> — nó có ở đó để bạn kiểm tra rằng cuộc thi này " +
+          "thật sự công bằng." +
           "<ul>" +
-          "<li><b>Cầu</b> (trơn tru, một cực tiểu): <b>leo đồi</b> thường thắng đậm. Không có " +
-          "bẫy nào thì mọi cơ chế thoát bẫy đều là ngân sách bị lãng phí.</li>" +
-          "<li><b>Rastrigin</b> (gợn sóng đều): leo đồi kẹt gần như ngay lập tức. PSO và GA " +
-          "vươn lên. Thứ hạng <b>đảo ngược hoàn toàn</b> so với địa hình trên — cùng bốn " +
-          "thuật toán, cùng ngân sách.</li>" +
-          "<li><b>Schwefel</b> là cái bẫy ác nhất: cực tiểu toàn cục nằm <b>sát mép</b> miền " +
-          "tìm kiếm, còn gần tâm là một cực tiểu giả rất hấp dẫn. Thuật toán nào có xu hướng " +
-          "tụ về giữa sẽ bị lừa.</li>" +
+          "<li><b>Thí nghiệm chính — chỉ đổi MỘT thanh.</b> Bấm preset " +
+          "<i>★ Cầu · ngân sách 2 000</i>: leo đồi thắng. Bấm tiếp " +
+          "<i>★ Cầu · ngân sách 20 000</i>: leo đồi <b>thua bét nhì</b>, PSO thắng. " +
+          "Địa hình y nguyên, hạt giống y nguyên, thuật toán y nguyên. " +
+          "<b>Chỉ ngân sách đổi, và người thắng đổi theo.</b></li>" +
+          "<li>Đo trên 8 hạt giống: ở ngân sách ≤ 2 000 leo đồi thắng <b>8/8</b> trên " +
+          "mặt cầu và Ackley; ở ≥ 6 000 nó thua <b>0/8</b>. Không phải may rủi — " +
+          "đó là hai chế độ khác hẳn nhau.</li>" +
+          "<li><b>Vì sao.</b> PSO phải tiêu 24 lần gọi chỉ để khởi tạo bầy, rồi 24 lần " +
+          "nữa cho mỗi vòng. Ngân sách ít thì nó chưa kịp làm gì đã hết tiền. Leo đồi " +
+          "tiêu <b>đúng 1 lần gọi mỗi bước</b> nên nó đã đi được 2 000 bước tinh chỉnh. " +
+          "Nhưng ngân sách nhiều thì lợi thế đó hết ý nghĩa, còn trí nhớ tập thể của " +
+          "bầy thì càng lúc càng có giá.</li>" +
+          "</ul>" +
+          "<b>Trục thứ hai: địa hình.</b> Ở cùng ngân sách 2 000, leo đồi thắng 8/8 trên " +
+          "mặt cầu và Ackley, nhưng chỉ 2/8 trên Rastrigin — nơi nó kẹt vào gợn sóng gần " +
+          "như ngay lập tức." +
+          "<ul>" +
+          "<li><b>Schwefel</b> là cái bẫy ác nhất: cực tiểu toàn cục nằm <b>xa tâm</b>, " +
+          "còn gần giữa là một cực tiểu giả rất hấp dẫn. Thuật toán nào có xu hướng tụ " +
+          "về giữa sẽ bị lừa — và leo đồi tụt xuống hạng bét ở đây.</li>" +
+          "<li><b>Kim đáy bể</b> phẳng lì khắp nơi trừ một cái giếng bán kính 0,5. " +
+          "<b>Không có dốc nào để bám</b>, nên mọi mẹo “đi xuống” đều vô dụng và bài " +
+          "toán chỉ còn là: ai rải mẫu thăm dò rộng hơn. Ở ngân sách 500 thì bốn thuật " +
+          "toán gần như <b>ngang nhau</b> — đó chính là hình ảnh của bài toán mà không " +
+          "hiểu biết nào giúp được.</li>" +
           "<li><b>Himmelblau</b> có <b>bốn</b> cực tiểu toàn cục ngang nhau. Bật " +
           "<i>vẽ mọi điểm đã thử</i>: GA và PSO thường tụ hết về một cái (mất đa dạng), " +
           "trong khi leo đồi khởi động lại rải đều hơn.</li>" +
           "</ul>" +
-          "<b>Bật “vẽ mọi điểm đã thử”</b> để thấy cách mỗi thuật toán <i>tiêu</i> ngân sách: " +
-          "leo đồi soi rất kỹ một vùng nhỏ, tôi luyện đi lang thang lúc còn nóng, GA tụ dần " +
-          "thành cụm, PSO quét thành những vệt cong đặc trưng." +
+          "<b>Bật “vẽ mọi điểm đã thử”</b> để thấy cách mỗi thuật toán <i>tiêu</i> ngân " +
+          "sách: leo đồi soi rất kỹ một vùng nhỏ, tôi luyện đi lang thang lúc còn nóng " +
+          "rồi co dần lại, GA tụ thành cụm, PSO quét thành những vệt cong đặc trưng." +
           "<ul>" +
-          "<li><b>Đổi hạt giống vài lần trước khi kết luận.</b> Đây là thuật toán ngẫu nhiên; " +
-          "một lần chạy đơn lẻ không nói lên điều gì. Bảng xếp hạng có thể đảo chỉ vì may rủi.</li>" +
-          "<li><b>“Không có bữa ăn trưa miễn phí”</b> (Wolpert & Macready, 1997): lấy trung " +
-          "bình trên <i>mọi</i> hàm mục tiêu có thể có, mọi thuật toán tìm kiếm đều ngang " +
-          "nhau. Một thuật toán chỉ thắng khi giả định của nó khớp với cấu trúc thật của bài " +
-          "toán. Lab này là bản thu nhỏ của định lý đó — đổi địa hình là đổi người thắng.</li>" +
+          "<li><b>Đổi hạt giống vài lần trước khi kết luận.</b> Đây là thuật toán ngẫu " +
+          "nhiên; một lần chạy đơn lẻ không nói lên điều gì. Mọi con số “8/8” ở trên đều " +
+          "là đếm trên 8 hạt giống, không phải một lần chạy.</li>" +
+          "<li><b>“Không có bữa ăn trưa miễn phí”</b> (Wolpert & Macready, 1997) nói rằng " +
+          "lấy trung bình trên <i>mọi</i> hàm mục tiêu có thể có, mọi thuật toán tìm kiếm " +
+          "đều ngang nhau. Nói cho đúng: định lý đó <b>không</b> hứa rằng thứ hạng sẽ đảo " +
+          "trên vài hàm chuẩn quen thuộc — hàm chuẩn đều có cấu trúc, và thuật toán khai " +
+          "thác được cấu trúc thì thắng. Cái lab này đo được, và cũng là cái đáng nhớ hơn, " +
+          "là <b>câu “thuật toán X tốt hơn Y” luôn thiếu vế sau</b>: tốt hơn trên địa hình " +
+          "nào, và với bao nhiêu lần gọi hàm.</li>" +
           "</ul>"
       });
       r.trai.classList.add("co");

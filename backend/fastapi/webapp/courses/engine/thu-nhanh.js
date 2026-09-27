@@ -256,9 +256,16 @@ function batDauChay(main) {
   return nut;
 }
 
-/** Gom toan bo chu trong mot nhanh DOM (ke ca nut van ban). */
+/** Gom toan bo chu trong mot nhanh DOM (ke ca nut van ban).
+
+    PHAI doc ca `_html`. DOM gia khong phan tich chuoi HTML thanh nut con,
+    nen chu ma lab ghi bang innerHTML truoc day BIEN MAT hoan toan khoi moi
+    phep do. Nhan cua bo phat ("buoc 65 / 600") duoc ghi dung kieu do — nen
+    chot chan chong-tua-bi-cat trong kiem-so.js van doc ra NaN, tuc no chua
+    tung bat duoc gi. Bo tag di la du: ta chi can van ban. */
 function chuTrong(e) {
   let s = e._text || "";
+  if (e._html) s += " " + String(e._html).replace(/<[^>]*>/g, " ");
   for (const c of e.children || []) s += " " + chuTrong(c);
   return s;
 }
@@ -294,6 +301,24 @@ function napTheoIndex() {
 }
 
 /** Khoi dong engine roi tra ve danh sach ma lab doc tu muc luc. */
+/** Noi ngan sach tua cho bo kiem tra.
+
+    Ngan sach 3 giay cua engine la de bao ve TAB CUA NGUOI DUNG. Trong
+    phep thu tu dong no lai thanh nguon chap chon: cung mot ma nguon, may
+    ranh thi tua toi buoc 1 210, may ban thi 1 153. Nen o day noi len 120
+    giay. Chot chan chong-tua-bi-cat van giu nguyen tac dung: no bat lab
+    KHONG BAO GIO chay xong, chu khong bat lab cham. */
+function noiNganSachTua(ms) {
+  window.CAU_HINH_VIS = window.CAU_HINH_VIS || {};
+  window.CAU_HINH_VIS.hanTua = ms === undefined ? 120000 : ms;
+}
+/* Tao san doi tuong cau hinh: vis-core.js chup `window.CAU_HINH_VIS` mot
+   lan luc nap, nen no phai ton tai TRUOC khi nap kich ban. Chua dat
+   `hanTua` o day — tang DOM gia chi can biet lab khong nem loi, khong can
+   chay tron, nen no giu ngan sach mac dinh cho nhanh. Tang doi chieu so
+   thi goi `noiNganSachTua()` cua rieng no. */
+window.CAU_HINH_VIS = window.CAU_HINH_VIS || {};
+
 function khoiDong() {
   (skWindow.DOMContentLoaded || []).forEach((f) => f());
   bomKhung(3);
@@ -308,6 +333,7 @@ function khoiDong() {
    Trong CommonJS, `return` o cap module la hop le.
    ------------------------------------------------------------------ */
 module.exports = {
+  noiNganSachTua,
   document, window, skWindow, ctx, TM, loiConsole,
   nap, napTheoIndex, khoiDong, bomKhung, timTrong, gomTrong,
   moLab, nutChayCua, batDauChay, chuTrong, thanhTua, soLieuCua

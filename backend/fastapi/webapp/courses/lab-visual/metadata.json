@@ -1,6 +1,6 @@
 {
   "title": "Web Lab trực quan",
-  "description": "Phòng thí nghiệm cho những thứ không hình dung nổi bằng chữ — thuật toán, hệ động lực, xác suất, tự động tế bào, bầy đàn, mạng phân tán, fractal. 25 lab: giả thuyết Collatz, logistic map, Fourier, xoắn ốc Ulam, Monte Carlo, giới hạn trung tâm, phân ly Schelling, Game of Life, 256 luật Wolfram, bài toán thấm, đống cát tới hạn, kiến Langton, đàn chim, dịch tễ, kẹt xe ma và nghịch lý Braess, nấm nhầy, sinh tồn xã hội, băm nhất quán, thế giới nhỏ, lan truyền trên mạng, đồng thuận Raft, Mandelbrot và Julia, phản ứng khuếch tán Turing, hiệu ứng cánh bướm, và năm điểm Lagrange. Mỗi lab chỉnh được tham số, tua như xem video, xuất ảnh PNG và video WebM, chia sẻ bằng liên kết giữ nguyên mọi tham số. Chạy được offline bằng file://.",
+  "description": "Phòng thí nghiệm cho những thứ không hình dung nổi bằng chữ — thuật toán, hệ động lực, xác suất, tự động tế bào, bầy đàn, mạng phân tán, fractal, tối ưu hoá, học máy. 28 lab: giả thuyết Collatz, logistic map, Fourier, xoắn ốc Ulam, Monte Carlo, giới hạn trung tâm, phân ly Schelling, Game of Life, 256 luật Wolfram, bài toán thấm, đống cát tới hạn, kiến Langton, đàn chim, dịch tễ, kẹt xe ma và nghịch lý Braess, nấm nhầy, sinh tồn xã hội, băm nhất quán, thế giới nhỏ, lan truyền trên mạng, đồng thuận Raft, Mandelbrot và Julia, phản ứng khuếch tán Turing, hiệu ứng cánh bướm, năm điểm Lagrange, đua optimizer (SGD/Momentum/RMSProp/Adam), đấu trường metaheuristic cùng ngân sách, và giảm chiều PCA/MDS/t-SNE. Mỗi lab chỉnh được tham số, tua như xem video, xuất ảnh PNG và video WebM, chia sẻ bằng liên kết giữ nguyên mọi tham số. Chạy được offline bằng file://.",
   "category": "Lab trực quan",
   "tags": [
     "truc-quan-hoa",
@@ -27,7 +27,15 @@
     "thien-van",
     "tuong-tac",
     "canvas",
-    "lab"
+    "lab",
+    "toi-uu-hoa",
+    "hoc-may",
+    "giam-chieu",
+    "t-sne",
+    "pca",
+    "metaheuristic",
+    "gradient-descent",
+    "adam"
   ],
   "icon": "🧪"
 }
