@@ -1,6 +1,6 @@
 # Web Lab — kế hoạch đề tài
 
-Lộ trình cho `courses/lab-visual/`. Cập nhật: 2026-09-25 (sau đợt 6).
+Lộ trình cho `courses/lab-visual/`. Cập nhật: 2026-09-27 (sau đợt 7).
 Ngữ cảnh và trạng thái kỹ thuật: [`web-lab-visualize.md`](web-lab-visualize.md).
 
 ---
@@ -286,6 +286,170 @@ ba lỗi thật ở trên, đó là bằng chứng mạnh hơn.
 
 ---
 
+### ✅ Đợt 7 — XONG (2026-09-27)
+
+Cả 4 lab đã dựng và kiểm tra. Site hiện có **32 lab**. Bàn giao chi tiết — kể cả **bốn lần số đo bác bỏ câu tôi đã viết** và ba bug thật — ở
+[`web-lab-dot-7-ban-giao.md`](web-lab-dot-7-ban-giao.md).
+
+Engine mọc: `V.cayQuyetDinh` · `V.canThongTin` · `V.choiThu`. Tự kiểm tra nguyên hàm **59 → 96 mục**.
+
+#### Kế hoạch ban đầu của đợt (giữ lại để đối chiếu)
+
+
+Một nhóm hoàn toàn mới với site: **câu đố quyết định**. 93 lab hiện có
+không có cái nào thuộc loại này.
+
+| Lab | Điều nó cho thấy | Công |
+|---|---|:--:|
+| **Cân xu tìm xu giả** | Mỗi lần cân cho **3 kết cục**, nên 12 xu cần ≥ log₃(24) = 2,9 → **3 lần**. Cân thích ứng vs cân định sẵn trước | M |
+| **Thả trứng tìm tầng cao nhất** | Với 2 trứng / 100 tầng, trực giác nói √100 = 10; đáp số đúng là **14** — và vì sao nó là số tam giác | M |
+| **Đoán chuỗi n số (Mastermind)** | Thuật toán 5 nước của Knuth; so **minimax vs entropy vs đoán bừa**; n = 5 cần mấy lần | L |
+| **Dồn hạt — bài thi tối ưu hoá** | ★ entropy trông như tốn N² nhưng tính đúng bằng **O(H+W)**; điểm tụ tối ưu là **trung vị**, không phải trung bình; bạn tự chơi rồi so điểm với thuật toán | L |
+
+**Engine phải mọc — hai nguyên hàm, cả hai đều đếm được ≥ 2 lab cần:**
+
+* `V.cayQuyetDinh` — dựng / bố cục / vẽ / đi theo **cây quyết định**, đo chiều sâu,
+  và vẽ sẵn **cận dưới lý thuyết thông tin** (log_b của số kết cục).
+  Cần bởi **5 lab**: cân xu, thả trứng, Mastermind, thuốc độc, thử chìa khoá.
+* `V.choiThu` — chế độ **người dùng tự chơi**: nhận nước đi, chấm điểm so với
+  chính sách tối ưu, giữ lịch sử, cho hoàn tác. **Đây là thứ biến lab thành
+  game** — đúng chỗ danh sách ý tưởng nhắm tới. Cần bởi **≥ 5 lab**.
+
+**Về lab "Dồn hạt"** — đây chính là hai ý số 8 và 9 trong danh sách
+(*"giải bài expert entropy"* + *"lab game: tạo môi trường, user chọn giải pháp,
+tính score"*). Luật chơi, lấy từ đề bài gốc:
+
+* Lưới H×W với H, W ∈ [80, 180]; **30–50 % ô có hạt** (N ≈ 2 000 – 16 000).
+* **Entropy** = tổng khoảng cách Manhattan của **mọi cặp hạt**.
+* Mỗi lượt đẩy một hạt sang ô kề; ngân sách **40·H·W** nước. **Mỗi ô chỉ chứa
+  được một hạt** — không chồng lên nhau được.
+* Điểm = `10⁶ · ratio² + (ngân sách còn lại)/100`, với
+  `ratio = (E₀ − E₁)/E₀`.
+
+Bốn điểm đáng dựng:
+
+1. **Entropy trông như tốn N²** (tới 10⁸ phép) nhưng Manhattan **tách được theo
+   trục**: `Σ|yᵢ−yⱼ| + Σ|xᵢ−xⱼ|`, mỗi vế tính bằng đếm theo hàng/cột → **O(H+W)**.
+   Đây là con số `kiem-so.js` đối chiếu được **tuyệt đối**: vét cạn N² phải khớp
+   công thức tới từng đơn vị.
+2. Điểm tụ tối ưu là **trung vị theo từng trục**, không phải trung bình — hệ quả
+   trực tiếp của Manhattan, và là chỗ trực giác hay sai.
+3. Không chồng hạt được, nên kết quả là một **quả cầu Manhattan** (hình thoi)
+   xếp chặt, không phải một điểm.
+4. Tối ưu lý thuyết là **một khối duy nhất** (entropy đếm cả cặp khác cụm), nhưng
+   **ngân sách nước đi** có thể làm 2–3 khối tốt hơn. Cùng bài học "ngân sách đổi
+   thì người thắng đổi" của đợt 6, ở một bài toán khác hẳn.
+
+> **Không gắn tên công ty nào vào lab.** Đề gốc đến từ một kỳ thi nội bộ; lab
+> mô tả nó như *một bài thi lập trình tối ưu hoá*, không quy cho bên nào — vừa
+> tránh lộ nguồn, vừa không ngụ ý liên kết với một sản phẩm thương mại nào.
+
+### Đợt 8 — Trạng thái và đường đi
+
+Hai nguyên hàm của đợt 7 đã có, nên bốn lab này rẻ hơn hẳn.
+
+| Lab | Điều nó cho thấy | Công |
+|---|---|:--:|
+| **Tìm thuốc độc** | 1 000 chai + 10 người thử = mã nhị phân. Biến thể **2 chai độc**, **cặp độc–giải** làm cận đổi hẳn | M |
+| **Thử chìa khoá** | n chìa, n ổ, chỉ so được chìa-với-ổ. Thuật toán ngẫu nhiên Θ(n log n) vs so tất cả Θ(n²) | M |
+| **Tháp Hà Nội** | Cấu hình đầu tùy ý + chỉ dẫn nước đi. ★ **đồ thị trạng thái là tam giác Sierpinski** | L |
+| **Hai quân mã, hai ô đích** | Hai sóng BFS lan trên bàn cờ; khoảng cách mã không phải khoảng cách hình học | M |
+
+**Engine có thể mọc:** `V.lanSong` — hiện sóng BFS theo từng lớp trên lưới
+hoặc đồ thị. Cần bởi 3 lab (hai quân mã, Hà Nội, chuỗi Markov ở đợt 9).
+**Chưa chốt** — chỉ tách ra engine nếu đếm được đúng ≥ 2 lab chép tay.
+
+### Đợt 9 — Ngẫu nhiên và hội tụ
+
+| Lab | Điều nó cho thấy | Công |
+|---|---|:--:|
+| **Chuỗi Markov — hội tụ** | Phân phối dừng, **thời gian trộn**, khe phổ. ★ khởi đầu nào cũng về cùng một chỗ — trừ khi xích tuần hoàn | M |
+| **Bloom filter** | ★ đọc "có" mà không có; tỉ lệ dương tính giả đo được khớp công thức `(1−e^(−kn/m))^k` | M |
+| **Địa hình thật cho heuristic** | ⚠ **chồng lấn nặng** — xem ghi chú bên dưới | S |
+
+### Đợt 10 — Nhận dạng chữ số viết tay, đầu cuối
+
+| Lab | Điều nó cho thấy | Công |
+|---|---|:--:|
+| **Vẽ số bằng chuột → mạng đoán** | ★ FNN vs CNN trên **cùng chữ bạn vừa viết**; softmax hiện độ tự tin từng lớp | XL |
+
+---
+
+## 4b. Phân loại danh sách ý tưởng ngày 2026-09-27
+
+16 ý tưởng, đối chiếu với **93 lab đã có** trên 4 site và với 5 tiêu chí ở mục 1.
+
+### ✅ Nhận — đủ tiêu chí, không trùng lab nào (9 ý)
+
+Cân xu · thả trứng · đoán chuỗi số · thuốc độc · thử chìa khoá · tháp Hà Nội ·
+hai quân mã · Bloom filter · chuỗi Markov. Đã xếp vào đợt 7–9 ở trên.
+
+### ⚠ Nhận có điều kiện (2 ý)
+
+**"Heuristic trên vùng đồi núi thật sự"** — phần *thuật toán* **đã có 7 lab**:
+`dia-hinh-toi-uu`, `leo-doi`, `simulated-annealing`, `dan-kien`, `di-truyen`,
+`bay-dan-pso`, `dua-thuat-toan` (heuristic-visual) và `dau-truong` (lab-visual).
+Thứ **duy nhất** còn mới là chính **địa hình**: thay hàm chuẩn (Rastrigin,
+Ackley…) bằng địa hình fractal sinh bằng diamond-square, vẽ bóng đổ kiểu bản
+đồ địa hình. Đề xuất: **không dựng lab mới**, mà thêm địa hình fractal làm
+một lựa chọn trong `dau-truong` — công nhỏ, không đẻ thêm lab trùng.
+
+**"CNN + FNN + softmax nhận dạng chữ số"** — các *thành phần* đều đã có trong
+`ai-everything-visual`: `cnn-duong-ong`, `tich-chap`, `truong-thu-nhan`,
+`mang-lan-truyen-tien`, `huan-luyen-mlp`, `backprop-tung-buoc`,
+`softmax-nhiet-do`. Cái **chưa có** là mạch đầu-cuối: *bạn vẽ một chữ số bằng
+chuột rồi xem nó được phân loại*. Đó mới là phần đáng dựng.
+
+> **Vấn đề chưa có lời giải: lấy dữ liệu huấn luyện ở đâu?** Dự án hứa
+> *chạy offline bằng `file://`, không thư viện ngoài*, và `vercel-bundle-size.md`
+> cho thấy kích thước gói đang là vấn đề sống. Nhúng MNIST thật là thêm
+> hàng trăm KB dữ liệu vào repo.
+>
+> **Đề xuất:** sinh dữ liệu huấn luyện **bằng nét vẽ thủ tục** (mỗi chữ số là
+> vài đoạn cong, jitter affine ngẫu nhiên), huấn luyện ngay trong trình duyệt.
+> Không tệp dữ liệu nào, và **bản thân việc nó hỏng lại là bài học**: mạng huấn
+> luyện trên chữ viết tổng hợp sẽ **đoán tệ hẳn** trên chữ viết tay thật của bạn —
+> đó chính là *trôi phân phối*, và site đã có lab `troi-du-lieu` để nối sang.
+>
+> **Đã chốt (2026-09-27): sinh thủ tục, huấn luyện trong trình duyệt.**
+
+### ✅ Đã rõ — hai ý "bài expert" gộp thành một lab (2 ý)
+
+Đề bài đã đọc. Cả hai ý — *"giải bài entropy"* và *"lab game: tạo môi trường,
+user chọn giải pháp, tính score"* — là **hai nửa của cùng một lab**: lab
+**Dồn hạt** ở đợt 7 vừa trình bày lời giải thuật toán, vừa cho người dùng tự
+chơi rồi chấm điểm theo đúng công thức của đề. Chi tiết ở phần đợt 7.
+
+Có thêm bài expert khác thì dựng thêm lab theo cùng khuôn — `V.choiThu` là hạ
+tầng dùng chung.
+
+### ❌ Không phải lab (3 ý)
+
+Mục 1 nói rõ: *"Chủ đề rớt tiêu chí không phải là chủ đề tồi — nó chỉ là
+bài viết, không phải lab."* Ba ý này không có **núm để vặn** và không có
+**điều bất ngờ** — chúng là **ứng dụng** hoặc **tài liệu**, nên thuộc
+`webapp/` chứ không thuộc `courses/*-visual/`:
+
+| Ý | Nó thật ra là gì | Chỗ đúng |
+|---|---|---|
+| Web JSON editor thân thiện | công cụ | `webapp/tranphuc8a/` — cạnh `markdown-editor-pro` |
+| Design pattern cheat sheet | tài liệu tra cứu | trang tĩnh, hoặc một `*-course` |
+| Ứng dụng quản lý chi tiêu | ứng dụng có dữ liệu riêng | dự án riêng — cần lưu trữ, không chạy `file://` được |
+
+**✅ ĐÃ LÀM XONG (2026-09-27)** — cả ba đều ở `webapp/tranphuc8a/`, **178 phép kiểm**,
+204 KB tổng cộng. Bàn giao: [`ba-ung-dung-ngoai-lab.md`](ba-ung-dung-ngoai-lab.md).
+
+| Ứng dụng | Đường dẫn | Phép kiểm |
+|---|---|:--:|
+| JSON Editor | `tranphuc8a/json-editor` | 58 |
+| Mẫu thiết kế | `tranphuc8a/design-pattern` | 36 |
+| Chi tiêu | `tranphuc8a/chi-tieu` | 84 |
+
+Chúng giữ nguyên ràng buộc của `courses/` (không thư viện ngoài, chạy `file://`,
+có `kiem.js`) — 60–80 KB mỗi cái, so với `markdown-editor-pro` là 7,5 MB.
+
+---
+
 ## 5. Thứ tự đề xuất
 
 1. ~~`B.cot()` → **logistic map** → **Fourier epicycles**~~ ✅ xong
@@ -294,6 +458,11 @@ ba lỗi thật ở trên, đó là bằng chứng mạnh hơn.
 4. ~~`V.thoNen` → **Gray–Scott** → **Mandelbrot**~~ ✅ xong (không cần Worker)
 5. ~~`V.doThi` → **Raft**~~ ✅ xong
 6. ~~`V.khungNhieu` → **đua optimizer**~~ ✅ xong
+7. `V.cayQuyetDinh` + `V.choiThu` → **cân xu** → **thả trứng** → **đoán chuỗi số** → **dồn hạt**  ← ✅ xong
+7b. Ba ứng dụng ngoài lab (JSON editor · cheat sheet · quản lý chi tiêu)
+8. (dùng lại) → **thuốc độc** → **thử chìa khoá** → **Hà Nội** → **hai quân mã**
+9. **chuỗi Markov** → **Bloom filter**
+10. **vẽ số bằng chuột → mạng đoán** (cần chốt nguồn dữ liệu trước)
 
 Đợt 1–2 xong — 12 lab, site đủ dày để công bố. Đợt 3 trở đi là chiều sâu.
 
