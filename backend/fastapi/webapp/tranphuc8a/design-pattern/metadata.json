@@ -1,0 +1,21 @@
+{
+  "title": "Mẫu thiết kế — tra nhanh",
+  "description": "Bảng tra 23 mẫu thiết kế GoF cộng 4 mẫu hiện đại (dependency injection, repository, null object, circuit breaker), viết bằng tiếng Việt. Khác với hầu hết cheat sheet, mỗi mẫu đều có mục KHI NÀO ĐỪNG DÙNG và cái giá phải trả — vì mẫu thiết kế bị lạm dụng nhiều hơn bị dùng thiếu. Kèm ý định một câu, sơ đồ SVG, và ví dụ mã ngắn dưới 18 dòng. Tìm được theo tên, theo tên tiếng Việt, hoặc theo chính vấn đề đang gặp (gõ hoàn tác ra Command và Memento); tìm không dấu vẫn ra và từ khoá được tô sáng. Chạy hoàn toàn trong trình duyệt, không thư viện ngoài.",
+  "category": "Tài liệu tham khảo",
+  "tags": [
+    "design-pattern",
+    "mau-thiet-ke",
+    "gof",
+    "kien-truc",
+    "tai-lieu",
+    "cheat-sheet",
+    "tra-cuu",
+    "oop",
+    "refactoring",
+    "tieng-viet",
+    "offline",
+    "khong-thu-vien",
+    "tranphuc8a"
+  ],
+  "icon": "◈"
+}

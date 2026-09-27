@@ -1,0 +1,21 @@
+{
+  "title": "JSON Editor",
+  "description": "Trình soạn thảo JSON chạy hoàn toàn trong trình duyệt, không cần cài gì và không gửi dữ liệu đi đâu. Báo lỗi cú pháp theo đúng dòng và cột thay vì chỉ nói vị trí ký tự. Có năm chế độ: soạn với số dòng và tô dòng lỗi, duyệt cây gấp mở từng nhánh, truy vấn theo đường dẫn kiểu JSONPath ($.a.b, [*], ..khoá), so sánh hai JSON theo cây nên đổi thứ tự khoá không bị tính là khác, và thống kê số nút, độ sâu, kích thước sau khi nén. Kèm định dạng, nén, sắp khoá theo bảng chữ cái, gỡ một lớp chuỗi cho JSON bị đóng gói, mở và tải tệp, giao diện sáng tối.",
+  "category": "Công cụ",
+  "tags": [
+    "json",
+    "editor",
+    "cong-cu",
+    "dinh-dang",
+    "truy-van",
+    "jsonpath",
+    "so-sanh",
+    "diff",
+    "cay",
+    "validator",
+    "offline",
+    "khong-thu-vien",
+    "tranphuc8a"
+  ],
+  "icon": "{}"
+}

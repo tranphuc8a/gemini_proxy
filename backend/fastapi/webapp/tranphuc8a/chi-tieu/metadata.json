@@ -1,0 +1,21 @@
+{
+  "title": "Chi tiêu",
+  "description": "Sổ thu chi cá nhân chạy hoàn toàn trong trình duyệt — dữ liệu nằm trong máy bạn, không gửi đi đâu và không cần tài khoản. Nhập tiền theo cách người Việt vẫn viết: 50k, 1.5tr, 2 triệu, 1.234.567 đều hiểu được và hiện ngay số đọc lại để khỏi gõ nhầm. Có tóm tắt thu chi từng tháng kèm so sánh với tháng trước, biểu đồ chi theo từng ngày, phân tích theo nhóm, và hạn mức từng nhóm báo động khi vượt. Xuất và nhập CSV giữ nguyên dữ liệu qua lại, chịu được dấu phẩy và dấu nháy trong ghi chú. Giao diện sáng tối, tiếng Việt.",
+  "category": "Ứng dụng",
+  "tags": [
+    "chi-tieu",
+    "tai-chinh",
+    "ngan-sach",
+    "so-thu-chi",
+    "ung-dung",
+    "csv",
+    "bieu-do",
+    "offline",
+    "rieng-tu",
+    "localstorage",
+    "khong-thu-vien",
+    "tieng-viet",
+    "tranphuc8a"
+  ],
+  "icon": "₫"
+}
