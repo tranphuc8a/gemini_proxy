@@ -226,12 +226,12 @@ cd lab-visual && python check.py --tinh     # đầy đủ, không cần trình 
 python engine/sync.py --kiem                # bản sao có lệch nguồn không
 ```
 
-Kết quả lần chạy cuối — **96 lab trên 4 site, tất cả xanh** (cộng 59 mục tự kiểm
+Kết quả lần chạy cuối — **100 lab trên 4 site, tất cả xanh** (cộng 96 mục tự kiểm
 tra nguyên hàm engine):
 
 | Site | Chạy thử | Đối chiếu số | Lỗi |
 |---|:--:|:--:|:--:|
-| `lab-visual` (28 lab) | 77 | 112 | 0 |
+| `lab-visual` (32 lab) | 89 | 141 | 0 |
 | `heuristic-visual` (21 lab) | 53 | — | 0 |
 | `ai-everything-visual` (39 lab) | 101 | — | 0 |
 | `system-design-visual` (8 lab) | 23 | — | 0 |
@@ -241,8 +241,15 @@ tra nguyên hàm engine):
 (ăn gian ngân sách trong đấu trường, mặt yên ngựa không có cận dưới, và nhãn bộ
 phát biến mất khỏi DOM giả khiến chốt chặn chống-tua-bị-cắt chưa bao giờ chạy).
 
-Năm tầng: **tĩnh** (Python) → **nguyên hàm engine** (`thu-engine.js`) → **DOM giả**
-(`thu-nhanh.js`) → **đối chiếu số** (`kiem-so.js`) → **Chromium** (playwright, chưa cài nên tự bỏ qua). Tầng DOM giả không bắt được
+**Hai lỗ hổng của chính bộ kiểm, phát hiện ở đợt 7.** `bomKhung` cho đồng hồ chạy
+lại từ 0 mỗi lần gọi → `dt` âm → **đường “Chạy” của mọi lab chưa từng chạy nổi
+một bước trong DOM giả**; và `nutChayCua` bắt nhầm nút `.chinh` của lab thay vì nút
+của bộ phát. Cả hai đã sửa; chi tiết ở [`web-lab-dot-7-ban-giao.md`](web-lab-dot-7-ban-giao.md).
+
+
+Sáu tầng: **tĩnh** (Python) → **nguyên hàm engine** (`thu-engine.js`) → **DOM giả**
+(`thu-nhanh.js`) → **đối chiếu số** (`kiem-so.js`) → **Chromium smoke test** (trong
+`check.py`) → **hình ảnh** (`engine/kiem_hinh.py`). Tầng DOM giả không bắt được
 lỗi hình học — canvas ở đó chỉ đếm số lần gọi.
 
 **Ngân sách tua trong phép thử.** `hanTua` (mặc định 3 000 ms) tồn tại để bảo vệ
@@ -269,5 +276,7 @@ DOM giả cố ý **không** nới: nó chỉ cần biết lab không ném lỗi
 - Lộ trình đề tài tiếp theo: xem [`web-lab-ke-hoach.md`](web-lab-ke-hoach.md).
 - Xuất GIF: cố tình bỏ, vì mã hoá GIF không thư viện là quá nhiều việc. Hiện có
   PNG + WebM.
-- Cân nhắc cài playwright khi số lab vượt ~15 — tầng DOM giả không bắt được lỗi
-  hình học.
+- ~~Cân nhắc cài playwright~~ ✅ **đã cài (2026-09-27)**. Tầng trình duyệt giờ
+  chạy thật, và có thêm `engine/kiem_hinh.py` đo hình học + chụp ảnh. Nó tìm ra
+  **4 lỗi của chính bộ kiểm** và **7 lỗi hình ảnh thật** ngay lần đầu — xem
+  [`kiem-tra-trinh-duyet.md`](kiem-tra-trinh-duyet.md).
