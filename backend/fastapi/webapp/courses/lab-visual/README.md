@@ -22,7 +22,7 @@ python -m http.server 8792 --bind 127.0.0.1
 
 ---
 
-## 36 lab
+## 38 lab
 
 | Nhóm | Lab | Điều nó cho thấy |
 |---|---|---|
@@ -58,6 +58,8 @@ python -m http.server 8792 --bind 127.0.0.1
 | | Thử chìa khoá — không so được hai chìa với nhau | Θ(n²) vs Θ(n log n) chạy thật · ★ chỗ lật **không phải một điểm mà là một dải**: n = 24 vét cạn thắng 8/8, n = 40 hoà 4/8, n = 56 trở lên thua 0/8 |
 | | Tìm chai thuốc độc — mỗi người thử là một bit | 1000 chai · 10 người · ★ **người và ngày đổi cho nhau được** · ★ đặt 2 chai độc thì phép OR làm mất thông tin, cận dưới **nói dối gấp 2,5 lần** |
 | | Tháp Hà Nội — đồ thị trạng thái là tam giác Sierpinski | cấu hình đầu tuỳ ý · ★ nối hai cấu hình cách nhau một nước đi thì hình hiện ra **đúng bằng** tam giác Sierpinski, và **2ⁿ−1 chính là độ dài một cạnh** |
+| **Ngẫu nhiên & hội tụ** | Chuỗi Markov — hội tụ, khe phổ, thời gian trộn | ba khởi đầu khác hẳn nhau **chập vào một chỗ** · ★ khe phổ chạy qua **bốn bậc độ lớn** mà tích `t_trộn × khe` vẫn kẹt trong [2,7 ; 3,9] · ★ xích tuần hoàn thì khe **đúng bằng 0**, không bao giờ trộn |
+| | Bloom filter — công thức mô tả trung bình, không phải lời hứa | hai bộ lọc song song, cùng m/k/n, khác hàm băm · ★ băm “hợp lý mà sai” có trung bình chỉ lệch 15% nhưng **độ dao động gấp 4,3 lần** (9% → 39%), và lệch công thức quá 10% ở **81%** số lần |
 | **Tối ưu hoá & heuristic** | Dồn hạt | ★ entropy trông như tốn N² mà tính đúng bằng **O(H+W)** · ★ dồn về đâu cũng **cho cùng một đáp số** |
 | **Tối ưu hoá & heuristic** | Đua optimizer | SGD · Momentum · RMSProp · Adam trên cùng mặt lỗi · ★ bước 60 trên yên ngựa: SGD còn ở **f ≈ 1,1**, RMSProp đã **2×10⁻²⁰** |
 | | Đấu trường metaheuristic | leo đồi · tôi luyện · GA · PSO, **cùng ngân sách gọi hàm** · ★ chỉ đổi ngân sách là **người thắng đổi** |
@@ -189,7 +191,7 @@ tại r = 2,8 / 3,2 / 3,5 / 3,83, σ của phân phối đều = 1/√12, luật
 2^popcount(n) ô đen ở hàng n, đống cát bảo toàn hạt, kiến Langton đối chiếu với một
 bản cài đặt độc lập, Braess ra đúng 65 và 80 phút, hệ số cụm vòng thuần khớp
 `3(k−2)/(4(k−1))`, Raft không bao giờ có hai lãnh đạo cùng nhiệm kỳ, tỉ lệ điểm
-trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lại đúng một mặt phẳng bị quay lên 30 chiều, ứng suất SMACOF chưa bao giờ tăng, không thuật toán nào trong đấu trường tiêu quá ngân sách…  13 xu cần đúng 4 lần cân, 100 tầng 2 trứng cần đúng 14 lần thả, entropy N² khớp công thức O(H+W) tới từng đơn vị, khoảng cách quân mã đối chiếu với một BFS viết riêng ngay trong tệp kiểm, và công thức Hà Nội tổng quát dẫn về đúng 0 nước ở năm cấu hình ngẫu nhiên khác nhau…  **190 phép, tất cả khớp.**
+trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lại đúng một mặt phẳng bị quay lên 30 chiều, ứng suất SMACOF chưa bao giờ tăng, không thuật toán nào trong đấu trường tiêu quá ngân sách…  13 xu cần đúng 4 lần cân, 100 tầng 2 trứng cần đúng 14 lần thả, entropy N² khớp công thức O(H+W) tới từng đơn vị, khoảng cách quân mã đối chiếu với một BFS viết riêng ngay trong tệp kiểm, công thức Hà Nội tổng quát dẫn về đúng 0 nước ở năm cấu hình ngẫu nhiên khác nhau, khe phổ của vòng n đỉnh khớp công thức đóng `1−|ε+(1−ε)ω|` tính độc lập, và tỉ lệ dương tính giả của Bloom khớp `(1−e^(−kn/m))^k`…  **221 phép, tất cả khớp.**
 
 > **Bẫy đã gặp:** `chayToi(k)` có thể **không tới được bước k** — bộ phát có ngân
 > sách 3 giây cho mỗi lần tua để không đóng băng tab. Nay nó xác nhận và báo lỗi rõ
@@ -201,6 +203,13 @@ trong tập Mandelbrot khớp diện tích đã biết 1,506…  PCA dựng lạ
 > 8×8 nên quân mã không còn ở góc — ba ô lệch đúng 1 nước, và suýt nữa thì đổ tội
 > cho lab. Nay phép thử đi từ bàn **lớn xuống nhỏ**, vì kẹp luôn đưa quân về đúng
 > góc của bàn mới.
+>
+> **Bẫy đợt 9 — phép thử đo đúng thứ không đáng đo.** Ba lần liền:
+> `chayToi(160)` trên một lab có thanh tua chỉ dài 50 bước; một ngưỡng tuyệt đối
+> đặt lên **một lần chạy đơn** của Bloom (800 phép thử, biên độ ±2 điểm phần
+> trăm) trong khi con số đáng kiểm là trung bình 20 hạt; và `10^0 = 1` bị dùng
+> làm “cầu nối yếu” trong khi nó nặng **bằng** cạnh trong cụm. Cả ba đều xanh-đỏ
+> theo vận may chứ không theo tính đúng.
 
 Tầng "chạy thử" chỉ chứng minh lab **không nổ**; tầng này chứng minh nó **tính đúng**.
 
