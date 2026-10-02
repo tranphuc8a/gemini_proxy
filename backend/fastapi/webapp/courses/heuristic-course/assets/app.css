@@ -1,8 +1,13 @@
 /* ==========================================================================
+   FILE SINH RA — DUNG SUA O DAY.
+   Nguon that: courses/engine/app.css
+   Sua o do roi chay: python engine/sync.py
+   ========================================================================== */
+/* ==========================================================================
    ENGINE KHOÁ HỌC — hệ thống giao diện
 
-   ★ ĐÂY LÀ FILE SINH RA. ĐỪNG SỬA TRONG THƯ MỤC KHOÁ HỌC.
-     Nguồn thật: courses/engine/app.css — sửa ở đó rồi chạy `python engine/sync.py`.
+   ★ NGUỒN THẬT: courses/engine/app.css. Bản trong <khoá>/assets/ là BẢN SAO
+     do `python engine/sync.py` chép ra — sửa ở đó sẽ mất.
 
    Bảng màu nhấn ở dưới là MẶC ĐỊNH trung tính. Mỗi khoá ghi đè bốn khai báo
    --ac/--ac2/--acbg/--acbd (sáng + tối), --sh3 và nền .brand-l trong
@@ -559,3 +564,17 @@ html[data-theme="dark"] .ovl{background:rgba(0,0,0,.62)}
 .prose .mermaid svg{max-width:100%;height:auto}
 .prose .mermaid:not([data-da-ve]){font-family:var(--fm);font-size:12px;
   white-space:pre;text-align:left;color:var(--tx3)}
+
+/* ---------- 16. Nội dung tải từ API ----------------------------------
+   Manifest và từng bài đến qua mạng: một dòng trạng thái khi khởi động, và
+   khung chờ khi một bài mất hơn 120 ms (nhanh hơn thế thì không nhấp nháy). */
+.boot{display:flex;align-items:center;justify-content:center;gap:10px;padding:90px 0;color:var(--tx3);font-size:15px}
+.boot .ic{animation:boot-p 1.2s ease-in-out infinite}
+@keyframes boot-p{50%{opacity:.3}}
+.sk{display:flex;flex-direction:column;gap:13px;margin-top:30px}
+.sk i{display:block;height:14px;border-radius:7px;
+  background:linear-gradient(90deg,var(--bg2) 25%,var(--surf2) 50%,var(--bg2) 75%);
+  background-size:200% 100%;animation:sk 1.3s linear infinite}
+.sk i.w6{width:60%}
+.sk i.w8{width:80%}
+@keyframes sk{to{background-position:-200% 0}}

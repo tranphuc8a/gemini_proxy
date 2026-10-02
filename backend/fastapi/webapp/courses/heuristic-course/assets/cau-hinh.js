@@ -8,6 +8,7 @@ window.CAU_HINH = {
   tieuDe:  "Học Heuristic — Từ cơ bản đến chuyên sâu",
   khoaLuu: "hh",                       /* giữ nguyên "hh" — khoá này đã có người
                                           học và tiến độ cũ nằm dưới tiền tố đó */
+  khoaHoc: "heuristic",            /* slug của khoá trong database — engine gọi /courses/heuristic/… */
 
   heroTieuDe: "Học <u>heuristic</u> từ kiến thức giải thuật cơ bản",
   heroMoTa:

@@ -1,18 +1,33 @@
 /* ==========================================================================
-   ENGINE KHOÁ HỌC — ứng dụng một trang, không cần build, không cần server.
+   FILE SINH RA — DUNG SUA O DAY.
+   Nguon that: courses/engine/app.js
+   Sua o do roi chay: python engine/sync.py
+   ========================================================================== */
+/* ==========================================================================
+   ENGINE KHOÁ HỌC — ứng dụng một trang, không cần build.
 
-   ★ ĐÂY LÀ FILE SINH RA. ĐỪNG SỬA TRONG THƯ MỤC KHOÁ HỌC.
-     Nguồn thật: courses/engine/app.js — sửa ở đó rồi chạy `python engine/sync.py`.
+   ★ NGUỒN THẬT: courses/engine/app.js. Bản trong <khoá>/assets/ là BẢN SAO do
+     `python engine/sync.py` chép ra — sửa ở đó sẽ mất.
 
-   Mỗi khoá nạp ba thứ, theo đúng thứ tự này:
-     ① assets/content.js   nội dung   (sinh bởi build.py của khoá)
-     ② assets/cau-hinh.js  cấu hình   (window.CAU_HINH — riêng mỗi khoá)
-     ③ assets/app.js       engine     (file này — dùng chung)
+   Nội dung KHÔNG còn nằm trong trang. Trước đây mỗi khoá nhúng toàn bộ bài
+   giảng vào assets/content.js (8 MB với khoá AI) rồi lập chỉ mục tìm kiếm trên
+   trình duyệt. Giờ nội dung ở database, và trang hỏi API ba thứ:
+     · GET /courses/<khoá>/manifest       mục lục + siêu dữ liệu, KHÔNG markdown
+     · GET /courses/<khoá>/docs/<id>      một bài, khi mở bài đó
+     · GET /courses/<khoá>/search?q=      tìm kiếm, xếp hạng phía server
+   Trình duyệt tự xác thực lại bằng ETag, nên lần mở sau chỉ tốn một phản hồi 304.
+
+   Mỗi khoá nạp, theo đúng thứ tự:
+     ① assets/cau-hinh.js  cấu hình   (window.CAU_HINH — riêng khoá; có `khoaHoc`)
+     ② assets/app.js       engine     (file này — dùng chung)
+   Có window.COURSE (một content.js xuất bằng `manage_courses.py export --js`)
+   thì engine dùng nó thay cho API — cách để trang vẫn chạy offline bằng file://.
    ========================================================================== */
 (function () {
 "use strict";
 
-var D      = window.COURSE;
+/* Đổ vào khi manifest về — xem khoiDong(). */
+var D = null;
 
 /* ---------- 0. Cấu hình của khoá -------------------------------------
    Mọi thứ RIÊNG của một khoá nằm ở đây, không nằm rải trong engine.
@@ -27,9 +42,9 @@ var KHOA_LUU  = ch("khoaLuu", "kh");      /* tiền tố localStorage — PHẢI
                                              giữa các khoá, nếu không tiến độ khoá
                                              này ghi đè tiến độ khoá kia khi cùng
                                              phục vụ từ một host. */
-var DOCS   = D.docs;
-var SLUGS  = D.slugs;
-var ORDER  = D.order;
+var DOCS   = {};
+var SLUGS  = {};
+var ORDER  = [];
 
 var $  = function (s, r) { return (r || document).querySelector(s); };
 var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
@@ -38,7 +53,11 @@ var esc = function (s) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
   });
 };
-var icon = function (n, cls) { return '<svg class="ic ' + (cls || '') + '"><use href="#i-' + n + '"/></svg>'; };
+/* Tên icon nằm trong một thuộc tính; tên đến từ database (icon của section)
+   nên chỉ giữ chữ, số và "-" — không thể thoát khỏi thuộc tính. */
+var icon = function (n, cls) {
+  return '<svg class="ic ' + esc(cls || "") + '"><use href="#i-' + String(n || "").replace(/[^a-z0-9-]/gi, "") + '"/></svg>';
+};
 
 /* ---------- 1. Lưu trạng thái ---------------------------------------- */
 var LS = {
@@ -57,6 +76,108 @@ var open  = LS.get("open", null);
 
 function saveDone()  { LS.set("done", Array.from(done)); }
 function saveStars() { LS.set("stars", Array.from(stars)); }
+
+/* ---------- 1b. Nguồn nội dung ----------------------------------------
+   Hai nguồn cùng một giao diện: manifest() · doc(id) · search(q) · prefetch(id).
+   Engine không cần biết nội dung đến từ API hay từ một content.js offline. */
+
+/* Gốc API: ?api=… trên địa chỉ (trang mở từ máy chủ tĩnh, API ở chỗ khác)
+   > cấu hình FastAPI chèn vào trang (window.__WEBAPP_CONFIG__.apiBase)
+   > cau-hinh.js > cùng origin. Chuỗi RỖNG là câu trả lời hợp lệ ("cùng origin,
+   không tiền tố"), nên phân biệt bằng typeof chứ không bằng truthy.
+
+   ?api= chỉ được nghe khi không thể là một cái bẫy: API ở máy cục bộ
+   (localhost, 127.0.0.1, [::1]) hoặc trang mở từ file://. Một đường link
+   "?api=https://may-chu-la" gửi cho người khác bị bỏ qua — nghe theo thì trang
+   sẽ lấy bài (rồi dựng HTML) từ máy chủ lạ, ngay trên origin của trang này. */
+function apiTuDiaChi() {
+  var q = (location.search.match(/[?&]api=([^&]+)/) || [])[1];
+  if (!q) return null;
+  var u;
+  try { u = new URL(decodeURIComponent(q)); } catch (e) { return null; }
+  var cucBo = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(u.hostname);
+  if ((u.protocol === "http:" || u.protocol === "https:") && (cucBo || location.protocol === "file:")) {
+    return (u.origin + u.pathname).replace(/\/+$/, "");
+  }
+  if (window.console) console.warn("Bỏ qua ?api=" + u.origin + ": chỉ nhận API ở máy cục bộ hoặc khi trang mở từ file://");
+  return null;
+}
+function gocApi() {
+  var q = apiTuDiaChi();
+  if (q !== null) return q;
+  var cfg = window.__WEBAPP_CONFIG__;
+  if (cfg && typeof cfg.apiBase === "string") return cfg.apiBase.replace(/\/+$/, "");
+  return String(ch("apiBase", "")).replace(/\/+$/, "");
+}
+
+function LoiTai(msg, status) { this.message = msg; this.status = status || 0; }
+
+/* ?nhap=1 — link "Xem trước" của trang Quản lý khoá học: gửi kèm token phiên mà
+   trang quản lý đã cất cho ĐÚNG gốc API này ("qlkh.phien@<gốc API>.token"), để xem
+   được khoá chưa xuất bản. Không có ?nhap=1 thì trang đọc như mọi khách. */
+function tokenXemNhap(goc) {
+  if (!/[?&]nhap=1(&|$)/.test(location.search)) return null;
+  try {
+    var khoa = "qlkh.phien@" + new URL(goc || "/", location.href).href.replace(/\/+$/, "") + ".token";
+    return JSON.parse(localStorage.getItem(khoa) || "null");
+  } catch (e) { return null; }
+}
+
+function nguonApi(goc, khoa) {
+  var BO_NHO = 40, cache = {}, thuTu = [], dangTai = {};
+  var dau = {}, tk = tokenXemNhap(goc);
+  if (tk) dau["X-Admin-Session"] = tk;
+  function url(p) { return goc + "/courses/" + encodeURIComponent(khoa) + p; }
+  function lay(p, signal) {
+    return fetch(url(p), { signal: signal, credentials: "same-origin", headers: dau }).then(function (r) {
+      if (r.ok) return r.json();
+      return r.json().then(function (j) { throw new LoiTai((j && (j.message || j.detail)) || ("HTTP " + r.status), r.status); },
+                          function () { throw new LoiTai("HTTP " + r.status, r.status); });
+    }, function (e) {
+      if (e && e.name === "AbortError") throw e;
+      throw new LoiTai("Không kết nối được tới máy chủ (" + (goc || location.origin) + ")", 0);
+    });
+  }
+  function nho(id, d) {
+    cache[id] = d; thuTu.push(id);
+    while (thuTu.length > BO_NHO) delete cache[thuTu.shift()];
+    return d;
+  }
+  /* id bài là đường dẫn ("mon-05/bai-giang/bai-04.md"): mã hoá từng đoạn,
+     GIỮ dấu "/" để API nhận đúng tham số {doc_id:path}. */
+  function maHoa(id) { return id.split("/").map(encodeURIComponent).join("/"); }
+  var api = {
+    kieu: "api",
+    moTa: url(""),
+    manifest: function () { return lay("/manifest"); },
+    doc: function (id) {
+      if (cache[id]) return Promise.resolve(cache[id]);
+      if (dangTai[id]) return dangTai[id];
+      var p = lay("/docs/" + maHoa(id)).then(function (d) { delete dangTai[id]; return nho(id, d); },
+                                              function (e) { delete dangTai[id]; throw e; });
+      dangTai[id] = p;
+      return p;
+    },
+    search: function (q, signal) {
+      return lay("/search?limit=24&q=" + encodeURIComponent(q), signal).then(function (r) { return r.hits || []; });
+    },
+    prefetch: function (id) { if (id && !cache[id]) api.doc(id).catch(function () {}); }
+  };
+  return api;
+}
+
+function nguonCucBo(C) {
+  return {
+    kieu: "cuc-bo",
+    moTa: "window.COURSE",
+    manifest: function () { return Promise.resolve(C); },
+    doc: function (id) { return C.docs[id] ? Promise.resolve(C.docs[id]) : Promise.reject(new LoiTai("Không có bài " + id, 404)); },
+    search: function (q) { return Promise.resolve(searchLocal(q)); },
+    prefetch: function () {}
+  };
+}
+
+var NGUON = window.COURSE ? nguonCucBo(window.COURSE) : nguonApi(gocApi(), ch("khoaHoc", ""));
 
 /* ---------- 2. Giao diện sáng/tối ------------------------------------ */
 var mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -140,6 +261,37 @@ function slugifyHeading(t) {
   return norm(t).replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "muc";
 }
 
+/* HTML do markdown sinh ra, đã gỡ phần chạy được.
+   Nội dung giờ sửa được qua API, không còn là tệp tin cậy trong repo — một khoá
+   quản trị bị lộ không được thành XSS trên mọi trang khoá học (cùng origin với
+   token phiên của trang quản lý). Markdown vẫn được dùng HTML vô hại
+   (<details>, <summary>, <b>, <br>…); chỉ phần tử chạy mã, thuộc tính on*
+   và URL javascript:/vbscript:/data: (trừ ảnh) bị gỡ.
+   Phân tích trong <template> chứ KHÔNG gán innerHTML cho một div: nội dung
+   template "trơ" — <img src=x onerror=…> không tải, nên onerror không kịp chạy
+   trước khi bị gỡ. */
+var THE_CAM = /^(script|iframe|frame|frameset|object|embed|applet|style|link|meta|base|form)$/i;
+function lamSach(goc) {
+  $$("*", goc).forEach(function (el) {
+    if (THE_CAM.test(el.tagName)) { el.parentNode && el.parentNode.removeChild(el); return; }
+    Array.prototype.slice.call(el.attributes).forEach(function (a) {
+      var n = a.name.toLowerCase();
+      var v = (a.value || "").replace(/[\u0000- ]+/g, "").toLowerCase();
+      if (n.indexOf("on") === 0 || n === "srcdoc") { el.removeAttribute(a.name); return; }
+      if (/^(href|src|xlink:href|action|formaction|poster|background)$/.test(n) &&
+          (/^(javascript|vbscript):/.test(v) || (/^data:/.test(v) && !(n === "src" && /^data:image\/(png|gif|jpe?g|webp);/.test(v))))) {
+        el.removeAttribute(a.name);
+      }
+    });
+  });
+}
+function htmlSach(html) {
+  var tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  lamSach(tpl.content);
+  return tpl.content;
+}
+
 function render(md, docId) {
   /* 5a. giấu mã nguồn để ký hiệu $ trong code không bị hiểu là công thức */
   var codes = [];
@@ -167,7 +319,7 @@ function render(md, docId) {
 
   var host = document.createElement("div");
   host.className = "prose";
-  host.innerHTML = marked.parse(md);
+  host.appendChild(htmlSach(marked.parse(md)));
 
   /* 5d. công thức */
   $$(".mjx-b,.mjx-i", host).forEach(function (el) {
@@ -278,6 +430,11 @@ function render(md, docId) {
 }
 
 /* ---------- 6. Tiến độ ------------------------------------------------ */
+/* Bài có thật trong DOCS — cây có thể nhắc tới id không còn (bản offline cũ). */
+function coThat(ids) { return (ids || []).filter(function (id) { return !!DOCS[id]; }); }
+/* href="#/slug" — slug đến từ database, nên luôn qua esc(). */
+function denBai(d) { return 'href="#/' + esc(d.slug) + '"'; }
+
 function groupStat(ids) {
   var n = 0;
   ids.forEach(function (i) { if (done.has(i)) n++; });
@@ -285,7 +442,7 @@ function groupStat(ids) {
 }
 function sectionIds(sec) {
   var out = [];
-  sec.groups.forEach(function (g) { out = out.concat(g.items); });
+  (sec.groups || []).forEach(function (g) { out = out.concat(coThat(g.items)); });
   return out;
 }
 function overall() { return groupStat(ORDER); }
@@ -300,19 +457,21 @@ function paintProgress() {
 /* ---------- 7. Mục lục bên trái --------------------------------------- */
 function buildNav() {
   var cur = state.doc ? state.doc.id : null;
-  var html = D.nav.map(function (sec) {
+  var html = (D.nav || []).map(function (sec, si) {
     var ids = sectionIds(sec), st = groupStat(ids);
     var has = cur && ids.indexOf(cur) >= 0;
-    var isOpen = open ? open.indexOf(sec.id) >= 0 : has || sec.id === "khoa-hoc";
+    /* Mặc định mở section ĐẦU — trước đây là section có id "khoa-hoc" (quy ước của
+       các khoá dựng tay), nên khoá tạo ở trang Quản lý với id khác hiện mục lục đóng kín. */
+    var isOpen = open ? open.indexOf(sec.id) >= 0 : has || si === 0;
     if (has) isOpen = true;
 
-    var body = sec.groups.map(function (g) {
-      var gs = groupStat(g.items);
-      var items = g.items.map(function (id) {
+    var body = (sec.groups || []).map(function (g) {
+      var ids = coThat(g.items), gs = groupStat(ids);
+      var items = ids.map(function (id) {
         var d = DOCS[id];
-        var no = d.meta && d.meta.no ? '<b class="no">' + d.meta.no + "</b>" : "";
+        var no = d.meta && d.meta.no ? '<b class="no">' + esc(d.meta.no) + "</b>" : "";
         return '<a class="nav-i' + (done.has(id) ? " done" : "") + (id === cur ? " on" : "") +
-               '" href="#/' + d.slug + '">' +
+               '" ' + denBai(d) + ">" +
                '<span class="dot">' + icon("check") + "</span>" +
                "<span>" + no + esc(d.title) +
                (d.tag ? '<i class="tag">' + esc(d.tag) + "</i>" : "") +
@@ -324,7 +483,7 @@ function buildNav() {
              items + "</div>";
     }).join("");
 
-    return '<div class="nav-sec" data-sec="' + sec.id + '" data-open="' + (isOpen ? 1 : 0) + '">' +
+    return '<div class="nav-sec" data-sec="' + esc(sec.id) + '" data-open="' + (isOpen ? 1 : 0) + '">' +
            '<button class="nav-sec-h" type="button">' + icon(sec.icon) +
            "<span><b>" + esc(sec.title) + "</b><i>" + esc(sec.sub) + "</i></span>" +
            icon("chev", "chev") + "</button>" +
@@ -399,35 +558,39 @@ function viewHome() {
   var o = overall();
   var last = LS.get("last", null);
   var lastDoc = last && DOCS[last.id] ? DOCS[last.id] : null;
-  var s = D.stats;
+  var s = D.stats || {};
 
   var kpis = (CH.kpi ? CH.kpi(s) : [
-    [s.lessons, "bài giảng"],
-    ["~" + Math.round(s.minutes / 60), "giờ đọc"],
-    [(s.words / 1000).toFixed(0) + "k", "từ nội dung"]
+    [s.lessons || 0, "bài giảng"],
+    ["~" + Math.round((s.minutes || 0) / 60), "giờ đọc"],
+    [((s.words || 0) / 1000).toFixed(0) + "k", "từ nội dung"]
   ]).map(function (k) {
-    return '<div class="kpi"><b>' + k[0] + "</b><span>" + k[1] + "</span></div>";
+    return '<div class="kpi"><b>' + esc(k[0]) + "</b><span>" + esc(k[1]) + "</span></div>";
   }).join("");
 
-  var course = D.nav[0];
-  var phases = course.groups.map(function (g, i) {
-    var gs = groupStat(g.items);
-    var lst = g.items.slice(0, 6).map(function (id) {
+  /* Khoá vừa tạo có thể chưa có section, nhóm có thể chưa có bài (người quản
+     trị lưu cây trước rồi mới thêm bài): trang chủ phải dựng được cả lúc đó. */
+  var course = (D.nav || [])[0] || { groups: [] };
+  var phases = (course.groups || []).map(function (g, i) {
+    var ids = coThat(g.items), gs = groupStat(ids);
+    var lst = ids.slice(0, 6).map(function (id) {
       var d = DOCS[id];
-      return '<a href="#/' + d.slug + '">' +
-             (d.meta && d.meta.no ? "Bài " + d.meta.no : esc(chipLabel(d.title))) + "</a>";
+      return "<a " + denBai(d) + ">" +
+             (d.meta && d.meta.no ? "Bài " + esc(d.meta.no) : esc(chipLabel(d.title))) + "</a>";
     }).join("");
-    if (g.items.length > 6) {                       /* báo rõ còn bao nhiêu, đừng cắt im lặng */
-      lst += '<a href="#/' + DOCS[g.items[6]].slug + '">+' + (g.items.length - 6) + " nữa</a>";
+    if (ids.length > 6) {                           /* báo rõ còn bao nhiêu, đừng cắt im lặng */
+      lst += "<a " + denBai(DOCS[ids[6]]) + ">+" + (ids.length - 6) + " nữa</a>";
     }
-    var first = DOCS[g.items[0]];
+    if (!ids.length) lst = "<span>Chưa có bài</span>";
+    var first = DOCS[ids[0]];
     /* Thẻ phải là <div>: bên trong đã có các liên kết bài học, mà <a> lồng
        trong <a> là HTML không hợp lệ — trình duyệt sẽ tự đóng thẻ ngoài và
        làm vỡ bố cục. Liên kết ở tiêu đề được kéo giãn bằng ::after để cả thẻ
        vẫn bấm được. */
     return '<div class="card">' +
       '<div class="card-top"><div class="card-n">' + soThe(i) + "</div>" +
-      '<h3><a href="#/' + first.slug + '">' + esc(boTienTo(g.title)) + "</a></h3></div>" +
+      "<h3>" + (first ? "<a " + denBai(first) + ">" + esc(boTienTo(g.title)) + "</a>" : esc(boTienTo(g.title))) +
+      "</h3></div>" +
       '<p>' + esc(phaseBlurb(g.short)) + "</p>" +
       '<div class="card-lst">' + lst + "</div>" +
       '<div class="card-foot" style="margin-top:13px"><div class="bar"><i style="width:' +
@@ -439,9 +602,9 @@ function viewHome() {
     return sectionIds(sec).length > 0;          /* mục rỗng -> bỏ qua, đừng làm vỡ trang */
   }).map(function (sec) {
     var ids = sectionIds(sec), gs = groupStat(ids), first = DOCS[ids[0]];
-    return '<a class="card" href="#/' + first.slug + '">' +
+    return '<a class="card" ' + denBai(first) + ">" +
       '<div class="card-top"><div class="card-n">' + icon(sec.icon) + "</div><h3>" + esc(sec.title) + "</h3></div>" +
-      "<p>" + esc(sec.sub) + " — " + ch("doAnMoTa", "") + "</p>" +
+      "<p>" + esc(sec.sub) + (ch("doAnMoTa", "") ? (sec.sub ? " — " : "") + ch("doAnMoTa", "") : "") + "</p>" +
       '<div class="card-foot"><div class="bar"><i style="width:' + (gs.p * 100).toFixed(0) +
       '%"></i></div><b>' + gs.n + "/" + gs.t + "</b></div></a>";
   }).join("");
@@ -450,16 +613,16 @@ function viewHome() {
   var refIds = refSec ? sectionIds(refSec) : [];
   var refs = refIds.map(function (id) {
     var d = DOCS[id];
-    return '<a href="#/' + d.slug + '">' + esc(d.title) + "</a>";
+    return "<a " + denBai(d) + ">" + esc(d.title) + "</a>";
   }).join("");
 
   $("#main").innerHTML =
     '<div class="home">' +
       '<div class="hero">' +
         "<h1>" + ch("heroTieuDe", esc(TIEU_DE)) + "</h1>" +
-        "<p>" + ch("heroMoTa", "") + "</p>" +
+        "<p>" + (CH.heroMoTa !== undefined ? CH.heroMoTa : esc((D.course || {}).description || (D.course || {}).subtitle || "")) + "</p>" +
         '<div class="hero-cta">' +
-          '<a class="btn btn-p" href="#/' + DOCS[ORDER[0]].slug + '">' + icon("right") + "Bắt đầu học</a>" +
+          (DOCS[ORDER[0]] ? '<a class="btn btn-p" ' + denBai(DOCS[ORDER[0]]) + ">" + icon("right") + "Bắt đầu học</a>" : "") +
           ch("heroNut", []).map(function (n) {
             /* Nút trỏ tới tài liệu KHÔNG CÓ THẬT thì bỏ hẳn, đừng in ra liên kết chết. */
             if (n.href.indexOf("#/") === 0 && !docOf(n.href.slice(2))) return "";
@@ -470,7 +633,7 @@ function viewHome() {
       "</div>" +
       '<div class="kpis">' + kpis + "</div>" +
       (lastDoc ?
-        '<a class="resume" href="#/' + lastDoc.slug + '">' +
+        '<a class="resume" ' + denBai(lastDoc) + ">" +
         '<div class="resume-i">' + icon("right") + "</div>" +
         '<div class="resume-t"><span>Học tiếp</span><b>' + esc(lastDoc.title) + "</b></div>" +
         '<div class="chip ac">' + Math.round(o.p * 100) + "% hoàn thành</div></a>" : "") +
@@ -530,16 +693,64 @@ function boTienTo(t) {
 /* ---------- 9. Trang bài đọc ------------------------------------------ */
 var spy = null;
 
+/* Mở một bài: markdown đến từ nguồn nội dung (API: một request; cục bộ: có sẵn).
+   `luotXem` chặn trường hợp người dùng đã sang bài khác trong lúc bài này đang
+   tải — phản hồi về muộn không được đè lên trang mới. */
+var luotXem = 0;
 function viewDoc(doc, anchor) {
+  var luot = ++luotXem;
+  var tre = setTimeout(function () {             /* chỉ hiện khung chờ khi mạng chậm thật */
+    if (luot !== luotXem) return;
+    $("#main").innerHTML = '<div class="page"><article class="doc"><div class="crumb"><a href="#/">Trang chủ</a>' +
+      icon("chev") + "<span>" + esc(doc.group || "") + '</span></div><div class="prose prose-head"><h1>' +
+      esc(doc.title) + '</h1></div><div class="sk">' + '<i></i><i></i><i class="w6"></i><i></i><i class="w8"></i>' +
+      "</div></article></div>";
+  }, 120);
+  NGUON.doc(doc.id).then(function (day) {
+    clearTimeout(tre);
+    if (luot !== luotXem) return;
+    /* Siêu dữ liệu đã có trong manifest; bản đầy đủ mang thêm md và outline. */
+    var d = {};
+    Object.keys(doc).forEach(function (k) { d[k] = doc[k]; });
+    Object.keys(day).forEach(function (k) { if (day[k] !== undefined) d[k] = day[k]; });
+    veDoc(d, anchor);
+    var nx = nextOf(doc.id);
+    if (nx) setTimeout(function () { NGUON.prefetch(nx.id); }, 600);     /* "Bài tiếp" mở tức thì */
+  }, function (err) {
+    clearTimeout(tre);
+    if (luot !== luotXem) return;
+    veLoi("Không tải được bài “" + doc.title + "”", err, function () { viewDoc(doc, anchor); });
+  });
+}
+
+/* Trang báo lỗi có nút thử lại — dùng cho cả manifest lẫn từng bài. */
+function veLoi(tieuDe, err, thuLai) {
+  var msg = err && err.message ? err.message : String(err || "");
+  var meo = NGUON.kieu === "api" && location.protocol === "file:" ?
+    "Trang đang mở bằng file:// nên không gọi được API cùng origin. Mở qua FastAPI " +
+    "(<code>/webapp/courses/…</code>) hoặc thêm <code>?api=http://127.0.0.1:6789</code> vào địa chỉ." :
+    (err && err.status === 404 ?
+      "Khoá học không có trong database, hoặc còn là bản nháp — bản nháp chỉ xem được qua nút " +
+      "“Mở trang” của trang Quản lý khoá học khi đã đăng nhập.<br>" : "") +
+    "Nguồn: <code>" + esc(NGUON.moTa) + "</code>";
+  $("#main").innerHTML = '<div class="home"><div class="hero"><h1>' + esc(tieuDe) + "</h1>" +
+    "<p>" + esc(msg) + "</p><p>" + meo + "</p>" +
+    '<div class="hero-cta"><button class="btn btn-p" id="btnThuLai">' + icon("reset") + "Thử lại</button>" +
+    '<a class="btn btn-s" href="#/">Về trang chủ</a></div></div></div>';
+  var b = $("#btnThuLai");
+  if (b && thuLai) b.addEventListener("click", thuLai);
+}
+
+function veDoc(doc, anchor) {
   var sec = D.nav.filter(function (s) { return s.id === doc.section; })[0];
   var m = doc.meta || {};
   var chips = [];
-  if (m.no) chips.push('<span class="chip ac">Bài ' + m.no + "/" + (m.of || D.stats.lessons) + "</span>");
+  if (m.no) chips.push('<span class="chip ac">Bài ' + esc(m.no) + "/" + esc(m.of || (D.stats || {}).lessons || "?") + "</span>");
   if (m.truc) chips.push('<span class="chip">Trục ' + esc(m.truc) + "</span>");
   if (m.hours) chips.push('<span class="chip">' + icon("clock") + esc(m.hours) + "</span>");
-  if (m.level) chips.push('<span class="chip"><span class="stars">' +
-      "★".repeat(m.level) + "☆".repeat(5 - m.level) + "</span></span>");
-  chips.push('<span class="chip">' + icon("book") + "~" + doc.minutes + " phút đọc</span>");
+  var lv = Math.max(0, Math.min(5, parseInt(m.level, 10) || 0));   /* số từ database: kẹp 0..5 */
+  if (lv) chips.push('<span class="chip"><span class="stars">' + "★".repeat(lv) + "☆".repeat(5 - lv) + "</span></span>");
+  chips.push('<span class="chip">' + icon("book") + "~" + esc(doc.minutes || 0) + " phút đọc</span>");
   if (doc.tag) chips.push('<span class="chip wa">' + esc(doc.tag) + "</span>");
 
   var body = render(doc.md, doc.id);
@@ -571,8 +782,8 @@ function viewDoc(doc, anchor) {
           "Ghi chú của bạn<em>tự động lưu trên máy này</em></div>" +
           '<textarea id="note" placeholder="Ghi lại điều bạn rút ra, câu hỏi còn vướng, hoặc con số cần nhớ…"></textarea></div>' +
         '<div class="pn">' +
-          (pv ? '<a class="pn-c" href="#/' + pv.slug + '"><span>' + icon("left") + "Bài trước</span><b>" + esc(pv.title) + "</b></a>" : "<span></span>") +
-          (nx ? '<a class="pn-c nx" href="#/' + nx.slug + '"><span>Bài tiếp' + icon("right") + "</span><b>" + esc(nx.title) + "</b></a>" : "<span></span>") +
+          (pv ? '<a class="pn-c" ' + denBai(pv) + "><span>" + icon("left") + "Bài trước</span><b>" + esc(pv.title) + "</b></a>" : "<span></span>") +
+          (nx ? '<a class="pn-c nx" ' + denBai(nx) + "><span>Bài tiếp" + icon("right") + "</span><b>" + esc(nx.title) + "</b></a>" : "<span></span>") +
         "</div>" +
       "</article>" +
       '<nav class="toc" id="toc" aria-label="Mục trong bài"></nav>' +
@@ -670,24 +881,25 @@ window.addEventListener("scroll", function () {
   });
 }, { passive: true });
 
-/* ---------- 10. Tìm kiếm ---------------------------------------------- */
+/* ---------- 10. Tìm kiếm ----------------------------------------------
+   Nguồn API: server xếp hạng (cùng quy tắc như dưới đây, viết lại bằng Python
+   trong src/domain/utils/course_text.py) — trình duyệt không cần giữ nội dung.
+   Nguồn cục bộ (window.COURSE): lập chỉ mục ngay trên trình duyệt như trước. */
 var HAY = null;
 function buildIndex() {
   if (HAY) return HAY;
   HAY = ORDER.map(function (id) {
     var d = DOCS[id];
-    var heads = d.outline.map(function (o) { return o.t; }).join(" · ");
+    var heads = (d.outline || []).map(function (o) { return o.t; }).join(" · ");
     return {
       id: id, d: d,
       title: norm(d.title),
       heads: norm(heads),
-      body: norm(d.md)
+      body: norm(d.md || "")
     };
   });
   return HAY;
 }
-if (window.requestIdleCallback) requestIdleCallback(buildIndex, { timeout: 4000 });
-else setTimeout(buildIndex, 1500);
 
 /* Chỉ khớp khi từ khoá bắt đầu ở RANH GIỚI TỪ. Không có điều này thì các từ
    ngắn rất hay gặp trong tiếng Việt ("bộ", "trị", "cực") sẽ khớp vào giữa
@@ -720,7 +932,7 @@ function cleanSnippet(s) {
     .trim();
 }
 
-function search(q) {
+function searchLocal(q) {
   var nq = norm(q.trim());
   if (!nq) return [];
   var terms = nq.split(/\s+/).filter(Boolean);
@@ -783,8 +995,13 @@ function openSearch() {
 }
 function closeSearch() { $("#ovl").hidden = true; srchOpen = false; }
 
+/* Mỗi lần gõ huỷ request trước (AbortController) và đánh số lượt tìm: một
+   phản hồi về muộn của từ khoá cũ không được đè lên kết quả của từ khoá mới. */
+var luotTim = 0, huyTim = null;
 function runSearch() {
   var q = $("#q").value, box = $("#res");
+  var luot = ++luotTim;
+  if (huyTim) { huyTim.abort(); huyTim = null; }
   if (!q.trim()) {
     var picks = [];
     var last = LS.get("last", null);
@@ -792,17 +1009,35 @@ function runSearch() {
     Array.from(stars).slice(0, 4).forEach(function (i) { if (DOCS[i]) picks.push(DOCS[i]); });
     ch("goiYTimKiem", [])
       .forEach(function (s) { var d = docOf(s); if (d && picks.indexOf(d) < 0) picks.push(d); });
-    srchHits = picks.slice(0, 7).map(function (d) { return { d: d, snip: d.outline.slice(0, 3).map(function (o) { return o.t; }).join(" · ") }; });
-  } else {
-    srchHits = search(q);
+    srchHits = picks.slice(0, 7).map(function (d) {
+      return { d: d, snip: d.outline ? d.outline.slice(0, 3).map(function (o) { return o.t; }).join(" · ") : (d.group || "") };
+    });
+    veKetQua(q, box);
+    return;
   }
+  if (window.AbortController) huyTim = new AbortController();
+  if (!box.querySelector(".r-i")) box.innerHTML = '<div class="srch-empty">Đang tìm…</div>';
+  NGUON.search(q, huyTim ? huyTim.signal : undefined).then(function (hits) {
+    if (luot !== luotTim) return;
+    srchHits = hits.map(function (h) {
+      if (h.d) return h;                                      /* nguồn cục bộ: đã đúng dạng */
+      var d = DOCS[h.id];
+      return d ? { d: d, s: h.score, snip: h.snippet } : null;
+    }).filter(Boolean);
+    veKetQua(q, box);
+  }, function (err) {
+    if (luot !== luotTim || (err && err.name === "AbortError")) return;
+    box.innerHTML = '<div class="srch-empty">Không tìm được: ' + esc(err && err.message || err) + "</div>";
+  });
+}
+function veKetQua(q, box) {
   srchSel = 0;
   if (!srchHits.length) {
     box.innerHTML = '<div class="srch-empty">Không tìm thấy “' + esc(q) + '”.<br>Thử từ khoá ngắn hơn — gõ không dấu cũng được.</div>';
     return;
   }
   box.innerHTML = srchHits.map(function (h, i) {
-    return '<a class="r-i' + (i === 0 ? " on" : "") + '" href="#/' + h.d.slug + '" data-i="' + i + '">' +
+    return '<a class="r-i' + (i === 0 ? " on" : "") + '" ' + denBai(h.d) + ' data-i="' + i + '">' +
       '<div class="r-i-t"><span>' + hlite(h.d.title, q) + '</span><em>' + esc(h.d.group) + "</em></div>" +
       '<div class="r-i-s">' + hlite(h.snip, q) + "</div></a>";
   }).join("");
@@ -823,7 +1058,10 @@ $("#btnSearch").addEventListener("click", openSearch);
 $("#btnCloseSrch").addEventListener("click", closeSearch);
 $("#ovl").addEventListener("mousedown", function (e) { if (e.target === $("#ovl")) closeSearch(); });
 var qT;
-$("#q").addEventListener("input", function () { clearTimeout(qT); qT = setTimeout(runSearch, 90); });
+$("#q").addEventListener("input", function () {
+  clearTimeout(qT);
+  qT = setTimeout(runSearch, NGUON.kieu === "api" ? 180 : 90);     /* gom phím trước khi gọi mạng */
+});
 $("#q").addEventListener("keydown", function (e) {
   if (e.key === "ArrowDown") { e.preventDefault(); setSel(srchSel + 1); }
   else if (e.key === "ArrowUp") { e.preventDefault(); setSel(srchSel - 1); }
@@ -858,6 +1096,7 @@ $("#scrim").addEventListener("click", function () { document.body.classList.remo
 var state = { doc: null };
 
 function route() {
+  if (!D) return;                           /* manifest chưa về — khoiDong() sẽ gọi lại */
   var h = location.hash.replace(/^#/, "");
   document.body.classList.remove("nav-open");
 
@@ -886,19 +1125,64 @@ function route() {
 }
 
 window.addEventListener("hashchange", route);
-paintProgress();
-route();
 
-/* ?q=... mở sẵn ô tìm kiếm với từ khoá — tiện để chia sẻ một đường dẫn
-   "tra cứu nhanh", và cũng là cách kiểm thử tự động chức năng tìm kiếm. */
-(function () {
-  var m = location.search.match(/[?&]q=([^&]*)/);
-  if (!m) return;
-  var q = decodeURIComponent(m[1].replace(/\+/g, " "));
-  if (!q) return;
-  openSearch();
-  $("#q").value = q;
-  runSearch();
-})();
+/* Trang đọc chung (courses/khoa-hoc/?khoa=…) không có cau-hinh.js riêng cho từng
+   khoá: tên, phụ đề, biểu tượng lấy từ chính khoá học trong database — khoá vừa tạo
+   ở trang Quản lý có ngay trang đọc. Trang có cấu hình riêng (tenNgan…) giữ nguyên
+   chữ của nó; chỉ số tài liệu trên ô tìm kiếm luôn lấy theo thực tế. */
+function apDungThongTinKhoa(c) {
+  if (CH.tenNgan === undefined && c.title) {
+    TEN_NGAN = c.title;
+    var b = $(".brand-txt b"), i = $(".brand-txt i"), mk = $("#brandMark");
+    if (b) b.textContent = c.title;
+    if (i) i.textContent = c.subtitle || "";
+    if (mk && c.icon) mk.textContent = c.icon;
+  }
+  if (CH.tieuDe === undefined && c.title) TIEU_DE = c.title + (c.subtitle ? " — " + c.subtitle : "");
+  var o = $("#btnSearch span");
+  if (o) o.textContent = ORDER.length ? "Tìm trong " + ORDER.length + " tài liệu…" : "Tìm trong khoá học…";
+  document.title = TIEU_DE;
+}
+
+/* ---------- 14. Khởi động ---------------------------------------------
+   Nạp manifest (mục lục + siêu dữ liệu, không có markdown), rồi mới dựng
+   trang. Trong lúc chờ: một dòng trạng thái; lỗi: trang báo lỗi có nút thử lại. */
+function khoiDong() {
+  if (NGUON.kieu === "api" && !ch("khoaHoc", "")) {
+    veLoi("Khoá học chưa khai báo `khoaHoc`", "assets/cau-hinh.js thiếu khoá khoaHoc (slug của khoá trong database).");
+    return;
+  }
+  $("#main").innerHTML = '<div class="home"><div class="boot">' + icon("book") + "Đang tải mục lục khoá học…</div></div>";
+  NGUON.manifest().then(function (m) {
+    D = m;
+    DOCS = m.docs || {};
+    SLUGS = m.slugs || {};
+    ORDER = coThat(m.order);
+    D.nav = m.nav || [];
+    apDungThongTinKhoa(m.course || {});
+    if (NGUON.kieu === "cuc-bo") {
+      if (window.requestIdleCallback) requestIdleCallback(buildIndex, { timeout: 4000 });
+      else setTimeout(buildIndex, 1500);
+    }
+    /* Lỗi khi DỰNG trang (dữ liệu lạ) cũng phải ra trang báo lỗi có nút thử
+       lại — để nó lọt ra ngoài thì người đọc kẹt mãi ở "Đang tải mục lục…". */
+    try {
+      paintProgress();
+      route();
+    } catch (e) {
+      if (window.console) console.error(e);
+      veLoi("Không dựng được trang khoá học", e, khoiDong);
+      return;
+    }
+    /* ?q=... mở sẵn ô tìm kiếm với từ khoá — tiện để chia sẻ một đường dẫn
+       "tra cứu nhanh", và cũng là cách kiểm thử tự động chức năng tìm kiếm. */
+    var mq = location.search.match(/[?&]q=([^&]*)/);
+    var q = mq ? decodeURIComponent(mq[1].replace(/\+/g, " ")) : "";
+    if (q) { openSearch(); $("#q").value = q; runSearch(); }
+  }, function (err) {
+    veLoi("Không tải được khoá học", err, khoiDong);
+  });
+}
+khoiDong();
 
 })();

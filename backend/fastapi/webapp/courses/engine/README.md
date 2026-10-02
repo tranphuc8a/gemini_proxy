@@ -1,8 +1,12 @@
-# Engine trực quan
+# Engine dùng chung của `courses/`
 
-Khung dùng chung cho mọi trang `*-visual` trong `courses/`. **Đây là nguồn thật.**
-Mọi bản `*/assets/vis-core.js` và `*/assets/vis.css` đều là bản sao do
+Hai engine, cả hai **là nguồn thật ở đây**; bản trong `<trang>/assets/` là bản sao do
 [`sync.py`](sync.py) chép ra — sửa ở đó sẽ mất.
+
+| Engine | Tệp nguồn | Trang nhận | Việc |
+|---|---|---|---|
+| **trực quan** | `vis-core.js`, `vis.css` | `lab-visual` (các `*-visual` cũ giữ v1) | lab mô phỏng trên canvas |
+| **đọc bài giảng** | `app.js`, `app.css` | `ai-everything-course`, `heuristic-course`, `heuristic-course-2`, `system-design-course` | nạp **manifest** (mục lục, không markdown), từng bài và tìm kiếm từ API `/courses/<khoaHoc>/…`; nội dung nằm trong database |
 
 > **Không Node, không npm, không thư viện ngoài** cho phần chạy trên trình duyệt.
 > Node chỉ dùng cho công cụ kiểm tra ở máy phát triển.
@@ -13,22 +17,57 @@ Mọi bản `*/assets/vis-core.js` và `*/assets/vis.css` đều là bản sao d
 
 | Tệp | Vai trò |
 |---|---|
-| [`vis-core.js`](vis-core.js) | Engine. Điều khiển, canvas, bộ phát, tham số, router, xuất ảnh/video |
+| [`vis-core.js`](vis-core.js) | Engine trực quan. Điều khiển, canvas, bộ phát, tham số, router, xuất ảnh/video |
 | [`vis.css`](vis.css) | Giao diện + biến màu. Mỗi trang đè bảng màu riêng bằng `assets/chu-de.css` |
-| [`sync.py`](sync.py) | Chép engine sang các trang đích khai báo trong `dong-bo.json` |
-| [`dong-bo.json`](dong-bo.json) | Trang nào nhận engine v2, trang nào cố ý chưa đồng bộ |
-| [`kiem_demo.py`](kiem_demo.py) | Module mà `check.py` của từng trang gọi vào |
+| [`app.js`](app.js) | Engine đọc bài giảng. Nguồn nội dung: API (mặc định) hoặc `window.COURSE` (offline). Mục lục, tiến độ, tìm kiếm, phím tắt |
+| [`app.css`](app.css) | Giao diện trang đọc bài giảng; mỗi khoá đè màu bằng `assets/chu-de.css` |
+| [`sync.py`](sync.py) | Chép engine sang các trang đích khai báo trong `dong-bo.json` (cả hai engine) |
+| [`dong-bo.json`](dong-bo.json) | `tep`/`dich`: engine trực quan · `khoa_hoc`: engine đọc bài giảng |
+| [`kiem_demo.py`](kiem_demo.py) | Module mà `check.py` của từng trang `*-visual` gọi vào |
+| [`kiem_khoa_hoc.py`](kiem_khoa_hoc.py) | Module mà `check.py` của từng trang `*-course` gọi vào; `MayChuThu` dựng FastAPI thật trên SQLite tạm cho mọi bài kiểm trình duyệt |
 | [`thu-nhanh.js`](thu-nhanh.js) | Chạy thật engine + mọi lab trong Node trên DOM/canvas giả |
 | [`thu-engine.js`](thu-engine.js) | Tự kiểm tra các nguyên hàm engine, không qua lab nào |
+
+---
+
+## Engine đọc bài giảng (`app.js`)
+
+Mỗi trang `*-course` nạp `assets/cau-hinh.js` (có `khoaHoc` = slug trong database) rồi
+`assets/app.js`. Trang [`khoa-hoc/`](../khoa-hoc/) là bản CHUNG: `?khoa=<slug>` đọc bất kỳ khoá
+nào trong database, không cần cấu hình riêng — trang không có `tenNgan` / `tieuDe` / `heroMoTa`
+thì engine lấy tên, phụ đề, biểu tượng, mô tả từ khoá học khi manifest về; section đầu luôn mở
+sẵn. Engine:
+
+1. Lấy gốc API: `?api=…` › `window.__WEBAPP_CONFIG__.apiBase` (FastAPI chèn) › `""`.
+   `?api=` chỉ được nghe khi API ở máy cục bộ (`localhost`, `127.0.0.1`, `[::1]`) hoặc trang mở
+   từ `file://`; trỏ ra máy chủ khác thì bị bỏ qua (cảnh báo trong console) — để một đường link
+   lạ không khiến trang đọc bài từ máy chủ của người khác.
+   Dữ liệu từ database vào HTML luôn qua `esc()` (slug trong `href`, `meta.no`, id/icon
+   section…), markdown qua bộ lọc `htmlSach`; nhóm rỗng, cây rỗng, khoá chưa có bài vẫn
+   dựng được trang chủ, và lỗi khi dựng trang ra trang báo lỗi có nút thử lại.
+2. Tải `GET /courses/<khoaHoc>/manifest` — mục lục và siêu dữ liệu, **không markdown**
+   (khoá AI: ≈ 24 KB gzip thay cho `content.js` 8,4 MB). Trình duyệt xác thực lại
+   bằng ETag: lần mở sau chỉ tốn một phản hồi 304.
+3. Mở bài: `GET /courses/<khoaHoc>/docs/<id>`; bộ nhớ đệm 40 bài; bài tiếp theo được tải
+   trước khi rảnh, nên phím `]` mở tức thì.
+4. Tìm kiếm: `GET /courses/<khoaHoc>/search?q=` — server xếp hạng bằng đúng quy tắc
+   cũ (bỏ dấu, khớp đầu từ, tiêu đề > đầu mục > nội dung), có huỷ request cũ khi gõ tiếp.
+
+Có `window.COURSE` (một `content.js` xuất bằng `manage_courses.py export --js`) thì engine
+dùng nó và lập chỉ mục tìm kiếm trên trình duyệt như trước — chế độ offline.
+
+```bash
+cd ../system-design-course && python check.py      # tĩnh + FastAPI thật + Chromium
+```
 
 ---
 
 ## Lệnh
 
 ```bash
-python sync.py                 # chép sang các trang trong dong-bo.json
-python sync.py lab-visual      # chỉ một trang
-python sync.py --tat-ca        # mọi thư mục *-visual
+python sync.py                 # chép cả hai engine sang mọi trang trong dong-bo.json
+python sync.py lab-visual      # chỉ một trang (tự biết trang thuộc engine nào)
+python sync.py --tat-ca        # mọi thư mục *-visual + mọi trang khoá học
 python sync.py --thu           # chỉ báo sẽ làm gì, không ghi
 python sync.py --kiem          # bản sao có lệch nguồn không (exit 1 nếu lệch)
 

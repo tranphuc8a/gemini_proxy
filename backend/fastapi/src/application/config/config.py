@@ -13,6 +13,11 @@ class Settings(BaseSettings): # type: ignore
     DB_DATABASE: str = "gemini_proxy_db"
     DB_USERNAME: str = "root"
     DB_PASSWORD: str = ""
+    # A full SQLAlchemy *async* URL that overrides the DB_* fields above. The
+    # production database (MySQL on Aiven) is not reachable from every laptop,
+    # and the course importer and the course web pages need *a* database to be
+    # worked on locally: `sqlite+aiosqlite:///data/dev.sqlite3` is enough.
+    DB_URL: str = ""
 
     # Where JSON data files are written. Empty means "probe for a writable
     # location" (see src/application/utils/data_paths.py) -- normally ./data,
@@ -105,6 +110,21 @@ class Settings(BaseSettings): # type: ignore
     POSTMAN_STORAGE_BACKEND: str = "json"
     POSTMAN_JSON_FILE: str = "data/postman-workspaces.json"
     POSTMAN_MAX_HISTORY: int = 500
+
+    # Course content (/courses/*): reading is public, writing (import, edit,
+    # delete) needs this key — exchanged for a session token like the editors.
+    # Empty (the default) switches every write endpoint off: a key printed in
+    # the source would be a key every reader of the repository holds.
+    COURSE_ADMIN_KEY: str = ""
+    COURSE_SESSION_HOURS: int = 12
+    # A session token can be refreshed before it expires, but only this many
+    # days after the login that started the chain; then the key is asked again.
+    COURSE_SESSION_MAX_DAYS: int = 7
+    # `GET /courses/{slug}/bundle` hands the whole course to the browser in one
+    # response; that is fine for a small structured course (OPIc, ~250 KB) and
+    # exactly what the refactor set out to stop for an 8 MB one. Above this
+    # many bytes of markdown the endpoint refuses and points at the manifest.
+    COURSE_BULK_MAX_BYTES: int = 2 * 1024 * 1024
 
     
     # Testing

@@ -61,6 +61,20 @@ def _create_engine_and_session() -> None:
                 connect_args={"check_same_thread": False},
                 future=True,
             )
+        elif (os.environ.get("DB_URL") or getattr(settings, "DB_URL", "") or "").strip():
+            # An explicit URL wins over the DB_* fields: this is how a laptop that
+            # cannot reach the production MySQL still runs the app and the
+            # course importer against a local SQLite file.
+            db_url = (os.environ.get("DB_URL") or settings.DB_URL).strip()
+            if db_url.startswith("sqlite"):
+                db_path = db_url.split("///", 1)[1] if "///" in db_url else ""
+                if db_path and db_path != ":memory:":
+                    Path(db_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
+                _async_engine = create_async_engine(
+                    db_url, echo=False, poolclass=NullPool, connect_args={"check_same_thread": False}, future=True
+                )
+            else:
+                _async_engine = create_async_engine(db_url, echo=False, future=True, pool_pre_ping=True, pool_recycle=3600)
         else:
             # attempt to create MySQL async engine; may raise ModuleNotFoundError if driver missing
             _async_engine = create_async_engine(

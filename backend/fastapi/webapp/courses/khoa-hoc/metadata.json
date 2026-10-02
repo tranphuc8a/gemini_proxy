@@ -1,0 +1,7 @@
+{
+  "title": "Thư viện khoá học",
+  "description": "Đọc mọi khoá học trong database, kể cả khoá vừa tạo ở trang Quản lý khoá học — không cần dựng trang riêng. Danh mục các khoá; mở một khoá là có mục lục, bài giảng, tìm kiếm phía server, tiến độ và ghi chú như các trang khoá học dựng tay.",
+  "category": "Khoá học",
+  "tags": ["khoa-hoc", "thu-vien", "doc-bai", "database", "tieng-viet"],
+  "icon": "📚"
+}

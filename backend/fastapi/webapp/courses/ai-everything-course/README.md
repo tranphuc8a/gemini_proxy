@@ -9,21 +9,29 @@ Giao diện web cho [đại khoá học Trí tuệ nhân tạo](../README.md) �
 
 ## Chạy thử
 
-**Nhanh nhất:** nhấp đúp [`index.html`](index.html). Chạy được ngay vì toàn bộ nội
-dung đã nhúng sẵn vào `assets/content.js` — trang **không dùng `fetch`** nên không
-vướng chặn CORS của giao thức `file://`.
-
-**Khuyến nghị:**
+Nội dung **không còn nằm trong trang**: nó ở database (bảng `courses`, `course_docs`…),
+và trang hỏi API `/courses/ai-everything/…` của chính FastAPI. Vì vậy mở trang qua backend:
 
 ```bash
-cd ai-everything-course/web
-python -m http.server 8790 --bind 127.0.0.1
-# mở http://127.0.0.1:8790
+cd backend/fastapi
+uvicorn src.main:app --port 6789          # rồi mở http://127.0.0.1:6789/webapp/courses/ai-everything-course/
 ```
 
-> ℹ️ Lần đầu mở cần mạng để nạp `marked`, `KaTeX`, `highlight.js` và `mermaid` từ cdnjs.
+Database chưa có khoá này thì nạp bundle (một lần):
 
----
+```bash
+cd backend/fastapi
+DB_URL=sqlite+aiosqlite:///data/dev.sqlite3 python tools/manage_courses.py init-db   # chỉ khi dùng SQLite cục bộ
+python tools/manage_courses.py import ../course-content/ai-everything.json                   # thêm --yes nếu đích là MySQL thật
+```
+
+Trang mở từ máy chủ tĩnh (`python -m http.server`) hay `file://` thì thêm
+`?api=http://127.0.0.1:6789` vào địa chỉ để trỏ tới API (chỉ nhận API ở máy cục bộ, xem `engine/README.md`). Muốn chạy **hoàn toàn offline**:
+`python tools/manage_courses.py export ai-everything --js -o webapp/courses/ai-everything-course/assets/content.js`
+rồi thêm lại `<script src="assets/content.js">` trước `cau-hinh.js` — engine thấy
+`window.COURSE` thì dùng nó thay cho API.
+
+> ℹ️ Lần đầu mở cần mạng để nạp `marked`, `KaTeX`, `highlight.js` từ cdnjs.
 
 ## Tính năng
 
@@ -56,44 +64,41 @@ web/
 │   ├── app.css         ★ BẢN SAO của engine/app.css — đừng sửa ở đây
 │   ├── app.js          ★ BẢN SAO của engine/app.js  — đừng sửa ở đây
 │   ├── chu-de.css      RIÊNG — bảng màu (nhấn hồng sen #9d174d)
-│   ├── cau-hinh.js     RIÊNG — window.CAU_HINH (trang chủ, mô tả môn, gợi ý tìm)
-│   └── content.js      ★ TỰ SINH — toàn bộ nội dung nhúng sẵn
-├── build.py            sinh lại content.js; CŨNG LÀ NƠI KHAI BÁO THỨ TỰ HỌC
-├── check.py            mỏng — gọi ../../engine/kiem.py
-└── shot.py             mỏng — khai báo tuyến đường, gọi ../../engine/chup.py
+│   └── cau-hinh.js     RIÊNG — window.CAU_HINH (trang chủ, mô tả môn, gợi ý tìm) · khoaHoc = "ai-everything" (slug trong database)
+└── check.py            mỏng — gọi ../engine/kiem_khoa_hoc.py (tĩnh + FastAPI thật + Chromium)
 ```
 
 ---
 
 ## Cập nhật nội dung
 
-Trang **không** đọc trực tiếp tệp `.md` lúc chạy. Sau khi sửa bất kỳ bài nào:
+Sửa trực tiếp trong database — không còn bước build cho trang:
 
-```bash
-cd ai-everything-course/web
-python build.py      # sinh lại assets/content.js
-python check.py      # kiểm liên kết và cú pháp
-```
+| Cách | Khi nào |
+|---|---|
+| Trang [Quản lý khoá học](../quan-ly-khoa-hoc/) | sửa bài, sắp xếp mục lục, xuất bản / ẩn, nạp / xuất bundle |
+| `python tools/manage_courses.py …` (trong `backend/fastapi`) | nạp bundle lớn (vượt 4,5 MB thân request của Vercel), sao lưu, script |
+| API `PUT /courses/ai-everything/docs/{id}`, `PUT /courses/ai-everything/structure` | tự động hoá |
+| `/admin` (sqladmin) | sửa nhanh một hàng |
 
-**Thêm bài mới** → thêm tên file vào danh sách `MON` trong `build.py`.
+Mọi đường ghi đều tăng `version` của khoá, nên trình duyệt xác thực lại manifest
+(ETag) và chỉ mục tìm kiếm phía server được dựng lại — không có bản cache cũ.
 
-> 📌 `build.py` **đã khai báo đủ 218 bài**. Bài chưa soạn được báo là "thiếu" và bỏ
-> qua — trang vẫn chạy bình thường và tự hiển thị bài mới ngay khi file xuất hiện.
-> Chỉ số KPI trên trang chủ hiện **số bài đã soạn / tổng số bài dự kiến**, để tiến
-> độ luôn trung thực.
+Bundle `backend/course-content/ai-everything.json` là bản sao lưu dạng tệp (định dạng
+`content.json` cũ cộng khối `course`). Thư mục markdown nguồn **không có trong repo**;
+nếu có, `backend/course-content/ai-everything/build.py <thu-muc-nguon>` sinh lại bundle.
 
 ### Kiểm thử
 
 ```bash
-python -m http.server 8790 --bind 127.0.0.1   # cửa sổ 1
-python shot.py                                 # cửa sổ 2
+python check.py --tinh    # tĩnh: index.html, bản sao engine, khoaHoc, bundle
+python check.py           # + FastAPI thật trên SQLite tạm, nạp bundle, mở bằng Chromium
+python check.py --anh     # như trên, chụp ảnh vào _shots/
 ```
 
-`shot.py` dùng Chromium có sẵn (từ bộ cài Playwright) — **không cài thêm thư viện nào**.
-Nó nạp trang bằng trình duyệt thật, xác nhận JavaScript chạy xong và dựng đúng nội
-dung (gồm cả sơ đồ mermaid đã được vẽ thành SVG), rồi chụp ảnh vào `_shots/`.
-
----
+Tầng trình duyệt không dùng mock: nó dựng uvicorn với `DB_URL` trỏ vào một SQLite tạm,
+nạp bundle bằng `manage_courses.py`, rồi mở trang qua route `/webapp/…` của FastAPI
+(`API_PREFIX=/api/v1`). Logic dùng chung ở [`engine/kiem_khoa_hoc.py`](../engine/kiem_khoa_hoc.py).
 
 ## Quan hệ với các trang khác trong kho
 
@@ -107,7 +112,7 @@ dung (gồm cả sơ đồ mermaid đã được vẽ thành SVG), rồi chụp 
 
 > ✅ Ba trang đầu dùng **cùng một engine**, và engine đó **đã được tách ra**
 > [`courses/engine/`](../../engine/README.md). Mỗi khoá chỉ còn giữ `index.html`,
-> `content.js`, `cau-hinh.js` và `chu-de.css`; `app.js` / `app.css` là **bản sao**
+> `cau-hinh.js` và `chu-de.css` (nội dung nằm trong database); `app.js` / `app.css` là **bản sao**
 > do `python engine/sync.py` chép xuống. Sửa engine thì sửa ở `engine/` rồi chạy
 > `sync.py`; `python engine/sync.py --kiem` bắt được bản sao bị lệch.
 
@@ -127,8 +132,7 @@ dung (gồm cả sơ đồ mermaid đã được vẽ thành SVG), rồi chụp 
 
 ## Ghi chú kỹ thuật
 
-**Nội dung nhúng sẵn thay vì `fetch`** để mở được bằng `file://` — trình duyệt chặn
-`fetch` trên giao thức này nhưng không chặn `<script src>`.
+**Nội dung tải từ API thay vì nhúng sẵn.** Trước đây toàn bộ khoá nằm trong `assets/content.js` để mở được bằng `file://`. Cái giá là trang nào cũng tải cả khoá (8 MB với khoá AI) và lập chỉ mục tìm kiếm trên trình duyệt. Giờ trang chỉ tải manifest, từng bài khi mở, và hỏi server khi tìm. Chế độ offline vẫn còn qua `manage_courses.py export --js` (xem *Chạy thử*).
 
 **Mermaid phải vẽ SAU khi nội dung vào DOM.** Hàm `render()` trả về một cây DOM rời;
 mermaid không vẽ được trên cây rời. Vì vậy `veMermaid()` được gọi trong `viewDoc`
@@ -150,19 +154,16 @@ chữ cái nên biến mất ở 10–11 px.
 
 ---
 
-## Hai định dạng nội dung
+## Nội dung nằm ở đâu
 
-`build.py` sinh **hai** file từ cùng một dữ liệu, cả hai đều là **file sinh ra** —
-nguồn sự thật vẫn là các file `.md`:
-
-| File | Dùng để | Vì sao cần |
+| | Trước | Bây giờ |
 |---|---|---|
-| `assets/content.js` | **runtime** — trang web đọc | Mở bằng `file://` thì **không `fetch()` được** `.json`, nên nội dung phải đến bằng một thẻ `<script>`. Minify một dòng cho nhẹ. |
-| `assets/content.json` | **công cụ** — đọc, diff, xử lý | Định dạng đẹp, thụt lề 2, khoá giữ nguyên thứ tự. Đổi một câu trong bài giảng thì diff chỉ hiện đúng dòng đó. **Trang web không dùng file này.** |
+| Nội dung | `assets/content.js` + `content.json` nhúng trong trang (8,4 MB) | database: `courses` / `course_sections` / `course_groups` / `course_docs` |
+| Trang tải khi mở | toàn bộ khoá | **manifest**: mục lục + siêu dữ liệu, không markdown (≈ 24 KB gzip) |
+| Mở một bài | đã có sẵn | `GET /courses/ai-everything/docs/{id}` — một bài, có ETag |
+| Tìm kiếm | lập chỉ mục cả khoá trên trình duyệt | `GET /courses/ai-everything/search?q=` — xếp hạng phía server, cùng quy tắc |
+| Bundle tệp | sinh bởi `build.py` trong thư mục này | `backend/course-content/ai-everything.json` — ngoài Root Directory của Vercel |
 
-```bash
-python build.py          # sinh cả hai, luôn khớp nhau
-```
+Tiến độ, ghi chú, đánh dấu sao vẫn trong `localStorage` (khoá theo `id` bài — không
+đổi khi chuyển sang database, nên tiến độ cũ của người học được giữ nguyên).
 
-> ⚠️ **Đừng sửa `content.json` để cập nhật nội dung** — lần `build.py` sau sẽ ghi đè.
-> Sửa file `.md` tương ứng rồi chạy lại `build.py`.

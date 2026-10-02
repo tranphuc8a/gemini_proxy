@@ -43,7 +43,11 @@ if config.config_file_name is not None:
 
 # set the sqlalchemy.url programmatically from settings
 # prefer explicit DB config (MySQL) when available
-if getattr(settings, "DB_HOST", None):
+_db_url_override = (os.environ.get("DB_URL") or getattr(settings, "DB_URL", "") or "").strip()
+if _db_url_override:
+    # DB_URL is the *async* URL the app uses; Alembic needs the sync driver.
+    db_url = _db_url_override.replace("+aiomysql", "+pymysql").replace("+asyncmy", "+pymysql").replace("+aiosqlite", "")
+elif getattr(settings, "DB_HOST", None):
     db_url = f"mysql+pymysql://{settings.DB_USERNAME}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_DATABASE}"
 else:
     # fallback to sqlite file next to alembic.ini

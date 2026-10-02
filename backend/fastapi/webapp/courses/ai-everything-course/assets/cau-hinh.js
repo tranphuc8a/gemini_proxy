@@ -7,6 +7,7 @@ window.CAU_HINH = {
   tenNgan: "Đại khoá học AI",
   tieuDe:  "Đại khoá học Trí tuệ nhân tạo — từ số 0 đến trình độ nghiên cứu",
   khoaLuu: "ai",                       /* tiền tố localStorage — phải khác hai khoá kia */
+  khoaHoc: "ai-everything",            /* slug của khoá trong database — engine gọi /courses/ai-everything/… */
 
   heroTieuDe: "Đại khoá học <u>Trí tuệ nhân tạo</u> — từ số 0 đến trình độ nghiên cứu",
   heroMoTa:
