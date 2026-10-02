@@ -21,7 +21,14 @@ Every write starts by locking the course row (``SELECT … FOR UPDATE``), so two
 admins saving the same course queue instead of interleaving, and the statistics
 are read with a locking read, which sees the latest committed documents rather
 than the snapshot the transaction started with. SQLite ignores both clauses; it
-serialises writers on its own.
+serialises writers on its own. The same lock makes "check the fingerprint the
+editor loaded, then write" atomic: a stale save raises `RevisionConflict`
+instead of overwriting a newer one.
+
+Nothing an editor writes is lost to a single click: a save keeps the version it
+replaced (`course_doc_revisions`, 30 per document), a deleted document stays
+there as its trash entry, and a deleted course is kept whole in `course_trash`
+— both for 30 days.
 
 Remote MySQL makes every statement a network round trip, so bulk changes are
 few statements, not one per row: documents go in as multi-row INSERTs, a new
@@ -35,26 +42,32 @@ SQLite — the test and dev engine — does not enforce foreign keys anyway.
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from sqlalchemy import case, delete, func, insert, literal, select, union_all, update
+from sqlalchemy import and_, case, delete, func, insert, literal, select, union_all, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapter.output.mysql.entities.course_entity import (
+    CourseAssetEntity,
     CourseDocEntity,
+    CourseDocRevisionEntity,
     CourseEntity,
     CourseGroupEntity,
     CourseSectionEntity,
+    CourseTrashEntity,
     derived_doc_values,
 )
-from src.application.ports.output.course_output_port import CourseOutputPort
+from src.application.ports.output.course_output_port import CourseOutputPort, DocIdTaken, RevisionConflict
 from src.domain.models.course_domain import (
+    CourseAssetDomain,
     CourseBundle,
     CourseDocDomain,
     CourseDomain,
     CourseGroupDomain,
+    CourseRevisionDomain,
     CourseSectionDomain,
 )
+from src.domain.utils.course_rev import RESERVED_CONFIG_KEYS, doc_rev, info_rev, tree_rev
 
 #: Text per multi-row INSERT of documents (markdown + its folded copy, counted
 #: as UTF-8). The AI course (12 MB with the folded copy) goes in a few
@@ -73,6 +86,10 @@ _UNLISTED_BASE = 100000
 #: Stats keys recomputed from the documents. Anything else in `courses.stats`
 #: (e.g. "lessonsPlanned", "subjects" of the AI course) is editorial and kept.
 _COMPUTED_STATS = ("files", "words", "minutes", "lessons")
+
+#: Past versions kept per document, and days a deleted course or document stays restorable.
+REVISIONS_KEPT = 30
+TRASH_DAYS = 30
 
 #: Columns of a document summary — everything except the heavy text columns.
 _SUMMARY_COLUMNS = (
@@ -93,6 +110,9 @@ _SUMMARY_COLUMNS = (
 _DOCS = CourseDocEntity.__table__
 _SECTIONS = CourseSectionEntity.__table__
 _GROUPS = CourseGroupEntity.__table__
+_REVS = CourseDocRevisionEntity.__table__
+_ASSETS = CourseAssetEntity.__table__
+_TRASH = CourseTrashEntity.__table__
 
 
 def _now() -> int:
@@ -103,6 +123,11 @@ def revision_of(course_id: int, created_at: Optional[int], version: Optional[int
     """The cache key of a course's content. The version alone is not enough: it
     restarts at 1 when a course is deleted and imported again."""
     return f"{int(course_id)}.{int(created_at or 0)}.{int(version or 0)}"
+
+
+def _info_rev_of(ent: CourseEntity) -> str:
+    return info_rev(ent.title, ent.subtitle or "", ent.description or "", ent.icon or "", ent.config or {},
+                    bool(ent.published))
 
 
 def _course_to_domain(ent: CourseEntity, doc_count: int = 0) -> CourseDomain:
@@ -117,6 +142,7 @@ def _course_to_domain(ent: CourseEntity, doc_count: int = 0) -> CourseDomain:
         published=bool(ent.published),
         version=int(ent.version or 1),
         revision=revision_of(ent.id, ent.created_at, ent.version),
+        info_rev=_info_rev_of(ent),
         created_at=int(ent.created_at or 0),
         updated_at=int(ent.updated_at or 0),
         doc_count=doc_count,
@@ -133,16 +159,51 @@ def _summary_to_domain(r: Any, where: Dict[int, Tuple[str, str]]) -> CourseDocDo
 
 
 def _full_to_domain(r: CourseDocEntity, section: str, group: str) -> CourseDocDomain:
+    meta = dict(r.meta_json or {})
     return CourseDocDomain(
         id=r.doc_id, slug=r.slug, title=r.title, kind=r.kind, tag=r.tag, section=section, group=group,
-        meta=dict(r.meta_json or {}), outline=list(r.outline or []), words=r.words, code_lines=r.code_lines,
+        meta=meta, outline=list(r.outline or []), words=r.words, code_lines=r.code_lines,
         minutes=r.minutes, md=r.md or "", updated_at=int(r.updated_at or 0),
+        rev=doc_rev(r.title, r.slug, r.kind, r.tag, meta, r.md or ""),
     )
+
+
+def _revision_to_domain(r: Any, with_md: bool) -> CourseRevisionDomain:
+    return CourseRevisionDomain(
+        id=r.id, doc_id=r.doc_id, action=r.action, title=r.title or "", slug=r.slug or "", kind=r.kind or "lesson",
+        tag=r.tag, meta=dict(r.meta or {}), md=(r.md or "") if with_md else "", words=int(r.words or 0),
+        saved_at=int(r.saved_at or 0), placement=dict(r.placement or {}),
+    )
+
+
+def _asset_to_domain(r: Any, with_data: bool) -> CourseAssetDomain:
+    return CourseAssetDomain(name=r.name, mime=r.mime, size=int(r.size or 0), sha1=r.sha1 or "",
+                             created_at=int(r.created_at or 0), data=bytes(r.data or b"") if with_data else b"")
 
 
 def _chunks(items: Sequence[Any], size: int) -> Iterable[Sequence[Any]]:
     for i in range(0, len(items), size):
         yield items[i:i + size]
+
+
+def _edit_config_table(course: CourseEntity, key: str, mutate: Callable[[Dict[str, str]], None]) -> None:
+    """Change one of the server-kept tables in `courses.config` (slug and id aliases).
+
+    A new dict is assigned on purpose: an in-place change of a JSON column is not
+    seen by SQLAlchemy and would never be written.
+    """
+    cfg = dict(course.config or {})
+    table = dict(cfg.get(key) or {})
+    mutate(table)
+    if table:
+        cfg[key] = table
+    else:
+        cfg.pop(key, None)
+    course.config = cfg
+
+
+_REV_COLUMNS = (_REVS.c.id, _REVS.c.doc_id, _REVS.c.action, _REVS.c.title, _REVS.c.slug, _REVS.c.kind, _REVS.c.tag,
+                _REVS.c.meta, _REVS.c.words, _REVS.c.saved_at, _REVS.c.placement)
 
 
 class CourseRepository(CourseOutputPort):
@@ -236,6 +297,16 @@ class CourseRepository(CourseOutputPort):
             .order_by(CourseDocEntity.sort_order, CourseDocEntity.id)
         )).all()
 
+    async def _placement_of(self, group_id: Optional[int]) -> Dict[str, str]:
+        if group_id is None:
+            return {}
+        row = (await self.db.execute(
+            select(_SECTIONS.c.sec_id, _GROUPS.c.short, _GROUPS.c.title)
+            .join(_SECTIONS, _SECTIONS.c.id == _GROUPS.c.section_id)
+            .where(_GROUPS.c.id == group_id)
+        )).one_or_none()
+        return {"section": row.sec_id, "group": row.short or row.title} if row else {}
+
     async def _refresh_course(self, course: CourseEntity, extra_stats: Optional[Dict[str, Any]] = None) -> None:
         """Recompute stats from the documents and bump the version.
 
@@ -317,6 +388,27 @@ class CourseRepository(CourseOutputPort):
                     placement.setdefault(doc_id, (group_id, i_pos))
         return placement
 
+    async def _save_revision(self, course_id: int, row: CourseDocEntity, action: str,
+                             placement: Optional[Dict[str, str]] = None) -> None:
+        """Keep the document as it is NOW (call before changing or deleting it)."""
+        self.db.add(CourseDocRevisionEntity(
+            course_id=course_id, doc_id=row.doc_id, action=action, title=row.title or "", slug=row.slug or "",
+            kind=row.kind or "lesson", tag=row.tag, meta_json=dict(row.meta_json or {}), placement=dict(placement or {}),
+            md=row.md or "", words=int(row.words or 0), saved_at=_now(),
+        ))
+        await self.db.flush()
+        old = (await self.db.execute(
+            select(_REVS.c.id).where(_REVS.c.course_id == course_id, _REVS.c.doc_id == row.doc_id)
+            .order_by(_REVS.c.saved_at.desc(), _REVS.c.id.desc()).offset(REVISIONS_KEPT)
+        )).scalars().all()
+        if old:
+            await self.db.execute(delete(_REVS).where(_REVS.c.id.in_(list(old))))
+
+    async def _prune_trash(self) -> None:
+        cutoff = _now() - TRASH_DAYS * 86400
+        await self.db.execute(delete(_TRASH).where(_TRASH.c.deleted_at < cutoff))
+        await self.db.execute(delete(_REVS).where(_REVS.c.action == "xoa", _REVS.c.saved_at < cutoff))
+
     # ================================================================ reading
 
     async def list_courses(self, include_unpublished: bool) -> List[CourseDomain]:
@@ -346,6 +438,7 @@ class CourseRepository(CourseOutputPort):
             return None
         course = _course_to_domain(*found)
         course.sections, _, _ = await self._tree(found[0].id)
+        course.tree_rev = tree_rev(course.sections)
         return course
 
     async def course_state(self, slug: str) -> Optional[Tuple[str, bool]]:
@@ -367,6 +460,7 @@ class CourseRepository(CourseOutputPort):
         sections, where, rank = await self._tree(row.id, placed=rows)
         course = _course_to_domain(row, len(rows))
         course.sections = sections
+        course.tree_rev = tree_rev(sections)
         return course, [_summary_to_domain(r, where) for r in self._sorted(rows, rank)]
 
     async def list_doc_summaries(self, slug: str) -> List[CourseDocDomain]:
@@ -492,7 +586,16 @@ class CourseRepository(CourseOutputPort):
         if batch:
             await self.db.execute(insert(_DOCS), batch)
 
-    async def replace_course(self, course: CourseDomain, bundle: CourseBundle) -> CourseDomain:
+    async def _write_assets(self, course_id: int, assets: Sequence[CourseAssetDomain]) -> None:
+        await self.db.execute(delete(_ASSETS).where(_ASSETS.c.course_id == course_id))
+        now = _now()
+        for a in assets:          # one row each: a file can be megabytes, keep statements small
+            await self.db.execute(insert(_ASSETS).values(
+                course_id=course_id, name=a.name, mime=a.mime, size=len(a.data), sha1=a.sha1,
+                data=a.data, created_at=a.created_at or now))
+
+    async def replace_course(self, course: CourseDomain, bundle: CourseBundle,
+                             assets: Optional[Sequence[CourseAssetDomain]] = None) -> CourseDomain:
         row = await self._lock(slug=course.slug)
         now = _now()
         if row is None:
@@ -513,18 +616,33 @@ class CourseRepository(CourseOutputPort):
 
         placement = await self._insert_structure(row.id, bundle.nav)
         await self._insert_docs(row.id, bundle, placement)
+        if assets is not None:
+            await self._write_assets(row.id, assets)
         await self._refresh_course(row, extra_stats=bundle.stats)
         await self.db.commit()
         return await self.get_course(course.slug)  # type: ignore[return-value]
 
-    async def update_course(self, slug: str, fields: Dict[str, Any]) -> Optional[CourseDomain]:
+    async def update_course(self, slug: str, fields: Dict[str, Any],
+                            expect_rev: Optional[str] = None) -> Optional[CourseDomain]:
         row = await self._lock(slug=slug)
         if row is None:
             await self.db.rollback()
             return None
-        for key in ("title", "subtitle", "description", "icon", "config", "published"):
+        if expect_rev is not None and expect_rev != _info_rev_of(row):
+            current = _course_to_domain(row)
+            await self.db.rollback()
+            raise RevisionConflict(current)
+        for key in ("title", "subtitle", "description", "icon", "published"):
             if key in fields and fields[key] is not None:
                 setattr(row, key, fields[key])
+        if fields.get("config") is not None:
+            # The editor never sees the server-kept tables (aliases): keep them.
+            current_cfg = dict(row.config or {})
+            new_cfg = {k: v for k, v in dict(fields["config"]).items() if k not in RESERVED_CONFIG_KEYS}
+            for key in RESERVED_CONFIG_KEYS:
+                if key in current_cfg:
+                    new_cfg[key] = current_cfg[key]
+            row.config = new_cfg
         await self._refresh_course(row, extra_stats=fields.get("stats"))
         await self.db.commit()
         return await self.get_course(slug)
@@ -539,24 +657,40 @@ class CourseRepository(CourseOutputPort):
         await self.db.commit()
         return await self.get_course(course.slug)  # type: ignore[return-value]
 
-    async def delete_course(self, slug: str) -> bool:
+    async def delete_course(self, slug: str, trash: Optional[Dict[str, Any]] = None) -> bool:
         row = await self._lock(slug=slug)
         if row is None:
             await self.db.rollback()
             return False
         course_id = row.id
+        if trash is not None:
+            self.db.add(CourseTrashEntity(slug=slug, title=trash.get("title") or row.title,
+                                          doc_count=int(trash.get("doc_count") or 0), bundle=trash["bundle"],
+                                          deleted_at=_now()))
+        # Children first: SQLite (tests, dev) does not enforce ON DELETE CASCADE.
         await self.db.execute(delete(_DOCS).where(_DOCS.c.course_id == course_id))
         await self._clear_structure(course_id)
+        await self.db.execute(delete(_REVS).where(_REVS.c.course_id == course_id))
+        await self.db.execute(delete(_ASSETS).where(_ASSETS.c.course_id == course_id))
         await self.db.execute(delete(CourseEntity.__table__).where(CourseEntity.__table__.c.id == course_id))
+        await self._prune_trash()
         await self.db.commit()
         self.db.expunge_all()
         return True
 
-    async def replace_structure(self, slug: str, sections: List[CourseSectionDomain]) -> Optional[CourseDomain]:
+    async def replace_structure(self, slug: str, sections: List[CourseSectionDomain],
+                                expect_rev: Optional[str] = None) -> Optional[CourseDomain]:
         course = await self._lock(slug=slug)
         if course is None:
             await self.db.rollback()
             return None
+        if expect_rev is not None:
+            current, _, _ = await self._tree(course.id)
+            current_rev = tree_rev(current)
+            if current_rev != expect_rev:
+                payload = {"nav": [s.model_dump() for s in current], "treeRev": current_rev}
+                await self.db.rollback()
+                raise RevisionConflict(payload)
         await self._clear_structure(course.id)
         placement = await self._insert_structure(course.id, sections)
         placed = list(placement.items())
@@ -589,7 +723,15 @@ class CourseRepository(CourseOutputPort):
             .limit(1)
         )).scalar_one_or_none()
 
-    async def upsert_doc(self, slug: str, doc: CourseDocDomain, group_ref: Optional[Dict[str, str]]) -> Optional[CourseDocDomain]:
+    async def _append_to_group(self, course_id: int, group_id: int) -> int:
+        last = (await self.db.execute(
+            select(func.coalesce(func.max(_DOCS.c.sort_order), -1))
+            .where(_DOCS.c.course_id == course_id, _DOCS.c.group_id == group_id)
+        )).scalar_one()
+        return int(last) + 1
+
+    async def upsert_doc(self, slug: str, doc: CourseDocDomain, group_ref: Optional[Dict[str, str]],
+                         expect_rev: Optional[str] = None, create_only: bool = False) -> Optional[CourseDocDomain]:
         course = await self._lock(slug=slug)
         if course is None:
             await self.db.rollback()
@@ -597,11 +739,32 @@ class CourseRepository(CourseOutputPort):
         row = (await self.db.execute(
             select(CourseDocEntity).where(CourseDocEntity.course_id == course.id, CourseDocEntity.doc_id == doc.id)
         )).scalar_one_or_none()
+
+        stale = (create_only and row is not None) or (
+            expect_rev is not None and
+            (row is None or doc_rev(row.title, row.slug, row.kind, row.tag, row.meta_json, row.md or "") != expect_rev))
+        if stale:
+            current = await self.get_doc(slug, doc.id) if row is not None else None
+            await self.db.rollback()
+            raise RevisionConflict(current)
+
         if row is None:
             row = CourseDocEntity(course_id=course.id, doc_id=doc.id, slug=doc.slug, title=doc.title,
                                   kind=doc.kind, tag=doc.tag, meta_json=dict(doc.meta or {}), md=doc.md or "")
             self.db.add(row)
+            _edit_config_table(course, "slugAliases", lambda t: t.pop(doc.slug, None))
         else:
+            changed = doc_rev(row.title, row.slug, row.kind, row.tag, row.meta_json, row.md or "") != \
+                doc_rev(doc.title, doc.slug, doc.kind, doc.tag, doc.meta, doc.md or "")
+            if changed:
+                await self._save_revision(course.id, row, "sua")
+            if row.slug != doc.slug:
+                old_slug = row.slug
+
+                def move(table: Dict[str, str]) -> None:
+                    table[old_slug] = doc.id          # the old address keeps working
+                    table.pop(doc.slug, None)         # the new one is a real slug now
+                _edit_config_table(course, "slugAliases", move)
             row.slug, row.title, row.kind, row.tag = doc.slug, doc.title, doc.kind, doc.tag
             row.meta_json = dict(doc.meta or {})
             row.md = doc.md or ""
@@ -612,14 +775,10 @@ class CourseRepository(CourseOutputPort):
             group_id = await self._group_row_id(course.id, group_ref.get("section", ""), group_ref.get("group", ""))
             if group_id is None:
                 await self.db.rollback()
-                raise LookupError(f"group {group_ref.get('group')!r} not found in section {group_ref.get('section')!r}")
+                raise LookupError(f"không có nhóm {group_ref.get('group')!r} trong section {group_ref.get('section')!r}")
             if row.group_id != group_id:
-                last = (await self.db.execute(
-                    select(func.coalesce(func.max(_DOCS.c.sort_order), -1))
-                    .where(_DOCS.c.course_id == course.id, _DOCS.c.group_id == group_id)
-                )).scalar_one()
                 row.group_id = group_id
-                row.sort_order = int(last) + 1
+                row.sort_order = await self._append_to_group(course.id, group_id)
         elif row.sort_order is None:
             row.sort_order = 2 * _UNLISTED_BASE
         await self.db.flush()
@@ -632,10 +791,206 @@ class CourseRepository(CourseOutputPort):
         if course is None:
             await self.db.rollback()
             return False
-        res = await self.db.execute(delete(_DOCS).where(_DOCS.c.course_id == course.id, _DOCS.c.doc_id == doc_id))
-        if not res.rowcount:
+        row = (await self.db.execute(
+            select(CourseDocEntity).where(CourseDocEntity.course_id == course.id, CourseDocEntity.doc_id == doc_id)
+        )).scalar_one_or_none()
+        if row is None:
             await self.db.rollback()
             return False
+        await self._save_revision(course.id, row, "xoa", await self._placement_of(row.group_id))
+        await self.db.execute(delete(_DOCS).where(_DOCS.c.course_id == course.id, _DOCS.c.doc_id == doc_id))
+        def forget(table: Dict[str, str]) -> None:     # old addresses of a deleted document lead nowhere
+            for k in [k for k, v in table.items() if v == doc_id]:
+                table.pop(k)
+        _edit_config_table(course, "slugAliases", forget)
         await self._refresh_course(course)
+        await self._prune_trash()
         await self.db.commit()
         return True
+
+    async def rename_doc(self, slug: str, old_id: str, new_id: str) -> Optional[CourseDocDomain]:
+        course = await self._lock(slug=slug)
+        if course is None:
+            await self.db.rollback()
+            return None
+        taken = (await self.db.execute(
+            select(_DOCS.c.id).where(_DOCS.c.course_id == course.id, _DOCS.c.doc_id == new_id)
+        )).scalar_one_or_none()
+        if taken is not None:
+            await self.db.rollback()
+            raise DocIdTaken(new_id)
+        res = await self.db.execute(
+            update(_DOCS).where(_DOCS.c.course_id == course.id, _DOCS.c.doc_id == old_id).values(doc_id=new_id))
+        if not res.rowcount:
+            await self.db.rollback()
+            return None
+        await self.db.execute(
+            update(_REVS).where(_REVS.c.course_id == course.id, _REVS.c.doc_id == old_id).values(doc_id=new_id))
+
+        def ids(table: Dict[str, str]) -> None:
+            for k, v in list(table.items()):
+                if v == old_id:
+                    table[k] = new_id                  # A → B, then B → C: A goes straight to C
+            table[old_id] = new_id
+            table.pop(new_id, None)
+
+        def slugs(table: Dict[str, str]) -> None:
+            for k, v in list(table.items()):
+                if v == old_id:
+                    table[k] = new_id
+        _edit_config_table(course, "idAliases", ids)
+        _edit_config_table(course, "slugAliases", slugs)
+        await self._refresh_course(course)
+        await self.db.commit()
+        return await self.get_doc(slug, new_id)
+
+    # ================================================================ history and trash
+
+    async def list_revisions(self, slug: str, doc_id: str) -> List[CourseRevisionDomain]:
+        course_id = await self._course_id(slug)
+        if course_id is None:
+            return []
+        rows = (await self.db.execute(
+            select(*_REV_COLUMNS).where(_REVS.c.course_id == course_id, _REVS.c.doc_id == doc_id)
+            .order_by(_REVS.c.saved_at.desc(), _REVS.c.id.desc())
+        )).all()
+        return [_revision_to_domain(r, with_md=False) for r in rows]
+
+    async def get_revision(self, slug: str, rev_id: int) -> Optional[CourseRevisionDomain]:
+        course_id = await self._course_id(slug)
+        if course_id is None:
+            return None
+        row = (await self.db.execute(
+            select(*_REV_COLUMNS, _REVS.c.md).where(_REVS.c.course_id == course_id, _REVS.c.id == rev_id)
+        )).one_or_none()
+        return _revision_to_domain(row, with_md=True) if row else None
+
+    async def list_deleted_docs(self) -> List[Tuple[str, str, CourseRevisionDomain, bool]]:
+        await self._prune_trash()
+        await self.db.commit()
+        rows = (await self.db.execute(
+            select(*_REV_COLUMNS, CourseEntity.slug.label("course_slug"), CourseEntity.title.label("course_title"),
+                   _REVS.c.course_id)
+            .join(CourseEntity, CourseEntity.id == _REVS.c.course_id)
+            .where(_REVS.c.action == "xoa")
+            .order_by(_REVS.c.saved_at.desc(), _REVS.c.id.desc())
+        )).all()
+        live: Dict[int, set] = {}
+        for cid in {r.course_id for r in rows}:
+            live[cid] = set((await self.db.execute(select(_DOCS.c.doc_id).where(_DOCS.c.course_id == cid))).scalars())
+        return [(r.course_slug, r.course_title, _revision_to_domain(r, with_md=False), r.doc_id in live[r.course_id])
+                for r in rows]
+
+    async def restore_deleted_doc(self, slug: str, rev_id: int) -> Optional[CourseDocDomain]:
+        course = await self._lock(slug=slug)
+        if course is None:
+            await self.db.rollback()
+            return None
+        rev = (await self.db.execute(
+            select(CourseDocRevisionEntity).where(CourseDocRevisionEntity.course_id == course.id,
+                                                  CourseDocRevisionEntity.id == rev_id,
+                                                  CourseDocRevisionEntity.action == "xoa")
+        )).scalar_one_or_none()
+        if rev is None:
+            await self.db.rollback()
+            return None
+        taken = (await self.db.execute(
+            select(_DOCS.c.id).where(_DOCS.c.course_id == course.id, _DOCS.c.doc_id == rev.doc_id)
+        )).scalar_one_or_none()
+        if taken is not None:
+            await self.db.rollback()
+            raise DocIdTaken(rev.doc_id)
+        place = dict(rev.placement or {})
+        group_id = await self._group_row_id(course.id, place.get("section", ""), place.get("group", "")) if place else None
+        slug_free = (await self.db.execute(
+            select(_DOCS.c.id).where(_DOCS.c.course_id == course.id, _DOCS.c.slug == rev.slug)
+        )).scalar_one_or_none() is None
+        doc_slug = rev.slug if slug_free else f"{rev.slug}-khoi-phuc-{rev.id}"
+        row = CourseDocEntity(course_id=course.id, doc_id=rev.doc_id, slug=doc_slug, title=rev.title, kind=rev.kind,
+                              tag=rev.tag, meta_json=dict(rev.meta_json or {}), md=rev.md or "",
+                              group_id=group_id,
+                              sort_order=(await self._append_to_group(course.id, group_id)) if group_id else 2 * _UNLISTED_BASE)
+        self.db.add(row)
+        await self.db.execute(delete(_REVS).where(_REVS.c.id == rev.id))
+        await self.db.flush()
+        await self._refresh_course(course)
+        await self.db.commit()
+        return await self.get_doc(slug, row.doc_id)
+
+    async def add_trash_course(self, slug: str, trash: Dict[str, Any]) -> None:
+        self.db.add(CourseTrashEntity(slug=slug, title=trash.get("title") or slug,
+                                      doc_count=int(trash.get("doc_count") or 0), bundle=trash["bundle"],
+                                      deleted_at=_now()))
+        await self._prune_trash()
+        await self.db.commit()
+
+    async def list_trash_courses(self) -> List[Dict[str, Any]]:
+        await self._prune_trash()
+        await self.db.commit()
+        rows = (await self.db.execute(
+            select(_TRASH.c.id, _TRASH.c.slug, _TRASH.c.title, _TRASH.c.doc_count, _TRASH.c.deleted_at)
+            .order_by(_TRASH.c.deleted_at.desc(), _TRASH.c.id.desc())
+        )).all()
+        return [{"id": r.id, "slug": r.slug, "title": r.title, "docCount": int(r.doc_count or 0),
+                 "deletedAt": int(r.deleted_at or 0)} for r in rows]
+
+    async def get_trash_course(self, trash_id: int) -> Optional[Dict[str, Any]]:
+        row = (await self.db.execute(select(_TRASH).where(_TRASH.c.id == trash_id))).one_or_none()
+        if row is None:
+            return None
+        return {"id": row.id, "slug": row.slug, "title": row.title, "docCount": int(row.doc_count or 0),
+                "deletedAt": int(row.deleted_at or 0), "bundle": row.bundle}
+
+    async def delete_trash_course(self, trash_id: int) -> bool:
+        res = await self.db.execute(delete(_TRASH).where(_TRASH.c.id == trash_id))
+        await self.db.commit()
+        return bool(res.rowcount)
+
+    # ================================================================ uploaded files
+
+    async def list_assets(self, slug: str) -> List[CourseAssetDomain]:
+        course_id = await self._course_id(slug)
+        if course_id is None:
+            return []
+        rows = (await self.db.execute(
+            select(_ASSETS.c.name, _ASSETS.c.mime, _ASSETS.c.size, _ASSETS.c.sha1, _ASSETS.c.created_at)
+            .where(_ASSETS.c.course_id == course_id).order_by(_ASSETS.c.name)
+        )).all()
+        return [_asset_to_domain(r, with_data=False) for r in rows]
+
+    async def get_asset(self, slug: str, name: str) -> Optional[CourseAssetDomain]:
+        row = (await self.db.execute(
+            select(_ASSETS).join(CourseEntity, CourseEntity.id == _ASSETS.c.course_id)
+            .where(CourseEntity.slug == slug, _ASSETS.c.name == name)
+        )).one_or_none()
+        return _asset_to_domain(row, with_data=True) if row else None
+
+    async def put_asset(self, slug: str, asset: CourseAssetDomain) -> Optional[CourseAssetDomain]:
+        course_id = await self._course_id(slug)
+        if course_id is None:
+            return None
+        values = {"mime": asset.mime, "size": len(asset.data), "sha1": asset.sha1, "data": asset.data,
+                  "created_at": _now()}
+        res = await self.db.execute(
+            update(_ASSETS).where(and_(_ASSETS.c.course_id == course_id, _ASSETS.c.name == asset.name)).values(**values))
+        if not res.rowcount:
+            await self.db.execute(insert(_ASSETS).values(course_id=course_id, name=asset.name, **values))
+        await self.db.commit()
+        return CourseAssetDomain(name=asset.name, mime=asset.mime, size=len(asset.data), sha1=asset.sha1,
+                                 created_at=values["created_at"])
+
+    async def delete_asset(self, slug: str, name: str) -> bool:
+        course_id = await self._course_id(slug)
+        if course_id is None:
+            return False
+        res = await self.db.execute(delete(_ASSETS).where(_ASSETS.c.course_id == course_id, _ASSETS.c.name == name))
+        await self.db.commit()
+        return bool(res.rowcount)
+
+    async def assets_with_data(self, slug: str) -> List[CourseAssetDomain]:
+        course_id = await self._course_id(slug)
+        if course_id is None:
+            return []
+        rows = (await self.db.execute(
+            select(_ASSETS).where(_ASSETS.c.course_id == course_id).order_by(_ASSETS.c.name))).all()
+        return [_asset_to_domain(r, with_data=True) for r in rows]

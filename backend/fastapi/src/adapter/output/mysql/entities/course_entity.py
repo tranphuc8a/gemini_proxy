@@ -27,12 +27,13 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
     event,
 )
-from sqlalchemy.dialects.mysql import LONGTEXT
+from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT
 from sqlalchemy.orm import relationship
 
 from src.adapter.output.mysql.db.base import Base
@@ -41,6 +42,8 @@ from src.domain.utils import course_text
 #: Markdown and its folded copy can exceed MySQL's TEXT (64 KB); the biggest
 #: lesson in the AI course is 34 KB of markdown but others may grow.
 LongText = Text().with_variant(LONGTEXT, "mysql")
+#: Uploaded files; BLOB on MySQL stops at 64 KB.
+LongBlob = LargeBinary().with_variant(LONGBLOB, "mysql")
 
 
 def Ident(length: int):
@@ -175,6 +178,66 @@ class CourseDocEntity(Base):
 
     def __str__(self) -> str:
         return f"{self.doc_id} — {self.title}"
+
+
+class CourseAssetEntity(Base):
+    """A file uploaded to a course. Created by `create_all` at start-up (and by
+    migration 0004), so adding it changes no existing table."""
+
+    __tablename__ = "course_assets"
+    __table_args__ = (UniqueConstraint("course_id", "name", name="uq_course_assets_course_name"), dict(_MYSQL_TABLE))
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    name = Column(Ident(128), nullable=False)
+    mime = Column(String(100), nullable=False)
+    size = Column(Integer, nullable=False, default=0)
+    sha1 = Column(String(40), nullable=False, default="")
+    data = Column(LongBlob, nullable=False)
+    created_at = Column(BigInteger, nullable=False, default=lambda: int(time.time()))
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.size} B)"
+
+
+class CourseDocRevisionEntity(Base):
+    """A past version of a document: the one a save replaced, or the one a
+    delete removed (`action` = "xoa" — that is also the document's trash entry)."""
+
+    __tablename__ = "course_doc_revisions"
+    __table_args__ = (
+        Index("ix_course_doc_revisions_doc", "course_id", "doc_id", "saved_at"),
+        dict(_MYSQL_TABLE),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    doc_id = Column(Ident(255), nullable=False)
+    action = Column(String(16), nullable=False, default="sua")
+    title = Column(String(500), nullable=False, default="")
+    slug = Column(Ident(255), nullable=False, default="")
+    kind = Column(String(32), nullable=False, default="lesson")
+    tag = Column(String(64), nullable=True)
+    meta_json = Column("meta", JSON, nullable=False, default=dict)
+    placement = Column(JSON, nullable=False, default=dict)
+    md = Column(LongText, nullable=False, default="")
+    words = Column(Integer, nullable=False, default=0)
+    saved_at = Column(BigInteger, nullable=False, default=lambda: int(time.time()))
+
+
+class CourseTrashEntity(Base):
+    """A deleted course, kept whole (its export bundle, files included) so it can
+    be restored. Not linked to `courses`: the course row is gone."""
+
+    __tablename__ = "course_trash"
+    __table_args__ = (dict(_MYSQL_TABLE),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    slug = Column(Ident(64), nullable=False)
+    title = Column(String(255), nullable=False, default="")
+    doc_count = Column(Integer, nullable=False, default=0)
+    bundle = Column(LongText, nullable=False)
+    deleted_at = Column(BigInteger, nullable=False, default=lambda: int(time.time()))
 
 
 def derived_doc_values(md: str, title: str) -> Dict[str, Any]:

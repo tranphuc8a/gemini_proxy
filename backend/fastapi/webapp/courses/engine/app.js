@@ -38,6 +38,7 @@ var KHOA_LUU  = ch("khoaLuu", "kh");      /* tiền tố localStorage — PHẢI
                                              này ghi đè tiến độ khoá kia khi cùng
                                              phục vụ từ một host. */
 var DOCS   = {};
+var BIET_DANH = {};      /* slug cũ → id bài: bài đã đổi slug vẫn mở được bằng link cũ */
 var SLUGS  = {};
 var ORDER  = [];
 
@@ -156,7 +157,17 @@ function nguonApi(goc, khoa) {
     search: function (q, signal) {
       return lay("/search?limit=24&q=" + encodeURIComponent(q), signal).then(function (r) { return r.hits || []; });
     },
-    prefetch: function (id) { if (id && !cache[id]) api.doc(id).catch(function () {}); }
+    prefetch: function (id) { if (id && !cache[id]) api.doc(id).catch(function () {}); },
+    /* Tệp tải lên khoá ("assets/hinh.png" trong markdown). */
+    asset: function (ten) { return url("/assets/" + encodeURIComponent(ten)); },
+    /* Bản nháp: ảnh của khoá chưa xuất bản chỉ trả cho quản trị viên, mà <img>
+       không gửi được header — tải bằng fetch kèm token rồi dùng blob. */
+    taiAnh: tk ? function (u) {
+      return fetch(u, { headers: dau, credentials: "same-origin" }).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.blob();
+      }).then(function (b) { return URL.createObjectURL(b); });
+    } : null
   };
   return api;
 }
@@ -168,7 +179,9 @@ function nguonCucBo(C) {
     manifest: function () { return Promise.resolve(C); },
     doc: function (id) { return C.docs[id] ? Promise.resolve(C.docs[id]) : Promise.reject(new LoiTai("Không có bài " + id, 404)); },
     search: function (q) { return Promise.resolve(searchLocal(q)); },
-    prefetch: function () {}
+    prefetch: function () {},
+    asset: function (ten) { return "assets/" + ten; },
+    taiAnh: null
   };
 }
 
@@ -202,226 +215,24 @@ function toast(msg) {
   toastT = setTimeout(function () { t.hidden = true; }, 1900);
 }
 
-/* Bỏ dấu tiếng Việt bằng bảng tra 1 ký tự → 1 ký tự.
-   Giữ nguyên độ dài chuỗi, nhờ vậy vị trí tìm được trên bản không dấu
-   dùng thẳng được cho bản gốc (để cắt trích đoạn và tô sáng từ khoá).
-   Cách này cũng nhanh hơn normalize("NFD") hàng trăm lần trên 770 nghìn ký tự. */
-var VMAP = (function () {
-  var m = {};
-  [["a", "àáạảãâầấậẩẫăằắặẳẵ"], ["e", "èéẹẻẽêềếệểễ"], ["i", "ìíịỉĩ"],
-   ["o", "òóọỏõôồốộổỗơờớợởỡ"], ["u", "ùúụủũưừứựửữ"], ["y", "ỳýỵỷỹ"], ["d", "đ"]
-  ].forEach(function (g) {
-    for (var i = 0; i < g[1].length; i++) m[g[1][i]] = g[0];
-  });
-  return m;
-})();
-function norm(s) {
-  var out = "", i, c, l;
-  for (i = 0; i < s.length; i++) {
-    c = s[i];
-    l = c.toLowerCase();
-    if (l.length !== 1) l = c;                 /* không để phép hạ chữ đổi độ dài */
-    out += VMAP[l] || l;
-  }
-  return out;
-}
+/* Bỏ dấu tiếng Việt (1 ký tự → 1 ký tự, giữ độ dài): dùng chung với hien-thi.js. */
+var norm = HienThi.norm;
 
 /* ---------- 4. Điều hướng tài liệu ------------------------------------ */
-function docOf(slug) { return DOCS[SLUGS[slug]] || null; }
+function docOf(slug) { return DOCS[SLUGS[slug]] || DOCS[BIET_DANH[slug]] || null; }
 function idxOf(id)   { return ORDER.indexOf(id); }
 function prevOf(id)  { var i = idxOf(id); return i > 0 ? DOCS[ORDER[i - 1]] : null; }
 function nextOf(id)  { var i = idxOf(id); return i >= 0 && i < ORDER.length - 1 ? DOCS[ORDER[i + 1]] : null; }
 
-/* Đổi liên kết tương đối trong markdown thành đường đi của trang. */
-function resolveHref(href, fromId) {
-  if (/^(https?:|mailto:|#)/.test(href)) return null;
-  var hash = "", h = href.split("#");
-  href = h[0]; if (h[1]) hash = h[1];
-  if (!href) return null;
-  var base = fromId.split("/"); base.pop();
-  href.split("/").forEach(function (s) {
-    if (!s || s === ".") return;
-    if (s === "..") base.pop(); else base.push(s);
-  });
-  var p = base.join("/");
-  var d = DOCS[p] || DOCS[p + "/README.md"] || DOCS[p.replace(/\/$/, "") + "/README.md"];
-  if (d) return { route: "#/" + d.slug + (hash ? "#" + hash : ""), doc: d };
-  return { file: "../" + p };          // file mã nguồn — mở thẳng từ kho
-}
-
-/* ---------- 5. Dựng HTML từ markdown --------------------------------- */
-marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
-
-function slugifyHeading(t) {
-  return norm(t).replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "muc";
-}
-
-/* HTML do markdown sinh ra, đã gỡ phần chạy được.
-   Nội dung giờ sửa được qua API, không còn là tệp tin cậy trong repo — một khoá
-   quản trị bị lộ không được thành XSS trên mọi trang khoá học (cùng origin với
-   token phiên của trang quản lý). Markdown vẫn được dùng HTML vô hại
-   (<details>, <summary>, <b>, <br>…); chỉ phần tử chạy mã, thuộc tính on*
-   và URL javascript:/vbscript:/data: (trừ ảnh) bị gỡ.
-   Phân tích trong <template> chứ KHÔNG gán innerHTML cho một div: nội dung
-   template "trơ" — <img src=x onerror=…> không tải, nên onerror không kịp chạy
-   trước khi bị gỡ. */
-var THE_CAM = /^(script|iframe|frame|frameset|object|embed|applet|style|link|meta|base|form)$/i;
-function lamSach(goc) {
-  $$("*", goc).forEach(function (el) {
-    if (THE_CAM.test(el.tagName)) { el.parentNode && el.parentNode.removeChild(el); return; }
-    Array.prototype.slice.call(el.attributes).forEach(function (a) {
-      var n = a.name.toLowerCase();
-      var v = (a.value || "").replace(/[\u0000- ]+/g, "").toLowerCase();
-      if (n.indexOf("on") === 0 || n === "srcdoc") { el.removeAttribute(a.name); return; }
-      if (/^(href|src|xlink:href|action|formaction|poster|background)$/.test(n) &&
-          (/^(javascript|vbscript):/.test(v) || (/^data:/.test(v) && !(n === "src" && /^data:image\/(png|gif|jpe?g|webp);/.test(v))))) {
-        el.removeAttribute(a.name);
-      }
-    });
-  });
-}
-function htmlSach(html) {
-  var tpl = document.createElement("template");
-  tpl.innerHTML = html;
-  lamSach(tpl.content);
-  return tpl.content;
-}
-
+/* ---------- 5. Dựng HTML từ markdown ---------------------------------
+   Phần dựng bài nằm ở hien-thi.js (dùng chung với khung xem trước của trang
+   Quản lý khoá học): bộ lọc HTML, công thức, khối mã, hộp chú ý, neo tiêu đề,
+   liên kết giữa các bài, tệp tải lên khoá (assets/…). */
 function render(md, docId) {
-  /* 5a. giấu mã nguồn để ký hiệu $ trong code không bị hiểu là công thức */
-  var codes = [];
-  md = md.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`/g, function (m) {
-    codes.push(m); return "\u0011" + (codes.length - 1) + "\u0011";
+  return HienThi.render(md, {
+    docId: docId, docs: DOCS, icon: icon, toast: toast,
+    assetUrl: NGUON.asset, taiAnh: NGUON.taiAnh
   });
-
-  /* 5b. rút công thức ra ngoài trước khi markdown đụng tới dấu \ */
-  var maths = [];
-  md = md.replace(/\$\$([\s\S]+?)\$\$/g, function (m, t) {
-    maths.push([t, true]);
-    /* Dùng <span> chứ không phải <div>, và KHÔNG chèn dòng trống: thẻ này còn
-       phải nằm đúng chỗ bên trong khối trích dẫn, ô bảng và mục danh sách —
-       nơi một thẻ khối hoặc một dòng trống sẽ phá vỡ cấu trúc markdown. */
-    return "<span class=\"mjx-b\" data-m=\"" + (maths.length - 1) + "\"></span>";
-  });
-  md = md.replace(/\$([^\n$]+?)\$/g, function (m, t) {
-    if (/^\s|\s$/.test(t)) return m;                 /* "$ 5 và $ 7" không phải công thức */
-    maths.push([t, false]);
-    return "<span class=\"mjx-i\" data-m=\"" + (maths.length - 1) + "\"></span>";
-  });
-
-  /* 5c. trả mã nguồn về đúng vị trí cũ rồi mới dựng HTML */
-  md = md.replace(/\u0011(\d+)\u0011/g, function (m, i) { return codes[+i]; });
-
-  var host = document.createElement("div");
-  host.className = "prose";
-  host.appendChild(htmlSach(marked.parse(md)));
-
-  /* 5d. công thức */
-  $$(".mjx-b,.mjx-i", host).forEach(function (el) {
-    var it = maths[+el.dataset.m]; if (!it) return;
-    try {
-      el.innerHTML = katex.renderToString(it[0], {
-        displayMode: it[1], throwOnError: false, strict: false, output: "html"
-      });
-    } catch (e) {
-      el.className += " mjx-err"; el.textContent = it[0];
-    }
-  });
-
-  /* 5e. khối mã: nhãn ngôn ngữ, nút chép, tô màu; khối không có ngôn ngữ
-        là hình vẽ ASCII nên giữ nguyên, không tô màu */
-  $$("pre", host).forEach(function (pre) {
-    var code = pre.querySelector("code");
-    var lang = code && (code.className.match(/language-([\w+#-]+)/) || [])[1];
-    if (lang === "mermaid") {
-      /* So do mermaid: thay <pre> bang <div class="mermaid"> chua ma nguon.
-         Thu vien se ve khi ta goi veMermaid() SAU KHI da chen vao DOM
-         (mermaid khong ve duoc tren cay DOM roi). */
-      var mm = document.createElement("div");
-      mm.className = "mermaid";
-      mm.textContent = code.textContent;
-      pre.parentNode.replaceChild(mm, pre);
-      return;
-    }
-    var wrap = document.createElement("div");
-    wrap.className = "cw" + (lang ? "" : " diag");
-    pre.parentNode.insertBefore(wrap, pre);
-    wrap.appendChild(pre);
-    if (lang && window.hljs && hljs.getLanguage(lang)) {
-      try { code.innerHTML = hljs.highlight(code.textContent, { language: lang }).value; } catch (e) {}
-    }
-    if (lang) {
-      var lb = document.createElement("span");
-      lb.className = "cw-lang"; lb.textContent = lang;
-      wrap.appendChild(lb);
-    }
-    var b = document.createElement("button");
-    b.className = "cw-cp"; b.title = "Chép đoạn mã"; b.setAttribute("aria-label", "Chép đoạn mã");
-    b.innerHTML = icon("copy");
-    b.addEventListener("click", function () {
-      var txt = (code || pre).textContent;
-      var ok = function () {
-        b.innerHTML = icon("check"); b.classList.add("ok");
-        setTimeout(function () { b.innerHTML = icon("copy"); b.classList.remove("ok"); }, 1400);
-      };
-      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok, function () { toast("Không chép được"); });
-      else {
-        var ta = document.createElement("textarea");
-        ta.value = txt; document.body.appendChild(ta); ta.select();
-        try { document.execCommand("copy"); ok(); } catch (e) { toast("Không chép được"); }
-        document.body.removeChild(ta);
-      }
-    });
-    wrap.appendChild(b);
-  });
-
-  /* 5f. bảng cuộn ngang được trên màn nhỏ */
-  $$("table", host).forEach(function (t) {
-    var w = document.createElement("div");
-    w.className = "tw";
-    t.parentNode.insertBefore(w, t); w.appendChild(t);
-  });
-
-  /* 5g. trích dẫn → hộp chú ý, phân loại theo biểu tượng mở đầu */
-  var CAL = [
-    [/^(📖|🔗)/, "cal-ref"], [/^(📌|⭐|💡|★)/, "cal-key"],
-    [/^(⚠️|⚠)/, "cal-warn"], [/^(❌|🚫)/, "cal-bad"], [/^(✅|✔)/, "cal-ok"]
-  ];
-  $$("blockquote", host).forEach(function (q) {
-    var t = (q.textContent || "").trim();
-    for (var i = 0; i < CAL.length; i++) {
-      if (CAL[i][0].test(t)) { q.classList.add(CAL[i][1]); return; }
-    }
-  });
-
-  /* 5h. tiêu đề: gắn mã neo */
-  var seen = {};
-  $$("h2,h3", host).forEach(function (h) {
-    var s = slugifyHeading(h.textContent);
-    if (seen[s]) { s = s + "-" + (++seen[s]); } else { seen[s] = 1; }
-    h.id = s;
-    var a = document.createElement("a");
-    a.className = "anch"; a.href = "#/" + DOCS[docId].slug + "#" + s;
-    a.setAttribute("aria-label", "Liên kết tới mục này"); a.innerHTML = icon("link");
-    h.insertBefore(a, h.firstChild);
-  });
-
-  /* 5i. liên kết */
-  $$("a", host).forEach(function (a) {
-    if (a.classList.contains("anch")) return;
-    var href = a.getAttribute("href") || "";
-    if (/^https?:/.test(href)) {
-      a.target = "_blank"; a.rel = "noopener noreferrer";
-      a.insertAdjacentHTML("beforeend", icon("ext"));
-      return;
-    }
-    var r = resolveHref(href, docId);
-    if (!r) return;
-    if (r.route) { a.setAttribute("href", r.route); a.title = r.doc.title; }
-    else { a.setAttribute("href", r.file); a.target = "_blank"; a.rel = "noopener"; a.title = "Mở tệp trong kho mã nguồn"; }
-  });
-
-  return host;
 }
 
 /* ---------- 6. Tiến độ ------------------------------------------------ */
@@ -511,42 +322,7 @@ function buildNav() {
 
 /* Ve so do mermaid sau khi noi dung da nam trong DOM.
    Goi lai duoc nhieu lan; moi khoi chi ve mot lan (danh dau data-da-ve). */
-function veMermaid() {
-  if (!window.mermaid) return;
-  var els = $$(".mermaid:not([data-da-ve])");
-  if (!els.length) return;
-  els.forEach(function (e) { e.setAttribute("data-da-ve", "1"); });
-  try {
-    var toi = document.documentElement.getAttribute("data-theme") === "dark" ||
-              (document.documentElement.getAttribute("data-theme") !== "light" &&
-               window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      theme: "base",
-      fontFamily: "inherit",
-      themeVariables: toi ? {
-        fontSize: "15px",
-        primaryColor: "#2a1420", primaryTextColor: "#ece8e2", primaryBorderColor: "#4d2137",
-        lineColor: "#8b847a", secondaryColor: "#241f26", tertiaryColor: "#1c1a18",
-        clusterBkg: "#1c1a18", clusterBorder: "#3a3530", background: "#151412"
-      } : {
-        fontSize: "15px",
-        primaryColor: "#fdf2f6", primaryTextColor: "#1a1816", primaryBorderColor: "#f3c6d8",
-        lineColor: "#8b847a", secondaryColor: "#f7f5f2", tertiaryColor: "#faf9f7",
-        clusterBkg: "#f7f5f2", clusterBorder: "#e4e0d9", background: "#ffffff"
-      }
-    });
-    mermaid.run({ nodes: els });
-  } catch (e) {
-    /* So do hong khong duoc lam hong ca trang: hien lai ma nguon. */
-    els.forEach(function (el) {
-      el.classList.remove("mermaid");
-      el.classList.add("cw", "diag");
-      el.innerHTML = "<pre><code>" + esc(el.textContent) + "</code></pre>";
-    });
-  }
-}
+function veMermaid() { HienThi.veMermaid($("#body")); }
 
 /* ---------- 8. Trang chủ ---------------------------------------------- */
 function viewHome() {
@@ -614,7 +390,7 @@ function viewHome() {
   $("#main").innerHTML =
     '<div class="home">' +
       '<div class="hero">' +
-        "<h1>" + ch("heroTieuDe", esc(TIEU_DE)) + "</h1>" +
+        "<h1>" + ch("heroTieuDe", esc(CH.tieuDe !== undefined ? TIEU_DE : TEN_NGAN)) + "</h1>" +
         "<p>" + (CH.heroMoTa !== undefined ? CH.heroMoTa : esc((D.course || {}).description || (D.course || {}).subtitle || "")) + "</p>" +
         '<div class="hero-cta">' +
           (DOCS[ORDER[0]] ? '<a class="btn btn-p" ' + denBai(DOCS[ORDER[0]]) + ">" + icon("right") + "Bắt đầu học</a>" : "") +
@@ -1106,6 +882,9 @@ function route() {
   var slug = hi >= 0 ? rest.slice(0, hi) : rest;
   var anchor = hi >= 0 ? rest.slice(hi + 1) : "";
   var doc = docOf(slug);
+  if (doc && doc.slug !== slug) {                   /* slug cũ: chuyển sang địa chỉ hiện tại */
+    history.replaceState(null, "", "#/" + doc.slug + (anchor ? "#" + anchor : ""));
+  }
   if (!doc) {
     state.doc = null;
     $("#main").innerHTML = '<div class="home"><div class="hero"><h1>Không tìm thấy trang</h1>' +
@@ -1121,6 +900,26 @@ function route() {
 
 window.addEventListener("hashchange", route);
 
+/* Bài đổi id (trang Quản lý → "Đổi id"): tiến độ, đánh dấu và ghi chú của người học
+   cất theo id cũ — chuyển sang id mới một lần, rồi cất lại. */
+function chuyenTienDo(doi) {
+  var ids = Object.keys(doi || {});
+  if (!ids.length) return;
+  var doiDone = false, doiStar = false, doiNote = false;
+  ids.forEach(function (cu) {
+    var moi = doi[cu];
+    if (!moi || cu === moi) return;
+    if (done.has(cu)) { done.delete(cu); done.add(moi); doiDone = true; }
+    if (stars.has(cu)) { stars.delete(cu); stars.add(moi); doiStar = true; }
+    if (notes[cu] !== undefined) { if (notes[moi] === undefined) notes[moi] = notes[cu]; delete notes[cu]; doiNote = true; }
+  });
+  if (doiDone) saveDone();
+  if (doiStar) saveStars();
+  if (doiNote) LS.set("notes", notes);
+  var last = LS.get("last", null);
+  if (last && doi[last.id]) { last.id = doi[last.id]; LS.set("last", last); }
+}
+
 /* Trang đọc chung (courses/khoa-hoc/?khoa=…) không có cau-hinh.js riêng cho từng
    khoá: tên, phụ đề, biểu tượng lấy từ chính khoá học trong database — khoá vừa tạo
    ở trang Quản lý có ngay trang đọc. Trang có cấu hình riêng (tenNgan…) giữ nguyên
@@ -1133,7 +932,11 @@ function apDungThongTinKhoa(c) {
     if (i) i.textContent = c.subtitle || "";
     if (mk && c.icon) mk.textContent = c.icon;
   }
-  if (CH.tieuDe === undefined && c.title) TIEU_DE = c.title + (c.subtitle ? " — " + c.subtitle : "");
+  if (CH.tieuDe === undefined && c.title) {
+    /* "Học X — từ số 0 đến Y" + phụ đề "từ số 0 đến Y" không được thành tiêu đề lặp. */
+    var lap = c.subtitle && norm(c.title).indexOf(norm(c.subtitle).trim()) >= 0;
+    TIEU_DE = c.title + (c.subtitle && !lap ? " — " + c.subtitle : "");
+  }
   var o = $("#btnSearch span");
   if (o) o.textContent = ORDER.length ? "Tìm trong " + ORDER.length + " tài liệu…" : "Tìm trong khoá học…";
   document.title = TIEU_DE;
@@ -1154,6 +957,8 @@ function khoiDong() {
     SLUGS = m.slugs || {};
     ORDER = coThat(m.order);
     D.nav = m.nav || [];
+    BIET_DANH = m.aliases || {};
+    chuyenTienDo(m.idAliases || {});
     apDungThongTinKhoa(m.course || {});
     if (NGUON.kieu === "cuc-bo") {
       if (window.requestIdleCallback) requestIdleCallback(buildIndex, { timeout: 4000 });

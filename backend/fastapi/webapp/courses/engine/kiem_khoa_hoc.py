@@ -208,10 +208,10 @@ def tang_1(thu_muc, B):
     ten = os.path.basename(thu_muc.rstrip(os.sep))
     html = open(os.path.join(thu_muc, "index.html"), encoding="utf-8").read()
     srcs = [s for s in re.findall(r'<script[^>]+src="([^"]+)"', html) if not s.startswith("http")]
-    if srcs == ["assets/cau-hinh.js", "assets/app.js"]:
-        B.ok("index.html nap cau-hinh.js -> app.js, khong con content.js")
+    if srcs == ["assets/hien-thi.js", "assets/cau-hinh.js", "assets/app.js"]:
+        B.ok("index.html nap hien-thi.js -> cau-hinh.js -> app.js, khong con content.js")
     else:
-        B.sai("thu tu <script> cuc bo trong index.html: %s (can: cau-hinh.js, app.js)" % srcs)
+        B.sai("thu tu <script> cuc bo trong index.html: %s (can: hien-thi.js, cau-hinh.js, app.js)" % srcs)
     for f in ("content.js", "content.json"):
         if os.path.exists(os.path.join(thu_muc, "assets", f)):
             B.sai("assets/%s van con — noi dung nang phai nam trong database, khong nam trong trang" % f)
@@ -262,7 +262,7 @@ def tang_1(thu_muc, B):
 
     node = shutil.which("node")
     if node:
-        for f in ("assets/cau-hinh.js", "assets/app.js"):
+        for f in ("assets/hien-thi.js", "assets/cau-hinh.js", "assets/app.js"):
             r = subprocess.run([node, "--check", os.path.join(thu_muc, f)], capture_output=True, text=True)
             (B.ok if r.returncode == 0 else B.sai)("cu phap " + f + ("" if r.returncode == 0 else ": " + r.stderr.strip()[-200:]))
     else:

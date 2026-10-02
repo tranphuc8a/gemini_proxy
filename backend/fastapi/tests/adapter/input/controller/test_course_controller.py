@@ -330,7 +330,7 @@ def test_duplicate_document_slugs_in_a_bundle_are_rejected(client):
     bad = copy.deepcopy(BUNDLE)
     bad["docs"]["p1/bai-02.md"]["slug"] = "bai/p1-bai-01"
     r = client.post(f"{BASE}/import", json=bad, headers=ADMIN)
-    assert r.status_code == 400 and "share the slug" in r.json()["message"]
+    assert r.status_code == 400 and "trùng slug" in r.json()["message"]
 
 
 def test_creating_an_empty_course_then_filling_it(client):
@@ -403,7 +403,7 @@ def test_a_session_cannot_be_refreshed_forever(client):
     old = admin_session.issue(ADMIN_KEY, salt="course-admin", ttl_seconds=3600,
                               since=int(time.time()) - 8 * 86400)
     r = client.post(f"{BASE}/admin/session", headers={"X-Admin-Session": old.token})
-    assert r.status_code == 403 and "too old" in r.text
+    assert r.status_code == 403 and r.json()["data"]["code"] == "session_too_old"
 
     fresh = client.post(f"{BASE}/admin/verify", headers=ADMIN).json()["session"]
     again = client.post(f"{BASE}/admin/session", headers={"X-Admin-Session": fresh})
@@ -486,10 +486,10 @@ def test_bulk_writes_do_not_scale_with_the_number_of_documents(client):
 
 
 @pytest.mark.parametrize("mutate, expected", [
-    (lambda b: b["nav"][0].update(id='x" onmouseover="alert(1)'), "section id"),
-    (lambda b: b["nav"][0].update(icon='x"/><img src=x onerror=alert(1)>'), "section icon"),
-    (lambda b: b["docs"]["p1/bai-01.md"].update(slug="bai/<script>"), "document slug"),
-    (lambda b: b["docs"]["p1/bai-01.md"].update(kind="lesson x"), "document kind"),
+    (lambda b: b["nav"][0].update(id='x" onmouseover="alert(1)'), "id section"),
+    (lambda b: b["nav"][0].update(icon='x"/><img src=x onerror=alert(1)>'), "biểu tượng section"),
+    (lambda b: b["docs"]["p1/bai-01.md"].update(slug="bai/<script>"), "slug bài"),
+    (lambda b: b["docs"]["p1/bai-01.md"].update(kind="lesson x"), "loại bài"),
 ], ids=["section-id", "section-icon", "doc-slug", "doc-kind"])
 def test_identifiers_with_markup_characters_are_refused(client, mutate, expected):
     bad = copy.deepcopy(BUNDLE)
@@ -501,7 +501,7 @@ def test_identifiers_with_markup_characters_are_refused(client, mutate, expected
 def test_document_ids_with_markup_characters_are_refused(client):
     _import(client)
     r = client.put(f"{BASE}/demo/docs/a%22b.md", json={"md": "# X"}, headers=ADMIN)
-    assert r.status_code == 400 and "document id" in r.json()["message"].lower()
+    assert r.status_code == 400 and "id bài" in r.json()["message"].lower()
     assert client.put(f"{BASE}/demo/docs/ghi-chú/bài-1.md", json={"md": "# Vietnamese ids are fine"},
                       headers=ADMIN).status_code == 200
 

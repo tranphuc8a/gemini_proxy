@@ -22,11 +22,14 @@
     "_ghi_chu": [
       "Engine trang DOC BAI GIANG (app.js + app.css): nap muc luc va tung bai tu API",
       "/courses/<khoaHoc>/… thay vi assets/content.js. Nguon that: engine/app.js, engine/app.css.",
-      "khoa-hoc = thu vien / trang doc CHUNG cho moi khoa trong database (?khoa=<slug>)."
+      "khoa-hoc = thu vien / trang doc CHUNG cho moi khoa trong database (?khoa=<slug>).",
+      "hien-thi.js + hien-thi.css = dung bai tu markdown, DUNG CHUNG voi khung xem truoc cua trang quan ly."
     ],
     "tep": [
       "app.js",
-      "app.css"
+      "app.css",
+      "hien-thi.js",
+      "hien-thi.css"
     ],
     "dich": [
       "ai-everything-course",
@@ -34,6 +37,18 @@
       "heuristic-course-2",
       "system-design-course",
       "khoa-hoc"
+    ]
+  },
+  "quan_ly": {
+    "_ghi_chu": [
+      "Trang Quan ly khoa hoc dung CUNG bo dung bai voi trang doc, de ban xem truoc giong het bai that."
+    ],
+    "tep": [
+      "hien-thi.js",
+      "hien-thi.css"
+    ],
+    "dich": [
+      "quan-ly-khoa-hoc"
     ]
   }
 }

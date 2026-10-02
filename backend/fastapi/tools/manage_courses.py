@@ -179,10 +179,11 @@ async def cmd_import_all(args) -> int:
 
 
 async def cmd_export(args) -> int:
-    from src.application.usecases.course_usecase import CourseUseCase
-
-    bundle = await _with_uc(lambda uc: uc.bundle(args.slug, include_unpublished=True, enforce_limit=False))
-    data = CourseUseCase.bundle_json(bundle)
+    # Same as GET /courses/{slug}/export: uploaded files ride along (base64) so `import`
+    # restores them. The --js offline format has no way to serve files, so it drops them.
+    data = await _with_uc(lambda uc: uc.export_json(args.slug))
+    if args.js:
+        data.pop("assets", None)
     text = json.dumps(data, ensure_ascii=False, indent=None if args.js else 1)
     if args.js:
         # The old offline format: the course engine uses window.COURSE when present.
@@ -192,7 +193,8 @@ async def cmd_export(args) -> int:
         out = _arg_path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text + ("" if args.js else "\n"), encoding="utf-8", newline="\n")
-        print(f"Đã ghi {out} ({out.stat().st_size / 1048576:.2f} MB, {len(data['docs'])} bài)")
+        tep = f", {len(data['assets'])} tệp" if data.get("assets") else ""
+        print(f"Đã ghi {out} ({out.stat().st_size / 1048576:.2f} MB, {len(data['docs'])} bài{tep})")
     else:
         sys.stdout.write(text + "\n")
     return 0
