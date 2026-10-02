@@ -50,11 +50,12 @@ def goi(may, method, duong, body=None, headers=None):
 def tang_1():
     print("TANG 1 — tinh")
     html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
-    a, b = html.find('src="assets/cau-hinh.js"'), html.find('src="assets/thu-vien.js"')
-    (ok if 0 < a < b and 'src="assets/app.js"' not in html else sai)(
-        "index.html nap cau-hinh.js -> thu-vien.js (thu-vien.js moi quyet dinh nap engine)")
+    h, a, b = (html.find('src="assets/hien-thi.js"'), html.find('src="assets/cau-hinh.js"'),
+               html.find('src="assets/thu-vien.js"'))
+    (ok if 0 < h < a < b and 'src="assets/app.js"' not in html else sai)(
+        "index.html nap hien-thi.js -> cau-hinh.js -> thu-vien.js (thu-vien.js moi quyet dinh nap engine)")
     import sync                                           # courses/engine/sync.py (sys.path o tren)
-    for ten in ("app.js", "app.css"):
+    for ten in ("app.js", "app.css", "hien-thi.js", "hien-thi.css"):
         try:
             ban = open(os.path.join(HERE, "assets", ten), encoding="utf-8", newline="").read()
         except OSError:
@@ -62,7 +63,7 @@ def tang_1():
         (ok if ban == sync.noi_dung_dich(ten) else sai)("assets/%s khop courses/engine/ (engine/sync.py)" % ten)
     json.load(open(os.path.join(HERE, "metadata.json"), encoding="utf-8"))
     ok("metadata.json doc duoc (trang hien trong portal)")
-    for ten in ("cau-hinh.js", "thu-vien.js", "app.js"):
+    for ten in ("hien-thi.js", "cau-hinh.js", "thu-vien.js", "app.js"):
         r = subprocess.run(["node", "--check", os.path.join(HERE, "assets", ten)], capture_output=True, text=True)
         (ok if r.returncode == 0 else sai)("cu phap assets/%s" % ten)
 
@@ -164,6 +165,33 @@ def tang_2(chup):
             pg.goto(goc)
             pg.wait_for_selector('.card[data-slug="nhap-thu"] .tv-tag.nhap')
             ok("danh muc cua quan tri vien co ban nhap (nhan 'nhap')")
+
+            # 5. QA-09 o phia nguoi doc: doi slug thi link cu van mo bai (chuyen sang dia chi moi);
+            #    doi id bai thi tien do (da xong / sao / ghi chu) di theo bai
+            khoa_done = "kh-%s.done" % KHOA_MOI
+            pg.evaluate("k => localStorage.setItem(k, JSON.stringify(['p1/bai-mot.md']))", khoa_done)
+            st5, _ = goi(may, "PUT", "/courses/%s/docs/p1/bai-mot.md" % KHOA_MOI, {"slug": "bai/mot-moi"})
+            st6, _ = goi(may, "POST", "/courses/%s/rename" % KHOA_MOI, {"from": "p1/bai-mot.md", "to": "p1/bai-1.md"})
+            pg.goto("about:blank")
+            pg.goto(goc + "?khoa=%s#/p1/bai-mot" % KHOA_MOI)
+            mo = pg.wait_for_function("() => { const b = document.querySelector('#body .prose');"
+                                      " return b && b.textContent.includes('tham lam') && location.hash; }", timeout=15000).json_value()
+            (ok if (st5, st6) == (200, 200) and mo == "#/bai/mot-moi" else sai)(
+                "link cu sau khi doi slug van mo bai, chuyen sang dia chi moi (%s, %s)" % ((st5, st6), mo))
+            done = pg.evaluate("k => JSON.parse(localStorage.getItem(k) || '[]')", khoa_done)
+            (ok if done == ["p1/bai-1.md"] else sai)("doi id bai: danh dau 'da xong' cua nguoi doc di theo bai (%s)" % done)
+
+            # 6. QA-06 dien thoai: header khong tran, tieu de khong lap phu de
+            m = br.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+            m.on("pageerror", lambda e: loi.append("pageerror(dien thoai): %s" % e))
+            m.goto(goc + "?khoa=system-design&theme=light")
+            m.wait_for_selector(".hero h1")
+            kq = m.evaluate("() => ({rong: document.documentElement.scrollWidth, vw: innerWidth,"
+                            " h1: document.querySelector('.hero h1').textContent, title: document.title})")
+            (ok if kq["rong"] <= kq["vw"] and kq["h1"].count("từ số 0") == 1 and kq["title"].count("từ số 0") == 1 else sai)(
+                "dien thoai 390px: khong tran ngang, tieu de khong lap phu de (QA-06) %s" % kq)
+            if chup:
+                m.screenshot(path=os.path.join(anh, "dien-thoai.png"))
             br.close()
         if loi:
             for l in loi[:8]:

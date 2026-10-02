@@ -5,9 +5,11 @@
 Nguon that la thu muc nay. Moi ban trong */assets/ deu la ban sao — sua o
 do se mat khi chay lai lenh nay.
 
-Hai bo engine, khai bao trong dong-bo.json:
+Cac bo engine, khai bao trong dong-bo.json:
   · vis-core.js + vis.css   -> cac trang lab *-visual        (khoa "tep"/"dich")
-  · app.js + app.css        -> cac trang doc bai *-course    (khoa "khoa_hoc")
+  · app.js + app.css + hien-thi.js/.css -> trang doc bai     (khoa "khoa_hoc")
+  · hien-thi.js/.css        -> trang Quan ly khoa hoc         (khoa "quan_ly")
+  Moi khoa khac co dang {"tep": [...], "dich": [...]} cung la mot bo.
 
     python sync.py                 # chep sang moi trang trong dong-bo.json
     python sync.py lab-visual      # chi mot trang (tu biet trang thuoc bo nao)
@@ -99,23 +101,36 @@ def chay(dich, tep, thu=False, chi_kiem=False):
     return so_ghi, so_lech, so_bo_qua
 
 
-def cac_bo(ch, ten_rieng, tat_ca):
-    """[(tep, dich)] cho tung bo engine. Trang dat ten rieng di vao bo co no."""
-    vis_tep = ch.get("tep", ["vis-core.js", "vis.css"])
-    kh = ch.get("khoa_hoc", {}) or {}
-    kh_tep, kh_dich = kh.get("tep", []), kh.get("dich", [])
-    if ten_rieng:
-        bo_kh = [t for t in ten_rieng if t in kh_dich or t.endswith("-course")]
-        bo_vis = [t for t in ten_rieng if t not in bo_kh]
-    elif tat_ca:
-        bo_vis, bo_kh = moi_trang_visual(), list(kh_dich)
-    else:
-        bo_vis, bo_kh = ch.get("dich", []), list(kh_dich)
+def _cac_nhom(ch):
+    """(ten, tep, dich) cua moi bo khai bao kieu {"tep", "dich"} ngoai bo goc."""
     out = []
+    for ten, v in ch.items():
+        if isinstance(v, dict) and isinstance(v.get("tep"), list) and isinstance(v.get("dich"), list):
+            out.append((ten, v["tep"], v["dich"]))
+    return out
+
+
+def cac_bo(ch, ten_rieng, tat_ca):
+    """[(tep, dich)] cho tung bo engine. Trang dat ten rieng di vao (moi) bo co no."""
+    vis_tep = ch.get("tep", ["vis-core.js", "vis.css"])
+    nhom = _cac_nhom(ch)
+    out = []
+    if ten_rieng:
+        con_lai = list(ten_rieng)
+        for ten, tep, dich in nhom:
+            chon = [t for t in ten_rieng if t in dich or (ten == "khoa_hoc" and t.endswith("-course"))]
+            if chon and tep:
+                out.append((tep, chon))
+                con_lai = [t for t in con_lai if t not in chon]
+        if con_lai:
+            out.insert(0, (vis_tep, con_lai))
+        return out
+    bo_vis = moi_trang_visual() if tat_ca else ch.get("dich", [])
     if bo_vis:
         out.append((vis_tep, bo_vis))
-    if bo_kh and kh_tep:
-        out.append((kh_tep, bo_kh))
+    for _ten, tep, dich in nhom:
+        if dich and tep:
+            out.append((tep, list(dich)))
     return out
 
 

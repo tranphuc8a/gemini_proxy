@@ -1,0 +1,338 @@
+/* ==========================================================================
+   HIỂN THỊ BÀI — markdown → DOM, MỘT bản cho cả hai nơi:
+     · trang đọc khoá học (engine/app.js gọi HienThi.render)
+     · khung xem trước của trang Quản lý khoá học
+   nên người soạn thấy đúng thứ người học sẽ thấy: công thức KaTeX, khối mã tô
+   màu, sơ đồ mermaid, hộp chú ý, bảng cuộn ngang, liên kết giữa các bài, ảnh
+   tải lên khoá (assets/…).
+
+   ★ NGUỒN THẬT: courses/engine/hien-thi.js. Bản trong <trang>/assets/ do
+     `python engine/sync.py` chép ra — sửa ở đó sẽ mất.
+
+   Cần (nếu có thì dùng, thiếu thì bỏ qua phần đó): window.marked (bắt buộc),
+   window.katex, window.hljs. mermaid được nạp từ CDN khi bài có sơ đồ.
+
+     HienThi.render(md, {
+       docId,            id bài đang dựng — gốc cho liên kết tương đối
+       docs,             id → {slug, title}: để biến "../bai-02.md" thành "#/slug"
+       icon(name),       chuỗi SVG cho nút chép / mũi tên liên kết ngoài (tuỳ chọn)
+       toast(msg),       báo "không chép được" (tuỳ chọn)
+       assetUrl(name),   địa chỉ thật của tệp "assets/<name>" (tuỳ chọn)
+       taiAnh(url)       → Promise<url dùng được>: tải ảnh có kèm token (bản nháp)
+     }) → <div class="prose">
+     HienThi.veMermaid(root)   vẽ sơ đồ SAU KHI root đã nằm trong DOM
+   ========================================================================== */
+(function (root) {
+"use strict";
+
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var esc = function (s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+};
+
+/* Bỏ dấu tiếng Việt bằng bảng tra 1 ký tự → 1 ký tự: giữ nguyên độ dài chuỗi,
+   nên vị trí tìm được trên bản không dấu dùng thẳng cho bản gốc. */
+var VMAP = (function () {
+  var m = {};
+  [["a", "àáạảãâầấậẩẫăằắặẳẵ"], ["e", "èéẹẻẽêềếệểễ"], ["i", "ìíịỉĩ"],
+   ["o", "òóọỏõôồốộổỗơờớợởỡ"], ["u", "ùúụủũưừứựửữ"], ["y", "ỳýỵỷỹ"], ["d", "đ"]
+  ].forEach(function (g) {
+    for (var i = 0; i < g[1].length; i++) m[g[1][i]] = g[0];
+  });
+  return m;
+})();
+function norm(s) {
+  var out = "", i, c, l;
+  s = String(s == null ? "" : s);
+  for (i = 0; i < s.length; i++) {
+    c = s[i];
+    l = c.toLowerCase();
+    if (l.length !== 1) l = c;                 /* không để phép hạ chữ đổi độ dài */
+    out += VMAP[l] || l;
+  }
+  return out;
+}
+
+function slugifyHeading(t) {
+  return norm(t).replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "muc";
+}
+
+/* HTML do markdown sinh ra, đã gỡ phần chạy được. Nội dung sửa được qua API,
+   không còn là tệp tin cậy trong repo — một khoá quản trị bị lộ không được
+   thành XSS trên mọi trang khoá học (cùng origin với token phiên của trang
+   quản lý). Markdown vẫn được dùng HTML vô hại (<details>, <b>, <br>…); chỉ phần
+   tử chạy mã, thuộc tính on* và URL javascript:/vbscript:/data: (trừ ảnh) bị gỡ.
+   Phân tích trong <template> chứ KHÔNG gán innerHTML cho một div: nội dung
+   template "trơ" — <img src=x onerror=…> không tải, nên onerror không kịp chạy. */
+var THE_CAM = /^(script|iframe|frame|frameset|object|embed|applet|style|link|meta|base|form)$/i;
+function lamSach(goc) {
+  $$("*", goc).forEach(function (el) {
+    if (THE_CAM.test(el.tagName)) { el.parentNode && el.parentNode.removeChild(el); return; }
+    Array.prototype.slice.call(el.attributes).forEach(function (a) {
+      var n = a.name.toLowerCase();
+      var v = (a.value || "").replace(/[\u0000- ]+/g, "").toLowerCase();
+      if (n.indexOf("on") === 0 || n === "srcdoc") { el.removeAttribute(a.name); return; }
+      if (/^(href|src|xlink:href|action|formaction|poster|background)$/.test(n) &&
+          (/^(javascript|vbscript):/.test(v) || (/^data:/.test(v) && !(n === "src" && /^data:image\/(png|gif|jpe?g|webp);/.test(v))))) {
+        el.removeAttribute(a.name);
+      }
+    });
+  });
+}
+function htmlSach(html) {
+  var tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  lamSach(tpl.content);
+  return tpl.content;
+}
+
+/* Liên kết tương đối trong markdown → bài trong khoá (route) hay tệp nguồn. */
+function resolveHref(href, fromId, docs) {
+  if (/^(https?:|mailto:|#)/.test(href)) return null;
+  var hash = "", h = href.split("#");
+  href = h[0]; if (h[1]) hash = h[1];
+  if (!href) return null;
+  var base = String(fromId || "").split("/"); base.pop();
+  href.split("/").forEach(function (s) {
+    if (!s || s === ".") return;
+    if (s === "..") base.pop(); else base.push(s);
+  });
+  var p = base.join("/");
+  docs = docs || {};
+  var id = docs[p] ? p : docs[p + "/README.md"] ? p + "/README.md" :
+           docs[p.replace(/\/$/, "") + "/README.md"] ? p.replace(/\/$/, "") + "/README.md" : null;
+  if (id) return { route: "#/" + docs[id].slug + (hash ? "#" + hash : ""), doc: docs[id], id: id };
+  return { file: "../" + p };          // tệp mã nguồn — mở thẳng từ kho
+}
+
+/* "assets/hinh.png" hoặc "./assets/hinh.png" → "hinh.png" */
+function tenTep(href) {
+  var m = /^(?:\.\/)?assets\/([^?#]+)$/.exec(href || "");
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+if (root.marked) root.marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
+
+function render(md, o) {
+  o = o || {};
+  var docs = o.docs || {}, docId = o.docId || "";
+  var icon = o.icon || function () { return ""; };
+  var toast = o.toast || function () {};
+  md = String(md || "");
+
+  /* a. giấu mã nguồn để ký hiệu $ trong code không bị hiểu là công thức */
+  var codes = [];
+  md = md.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`/g, function (m) {
+    codes.push(m); return "\u0011" + (codes.length - 1) + "\u0011";
+  });
+
+  /* b. rút công thức ra ngoài trước khi markdown đụng tới dấu \ */
+  var maths = [];
+  md = md.replace(/\$\$([\s\S]+?)\$\$/g, function (m, t) {
+    maths.push([t, true]);
+    /* <span> chứ không phải <div>, và KHÔNG chèn dòng trống: thẻ này còn phải
+       nằm đúng chỗ trong trích dẫn, ô bảng và mục danh sách. */
+    return "<span class=\"mjx-b\" data-m=\"" + (maths.length - 1) + "\"></span>";
+  });
+  md = md.replace(/\$([^\n$]+?)\$/g, function (m, t) {
+    if (/^\s|\s$/.test(t)) return m;                 /* "$ 5 và $ 7" không phải công thức */
+    maths.push([t, false]);
+    return "<span class=\"mjx-i\" data-m=\"" + (maths.length - 1) + "\"></span>";
+  });
+
+  /* c. trả mã nguồn về đúng vị trí cũ rồi mới dựng HTML */
+  md = md.replace(/\u0011(\d+)\u0011/g, function (m, i) { return codes[+i]; });
+
+  var host = document.createElement("div");
+  host.className = "prose";
+  host.appendChild(htmlSach(root.marked ? root.marked.parse(md) : "<pre>" + esc(md) + "</pre>"));
+
+  /* d. công thức */
+  $$(".mjx-b,.mjx-i", host).forEach(function (el) {
+    var it = maths[+el.dataset.m]; if (!it) return;
+    if (!root.katex) { el.className += " mjx-err"; el.textContent = it[0]; return; }
+    try {
+      el.innerHTML = root.katex.renderToString(it[0], {
+        displayMode: it[1], throwOnError: false, strict: false, output: "html"
+      });
+    } catch (e) {
+      el.className += " mjx-err"; el.textContent = it[0];
+    }
+  });
+
+  /* e. khối mã: nhãn ngôn ngữ, nút chép, tô màu; khối không ngôn ngữ là hình
+        vẽ ASCII nên giữ nguyên; khối mermaid thành sơ đồ (vẽ sau, trong DOM) */
+  $$("pre", host).forEach(function (pre) {
+    var code = pre.querySelector("code");
+    var lang = code && (code.className.match(/language-([\w+#-]+)/) || [])[1];
+    if (lang === "mermaid") {
+      var mm = document.createElement("div");
+      mm.className = "mermaid";
+      mm.textContent = code.textContent;
+      pre.parentNode.replaceChild(mm, pre);
+      return;
+    }
+    var wrap = document.createElement("div");
+    wrap.className = "cw" + (lang ? "" : " diag");
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    if (lang && root.hljs && root.hljs.getLanguage(lang)) {
+      try { code.innerHTML = root.hljs.highlight(code.textContent, { language: lang }).value; } catch (e) {}
+    }
+    if (lang) {
+      var lb = document.createElement("span");
+      lb.className = "cw-lang"; lb.textContent = lang;
+      wrap.appendChild(lb);
+    }
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "cw-cp"; b.title = "Chép đoạn mã"; b.setAttribute("aria-label", "Chép đoạn mã");
+    b.innerHTML = icon("copy") || "⧉";
+    b.addEventListener("click", function () {
+      var txt = (code || pre).textContent;
+      var ok = function () {
+        b.innerHTML = icon("check") || "✓"; b.classList.add("ok");
+        setTimeout(function () { b.innerHTML = icon("copy") || "⧉"; b.classList.remove("ok"); }, 1400);
+      };
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok, function () { toast("Không chép được"); });
+      else {
+        var ta = document.createElement("textarea");
+        ta.value = txt; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); ok(); } catch (e) { toast("Không chép được"); }
+        document.body.removeChild(ta);
+      }
+    });
+    wrap.appendChild(b);
+  });
+
+  /* f. bảng cuộn ngang được trên màn nhỏ */
+  $$("table", host).forEach(function (t) {
+    var w = document.createElement("div");
+    w.className = "tw";
+    t.parentNode.insertBefore(w, t); w.appendChild(t);
+  });
+
+  /* g. trích dẫn → hộp chú ý, phân loại theo biểu tượng mở đầu */
+  var CAL = [
+    [/^(📖|🔗)/, "cal-ref"], [/^(📌|⭐|💡|★)/, "cal-key"],
+    [/^(⚠️|⚠)/, "cal-warn"], [/^(❌|🚫)/, "cal-bad"], [/^(✅|✔)/, "cal-ok"]
+  ];
+  $$("blockquote", host).forEach(function (q) {
+    var t = (q.textContent || "").trim();
+    for (var i = 0; i < CAL.length; i++) {
+      if (CAL[i][0].test(t)) { q.classList.add(CAL[i][1]); return; }
+    }
+  });
+
+  /* h. tiêu đề: gắn mã neo */
+  var seen = {}, slugBai = docs[docId] ? docs[docId].slug : "";
+  $$("h2,h3", host).forEach(function (h) {
+    var s = slugifyHeading(h.textContent);
+    if (seen[s]) { s = s + "-" + (++seen[s]); } else { seen[s] = 1; }
+    h.id = s;
+    var a = document.createElement("a");
+    a.className = "anch"; a.href = slugBai ? "#/" + slugBai + "#" + s : "#" + s;
+    a.setAttribute("aria-label", "Liên kết tới mục này"); a.innerHTML = icon("link") || "#";
+    h.insertBefore(a, h.firstChild);
+  });
+
+  /* i. tệp tải lên khoá: assets/<tên> → địa chỉ thật */
+  $$("img[src]", host).forEach(function (img) {
+    var ten = tenTep(img.getAttribute("src"));
+    if (!ten || !o.assetUrl) return;
+    var url = o.assetUrl(ten);
+    img.setAttribute("loading", "lazy");
+    if (o.taiAnh) {
+      img.removeAttribute("src");
+      img.setAttribute("data-tep", ten);
+      o.taiAnh(url).then(function (u) { img.src = u; }, function () { img.alt = (img.alt || "") + " [không tải được " + ten + "]"; });
+    } else {
+      img.src = url;
+    }
+  });
+
+  /* j. liên kết */
+  $$("a", host).forEach(function (a) {
+    if (a.classList.contains("anch")) return;
+    var href = a.getAttribute("href") || "";
+    var ten = tenTep(href);
+    if (ten) {
+      if (o.assetUrl) { a.href = o.assetUrl(ten); a.target = "_blank"; a.rel = "noopener"; a.title = "Tệp " + ten; }
+      return;
+    }
+    if (/^https?:/.test(href)) {
+      a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.insertAdjacentHTML("beforeend", icon("ext"));
+      return;
+    }
+    var r = resolveHref(href, docId, docs);
+    if (!r) return;
+    if (r.route) { a.setAttribute("href", r.route); a.title = r.doc.title || ""; a.setAttribute("data-bai", r.id); }
+    else { a.setAttribute("href", r.file); a.target = "_blank"; a.rel = "noopener"; a.title = "Mở tệp trong kho mã nguồn"; }
+  });
+
+  return host;
+}
+
+/* ---- sơ đồ mermaid: nạp thư viện khi cần, vẽ khi đã ở trong DOM ---- */
+var MERMAID_URL = "https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js";
+var dangNap = null;
+function napMermaid() {
+  if (root.mermaid) return Promise.resolve(root.mermaid);
+  if (dangNap) return dangNap;
+  dangNap = new Promise(function (ok, loi) {
+    var s = document.createElement("script");
+    s.src = MERMAID_URL; s.async = true;
+    s.onload = function () { root.mermaid ? ok(root.mermaid) : loi(new Error("mermaid")); };
+    s.onerror = function () { dangNap = null; loi(new Error("không tải được mermaid")); };
+    document.head.appendChild(s);
+  });
+  return dangNap;
+}
+function veMermaid(goc) {
+  var els = $$(".mermaid:not([data-da-ve])", goc || document);
+  if (!els.length) return Promise.resolve(0);
+  return napMermaid().then(function (mermaid) {
+    els = els.filter(function (e) { return e.isConnected && !e.hasAttribute("data-da-ve"); });
+    if (!els.length) return 0;
+    els.forEach(function (e) { e.setAttribute("data-da-ve", "1"); });
+    var de = document.documentElement;
+    var toi = de.getAttribute("data-theme") === "dark" ||
+              (de.getAttribute("data-theme") !== "light" && root.matchMedia && root.matchMedia("(prefers-color-scheme: dark)").matches);
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: "base",
+      fontFamily: "inherit",
+      themeVariables: toi ? {
+        fontSize: "15px",
+        primaryColor: "#2a1420", primaryTextColor: "#ece8e2", primaryBorderColor: "#4d2137",
+        lineColor: "#8b847a", secondaryColor: "#241f26", tertiaryColor: "#1c1a18",
+        clusterBkg: "#1c1a18", clusterBorder: "#3a3530", background: "#151412"
+      } : {
+        fontSize: "15px",
+        primaryColor: "#fdf2f6", primaryTextColor: "#1a1816", primaryBorderColor: "#f3c6d8",
+        lineColor: "#8b847a", secondaryColor: "#f7f5f2", tertiaryColor: "#faf9f7",
+        clusterBkg: "#f7f5f2", clusterBorder: "#e4e0d9", background: "#ffffff"
+      }
+    });
+    return Promise.resolve(mermaid.run({ nodes: els })).then(function () { return els.length; });
+  }).catch(function () {
+    /* Sơ đồ hỏng (hay không tải được thư viện) không được làm hỏng cả trang: hiện lại mã nguồn. */
+    els.forEach(function (el) {
+      if (el.querySelector("svg")) return;
+      el.classList.remove("mermaid");
+      el.classList.add("cw", "diag");
+      el.innerHTML = "<pre><code>" + esc(el.textContent) + "</code></pre>";
+    });
+    return 0;
+  });
+}
+
+root.HienThi = {
+  norm: norm, slugifyHeading: slugifyHeading, lamSach: lamSach, htmlSach: htmlSach,
+  resolveHref: resolveHref, render: render, veMermaid: veMermaid, tenTep: tenTep
+};
+})(window);

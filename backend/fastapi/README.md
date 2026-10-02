@@ -36,21 +36,33 @@ Notes:
 
 The course pages under `webapp/courses/` no longer embed their lessons. Content
 lives in four tables (`courses` → `course_sections` → `course_groups` → `course_docs`,
-migration `0003`), and the pages read it through this API:
+migration `0003`), plus uploaded files, document history and the trash
+(`course_assets`, `course_doc_revisions`, `course_trash`, migration `0004`). The
+pages read it through this API:
 
 | Endpoint | Who | What |
 |---|---|---|
 | `GET /courses` | public (`?all=1` + admin: drafts too) | list |
-| `GET /courses/{slug}` · `/manifest` | public | course + navigation tree · tree + document metadata, **no markdown** (ETag, gzip) |
+| `GET /courses/{slug}` · `/manifest` | public | course + navigation tree · tree + document metadata, **no markdown** (ETag, gzip); the manifest carries `aliases` (old slug → document) and `idAliases` (old id → new id) |
 | `GET /courses/{slug}/docs/{id}` | public | one document with markdown (ETag, gzip) |
 | `GET /courses/{slug}/search?q=` | public | server-side ranking, diacritic-insensitive, word-start matching; at most 6 distinct terms of 2+ letters, ranked off the event loop, answers cached per revision |
 | `GET /courses/{slug}/bundle` | public, small courses only | the whole course (`COURSE_BULK_MAX_BYTES`) |
-| `POST /courses/admin/verify` · `/admin/session` | — | `COURSE_ADMIN_KEY` → session token · refresh (until `COURSE_SESSION_MAX_DAYS` after the login) |
-| `POST /courses` · `POST /courses/import` | admin | create · create-or-replace from a bundle |
-| `PATCH` / `DELETE /courses/{slug}` | admin | edit (title, publish…) · delete |
+| `GET /courses/{slug}/assets/{name}` | public like the course | an uploaded file (type from the extension; SVG under a sandbox CSP) |
+| `POST /courses/admin/verify` · `/admin/session` | — | `COURSE_ADMIN_KEY` → session token (5 failures per address in 5 min, 50 overall → 429 `Retry-After`) · refresh (until `COURSE_SESSION_MAX_DAYS` after the login) |
+| `POST /courses` · `/import` · `/{slug}/duplicate` | admin | create (empty or from a template: `trong`, `co-ban`, `chu-de`) · create-or-replace from a bundle (the replaced course goes to the trash) · copy as a draft |
+| `PATCH` / `DELETE /courses/{slug}` | admin | edit (title, publish…) · move to the trash |
 | `PUT /courses/{slug}/structure` | admin | replace the navigation tree |
-| `PUT` / `DELETE /courses/{slug}/docs/{id}` | admin | create-or-update · delete a document |
-| `GET /courses/{slug}/export` | admin | the bundle, as a file |
+| `PUT` / `DELETE /courses/{slug}/docs/{id}` · `POST /{slug}/rename` | admin | create-or-update (≤ `COURSE_DOC_MAX_BYTES`) · move to the trash · change a document's id (learner progress follows) |
+| `GET /courses/{slug}/history?doc=` · `/history/{rev}` | admin | the last 30 versions of a document |
+| `GET /courses/trash` · `POST …/trash/courses/{id}/restore` · `POST /{slug}/trash/{rev}/restore` · `DELETE /courses/trash/courses/{id}` | admin | deleted courses and documents (kept 30 days): list · restore · forget |
+| `GET` / `PUT` / `DELETE /courses/{slug}/assets[/{name}]` | admin | list (with which documents use each file) · upload a raw body (≤ `COURSE_ASSET_MAX_BYTES`) · delete |
+| `GET /courses/{slug}/links` | admin | broken links between documents and files, who links to whom |
+| `GET /courses/{slug}/export` | admin | the bundle including files (base64), as a file |
+
+Writes an editor makes from something it loaded accept `If-Match` with the
+`rev` / `treeRev` / `infoRev` it was given; if someone saved in between the answer
+is 409 with the current version in `data.current` instead of a silent overwrite.
+`PUT …/docs/{id}` with `If-None-Match: *` only creates.
 
 Unpublished courses answer 404 to the public. Every write bumps the course
 `version` in SQL (`version = version + 1`, under a row lock); ETags and the

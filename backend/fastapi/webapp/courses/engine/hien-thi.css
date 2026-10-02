@@ -1,0 +1,163 @@
+/* ==========================================================================
+   HIỂN THỊ BÀI — kiểu chữ của nội dung bài (markdown đã dựng bởi hien-thi.js).
+   Dùng chung: trang đọc khoá học (nạp sau app.css) và khung xem trước của trang
+   Quản lý khoá học — một nguồn, nên bản xem trước trông đúng như bài thật.
+
+   ★ NGUỒN THẬT: courses/engine/hien-thi.css — bản trong <trang>/assets/ do
+     `python engine/sync.py` chép ra.
+
+   Dùng biến màu của trang chủ (--tx, --bd, --ac, --surf2…). Màu mã nguồn và tô
+   màu cú pháp định nghĩa ở đây vì trang quản lý không có chúng.
+   ========================================================================== */
+:root{
+  --code:#f6f4f0; --codebd:#e8e4dc; --codetx:#26231f;
+  --k-key:#8b3fb3; --k-str:#0d7551; --k-num:#ab5117; --k-com:#948d7c;
+  --k-fn:#2a55c4;  --k-typ:#8f4610; --k-met:#756e63;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --code:#1a1917; --codebd:#2c2a26; --codetx:#e4e0d8;
+    --k-key:#d29bef; --k-str:#7fd8a8; --k-num:#f0a86a; --k-com:#6f6a60;
+    --k-fn:#8fb0ff;  --k-typ:#e0a06a; --k-met:#8a837a;
+  }
+}
+html[data-theme="dark"]{
+  --code:#1a1917; --codebd:#2c2a26; --codetx:#e4e0d8;
+  --k-key:#d29bef; --k-str:#7fd8a8; --k-num:#f0a86a; --k-com:#6f6a60;
+  --k-fn:#8fb0ff;  --k-typ:#e0a06a; --k-met:#8a837a;
+}
+
+/* ---------- 8. PROSE — trái tim của trang ---------------------------- */
+.prose{font-size:16.4px;line-height:1.78;color:var(--tx)}
+.prose>*:first-child{margin-top:0}
+.prose h1{
+  font-size:clamp(26px,3.4vw,34px);font-weight:700;line-height:1.24;
+  letter-spacing:-.02em;margin:0 0 6px;
+}
+.prose h2{
+  font-size:21px;font-weight:700;line-height:1.34;letter-spacing:-.012em;
+  margin:52px 0 16px;padding-top:20px;border-top:1px solid var(--bd);
+}
+.prose h3{font-size:17.4px;font-weight:600;line-height:1.4;margin:34px 0 12px;letter-spacing:-.008em}
+.prose h4{font-size:15.4px;font-weight:600;margin:26px 0 10px;color:var(--tx2)}
+.prose h2:first-child,.prose h3:first-child{margin-top:0;border-top:0;padding-top:0}
+/* Tài liệu dùng rất nhiều dấu --- ngay trước ## ; khi đó đường kẻ của h2
+   sẽ nhân đôi với <hr>. Bỏ một trong hai. */
+.prose hr + h2{border-top:0;padding-top:0;margin-top:34px}
+.anch{
+  float:left;margin-left:-24px;width:24px;padding-right:6px;
+  opacity:0;transition:opacity .15s;color:var(--tx3);
+}
+.anch .ic{width:15px;height:15px}
+h2:hover .anch,h3:hover .anch{opacity:1}
+.prose p{margin:0 0 17px}
+.prose strong{font-weight:600;color:var(--tx)}
+.prose em{font-style:italic}
+.prose a{text-decoration:underline;text-decoration-color:var(--acbd);
+  text-underline-offset:3px;text-decoration-thickness:1.5px;transition:.13s}
+.prose a:hover{text-decoration-color:var(--ac)}
+.prose a .ic{width:11px;height:11px;display:inline;vertical-align:baseline;margin-left:2px;opacity:.55}
+.prose ul,.prose ol{margin:0 0 17px;padding-left:25px}
+.prose li{margin:0 0 7px}
+.prose li>ul,.prose li>ol{margin:7px 0 0}
+.prose ul li::marker{color:var(--tx3)}
+.prose ol li::marker{color:var(--tx3);font-weight:600;font-size:.93em}
+.prose hr{border:0;height:1px;background:var(--bd);margin:36px 0}
+.prose img{max-width:100%;height:auto;border-radius:var(--rad)}
+
+/* -- mã nguồn -- */
+.prose code{
+  font:400 .855em/1.5 var(--fm);background:var(--code);color:var(--codetx);
+  border:1px solid var(--codebd);border-radius:5px;padding:.12em .38em;
+  overflow-wrap:break-word;
+}
+.cw{position:relative;margin:0 0 20px}
+.prose pre{
+  margin:0;padding:15px 17px;overflow-x:auto;
+  background:var(--code);border:1px solid var(--codebd);border-radius:var(--rad);
+  font:400 13.4px/1.62 var(--fm);color:var(--codetx);
+  -webkit-overflow-scrolling:touch;
+}
+.prose pre code{background:none;border:0;padding:0;font-size:inherit;line-height:inherit;white-space:pre}
+.cw.diag pre{line-height:1.44;font-size:12.9px;background:var(--surf2);color:var(--tx2)}
+.cw-lang{
+  position:absolute;top:8px;right:44px;font:600 10px/1 var(--fm);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);
+  pointer-events:none;opacity:0;transition:opacity .15s;
+}
+.cw-cp{
+  position:absolute;top:6px;right:6px;width:29px;height:29px;
+  display:grid;place-items:center;border-radius:7px;color:var(--tx3);
+  background:var(--surf);border:1px solid var(--bd);opacity:0;transition:.15s;
+}
+.cw:hover .cw-cp,.cw:hover .cw-lang,.cw-cp:focus-visible{opacity:1}
+.cw-cp:hover{color:var(--ac);border-color:var(--acbd)}
+.cw-cp .ic{width:14px;height:14px}
+.cw-cp.ok{color:var(--ok);border-color:var(--okbd);opacity:1}
+.hljs-keyword,.hljs-literal,.hljs-selector-tag{color:var(--k-key)}
+.hljs-string,.hljs-regexp,.hljs-attr{color:var(--k-str)}
+.hljs-number,.hljs-symbol{color:var(--k-num)}
+.hljs-comment,.hljs-quote{color:var(--k-com);font-style:italic}
+.hljs-title,.hljs-title.function_,.hljs-section{color:var(--k-fn)}
+.hljs-type,.hljs-built_in,.hljs-title.class_{color:var(--k-typ)}
+.hljs-meta,.hljs-meta .hljs-string{color:var(--k-met)}
+.hljs-variable,.hljs-params,.hljs-operator,.hljs-punctuation{color:inherit}
+
+/* -- bảng -- */
+.tw{overflow-x:auto;margin:0 0 22px;border:1px solid var(--bd);border-radius:var(--rad);
+   background:var(--surf);-webkit-overflow-scrolling:touch}
+.prose table{border-collapse:collapse;width:100%;font-size:14.2px;line-height:1.55}
+.prose thead th{
+  background:var(--surf2);font-weight:600;color:var(--tx);text-align:left;
+  padding:10px 14px;border-bottom:1px solid var(--bd);white-space:nowrap;font-size:13.3px;
+}
+.prose tbody td{padding:10px 14px;border-bottom:1px solid var(--bd2);vertical-align:top}
+.prose tbody tr:last-child td{border-bottom:0}
+.prose tbody tr:hover{background:var(--surf2)}
+/* Cột căn phải trong các tài liệu này luôn là số đo; không cho ngắt dòng
+   giữa các nhóm chữ số (15 563 974 bị tách thành hai dòng rất khó đọc). */
+.prose td[align="right"],.prose th[align="right"]{
+  text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.prose td[align="center"],.prose th[align="center"]{text-align:center}
+.prose table code{font-size:.86em;white-space:nowrap}
+
+/* -- callout (trích dẫn) -- */
+.prose blockquote{
+  margin:0 0 22px;padding:14px 18px;border-radius:var(--rad);
+  border:1px solid var(--bd);border-left:3px solid var(--tx3);
+  background:var(--surf2);color:var(--tx2);
+}
+.prose blockquote>*:last-child{margin-bottom:0}
+.prose blockquote p{margin-bottom:11px}
+.prose blockquote h2,.prose blockquote h3,.prose blockquote h4{
+  border:0;padding-top:0;margin:2px 0 10px;font-size:15.4px;color:var(--tx)}
+.prose blockquote blockquote{margin:12px 0;background:var(--surf);border-left-width:2px}
+.prose blockquote table{font-size:13.4px}
+.prose blockquote .tw{background:var(--surf)}
+.cal-ref{border-left-color:var(--ac)!important;background:var(--acbg)!important;
+         border-color:var(--acbd)!important;color:var(--tx2)}
+.cal-key{border-left-color:var(--wa)!important;background:var(--wabg)!important;
+         border-color:var(--wabd)!important}
+.cal-warn{border-left-color:var(--wa)!important;background:var(--wabg)!important;
+          border-color:var(--wabd)!important}
+.cal-bad{border-left-color:var(--ba)!important;background:var(--babg)!important;
+         border-color:var(--babd)!important}
+.cal-ok{border-left-color:var(--ok)!important;background:var(--okbg)!important;
+        border-color:var(--okbd)!important}
+.cal-ref strong,.cal-key strong,.cal-warn strong,.cal-bad strong,.cal-ok strong{color:var(--tx)}
+
+/* -- công thức -- */
+.katex{font-size:1.045em}
+.mjx-b{display:block;margin:20px 0;overflow-x:auto;overflow-y:hidden;padding:6px 2px;text-align:center;
+       -webkit-overflow-scrolling:touch}
+.mjx-err{color:var(--ba);font-family:var(--fm);font-size:.85em}
+
+/* ---- So do mermaid ---------------------------------------------------- */
+.prose .mermaid{
+  margin:18px 0;padding:14px 10px;
+  background:var(--bg2);border:1px solid var(--bd);border-radius:12px;
+  overflow-x:auto;text-align:center;
+}
+.prose .mermaid svg{max-width:100%;height:auto}
+.prose .mermaid:not([data-da-ve]){font-family:var(--fm);font-size:12px;
+  white-space:pre;text-align:left;color:var(--tx3)}

@@ -6,7 +6,7 @@ Hai engine, cả hai **là nguồn thật ở đây**; bản trong `<trang>/asse
 | Engine | Tệp nguồn | Trang nhận | Việc |
 |---|---|---|---|
 | **trực quan** | `vis-core.js`, `vis.css` | `lab-visual` (các `*-visual` cũ giữ v1) | lab mô phỏng trên canvas |
-| **đọc bài giảng** | `app.js`, `app.css` | `ai-everything-course`, `heuristic-course`, `heuristic-course-2`, `system-design-course` | nạp **manifest** (mục lục, không markdown), từng bài và tìm kiếm từ API `/courses/<khoaHoc>/…`; nội dung nằm trong database |
+| **đọc bài giảng** | `app.js`, `app.css` + bộ dựng bài `hien-thi.js`, `hien-thi.css` | `ai-everything-course`, `heuristic-course`, `heuristic-course-2`, `system-design-course`, `khoa-hoc` (bộ dựng bài cả ở `quan-ly-khoa-hoc`) | nạp **manifest** (mục lục, không markdown), từng bài và tìm kiếm từ API `/courses/<khoaHoc>/…`; nội dung nằm trong database |
 
 > **Không Node, không npm, không thư viện ngoài** cho phần chạy trên trình duyệt.
 > Node chỉ dùng cho công cụ kiểm tra ở máy phát triển.
@@ -21,8 +21,10 @@ Hai engine, cả hai **là nguồn thật ở đây**; bản trong `<trang>/asse
 | [`vis.css`](vis.css) | Giao diện + biến màu. Mỗi trang đè bảng màu riêng bằng `assets/chu-de.css` |
 | [`app.js`](app.js) | Engine đọc bài giảng. Nguồn nội dung: API (mặc định) hoặc `window.COURSE` (offline). Mục lục, tiến độ, tìm kiếm, phím tắt |
 | [`app.css`](app.css) | Giao diện trang đọc bài giảng; mỗi khoá đè màu bằng `assets/chu-de.css` |
+| [`hien-thi.js`](hien-thi.js) | Bộ dựng bài từ markdown, `window.HienThi`: marked + bộ lọc HTML, KaTeX, tô màu mã, mermaid (nạp khi cần), hộp chú ý, link giữa các bài, ảnh `assets/…` của khoá. Trang đọc và bản xem trước ở trang Quản lý dùng **chung** tệp này — xem trước giống hệt trang thật |
+| [`hien-thi.css`](hien-thi.css) | Kiểu chữ bài đọc (`.prose`, khối mã, mermaid) đi cùng `hien-thi.js` |
 | [`sync.py`](sync.py) | Chép engine sang các trang đích khai báo trong `dong-bo.json` (cả hai engine) |
-| [`dong-bo.json`](dong-bo.json) | `tep`/`dich`: engine trực quan · `khoa_hoc`: engine đọc bài giảng |
+| [`dong-bo.json`](dong-bo.json) | `tep`/`dich`: engine trực quan · `khoa_hoc`: engine đọc bài giảng · `quan_ly`: bộ dựng bài sang trang Quản lý |
 | [`kiem_demo.py`](kiem_demo.py) | Module mà `check.py` của từng trang `*-visual` gọi vào |
 | [`kiem_khoa_hoc.py`](kiem_khoa_hoc.py) | Module mà `check.py` của từng trang `*-course` gọi vào; `MayChuThu` dựng FastAPI thật trên SQLite tạm cho mọi bài kiểm trình duyệt |
 | [`thu-nhanh.js`](thu-nhanh.js) | Chạy thật engine + mọi lab trong Node trên DOM/canvas giả |
@@ -47,7 +49,9 @@ sẵn. Engine:
    dựng được trang chủ, và lỗi khi dựng trang ra trang báo lỗi có nút thử lại.
 2. Tải `GET /courses/<khoaHoc>/manifest` — mục lục và siêu dữ liệu, **không markdown**
    (khoá AI: ≈ 24 KB gzip thay cho `content.js` 8,4 MB). Trình duyệt xác thực lại
-   bằng ETag: lần mở sau chỉ tốn một phản hồi 304.
+   bằng ETag: lần mở sau chỉ tốn một phản hồi 304. Manifest mang `aliases` (slug cũ → id
+   bài) và `idAliases` (id cũ → id mới): link cũ sau khi đổi slug vẫn mở bài rồi chuyển sang
+   địa chỉ mới; đổi id thì "đã xong", sao, ghi chú và bài đọc dở của người học đi theo.
 3. Mở bài: `GET /courses/<khoaHoc>/docs/<id>`; bộ nhớ đệm 40 bài; bài tiếp theo được tải
    trước khi rảnh, nên phím `]` mở tức thì.
 4. Tìm kiếm: `GET /courses/<khoaHoc>/search?q=` — server xếp hạng bằng đúng quy tắc

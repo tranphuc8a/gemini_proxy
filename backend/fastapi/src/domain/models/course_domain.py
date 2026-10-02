@@ -66,6 +66,9 @@ class CourseDocDomain(BaseModel):
     minutes: int = 0
     md: str = ""
     updated_at: int = 0
+    #: Fingerprint of the editable fields (see domain.utils.course_rev) — sent
+    #: back as If-Match so a save cannot overwrite someone else's newer one.
+    rev: str = ""
 
 
 class CourseDomain(BaseModel):
@@ -86,6 +89,9 @@ class CourseDomain(BaseModel):
     #: What caches and ETags are keyed on: row id, creation time and version,
     #: so a course deleted and imported again never matches an old cache entry.
     revision: str = ""
+    #: Fingerprints of the course information and of the navigation tree.
+    info_rev: str = ""
+    tree_rev: str = ""
     created_at: int = 0
     updated_at: int = 0
     sections: List[CourseSectionDomain] = Field(default_factory=list)
@@ -106,6 +112,38 @@ class CourseBundle(BaseModel):
     order: List[str] = Field(default_factory=list)
     docs: Dict[str, CourseDocDomain] = Field(default_factory=dict)
     stats: Dict[str, Any] = Field(default_factory=dict)
+    #: Uploaded files, name → {"mime", "data" (base64)} — in exports and backups only.
+    assets: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CourseAssetDomain(BaseModel):
+    """A file uploaded to a course (an image a lesson shows, a PDF it links)."""
+
+    name: str
+    mime: str
+    size: int = 0
+    sha1: str = ""
+    created_at: int = 0
+    data: bytes = b""
+
+
+class CourseRevisionDomain(BaseModel):
+    """A past version of a document — saved before each change and on delete."""
+
+    id: int = 0
+    doc_id: str
+    #: "sua" (the version before a save), "xoa" (the version that was deleted).
+    action: str = "sua"
+    title: str = ""
+    slug: str = ""
+    kind: str = "lesson"
+    tag: Optional[str] = None
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    md: str = ""
+    words: int = 0
+    saved_at: int = 0
+    #: Where a deleted document sat: {"section": id, "group": label}.
+    placement: Dict[str, Any] = Field(default_factory=dict)
 
 
 class CourseSearchHit(BaseModel):

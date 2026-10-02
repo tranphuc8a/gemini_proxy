@@ -90,14 +90,17 @@ kbd{
   backdrop-filter:saturate(180%) blur(14px);
   border-bottom:1px solid var(--bd);
 }
-.brand{display:flex;align-items:center;gap:10px;color:var(--tx);flex:none}
+.brand{display:flex;align-items:center;gap:10px;color:var(--tx);flex:0 1 auto;min-width:0}
 .brand-mark{
   width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
   background:linear-gradient(150deg,var(--ac),#718096);color:#fff;
   box-shadow:var(--sh1);
 }
 .brand-mark svg{width:22px;height:22px}
-.brand-txt{display:flex;flex-direction:column;line-height:1.15}
+.brand-txt{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+/* Tên khoá lấy từ database có thể rất dài: cắt bằng "…", không đẩy nút ra ngoài màn hình. */
+.brand-txt b,.brand-txt i{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.brand-mark{flex:none}
 .brand-txt b{font-size:15px;font-weight:700;letter-spacing:-.01em}
 .brand-txt i{font-size:11px;font-style:normal;color:var(--tx3)}
 .searchpill{
@@ -221,130 +224,10 @@ main{flex:1;min-width:0}
 .chip.ok{background:var(--okbg);border-color:var(--okbd);color:var(--ok)}
 .stars{letter-spacing:1px;color:var(--wa);font-size:11px}
 
-/* ---------- 8. PROSE — trái tim của trang ---------------------------- */
-.prose{font-size:16.4px;line-height:1.78;color:var(--tx)}
-.prose>*:first-child{margin-top:0}
-.prose h1{
-  font-size:clamp(26px,3.4vw,34px);font-weight:700;line-height:1.24;
-  letter-spacing:-.02em;margin:0 0 6px;
-}
-.prose h2{
-  font-size:21px;font-weight:700;line-height:1.34;letter-spacing:-.012em;
-  margin:52px 0 16px;padding-top:20px;border-top:1px solid var(--bd);
-}
-.prose h3{font-size:17.4px;font-weight:600;line-height:1.4;margin:34px 0 12px;letter-spacing:-.008em}
-.prose h4{font-size:15.4px;font-weight:600;margin:26px 0 10px;color:var(--tx2)}
-.prose h2:first-child,.prose h3:first-child{margin-top:0;border-top:0;padding-top:0}
-/* Tài liệu dùng rất nhiều dấu --- ngay trước ## ; khi đó đường kẻ của h2
-   sẽ nhân đôi với <hr>. Bỏ một trong hai. */
-.prose hr + h2{border-top:0;padding-top:0;margin-top:34px}
-.anch{
-  float:left;margin-left:-24px;width:24px;padding-right:6px;
-  opacity:0;transition:opacity .15s;color:var(--tx3);
-}
-.anch .ic{width:15px;height:15px}
-h2:hover .anch,h3:hover .anch{opacity:1}
-.prose p{margin:0 0 17px}
-.prose strong{font-weight:600;color:var(--tx)}
-.prose em{font-style:italic}
-.prose a{text-decoration:underline;text-decoration-color:var(--acbd);
-  text-underline-offset:3px;text-decoration-thickness:1.5px;transition:.13s}
-.prose a:hover{text-decoration-color:var(--ac)}
-.prose a .ic{width:11px;height:11px;display:inline;vertical-align:baseline;margin-left:2px;opacity:.55}
-.prose ul,.prose ol{margin:0 0 17px;padding-left:25px}
-.prose li{margin:0 0 7px}
-.prose li>ul,.prose li>ol{margin:7px 0 0}
-.prose ul li::marker{color:var(--tx3)}
-.prose ol li::marker{color:var(--tx3);font-weight:600;font-size:.93em}
-.prose hr{border:0;height:1px;background:var(--bd);margin:36px 0}
-.prose img{max-width:100%;height:auto;border-radius:var(--rad)}
-
-/* -- mã nguồn -- */
-.prose code{
-  font:400 .855em/1.5 var(--fm);background:var(--code);color:var(--codetx);
-  border:1px solid var(--codebd);border-radius:5px;padding:.12em .38em;
-  overflow-wrap:break-word;
-}
-.cw{position:relative;margin:0 0 20px}
-.prose pre{
-  margin:0;padding:15px 17px;overflow-x:auto;
-  background:var(--code);border:1px solid var(--codebd);border-radius:var(--rad);
-  font:400 13.4px/1.62 var(--fm);color:var(--codetx);
-  -webkit-overflow-scrolling:touch;
-}
-.prose pre code{background:none;border:0;padding:0;font-size:inherit;line-height:inherit;white-space:pre}
-.cw.diag pre{line-height:1.44;font-size:12.9px;background:var(--surf2);color:var(--tx2)}
-.cw-lang{
-  position:absolute;top:8px;right:44px;font:600 10px/1 var(--fm);
-  letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);
-  pointer-events:none;opacity:0;transition:opacity .15s;
-}
-.cw-cp{
-  position:absolute;top:6px;right:6px;width:29px;height:29px;
-  display:grid;place-items:center;border-radius:7px;color:var(--tx3);
-  background:var(--surf);border:1px solid var(--bd);opacity:0;transition:.15s;
-}
-.cw:hover .cw-cp,.cw:hover .cw-lang,.cw-cp:focus-visible{opacity:1}
-.cw-cp:hover{color:var(--ac);border-color:var(--acbd)}
-.cw-cp .ic{width:14px;height:14px}
-.cw-cp.ok{color:var(--ok);border-color:var(--okbd);opacity:1}
-.hljs-keyword,.hljs-literal,.hljs-selector-tag{color:var(--k-key)}
-.hljs-string,.hljs-regexp,.hljs-attr{color:var(--k-str)}
-.hljs-number,.hljs-symbol{color:var(--k-num)}
-.hljs-comment,.hljs-quote{color:var(--k-com);font-style:italic}
-.hljs-title,.hljs-title.function_,.hljs-section{color:var(--k-fn)}
-.hljs-type,.hljs-built_in,.hljs-title.class_{color:var(--k-typ)}
-.hljs-meta,.hljs-meta .hljs-string{color:var(--k-met)}
-.hljs-variable,.hljs-params,.hljs-operator,.hljs-punctuation{color:inherit}
-
-/* -- bảng -- */
-.tw{overflow-x:auto;margin:0 0 22px;border:1px solid var(--bd);border-radius:var(--rad);
-   background:var(--surf);-webkit-overflow-scrolling:touch}
-.prose table{border-collapse:collapse;width:100%;font-size:14.2px;line-height:1.55}
-.prose thead th{
-  background:var(--surf2);font-weight:600;color:var(--tx);text-align:left;
-  padding:10px 14px;border-bottom:1px solid var(--bd);white-space:nowrap;font-size:13.3px;
-}
-.prose tbody td{padding:10px 14px;border-bottom:1px solid var(--bd2);vertical-align:top}
-.prose tbody tr:last-child td{border-bottom:0}
-.prose tbody tr:hover{background:var(--surf2)}
-/* Cột căn phải trong các tài liệu này luôn là số đo; không cho ngắt dòng
-   giữa các nhóm chữ số (15 563 974 bị tách thành hai dòng rất khó đọc). */
-.prose td[align="right"],.prose th[align="right"]{
-  text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.prose td[align="center"],.prose th[align="center"]{text-align:center}
-.prose table code{font-size:.86em;white-space:nowrap}
-
-/* -- callout (trích dẫn) -- */
-.prose blockquote{
-  margin:0 0 22px;padding:14px 18px;border-radius:var(--rad);
-  border:1px solid var(--bd);border-left:3px solid var(--tx3);
-  background:var(--surf2);color:var(--tx2);
-}
-.prose blockquote>*:last-child{margin-bottom:0}
-.prose blockquote p{margin-bottom:11px}
-.prose blockquote h2,.prose blockquote h3,.prose blockquote h4{
-  border:0;padding-top:0;margin:2px 0 10px;font-size:15.4px;color:var(--tx)}
-.prose blockquote blockquote{margin:12px 0;background:var(--surf);border-left-width:2px}
-.prose blockquote table{font-size:13.4px}
-.prose blockquote .tw{background:var(--surf)}
-.cal-ref{border-left-color:var(--ac)!important;background:var(--acbg)!important;
-         border-color:var(--acbd)!important;color:var(--tx2)}
-.cal-key{border-left-color:var(--wa)!important;background:var(--wabg)!important;
-         border-color:var(--wabd)!important}
-.cal-warn{border-left-color:var(--wa)!important;background:var(--wabg)!important;
-          border-color:var(--wabd)!important}
-.cal-bad{border-left-color:var(--ba)!important;background:var(--babg)!important;
-         border-color:var(--babd)!important}
-.cal-ok{border-left-color:var(--ok)!important;background:var(--okbg)!important;
-        border-color:var(--okbd)!important}
-.cal-ref strong,.cal-key strong,.cal-warn strong,.cal-bad strong,.cal-ok strong{color:var(--tx)}
-
-/* -- công thức -- */
-.katex{font-size:1.045em}
-.mjx-b{display:block;margin:20px 0;overflow-x:auto;overflow-y:hidden;padding:6px 2px;text-align:center;
-       -webkit-overflow-scrolling:touch}
-.mjx-err{color:var(--ba);font-family:var(--fm);font-size:.85em}
+/* ---------- 8. PROSE — đã chuyển sang hien-thi.css --------------------
+   Kiểu chữ của bài đọc (tiêu đề, mã, bảng, hộp chú ý, công thức, sơ đồ)
+   nằm ở engine/hien-thi.css, dùng chung với khung xem trước của trang
+   Quản lý khoá học. Trang khoá học nạp CẢ HAI tệp. */
 
 /* ---------- 9. Chân bài ---------------------------------------------- */
 .done-card{
@@ -549,16 +432,6 @@ html[data-theme="dark"] .ovl{background:rgba(0,0,0,.62)}
   .doc{max-width:100%;padding:0}
   .prose pre,.tw{break-inside:avoid}
 }
-
-/* ---- So do mermaid ---------------------------------------------------- */
-.prose .mermaid{
-  margin:18px 0;padding:14px 10px;
-  background:var(--bg2);border:1px solid var(--bd);border-radius:12px;
-  overflow-x:auto;text-align:center;
-}
-.prose .mermaid svg{max-width:100%;height:auto}
-.prose .mermaid:not([data-da-ve]){font-family:var(--fm);font-size:12px;
-  white-space:pre;text-align:left;color:var(--tx3)}
 
 /* ---------- 16. Nội dung tải từ API ----------------------------------
    Manifest và từng bài đến qua mạng: một dòng trạng thái khi khởi động, và

@@ -2,11 +2,27 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from src.domain.models.course_domain import (
+    CourseAssetDomain,
     CourseBundle,
     CourseDocDomain,
     CourseDomain,
+    CourseRevisionDomain,
     CourseSectionDomain,
 )
+
+
+class RevisionConflict(Exception):
+    """The stored version is not the one the caller edited (or a document the
+    caller meant to create already exists). `current` is what is stored now —
+    a domain object, a dict, or None when it is gone."""
+
+    def __init__(self, current: Any = None):
+        super().__init__("revision conflict")
+        self.current = current
+
+
+class DocIdTaken(Exception):
+    """Another document of the course already has this id."""
 
 
 class CourseOutputPort(ABC):
@@ -72,25 +88,91 @@ class CourseOutputPort(ABC):
         pass
 
     @abstractmethod
-    async def replace_course(self, course: CourseDomain, bundle: CourseBundle) -> CourseDomain:
-        """Create or fully replace a course from a bundle. Returns the stored course."""
+    async def replace_course(self, course: CourseDomain, bundle: CourseBundle,
+                             assets: Optional[Sequence[CourseAssetDomain]] = None) -> CourseDomain:
+        """Create or fully replace a course from a bundle. `assets` (when given)
+        replace the course's uploaded files. Returns the stored course."""
 
     @abstractmethod
-    async def update_course(self, slug: str, fields: Dict[str, Any]) -> Optional[CourseDomain]:
-        pass
+    async def update_course(self, slug: str, fields: Dict[str, Any],
+                            expect_rev: Optional[str] = None) -> Optional[CourseDomain]:
+        """Raises RevisionConflict when `expect_rev` is not the current info fingerprint."""
 
     @abstractmethod
-    async def delete_course(self, slug: str) -> bool:
-        pass
+    async def delete_course(self, slug: str, trash: Optional[Dict[str, Any]] = None) -> bool:
+        """`trash` = {"title", "doc_count", "bundle" (JSON text)} keeps a restorable copy."""
 
     @abstractmethod
-    async def replace_structure(self, slug: str, sections: List[CourseSectionDomain]) -> Optional[CourseDomain]:
+    async def replace_structure(self, slug: str, sections: List[CourseSectionDomain],
+                                expect_rev: Optional[str] = None) -> Optional[CourseDomain]:
         """Replace the navigation tree; documents keep their rows and are re-attached by id."""
 
     @abstractmethod
-    async def upsert_doc(self, slug: str, doc: CourseDocDomain, group_ref: Optional[Dict[str, str]]) -> Optional[CourseDocDomain]:
-        """Create or update one document. `group_ref` = {section, group} (re)places it."""
+    async def upsert_doc(self, slug: str, doc: CourseDocDomain, group_ref: Optional[Dict[str, str]],
+                         expect_rev: Optional[str] = None, create_only: bool = False) -> Optional[CourseDocDomain]:
+        """Create or update one document. `group_ref` = {section, group} (re)places it.
+        The replaced version is kept as a revision; a changed slug leaves an alias."""
 
     @abstractmethod
     async def delete_doc(self, slug: str, doc_id: str) -> bool:
+        """Delete a document, keeping it as an "xoa" revision (the document trash)."""
+
+    @abstractmethod
+    async def rename_doc(self, slug: str, old_id: str, new_id: str) -> Optional[CourseDocDomain]:
+        """Change a document's id; raises DocIdTaken. Leaves an id alias so learners keep their progress."""
+
+    # ---- history and trash ----------------------------------------------
+
+    @abstractmethod
+    async def list_revisions(self, slug: str, doc_id: str) -> List[CourseRevisionDomain]:
+        """Past versions of one document, newest first, markdown left empty."""
+
+    @abstractmethod
+    async def get_revision(self, slug: str, rev_id: int) -> Optional[CourseRevisionDomain]:
         pass
+
+    @abstractmethod
+    async def list_deleted_docs(self) -> List[Tuple[str, str, CourseRevisionDomain, bool]]:
+        """(course slug, course title, deleted version without markdown, id in use again)."""
+
+    @abstractmethod
+    async def restore_deleted_doc(self, slug: str, rev_id: int) -> Optional[CourseDocDomain]:
+        """Re-create a deleted document where it was; raises DocIdTaken."""
+
+    @abstractmethod
+    async def add_trash_course(self, slug: str, trash: Dict[str, Any]) -> None:
+        """A restorable copy without deleting the course (taken before an import replaces it)."""
+
+    @abstractmethod
+    async def list_trash_courses(self) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    async def get_trash_course(self, trash_id: int) -> Optional[Dict[str, Any]]:
+        """With the bundle (JSON text)."""
+
+    @abstractmethod
+    async def delete_trash_course(self, trash_id: int) -> bool:
+        pass
+
+    # ---- uploaded files -------------------------------------------------
+
+    @abstractmethod
+    async def list_assets(self, slug: str) -> List[CourseAssetDomain]:
+        """Without their bytes."""
+
+    @abstractmethod
+    async def get_asset(self, slug: str, name: str) -> Optional[CourseAssetDomain]:
+        pass
+
+    @abstractmethod
+    async def put_asset(self, slug: str, asset: CourseAssetDomain) -> Optional[CourseAssetDomain]:
+        pass
+
+    @abstractmethod
+    async def delete_asset(self, slug: str, name: str) -> bool:
+        pass
+
+    @abstractmethod
+    async def assets_with_data(self, slug: str) -> List[CourseAssetDomain]:
+        """Every file with its bytes — for export, duplication and the trash."""

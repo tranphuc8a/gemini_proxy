@@ -125,6 +125,16 @@ class Settings(BaseSettings): # type: ignore
     # exactly what the refactor set out to stop for an 8 MB one. Above this
     # many bytes of markdown the endpoint refuses and points at the manifest.
     COURSE_BULK_MAX_BYTES: int = 2 * 1024 * 1024
+    # One lesson's markdown. Vercel refuses request bodies over 4.5 MB anyway;
+    # past this limit the API says so in words instead of a bare 413.
+    COURSE_DOC_MAX_BYTES: int = 1024 * 1024
+    # One uploaded file (image, PDF…) of a course.
+    COURSE_ASSET_MAX_BYTES: int = 3 * 1024 * 1024
+    # Wrong admin keys tolerated per client address, then per server, in this
+    # many seconds before /courses/admin/verify answers 429.
+    COURSE_LOGIN_FAILURES: int = 5
+    COURSE_LOGIN_FAILURES_GLOBAL: int = 50
+    COURSE_LOGIN_WINDOW_SECONDS: int = 300
 
     
     # Testing
