@@ -6,7 +6,34 @@
     "dang giu ban engine v1 cua rieng chung — CO Y de nguyen, chua dong bo.",
     "Muon dong bo chung: them ten vao 'dich' roi mo lai tung lab de kiem tra."
   ],
-  "tep": ["vis-core.js", "vis.css"],
-  "dich": ["lab-visual"],
-  "chua_dong_bo": ["ai-everything-visual", "heuristic-visual", "system-design-visual"]
+  "tep": [
+    "vis-core.js",
+    "vis.css"
+  ],
+  "dich": [
+    "lab-visual"
+  ],
+  "chua_dong_bo": [
+    "ai-everything-visual",
+    "heuristic-visual",
+    "system-design-visual"
+  ],
+  "khoa_hoc": {
+    "_ghi_chu": [
+      "Engine trang DOC BAI GIANG (app.js + app.css): nap muc luc va tung bai tu API",
+      "/courses/<khoaHoc>/… thay vi assets/content.js. Nguon that: engine/app.js, engine/app.css.",
+      "khoa-hoc = thu vien / trang doc CHUNG cho moi khoa trong database (?khoa=<slug>)."
+    ],
+    "tep": [
+      "app.js",
+      "app.css"
+    ],
+    "dich": [
+      "ai-everything-course",
+      "heuristic-course",
+      "heuristic-course-2",
+      "system-design-course",
+      "khoa-hoc"
+    ]
+  }
 }

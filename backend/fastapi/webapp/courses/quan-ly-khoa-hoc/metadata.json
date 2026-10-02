@@ -1,0 +1,7 @@
+{
+  "title": "Quản lý khoá học",
+  "description": "Trang quản trị nội dung khoá học trong database qua API /courses: tạo khoá, nạp và xuất bundle JSON, xuất bản / ẩn bản nháp, sửa thông tin, sắp xếp mục lục (section → nhóm → bài), thêm / sửa / xoá bài giảng markdown có xem trước, thử tìm kiếm phía server. Đăng nhập bằng COURSE_ADMIN_KEY (đổi lấy token phiên, trình duyệt không giữ khoá).",
+  "category": "Công cụ",
+  "tags": ["khoa-hoc", "quan-tri", "cms", "markdown", "admin", "tieng-viet"],
+  "icon": "🗂️"
+}

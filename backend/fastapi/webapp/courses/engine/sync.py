@@ -5,9 +5,13 @@
 Nguon that la thu muc nay. Moi ban trong */assets/ deu la ban sao — sua o
 do se mat khi chay lai lenh nay.
 
-    python sync.py                 # chep sang cac trang trong dong-bo.json
-    python sync.py lab-visual      # chi mot trang
-    python sync.py --tat-ca        # moi thu muc *-visual tim thay duoc
+Hai bo engine, khai bao trong dong-bo.json:
+  · vis-core.js + vis.css   -> cac trang lab *-visual        (khoa "tep"/"dich")
+  · app.js + app.css        -> cac trang doc bai *-course    (khoa "khoa_hoc")
+
+    python sync.py                 # chep sang moi trang trong dong-bo.json
+    python sync.py lab-visual      # chi mot trang (tu biet trang thuoc bo nao)
+    python sync.py --tat-ca        # moi thu muc *-visual + moi trang khoa hoc
     python sync.py --thu           # chi bao se lam gi, khong ghi
     python sync.py --kiem          # kiem tra ban sao co lech nguon khong
                                    #   (exit code 1 neu lech — dung cho CI)
@@ -95,30 +99,46 @@ def chay(dich, tep, thu=False, chi_kiem=False):
     return so_ghi, so_lech, so_bo_qua
 
 
+def cac_bo(ch, ten_rieng, tat_ca):
+    """[(tep, dich)] cho tung bo engine. Trang dat ten rieng di vao bo co no."""
+    vis_tep = ch.get("tep", ["vis-core.js", "vis.css"])
+    kh = ch.get("khoa_hoc", {}) or {}
+    kh_tep, kh_dich = kh.get("tep", []), kh.get("dich", [])
+    if ten_rieng:
+        bo_kh = [t for t in ten_rieng if t in kh_dich or t.endswith("-course")]
+        bo_vis = [t for t in ten_rieng if t not in bo_kh]
+    elif tat_ca:
+        bo_vis, bo_kh = moi_trang_visual(), list(kh_dich)
+    else:
+        bo_vis, bo_kh = ch.get("dich", []), list(kh_dich)
+    out = []
+    if bo_vis:
+        out.append((vis_tep, bo_vis))
+    if bo_kh and kh_tep:
+        out.append((kh_tep, bo_kh))
+    return out
+
+
 def main(argv):
     ch = doc_cau_hinh()
-    tep = ch.get("tep", ["vis-core.js", "vis.css"])
     thu = "--thu" in argv
     chi_kiem = "--kiem" in argv
     tat_ca = "--tat-ca" in argv
     ten_rieng = [a for a in argv if not a.startswith("-")]
 
-    if ten_rieng:
-        dich = ten_rieng
-    elif tat_ca:
-        dich = moi_trang_visual()
-    else:
-        dich = ch.get("dich", [])
-
-    if not dich:
+    bo = cac_bo(ch, ten_rieng, tat_ca)
+    if not bo:
         print("Khong co trang dich nao. Them vao engine/dong-bo.json hoac dung --tat-ca.")
         return 0
 
-    print("Nguon : courses/engine/  (%s)" % ", ".join(tep))
-    print("Dich  : %s%s" % (", ".join(dich), "   [CHI THU]" if thu else ""))
-    print("")
-    so_ghi, so_lech, so_bo_qua = chay(dich, tep, thu=thu, chi_kiem=chi_kiem)
-    print("")
+    so_ghi = so_lech = so_bo_qua = 0
+    for tep, dich in bo:
+        print("Nguon : courses/engine/  (%s)" % ", ".join(tep))
+        print("Dich  : %s%s" % (", ".join(dich), "   [CHI THU]" if thu else ""))
+        print("")
+        g, l, b = chay(dich, tep, thu=thu, chi_kiem=chi_kiem)
+        so_ghi, so_lech, so_bo_qua = so_ghi + g, so_lech + l, so_bo_qua + b
+        print("")
 
     if chi_kiem:
         if so_lech:

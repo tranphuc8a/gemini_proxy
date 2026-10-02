@@ -7,6 +7,7 @@ window.CAU_HINH = {
   tenNgan: "Học System Design",
   tieuDe:  "Học System Design — Từ số 0 đến kiến trúc production",
   khoaLuu: "sd",
+  khoaHoc: "system-design",            /* slug của khoá trong database — engine gọi /courses/system-design/… */
 
   heroTieuDe: "Học <u>System Design</u> từ số 0 đến kiến trúc production",
   heroMoTa:

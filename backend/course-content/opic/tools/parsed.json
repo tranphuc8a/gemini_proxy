@@ -1,0 +1,3237 @@
+{
+ "A": [
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 1,
+   "vi": "Giới thiệu bản thân",
+   "topic_src": [
+    1,
+    "BẢN THÂN & MỐI QUAN HỆ"
+   ],
+   "cau": [
+    "Hi there!",
+    "So, my name is Son — I'm 23 years old and I work as a software engineer at Samsung Vietnam's R&D Center here in Hanoi.",
+    "My job mainly involves developing mobile applications and working closely with Korean engineers, so I actually use English quite a bit on a daily basis.",
+    "Outside of work... I like to keep things pretty simple, honestly.",
+    "I go jogging in the mornings, watch movies when I have the time, and I really enjoy exploring new cafes around the city.",
+    "I'd describe myself as a fairly calm and detail-oriented person — which, I think, fits pretty well with software development.",
+    "Yeah, that's basically me in a nutshell.",
+    "Thanks for asking!"
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 2,
+   "vi": "Miêu tả 2 người trong gia đình/bạn bè – điểm giống và khác nhau",
+   "topic_src": [
+    1,
+    "BẢN THÂN & MỐI QUAN HỆ"
+   ],
+   "cau": [
+    "Sure!",
+    "I'd love to talk about two people who are really close to me — my younger brother and my best friend Minh.",
+    "My brother is 25, works as a teacher, and honestly he's the kind of person who can light up any room — super outgoing, talkative, always in a good mood.",
+    "Minh, on the other hand, is around my age and works in finance.",
+    "He's a lot quieter and more reserved — kind of the opposite personality.",
+    "But what's interesting is that despite those differences, they actually have a lot in common.",
+    "Both of them love being active — they jog and cycle regularly on weekends.",
+    "And they're both incredibly dependable.",
+    "Whenever I need advice or just someone to talk to, I know I can count on either of them.",
+    "I think having both types of people in my life has actually been really good for me — they balance each other out in a nice way."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 3,
+   "vi": "Khi nói chuyện với bạn bè thường nói về vấn đề gì?",
+   "topic_src": [
+    1,
+    "BẢN THÂN & MỐI QUAN HỆ"
+   ],
+   "cau": [
+    "Hmm, when I hang out or call my friends, we usually end up talking about all sorts of things, to be honest.",
+    "Work is probably the most common topic — we swap stories about our jobs, funny office situations, or sometimes ask each other for career advice.",
+    "We also talk a lot about movies and shows.",
+    "Since I'm pretty into films, I'll often recommend something and then we'll share our thoughts afterward.",
+    "Tech comes up a fair amount too, especially since a lot of my close friends work in tech-related areas.",
+    "And sometimes — not always, but sometimes — we get into deeper stuff, like life goals, travel plans, or just... venting about a stressful week.",
+    "Honestly, I think good conversations with friends are one of the best ways to recharge and get a fresh perspective on things."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 4,
+   "vi": "Chủ đề khi gặp gia đình/bạn bè và ảnh hưởng của việc sống chung",
+   "topic_src": [
+    1,
+    "BẢN THÂN & MỐI QUAN HỆ"
+   ],
+   "cau": [
+    "When I get together with family or friends, the conversations are usually pretty lively and cover a lot of ground.",
+    "With family, we catch up on the everyday stuff — how work's going, what we've been eating, any news about relatives.",
+    "With friends it tends to be more about shared interests — movies, sports, travel plans, that kind of thing.",
+    "In terms of living together — I used to live with my family before I moved to Hanoi for work.",
+    "And that really shaped me, I think.",
+    "It taught me to be more considerate, to communicate openly, and to share responsibilities.",
+    "Now that I live alone, I do sometimes miss that energy.",
+    "But living on my own has also given me a real sense of independence and self-discipline, which I genuinely value."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 5,
+   "vi": "Tính cách của hai người trong gia đình/bạn bè: điểm chung và khác biệt",
+   "topic_src": [
+    1,
+    "BẢN THÂN & MỐI QUAN HỆ"
+   ],
+   "cau": [
+    "So, comparing my brother and Minh in terms of personality — they're actually quite different.",
+    "My brother is naturally extroverted — enthusiastic, sociable, always looking for the next thing to do or talk about.",
+    "Minh is more introverted and thoughtful.",
+    "He's the type who listens carefully before he speaks, which I really respect.",
+    "One big thing they share, though, is loyalty.",
+    "Both of them are genuinely trustworthy — neither would ever let a friend down.",
+    "They're also both really hardworking in their own fields, which I find admirable.",
+    "The biggest difference is probably how they handle pressure.",
+    "My brother stays upbeat and energetic, while Minh gets calm and analytical.",
+    "I think both approaches have their strengths."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 6,
+   "vi": "Điều tồi tệ xảy ra với gia đình hoặc bất đồng với gia đình",
+   "topic_src": [
+    1,
+    "BẢN THÂN & MỐI QUAN HỆ"
+   ],
+   "cau": [
+    "One really difficult period for my family was when my grandfather became seriously ill a few years ago.",
+    "He had to be hospitalized for several weeks, and the whole family was really worried.",
+    "My parents took turns staying at the hospital, which was exhausting — both physically and emotionally.",
+    "During that time, there were some disagreements about which hospital to go to and what treatment options to pursue.",
+    "Those kinds of tensions are pretty normal under stress, I think.",
+    "But in the end, we managed to come to an agreement through open family discussion.",
+    "Thankfully, my grandfather did recover after a few months.",
+    "And honestly, going through that together brought our family closer.",
+    "It really showed us how important communication is when things get hard."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 7,
+   "vi": "Chọn một mâu thuẫn với cha mẹ và kể chi tiết",
+   "topic_src": [
+    1,
+    "BẢN THÂN & MỐI QUAN HỆ"
+   ],
+   "cau": [
+    "The biggest disagreement I've had with my parents was about my career path after I graduated.",
+    "They really wanted me to find a stable government job close to our hometown — they were worried about job security and, I think, about the distance if I moved to Hanoi.",
+    "But I was passionate about working in tech.",
+    "I'd already received an offer from Samsung, and I knew it was the right move for me.",
+    "We had several long conversations about it — some of them got a bit heated, to be honest.",
+    "But I could tell they were coming from a place of genuine concern, not trying to control me.",
+    "I tried to explain my reasoning — that the tech industry has strong prospects, and Samsung is a well- respected company.",
+    "After a few weeks of back-and-forth, they agreed to support my decision.",
+    "And looking back, I'm really grateful for how it turned out — and for how that experience helped us communicate more openly as a family."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 8,
+   "vi": "Miêu tả nhà của bạn / miêu tả chi tiết ngôi nhà đang sống",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "So right now, I'm living in a one-bedroom apartment on the 8th floor of a residential building in Cau Giay District, Hanoi.",
+    "I live by myself, which was a conscious choice — I like having a quiet, focused space after a full day of coding and meetings.",
+    "The apartment has a living room that opens into a small kitchen, one bedroom, and a bathroom.",
+    "It's compact, but everything's there.",
+    "In the living room, there's a sofa, a TV, and a small bookshelf.",
+    "The kitchen is pretty basic — I mainly use it for coffee and simple meals.",
+    "My bedroom is probably my favorite part.",
+    "It has a comfortable bed, a desk by the window, and a wardrobe.",
+    "The location is also really convenient — close to my office, supermarkets, and a nearby park.",
+    "Overall, I'm quite happy with it."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 9,
+   "vi": "Miêu tả phòng trong ngôi nhà yêu thích",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "Definitely my bedroom — no question there.",
+    "It's a relatively small room, but I've set it up to be as cozy and functional as possible.",
+    "There's a king-sized bed with really soft pillows, which I genuinely look forward to every evening after work.",
+    "Next to the bed is a wooden desk by the window, where I sit to work or read while looking out at the city.",
+    "In the evenings, the view of the city lights is honestly really calming.",
+    "I also keep a Bluetooth speaker on the desk, so I usually put on some soft music before going to sleep.",
+    "It's quiet, it's personal, and whenever I feel stressed, just lying down in that room and listening to music instantly helps me reset."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 10,
+   "vi": "So sánh nhà ở quá khứ và hiện tại",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "My current place is really quite different from the house I grew up in.",
+    "When I was young, we lived in a two-story house in a smaller city — spacious, with a front yard, a big kitchen, and everyone had their own room.",
+    "The surroundings were peaceful — trees, neighbors who knew each other, fresh air in the mornings.",
+    "It was lovely.",
+    "Now I'm in a small one-bedroom apartment in the city with no outdoor space, which I do miss sometimes.",
+    "But the location is hard to beat — I'm close to everything I need: work, restaurants, cafes, a park.",
+    "The city noise can get a bit much at times, but overall, I appreciate the convenience.",
+    "Both places have their charm, and I carry good memories from my childhood home."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 11,
+   "vi": "Miêu tả nhà, phòng thích nhất và sự thay đổi đồ đạc trong nhà",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "My apartment's layout is simple — living room, kitchen, bedroom, bathroom.",
+    "The bedroom is definitely my sanctuary.",
+    "When I first moved in, the apartment came with very basic furnishings — pretty bare, honestly.",
+    "Over the past two years I've gradually made it feel more like home.",
+    "The biggest purchase was probably a new ergonomic desk chair, because I spend a lot of hours working from home and my back was suffering.",
+    "I also got a small bookshelf and some indoor plants to make the living room feel warmer.",
+    "Most recently I replaced my old mattress with a better quality one, and the difference in sleep quality has been noticeable.",
+    "I like the idea of slowly improving the space over time — it doesn't need to be perfect all at once."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 12,
+   "vi": "Nếu mua đồ nội thất mới: mua ở đâu, cách tìm như thế nào?",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "If I needed to buy new furniture, I'd always start by researching online first before going to any store.",
+    "I usually check platforms like Tiki or Lazada, compare prices, and read through customer reviews.",
+    "For smaller things like shelves or lamps, buying online is fine as long as the reviews are solid.",
+    "For bigger items — a sofa, a bed frame — I prefer going to a physical store to see the quality and size for myself.",
+    "There's a furniture store near my area I've visited a couple of times and found pretty good.",
+    "I also browse Instagram and Pinterest for design inspiration before I decide on anything.",
+    "My main priorities are always durability, functionality, and whether it fits both the room and my budget.",
+    "Good furniture is worth investing in — it directly affects how comfortable your everyday life is."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 13,
+   "vi": "Nếu thiết kế lại phòng: cách thức và lý do",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "If I could redesign my bedroom, I'd start by repainting the walls — probably a soft warm tone like light beige or sage green, instead of the plain white they are now.",
+    "I think color really does affect mood, and something warmer would make the room feel a lot cozier.",
+    "I'd also rearrange the furniture a bit.",
+    "Right now my desk placement is a bit awkward — I'd move it to get better natural light.",
+    "I'd add some wall shelving to store books and decorative items without taking up floor space.",
+    "And better blackout curtains, definitely — the current ones let in way too much light in the morning.",
+    "The main goal is to create a space that's both restful and inspiring — somewhere I can properly relax, but also focus when I need to."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 14,
+   "vi": "Trang trí bên ngoài ngôi nhà",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "Since I'm in an apartment building, I don't really have control over the exterior.",
+    "But I do have a small balcony, and I've tried to make it a nice little space.",
+    "I put a couple of potted plants out there — a cactus and a small fern — because they're easy to look after and add a bit of greenery.",
+    "I also have a folding chair out there.",
+    "On nice evenings, I'll sit outside with a coffee and enjoy the view.",
+    "It's a small thing, but it makes a difference.",
+    "If I owned a house someday, I'd definitely put more time and effort into proper garden and exterior design."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 15,
+   "vi": "Vấn đề tại nơi bạn sống / cách giải quyết",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "Living in an apartment building comes with a few recurring issues.",
+    "The most persistent one is noise — the building's on a fairly busy street, so I can hear traffic, especially at night.",
+    "I started using earplugs when I sleep, and honestly it's helped a lot.",
+    "Another issue was when the water heater broke down last winter.",
+    "I had to take cold showers for about three days, which was pretty miserable.",
+    "I reported it to building management and they got a technician in within two days, so that was resolved fairly quickly.",
+    "There was also a week when the elevator was out of service — so eight flights of stairs, every single day.",
+    "That one was painful.",
+    "For these kinds of problems, I've found the best approach is just to report them to management promptly and follow up if they're taking too long."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 16,
+   "vi": "Vấn đề nơi bạn sống: họp gia đình bàn bạc, cách giải quyết",
+   "topic_src": [
+    2,
+    "NHÀ CỬA (HOUSING)"
+   ],
+   "cau": [
+    "When I still lived with my family, we'd occasionally have to sit down together to discuss household problems.",
+    "One of the more serious ones was when the roof started leaking during the rainy season — it was affecting multiple rooms and the humidity was damaging some furniture.",
+    "My dad wanted to fix it immediately; my mum was more concerned about the cost.",
+    "That kind of disagreement is pretty natural.",
+    "After talking it through at dinner, we agreed to hire a professional contractor to do a proper repair rather than a quick patch-up.",
+    "It took about two weeks, but the result was much better than we expected.",
+    "That experience really showed me how important it is to tackle household problems quickly — and as a team."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 17,
+   "vi": "Thể loại âm nhạc yêu thích? Ca sĩ / nhạc sĩ yêu thích?",
+   "topic_src": [
+    3,
+    "ÂM NHẠC (MUSIC)"
+   ],
+   "cau": [
+    "Music is a pretty big part of my day-to-day life.",
+    "My favorite genre is probably indie pop and acoustic music — I find it really soothing without being boring.",
+    "My favorite Vietnamese artist is Ha Anh Tuan.",
+    "He has a warm, emotional voice and his songs are about everyday feelings in a really relatable way.",
+    "I also enjoy Ed Sheeran from time to time — his songwriting is very natural and conversational, which I appreciate.",
+    "I usually listen on Spotify — during my morning jog, on the commute, or before sleeping.",
+    "Music has this incredible ability to shift your mood almost instantly.",
+    "After a long day, putting on a calm playlist helps me unwind really quickly."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 18,
+   "vi": "Thể loại nhạc yêu thích? Trước đây và bây giờ có thay đổi không?",
+   "topic_src": [
+    3,
+    "ÂM NHẠC (MUSIC)"
+   ],
+   "cau": [
+    "Definitely, my taste has changed a lot over the years.",
+    "Back in middle and high school, I mainly listened to popular Vietnamese pop and K-pop — basically whatever was trending at the time.",
+    "I didn't really have a strong personal preference; I just followed what my friends liked.",
+    "Then at university, living more independently, I started exploring on YouTube and discovered indie pop, lo-fi beats, and acoustic folk music.",
+    "I immediately connected with them — they felt more personal somehow.",
+    "Now my everyday playlist is mostly soft indie songs, gentle jazz, and lo-fi music for working or studying.",
+    "I think the shift reflects how my lifestyle changed — from a social, school-based life to something more introspective and focused."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 19,
+   "vi": "Âm nhạc hồi bé và hiện tại, tác giả/ca khúc ưa thích",
+   "topic_src": [
+    3,
+    "ÂM NHẠC (MUSIC)"
+   ],
+   "cau": [
+    "When I was young, I didn't really pay much attention to music intentionally — I just heard whatever was on TV or at family gatherings.",
+    "I remember my mother humming old Vietnamese folk songs while cooking.",
+    "Those melodies still feel really nostalgic to me.",
+    "As I got older — especially in high school — I started exploring on my own and discovered artists like Son Tung MTP and some K-pop groups.",
+    "Now, my taste has matured quite a bit.",
+    "My current favorite is Ha Anh Tuan's album 'Trinh Ca'.",
+    "His songs are poetic, emotionally layered, and beautifully arranged with acoustic instruments.",
+    "Listening to his music kind of feels like reading a short story — there's always a mood and a narrative being told.",
+    "The shift from childhood music to now reflects how my appreciation for depth and craftsmanship has grown."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 20,
+   "vi": "Lần đầu nghe nhạc với ai, ở đâu, phương pháp nghe nhạc",
+   "topic_src": [
+    3,
+    "ÂM NHẠC (MUSIC)"
+   ],
+   "cau": [
+    "My earliest memory of really listening to music was when I was about 10.",
+    "My dad had an old CD player in the living room, and in the evenings he'd play Vietnamese ballads.",
+    "I remember sitting with him and just... listening together.",
+    "I didn't fully understand the lyrics, but the music felt comforting somehow.",
+    "That was also when I first noticed how music could set an atmosphere and create emotion in a room.",
+    "As I got older, I moved from MP3 players to smartphones, and now I stream everything on Spotify.",
+    "These days, I prefer listening through wireless earphones — usually during my morning jog or when I'm doing focused work.",
+    "Good earphones really do make a difference in the listening experience.",
+    "And that early memory of listening with my dad is something I still think about fondly."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 21,
+   "vi": "Bắt đầu thích nghe nhạc như thế nào? Sự thay đổi sở thích theo thời gian",
+   "topic_src": [
+    3,
+    "ÂM NHẠC (MUSIC)"
+   ],
+   "cau": [
+    "I became a more conscious music listener during my first year of university.",
+    "Before that, music was mostly background noise — I wasn't really stopping to actually listen.",
+    "But when I started living in a dormitory away from home, music became a way to cope with homesickness and stress.",
+    "I'd put on headphones and just explore different artists for hours.",
+    "That's when I discovered acoustic guitar music, and I fell in love with the simplicity and intimacy of it.",
+    "Over the years, my preferences shifted from energetic pop to slower, more thoughtful genres.",
+    "Now music is a daily thing for me — and it's become an important emotional outlet.",
+    "It helps me process feelings that I might not easily put into words."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 22,
+   "vi": "Bộ phim yêu thích của bạn là gì?",
+   "topic_src": [
+    4,
+    "PHIM ẢNH (MOVIES)"
+   ],
+   "cau": [
+    "My all-time favorite movie is Interstellar, directed by Christopher Nolan.",
+    "It's a sci-fi film that manages to combine really complex ideas about space, time, and physics with an incredibly emotional story — a father trying to save his daughter and humanity.",
+    "What I love most is how it's both intellectually stimulating and deeply moving at the same time.",
+    "That's not easy to pull off.",
+    "The visual effects are breathtaking — especially the scenes depicting black holes.",
+    "And the Hans Zimmer soundtrack is one of the best I've ever heard.",
+    "I've watched it three times now, and each time I notice something new.",
+    "For me, a great movie is one that stays with you long after it ends — and Interstellar definitely does that."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 23,
+   "vi": "Thể loại phim yêu thích / thể loại phim xem gần đây",
+   "topic_src": [
+    4,
+    "PHIM ẢNH (MOVIES)"
+   ],
+   "cau": [
+    "My favorite genres are sci-fi and psychological thrillers — I'm really drawn to stories that challenge the way you think.",
+    "Sci-fi lets me explore big questions about space, technology, and the future in an entertaining way.",
+    "Thrillers keep me hooked because of the tension and unpredictability.",
+    "Recently I've also been watching more Korean films and dramas, which tend to have really strong storytelling and character development.",
+    "I watched Parasite last year and was completely blown away — the layered social commentary, the plot twists... just incredible.",
+    "On weekends, I usually watch a movie or a couple of episodes of something at home.",
+    "I think good films are one of the most efficient ways to learn about different cultures and the human experience."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 24,
+   "vi": "Đi xem phim cùng bạn thường làm gì?",
+   "topic_src": [
+    4,
+    "PHIM ẢNH (MOVIES)"
+   ],
+   "cau": [
+    "Going to the cinema with friends is always a great time from start to finish.",
+    "We usually plan a few days ahead — figure out what to watch and book tickets online to avoid the queue.",
+    "Before the movie, we almost always grab a meal first, usually at a nearby restaurant or food court.",
+    "At the cinema, I always get a medium popcorn and a drink — that's just a non-negotiable ritual for me.",
+    "Can't skip it.",
+    "During the film we stay quiet, but you can always feel the group's reactions — laughing together or gasping at the same moment.",
+    "That shared experience is really something.",
+    "After, we usually find a café nearby and talk about the film.",
+    "Those post-movie discussions are honestly my favorite part — everyone has different observations and interpretations."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 25,
+   "vi": "Sự kiện trước/sau khi xem phim tại rạp",
+   "topic_src": [
+    4,
+    "PHIM ẢNH (MOVIES)"
+   ],
+   "cau": [
+    "A typical cinema trip for me follows a pretty enjoyable routine.",
+    "First, I research the film — read a brief synopsis and watch the trailer to decide if it's worth the big screen.",
+    "Then I book tickets through an app, which is way more convenient than queuing at the box office.",
+    "I try to arrive about 20 to 30 minutes early so there's time to get snacks without rushing.",
+    "The cinema experience itself is special — the big screen, surround sound, and the shared atmosphere with other viewers is something you really can't replicate at home.",
+    "After the movie, if I'm with friends we always dissect it over drinks or dessert somewhere nearby.",
+    "If watched alone, I'll read reviews online and compare perspectives."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 26,
+   "vi": "Nam diễn viên được yêu thích nhất",
+   "topic_src": [
+    4,
+    "PHIM ẢNH (MOVIES)"
+   ],
+   "cau": [
+    "My favorite actor is Tom Hanks.",
+    "I've admired him for years because of his incredible range and authenticity.",
+    "What impresses me most is that he makes you believe every single role — whether it's Cast Away, Forrest Gump, or The Da Vinci Code.",
+    "He never seems to be 'performing' — it just feels completely genuine.",
+    "I also deeply respect him as a person.",
+    "From everything I've read, he's known as one of the kindest and most humble people in Hollywood.",
+    "Among Korean actors, I really admire Song Kang-ho, who starred in Parasite.",
+    "His ability to play morally complex characters is remarkable.",
+    "Good acting, to me, is about making the audience forget they're watching a film — and both of these actors achieve that effortlessly."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 27,
+   "vi": "Tả chuyến du lịch trong nước",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "One of my most memorable domestic trips was to Da Nang with three close friends about two years ago.",
+    "We stayed for four days and three nights, which felt like just the right amount.",
+    "We checked out the Marble Mountains, My Khe Beach, the Dragon Bridge, and Ba Na Hills.",
+    "The highlight for me was spending a full day at the beach — swimming in the morning and just relaxing under the sun in the afternoon.",
+    "The seafood was outstanding.",
+    "We found this small local restaurant near the beach with incredibly fresh grilled fish and shrimp at really affordable prices.",
+    "One funny memory was getting lost on the way there and stumbling upon a lively local night market by accident.",
+    "We ended up spending an hour browsing — one of those unplanned moments that turns out to be the best part of the trip.",
+    "I'd love to go back someday."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 28,
+   "vi": "Miêu tả điểm du lịch (ở đâu, làm gì, với ai)",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "I'd like to describe a trip to Hoi An — a charming ancient town in central Vietnam.",
+    "I went with two university friends and we spent three days exploring.",
+    "Hoi An is famous for its well-preserved old quarter, lantern-lit streets, and traditional crafts.",
+    "During the day we wandered through the old town, had some custom clothes made at a tailor, and rented bicycles to explore the rice paddies and nearby beaches.",
+    "At night, the town transforms into something magical — streets glowing with colorful lanterns reflected in the river.",
+    "We had dinner at a traditional restaurant overlooking the water and I still remember how peaceful it was.",
+    "What made the trip special wasn't just the scenery but the pace.",
+    "Hoi An felt like stepping back in time, and it reminded me how valuable it is to slow down sometimes."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 29,
+   "vi": "Miêu tả một quốc gia bạn đã đi nghỉ ở nước ngoài",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "I had the chance to visit South Korea for a short work trip, and I made the most of my days off to do some sightseeing.",
+    "I visited Seoul, and I was immediately struck by how clean, organized, and efficient the city is.",
+    "The metro system was incredibly convenient — easy to navigate even without knowing much Korean.",
+    "I visited Gyeongbokgung Palace, which was stunning — traditional Korean architecture surrounded by modern skyscrapers.",
+    "I also explored Insadong for traditional crafts and Myeongdong for street food and shopping.",
+    "The food was a real highlight — bibimbap, Korean BBQ, tteokbokki... all delicious.",
+    "What impressed me most was how ancient culture and cutting-edge technology coexist so seamlessly.",
+    "It was a short visit, but it left a strong impression.",
+    "I'd love to go back for a proper holiday."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 30,
+   "vi": "Lý do mọi người thích đi du lịch? Lý do nào quan trọng nhất?",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "I think people travel for all sorts of reasons, and each one is completely valid.",
+    "Some people travel to relax and escape the stress of daily life — just getting away from familiar surroundings can be incredibly refreshing.",
+    "Others go to experience new cultures, food, and perspectives.",
+    "And many people travel for adventure — hiking, diving, exploring landscapes they've never seen.",
+    "And of course, some travel specifically to spend quality time with family or friends and create shared memories.",
+    "If I had to pick the most important reason... I'd say gaining new perspectives.",
+    "Travel forces you out of your comfort zone and shows you there are many different, equally valid ways of living.",
+    "That kind of experience makes you more empathetic, open-minded, and genuinely grateful for your own life."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 31,
+   "vi": "Kỷ niệm về chuyến du lịch đáng nhớ",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "The most memorable travel experience I've had was a solo trip to Sapa in northern Vietnam.",
+    "It was my first time traveling completely alone, which felt both exciting and a little daunting, to be honest.",
+    "I took an overnight train from Hanoi and arrived in the early morning surrounded by misty mountains and rice terraces.",
+    "It was breathtaking.",
+    "I joined a local trekking group and spent two days hiking through villages of ethnic minority communities.",
+    "One moment that really stood out — a local family invited me into their home for tea.",
+    "We couldn't really communicate because of the language barrier, but the warmth and hospitality they showed me was genuinely touching.",
+    "That experience taught me that human connection doesn't always need words — kindness is universal.",
+    "It remains one of the most meaningful trips I've ever taken."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 32,
+   "vi": "Những thứ cần chuẩn bị khi đi du lịch",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "I like to plan carefully, but without over-scheduling everything.",
+    "The first thing I do is research the destination — must-see places, local food, weather, transport options.",
+    "Then I book accommodation and transport in advance, especially if it's peak season.",
+    "For packing, I have a checklist: weather-appropriate clothes, toiletries, medication, a basic first-aid kit, and copies of important documents.",
+    "I always bring a portable power bank since I rely heavily on my phone for navigation, translation, and photos.",
+    "I also download offline maps and save key addresses in case I lose internet connection.",
+    "A bit of local cash is always useful, and I make sure to share my itinerary with a family member so someone knows where I am.",
+    "Good preparation really does let you relax and enjoy the trip."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 33,
+   "vi": "Miêu tả nơi muốn du lịch và đưa lời khuyên cho Jiwon",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "A place I've always wanted to visit is Japan — specifically Kyoto during cherry blossom season.",
+    "I'm drawn to Japan because of its perfect blend of ancient tradition and modern innovation.",
+    "Kyoto appeals to me for its temples, tea houses, bamboo groves, and peaceful gardens.",
+    "I imagine walking through the Arashiyama bamboo forest in the early morning, before the crowds arrive, would be extraordinary.",
+    "If I were advising my Korean colleague Jiwon on visiting Vietnam, I'd say: start with Hoi An.",
+    "It's beautiful, walkable, and gives you a completely different side of Vietnam from the busy cities.",
+    "Go early in the morning to explore the old town before the heat kicks in.",
+    "And don't miss Cao Lau — a local noodle dish that's only made properly in Hoi An.",
+    "Absolutely delicious.",
+    "Best time to visit is February to April, when the weather is dry and pleasant."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 34,
+   "vi": "Miêu tả công viên / chuyện đáng nhớ khi đi công viên",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "There's a public park not far from my apartment that I visit regularly, mainly for morning jogs.",
+    "It's a medium-sized park built around a lake with a jogging path, benches, and shaded areas under tall trees.",
+    "In the mornings, it's full of life — elderly residents doing tai chi, families with young kids.",
+    "I usually go around 6 AM for a 30 to 40-minute jog before work.",
+    "One memorable incident happened a few months ago.",
+    "I was jogging while listening to music, admiring the lake view, when I tripped on an uneven patch of pavement and fell.",
+    "Knee scraped, earphones flying — pretty embarrassing, especially since people nearby saw it happen.",
+    "Fortunately, a kind woman nearby came over and offered me a wet wipe and asked if I was okay.",
+    "That small act of kindness really made me feel better.",
+    "Since then, I definitely pay more attention to where I'm running."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 35,
+   "vi": "Công viên: đi hồi bé với ai, làm gì, so sánh 2 công viên, việc bảo tồn",
+   "topic_src": [
+    5,
+    "DU LỊCH & CÔNG VIÊN"
+   ],
+   "cau": [
+    "When I was young, my parents used to take me to a big public park near our home every Sunday morning — a real family ritual.",
+    "My brother and I would run around, kick a ball, and feed the ducks by the pond while my parents walked and chatted.",
+    "Happy memories.",
+    "Compared to the park I use now in Hanoi, the one from my childhood was much larger and felt more natural — more trees, more open grass, less urban.",
+    "My current park is well-maintained but more of an urban recreational space.",
+    "As for conservation — I think it's extremely important, especially in fast-growing cities like Hanoi.",
+    "Parks provide essential green space, cleaner air, and real mental health benefits.",
+    "I genuinely think the city should invest more in expanding and maintaining them, rather than converting green areas into commercial developments."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 36,
+   "vi": "Ở nước bạn chủ yếu dùng phương tiện gì?",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "In Vietnam, the most widely used form of transport is definitely the motorbike.",
+    "Almost every household owns at least one — it's affordable, cheap to run, and perfect for navigating narrow streets and heavy traffic.",
+    "In Hanoi or Ho Chi Minh City, you can see thousands of motorbikes on the road at any given time.",
+    "Public buses exist and are fairly cheap, but the routes aren't always convenient, so not everyone relies on them.",
+    "Ride-hailing apps like Grab have become huge in recent years — offering both motorbike and car options.",
+    "I personally commute by motorbike most days since my office is only about 15 minutes away.",
+    "And Hanoi's metro recently opened a new line, which is a really positive development for reducing congestion."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 37,
+   "vi": "So sánh phương tiện giao thông ngày xưa và bây giờ",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "Transportation in Vietnam has changed dramatically over the past two or three decades.",
+    "When my parents were young, bicycles were the primary way of getting around — to school, to the market, to work.",
+    "Slow, but practical and eco-friendly.",
+    "Then as the economy grew rapidly in the 90s and 2000s, motorbikes became affordable for most households and quickly replaced bicycles.",
+    "Today, the streets are dominated by motorbikes, with a growing number of private cars as well.",
+    "Ride-hailing apps and GPS navigation have also made commuting much more convenient.",
+    "The downside is severe traffic congestion and air pollution in major cities.",
+    "I think the future needs to prioritize public transport, cycling infrastructure, and electric vehicles to make cities more sustainable."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 38,
+   "vi": "Vấn đề gặp phải với phương tiện giao thông và cách giải quyết",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "The most common problem I face is traffic congestion during rush hours.",
+    "My commute normally takes 15 minutes, but during peak hours — around 7:30 to 8:30 AM — it can stretch to 40 minutes or more.",
+    "That's both time-consuming and stressful, especially with an early morning meeting.",
+    "My solution is to leave home earlier, around 7 AM, to avoid the worst of it.",
+    "Another issue is unexpected rain while riding without a raincoat.",
+    "I now always keep a compact foldable raincoat in my bag during the rainy season.",
+    "I once had a flat tyre on the way to work too, which was stressful because I wasn't near a repair shop.",
+    "Luckily a nearby resident pointed me to one just two streets away.",
+    "That experience taught me to have repair shop locations saved on my phone — just in case."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 39,
+   "vi": "Ký ức không tốt liên quan tới phương tiện giao thông",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "One unpleasant memory happened about a year ago in the summer.",
+    "I was riding home from work when I got caught in a sudden, very heavy rainstorm.",
+    "I hadn't checked the forecast, and I had no raincoat with me.",
+    "The rain was so intense the road flooded in several places and visibility was really poor.",
+    "I had to pull over under a small overhang and wait for about 45 minutes, completely soaked.",
+    "What made it worse was that my phone battery died, so I couldn't call anyone or check a map.",
+    "By the time I got home, my clothes and shoes were completely waterlogged, and I ended up catching a cold the next day.",
+    "Genuinely miserable experience.",
+    "But I learned from it — now I always check the weather before heading out and carry a raincoat during the wet season."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 40,
+   "vi": "Thời tiết ở thành phố của bạn – so sánh với thành phố khác và quá khứ",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "Hanoi has a four-season climate, which makes it quite different from Ho Chi Minh City in the south.",
+    "Ho Chi Minh City basically has two seasons — dry and rainy — and stays warm all year, around 25 to 35 degrees.",
+    "Hanoi, on the other hand, has proper winters that can drop to around 10 degrees, mild springs, hot summers, and cool autumns.",
+    "Personally, I love Hanoi's spring — the weather is mild, breezy, and really comfortable for outdoor activities.",
+    "Compared to the past, though, I feel the weather has become more extreme in recent years.",
+    "Summers seem longer and hotter, winters less predictable.",
+    "I think part of it is the urban heat island effect as the city expands, and part of it is broader climate change.",
+    "It's a concerning trend."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 41,
+   "vi": "Thời tiết ở nước bạn – so sánh với nước khác",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "Vietnam has a tropical monsoon climate with significant regional variation.",
+    "The south has two seasons — dry from November to April, rainy from May to October.",
+    "The north, where I live, has four proper seasons.",
+    "Compared to countries like South Korea or Japan, Vietnam is significantly warmer on average.",
+    "When I visited Seoul for work, the winter temperatures were well below zero — nothing like what I experience in Hanoi.",
+    "In terms of rainfall, Vietnam gets a lot during monsoon season — heavy downpours that can cause localized flooding, especially in Hanoi.",
+    "The heat and humidity here in summer can feel pretty intense to visitors from more temperate countries.",
+    "But I do think the lush greenery and vibrant nature that comes with a tropical climate is one of Vietnam's great natural assets."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 42,
+   "vi": "Sự kiện đáng nhớ xảy ra do thời tiết, cách bạn giải quyết",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "A weather event that stands out was a strong typhoon that hit Hanoi a few years ago.",
+    "The city issued warnings the night before, so I stocked up on food and water in advance.",
+    "The next morning the wind was incredibly strong and the rain relentless.",
+    "I decided to work from home.",
+    "But around midday, the power went out and stayed out for about six hours.",
+    "Without electricity I couldn't work or charge anything.",
+    "My laptop battery lasted about three hours, which I used for the most urgent tasks.",
+    "I ended up eating cold food and spending the afternoon reading a paperback by the window — honestly not the worst afternoon.",
+    "When the power came back, I charged everything immediately and made a note to buy a proper backup power bank.",
+    "The experience really highlighted how dependent we are on electricity in modern life."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 43,
+   "vi": "Thời tiết thay đổi những năm gần đây? Nguyên nhân và ảnh hưởng",
+   "topic_src": [
+    6,
+    "GIAO THÔNG & THỜI TIẾT"
+   ],
+   "cau": [
+    "I've definitely noticed that weather patterns in Vietnam have become more unpredictable and extreme in recent years.",
+    "Summers in Hanoi are getting hotter — temperatures regularly exceed 40 degrees during peak months.",
+    "Even a short rainstorm can now cause significant flooding in parts of the city.",
+    "Winters, on the other hand, have become shorter and milder, disrupting the traditional seasonal rhythm.",
+    "think the main causes are global climate change driven by greenhouse gas emissions, combined with rapid urbanization that reduces green cover and amplifies the heat island effect.",
+    "The consequences are significant — crop failures, more severe flooding in coastal regions, and real health impacts from heat stress.",
+    "On a personal level, the increasingly hot summers are just uncomfortable — they affect how much time I can spend outdoors.",
+    "I think individuals, businesses, and governments all share responsibility to reduce emissions and adapt to these changes."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 44,
+   "vi": "Miêu tả máy tính của bạn",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "I use a Samsung Galaxy Book laptop for both work and personal use — which feels pretty fitting given where I work.",
+    "It's a 15-inch Full HD display, bright and clear, which really matters when you're staring at code for hours.",
+    "It's also relatively lightweight with a slim profile, so I can carry it to meetings or cafes without any hassle.",
+    "It has a fast processor and enough RAM to run multiple development environments simultaneously without slowing down.",
+    "Battery life is decent — I can usually get through a full workday without needing to plug in.",
+    "Working in software development, having a reliable and powerful machine is essential, and this one meets my needs well."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 45,
+   "vi": "Miêu tả máy tính (màn hình, âm thanh)",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "The screen is a 15-inch Full HD display with good color accuracy and brightness — comfortable to work on for extended periods.",
+    "At my office desk, I've connected an external 24-inch monitor as well, for better ergonomics and more screen space.",
+    "That dual-screen setup makes development significantly more efficient — code on one screen, browser or documentation on the other.",
+    "As for audio, the built-in speakers are decent for video calls and casual music.",
+    "But for anything more serious — watching a film or actually enjoying music — I always use my wireless earphones.",
+    "Good audio quality matters to me because music is such a regular part of my routine."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 46,
+   "vi": "Miêu tả điện thoại di động",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "I'm currently using a Samsung Galaxy S series smartphone — I've had it for about two years now.",
+    "The screen is a large, vibrant AMOLED display that makes everything look great, whether I'm reading or watching videos.",
+    "The camera is one of its strongest features.",
+    "I use it regularly when traveling or just out on walks, and the results are consistently impressive.",
+    "The phone handles multitasking really well, which matters since I switch between a lot of apps throughout the day.",
+    "Battery life is solid — comfortably lasts a full day with moderate to heavy use.",
+    "I use it for pretty much everything: work email, messaging, navigation, music, and mobile banking.",
+    "Working at Samsung, I'm also genuinely interested in how these features evolve with each new generation."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 47,
+   "vi": "Tại sao bạn muốn mua một chiếc điện thoại mới?",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "My current phone has served me well for two years, but I've been thinking about upgrading for a few reasons.",
+    "First, the battery has started to degrade noticeably.",
+    "By the end of a busy day it often needs charging, whereas before it would easily last until bedtime.",
+    "Second, I'd love a better camera.",
+    "The newer Samsung models have significantly improved sensors and computational photography features.",
+    "Third, storage is getting tight — two years of photos, apps, and files have accumulated and I'm constantly managing space.",
+    "And as a software engineer, using the latest device helps me stay current with the platform's capabilities.",
+    "I'm not in a rush, but within the next few months I'll probably make the switch to the latest Samsung flagship."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 48,
+   "vi": "Đồ vật người Việt Nam dùng nhiều nhất",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "Without question, the object Vietnamese people use most in their daily lives is the mobile phone.",
+    "Vietnam has one of the highest smartphone penetration rates in Southeast Asia, and it's easy to see why.",
+    "People use their phones for virtually everything — calls, messaging, banking, shopping, navigation, entertainment, and food delivery.",
+    "Apps like Zalo for messaging, Grab for transport and delivery, and various banking apps have become essential daily tools.",
+    "Mobile payment is growing rapidly too — many people now pay for groceries, coffee, even street food using QR codes.",
+    "For younger generations especially, the smartphone is the central device for both work and social life.",
+    "It's genuinely hard to imagine daily life in Vietnam without one now."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 49,
+   "vi": "Điện thoại di động quá khứ và hiện tại",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "My relationship with phones has changed dramatically over the years.",
+    "My first phone, when I was about 15, was a basic Nokia feature phone.",
+    "It could make calls, send texts, and play Snake — that was pretty much it.",
+    "The screen was tiny and black and white, but I was genuinely thrilled to have it.",
+    "When I started university, I got my first touchscreen smartphone.",
+    "The difference was incredible — suddenly I had internet, apps, maps, and a camera in my pocket.",
+    "I still remember the first time I used Google Maps to navigate somewhere unfamiliar.",
+    "It felt almost magical.",
+    "My current Samsung Galaxy is a world away from that old Nokia.",
+    "The processing power alone would have seemed like science fiction to my teenage self.",
+    "The evolution in just one generation is genuinely remarkable."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 50,
+   "vi": "Kinh nghiệm đáng nhớ khi dùng điện thoại",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "One really memorable experience happened about a year and a half ago.",
+    "I was jogging near my apartment when I slipped on a wet surface and dropped my phone into a shallow puddle.",
+    "The screen went black almost immediately.",
+    "I panicked.",
+    "I dried it off, tried turning it on — nothing.",
+    "I searched online and found the classic advice about putting it in uncooked rice to absorb the moisture.",
+    "I left it overnight, and by the next morning it turned back on.",
+    "I was genuinely relieved — and a little amazed, honestly.",
+    "The screen glitched for a few days but eventually returned to normal.",
+    "After that I immediately bought a waterproof case and a screen protector.",
+    "It taught me how fragile and valuable these devices really are."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 51,
+   "vi": "Vấn đề với điện thoại (hỏng/sự cố), cách bạn giải quyết",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "The most serious phone issue I've faced was when my previous smartphone suddenly stopped charging after about 18 months of use.",
+    "I tried different cables and adaptors — nothing worked.",
+    "The battery was draining and there was no way to charge it.",
+    "Since it was still under warranty, I took it to the official Samsung service center.",
+    "After running diagnostics, they found the charging port was faulty due to a manufacturing defect.",
+    "They replaced it free of charge under warranty, which took about a week.",
+    "During that week without my phone, I borrowed an old spare from my brother to stay reachable.",
+    "It was inconvenient, but it reminded me how much I rely on my smartphone for everyday tasks.",
+    "Now I make a habit of backing up data to cloud storage regularly — just in case."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 52,
+   "vi": "Internet quá khứ và hiện tại; kinh nghiệm dùng Facebook đáng nhớ",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "Internet usage in Vietnam has changed beyond recognition over the past 15 years.",
+    "When I was in middle school, internet meant going to a PC café and paying by the hour for slow connections.",
+    "Websites took ages to load, streaming video was basically impossible.",
+    "Now I have fast 4G and 5G on my phone and fiber optic broadband at home.",
+    "I can stream 4K video, join video calls, and upload large files with no issues at all.",
+    "As for a memorable Facebook experience — a few years ago, an old school friend I hadn't spoken to in about eight years sent me a message out of nowhere.",
+    "He'd seen some photos I'd posted and reached out.",
+    "We ended up meeting for coffee and catching up on everything.",
+    "That reconnection was one of the most pleasant surprises social media has given me.",
+    "We've stayed in touch regularly ever since."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 53,
+   "vi": "So sánh Internet hiện tại và quá khứ",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "The contrast between internet use now and 10 to 15 years ago is pretty extraordinary.",
+    "In the past, access in Vietnam was slow, expensive, and mostly limited to PC cafés or schools.",
+    "People used it mainly for basic browsing, email, or chatting on Yahoo Messenger.",
+    "Accessing news took time, and streaming anything was practically impossible.",
+    "Today, high-speed internet is widely available, affordable, and accessible on any smartphone, pretty much anywhere in the country.",
+    "Video calling family in perfect quality, streaming any film instantly, working remotely without technical limitations — all normal now.",
+    "The downsides are information overload, privacy concerns, and addictive usage patterns.",
+    "But on balance, the improvements to daily life and economic opportunity have been enormously positive."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 54,
+   "vi": "Giới thiệu về SNS (mạng xã hội), SNS hay dùng và những mặt tiêu cực",
+   "topic_src": [
+    7,
+    "CÔNG NGHỆ (INTERNET, ĐIỆN THOẠI, MÁY TÍNH)"
+   ],
+   "cau": [
+    "Social networking services have become a really integral part of modern life in Vietnam.",
+    "The most popular platforms here are Facebook, TikTok, Instagram, and Zalo — which is a local messaging and social app.",
+    "personally use Facebook to stay connected with friends and family, and scroll through Instagram occasionally for photography and tech content.",
+    "SNS has genuine benefits — maintaining relationships across distances, staying informed, even growing small businesses.",
+    "But the negatives are significant and shouldn't be ignored.",
+    "The most serious problem is misinformation.",
+    "False news spreads faster than corrections, and many people believe things without verifying them.",
+    "Cyberbullying is another major concern, especially for young people.",
+    "Excessive social media use has also been linked to anxiety and lower self-esteem.",
+    "Personally, I try to limit my daily usage and be selective about what I engage with."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 55,
+   "vi": "Làm gì vào ngày nghỉ?",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "On my days off, I try to balance rest, personal development, and seeing people.",
+    "usually wake up a bit later than usual — around 7:30 — and start with a morning jog at the nearby park.",
+    "After that and a good breakfast, I might work on personal coding projects or catch up on tech articles.",
+    "In the afternoon, I'll often meet friends for lunch or coffee, or go explore a new part of the city.",
+    "I really enjoy discovering new cafes and restaurants — Hanoi has a fantastic food scene that I feel I've barely scratched the surface of.",
+    "In the evenings, I usually wind down with a movie or a few episodes of something.",
+    "Sometimes on weekends I'll take a short day trip to the countryside or a lake outside the city.",
+    "A good day off leaves me feeling genuinely recharged for the week ahead."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 56,
+   "vi": "Kỷ niệm về ngày nghỉ đặc biệt",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "One day off that stands out was last year on my birthday.",
+    "My friends organized a surprise picnic at a lakeside park outside Hanoi — without telling me anything in advance.",
+    "I thought we were just going for a casual drive.",
+    "When we arrived, there were blankets, food, a cake, and a little Bluetooth speaker already set up.",
+    "We spent the whole afternoon eating, listening to music, playing games, and watching the sunset over the lake.",
+    "It was such a simple setting, but the laughter and warmth of being surrounded by people who genuinely care... it felt extraordinary.",
+    "No fancy restaurant or expensive gift could have matched that feeling.",
+    "The best memories really do come from genuine effort and thoughtfulness, not grand gestures."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 57,
+   "vi": "Chạy bộ với ai, làm gì trước/sau khi chạy, tại sao thích chạy bộ?",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "I usually jog by myself, which I actually prefer — it gives me quiet time to think and decompress.",
+    "Before going, I always drink a glass of water and do about 5 minutes of dynamic stretching to warm up.",
+    "I run for 30 to 40 minutes, usually around the lake in the park near my apartment.",
+    "After finishing, I walk slowly to cool down, then go home to shower and have breakfast.",
+    "I started jogging about two years ago when I realized I was sitting at a desk for 8+ hours a day and not getting nearly enough physical activity.",
+    "What I love most is the mental clarity it brings.",
+    "After a good run, my mind feels calm and organized — which is really invaluable before a full workday.",
+    "It's become a habit that helps me feel structured and disciplined overall."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 58,
+   "vi": "Chuyện gọi điện cho bạn: nói gì, khi nào, bao lâu một lần",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "I catch up with close friends on the phone about once or twice a week, depending on how busy everyone is.",
+    "Usually I call to check in and chat — how work's going, anything funny or interesting that happened, or to make plans to meet up.",
+    "Sometimes it's to ask for advice on something specific — a work decision, a purchase, a personal situation.",
+    "Calls typically last 15 to 30 minutes, unless we get into a really engaging topic, in which case it can go on much longer.",
+    "I prefer voice calls over text for proper conversations — you can convey tone and emotion so much more naturally.",
+    "I also regularly video call my parents, who live in another city.",
+    "At least once a week — it really helps me feel connected even though I'm far from home."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 59,
+   "vi": "Tình huống không nghe được điện thoại",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "There have been a few times I missed calls and it caused some inconvenience.",
+    "The most memorable was when my phone was on silent during an important work meeting.",
+    "My mother had been trying to reach me for about two hours — she wasn't feeling well and wanted some reassurance.",
+    "When I finally finished and checked my phone, there were five missed calls.",
+    "I immediately felt terrible.",
+    "I called her back right away, and thankfully it wasn't a serious emergency — just a headache and some anxiety.",
+    "But the guilt of having been unreachable stayed with me for the rest of the day.",
+    "Since then I've made a habit of checking missed calls immediately after any meeting.",
+    "And I let my family know in advance when I'll be unavailable for a while, so they don't worry."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 60,
+   "vi": "Giới thiệu về ngân hàng gần nhà / ấn tượng về ngân hàng nào nhất",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "The bank I use most is Vietcombank — there's a branch about 10 minutes from my apartment.",
+    "It's a fairly modern branch with a comfortable waiting area and a well-organized queuing system.",
+    "I've visited a few times for things like account updates or processing a larger transfer that needed in- person verification.",
+    "The staff have been professional and helpful every time.",
+    "But honestly, what impresses me most is their mobile banking app.",
+    "It's fast, secure, and covers almost every transaction I need — transfers, bill payments, card management.",
+    "Since I started using it, I rarely need to visit the branch at all.",
+    "The combination of reliable in-person service and a great digital platform is what makes Vietcombank stand out for me."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 61,
+   "vi": "Bị vấn đề gì nên vào bệnh viện? Ký ức về việc đó / Ai giới thiệu?",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "About two years ago, I had to visit the hospital due to persistent stomach pain that lasted for several days.",
+    "At first I figured it was something minor — bad food, maybe — so I rested and drank plenty of water.",
+    "But when the pain got worse and started affecting my sleep, a colleague really encouraged me to get checked properly.",
+    "She recommended Dr. Hung at Viet Duc Hospital, saying he'd helped her with something similar before.",
+    "I went the next morning.",
+    "After an examination and some tests, Dr. Hung diagnosed a mild gastric inflammation, likely from stress and irregular eating habits.",
+    "He prescribed medication and dietary adjustments for three weeks.",
+    "What stood out was his patience — he explained everything clearly and answered all my questions without making me feel rushed.",
+    "The treatment worked well, and that experience taught me to take my eating habits more seriously and not delay seeking medical help."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 62,
+   "vi": "Bệnh viện: tại sao đi hồi bé, ký ức vui vẻ với bác sĩ tốt bụng",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "When I was young, I visited the hospital mainly for respiratory infections and fever — pretty standard childhood stuff.",
+    "One visit when I was about 8 stands out as a positive memory.",
+    "I had a high fever and was quite scared.",
+    "But the pediatrician who treated me was a wonderfully warm woman.",
+    "She spoke to me gently, explained every step of the examination in child-friendly language so I wouldn't be frightened.",
+    "She even gave me a small sticker at the end, which absolutely delighted me at that age.",
+    "I remember telling my mum on the way home that I wanted to be a doctor when I grew up — purely because of how kind that doctor had been.",
+    "That experience left me with a genuinely positive impression of the medical profession.",
+    "It taught me early on that the best healthcare isn't just about technical skill — the human side of medicine matters enormously."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 63,
+   "vi": "Lần đầu đi cắt tóc: khi nào, với ai, cảm giác như thế nào?",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "My first independent haircut was when I was about 17, the summer before starting university.",
+    "Until then, my mother had always come with me to the barber and handled the communication.",
+    "This time I decided to go alone and manage it myself.",
+    "I walked into a small barbershop near our house and tried to explain what I wanted — shorter on the sides, some length on top.",
+    "Unfortunately, I was too vague and a bit nervous, so the barber made his own interpretation.",
+    "When I looked in the mirror... the result was much shorter than I'd imagined.",
+    "My eyes went wide.",
+    "I didn't say anything because I felt too awkward, paid, and left.",
+    "My friends and family teased me about it for weeks.",
+    "Looking back, it was a small but important lesson: communicate clearly and specifically — and don't be afraid to speak up."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 64,
+   "vi": "Kỷ niệm không tốt liên quan đến cắt tóc và cách xử lý",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "A more recent bad haircut experience happened about two years ago at a new barbershop I was trying for the first time.",
+    "I showed the barber a reference photo and explained clearly what I wanted.",
+    "He nodded confidently and said he could do it.",
+    "The end result looked nothing like the photo.",
+    "The sides were uneven and the top was way shorter than I'd asked for.",
+    "I was genuinely unhappy with it.",
+    "But this time — unlike my teenage self — I decided to say something politely.",
+    "I told him it wasn't quite what I'd hoped for and asked if he could make some adjustments to even it out.",
+    "He apologized and tried to fix it, though the damage was mostly done at that point.",
+    "I paid, left, and resolved not to go back.",
+    "The lesson: even with a clear photo, only go to a barber who comes recommended or whose work you've seen before."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 65,
+   "vi": "Các loại giấy tờ tùy thân ở quốc gia bạn",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "In Vietnam, the primary ID is the CCCD — the Citizen Identification Card — which replaced the old system a few years ago.",
+    "Every citizen aged 14 and above is required to have one.",
+    "It contains your name, date of birth, address, nationality, and a unique 12-digit ID number.",
+    "It's also embedded with a chip storing biometric data, making it more secure than older ID systems.",
+    "You need it in almost every official situation — opening a bank account, signing contracts, booking flights, registering a SIM card, applying for jobs.",
+    "To get one, you go to your local police station with supporting documents.",
+    "They take a photo and fingerprints, and the card is usually issued within 7 to 14 days.",
+    "If it's damaged or has incorrect information, you return to the police station and apply for a replacement.",
+    "The process is straightforward, so it's important to store the card safely and report errors immediately."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": false,
+   "so": 66,
+   "vi": "Đồ gia dụng gặp vấn đề và cách xử lý",
+   "topic_src": [
+    8,
+    "HOẠT ĐỘNG THƯỜNG NGÀY & DỊCH VỤ"
+   ],
+   "cau": [
+    "The most disruptive appliance issue I've had was when my refrigerator stopped cooling properly.",
+    "I noticed one morning when my food was no longer cold and the milk had gone off overnight.",
+    "I checked the basics first — making sure it was plugged in properly, checking the thermostat settings.",
+    "That didn't help.",
+    "So I looked up the brand's customer service number online and called to describe the problem.",
+    "They scheduled a technician for the following afternoon.",
+    "The technician found a faulty compressor and said it would take three to four days to repair.",
+    "During that time I stored perishables in a cooler with ice and kept grocery shopping to daily essentials.",
+    "After the repair, the fridge worked perfectly.",
+    "And importantly, it was still under warranty — so the repair was covered.",
+    "That reminded me to always check warranty status before agreeing to pay for repairs."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 1,
+   "vi": "Chuyến du lịch có vấn đề – gọi điện cho đại lý đổi lịch",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hi, this is Son calling.",
+    "I booked a two-day trip to Da Nang through your agency last week — it was scheduled for this Saturday the 10th.",
+    "Something unexpected has come up at work, so unfortunately I won't be able to travel on that date.",
+    "Is there any chance I could reschedule to the following Saturday, the 17th?",
+    "Could you also check whether the hotel and transport arrangements can be moved to the new date as well?",
+    "If there are any rescheduling fees, just let me know the amount and how I can take care of it.",
+    "I'd really appreciate your help.",
+    "Could you give me a call back once you've confirmed availability?",
+    "Thank you so much."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 2,
+   "vi": "Giúp đỡ người nước ngoài bị lạc đường",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Excuse me — are you lost?",
+    "Can I help?",
+    "Oh, you're looking for Hoan Kiem Lake!",
+    "No worries at all — it's not far from here.",
+    "Just head straight down this street for about 200 meters, then turn left at the big intersection.",
+    "You'll see a red pedestrian bridge — the lake is just past that, on your right.",
+    "Should take about 10 minutes on foot.",
+    "If you have Google Maps open, I can show you exactly on your screen.",
+    "No problem at all!",
+    "Welcome to Hanoi — I hope you have a great visit!"
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 3,
+   "vi": "Mua giày tập bị bất tiện – đến cửa hàng giải thích",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hello, I bought a pair of running shoes here about a week ago and I've run into a problem with them.",
+    "The sole on the left shoe has started coming apart at the front edge — and I've only worn them three or four times for light jogging.",
+    "I have the receipt and the shoes are still in the original box.",
+    "I believe this is a manufacturing defect, not damage from use — I've been wearing them completely normally.",
+    "I'd like to either exchange them for a new pair of the same model and size, or get a refund if that model's no longer available.",
+    "Could you help me with this?",
+    "I'd really appreciate a quick resolution — thank you."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 4,
+   "vi": "Mất đồ trên taxi – gọi điện tới công ty taxi",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hello, I'd like to report a lost item.",
+    "I took one of your taxis about an hour ago.",
+    "I traveled from Dinh Tien Hoang Street in Hoan Kiem District to Galaxy Building in Cau Giay District.",
+    "When I got home, I realized I'd left my laptop bag on the back seat.",
+    "It's a black bag with a grey strap, and it contains my work laptop and some important documents.",
+    "I have the receipt with me — it was taxi number 58K-12345 at around 5:40 PM.",
+    "Could you please check with the driver?",
+    "I'll come to collect it immediately if it's been found.",
+    "Please contact me at this number — thank you so much, I really appreciate your help."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 5,
+   "vi": "Ở khách sạn lâu ngày – hỏi lễ tân về chỗ vui chơi gần đó",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Good afternoon!",
+    "I've been staying here for three days now and I have a free afternoon today.",
+    "Could you recommend some interesting things to do or places to visit nearby?",
+    "I'm especially interested in local food — are there any well-known street food areas or traditional restaurants within walking distance?",
+    "I'd also love to see some cultural or historical sites if there are any close by.",
+    "And is there anywhere I could rent a bicycle?",
+    "I'd love to cycle around and explore.",
+    "If possible, could you write down the names of the places for me?",
+    "My Vietnamese reading isn't very strong, so having it written out would be really helpful.",
+    "Thank you so much!"
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 6,
+   "vi": "Hỏi Ava (máy tính) về nơi ở của nó",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hey Ava!",
+    "I have a fun question for you today — where do you actually live, or where are you located?",
+    "Do you have a physical home somewhere, or do you exist entirely in digital space?",
+    "As a software engineer, I find it genuinely interesting to think about where AI systems actually run.",
+    "Are you hosted on dedicated servers, or distributed across cloud infrastructure in multiple data centers around the world?",
+    "And does the concept of 'home' mean anything to you, or is location completely irrelevant from your perspective?",
+    "I'm really curious to hear your answer — or your best attempt at one!"
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 7,
+   "vi": "Gọi điện cho bạn hỏi cách sử dụng máy MP3",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hey Minh, it's Son!",
+    "Sorry to bother you — do you have a few minutes?",
+    "So I just borrowed an MP3 player and I'm having trouble figuring it out.",
+    "How do I skip between songs?",
+    "Every time I press the button it just goes to a menu instead of the next track.",
+    "And how do I adjust the volume?",
+    "I pressed what looked like the volume buttons but the track changed instead.",
+    "Oh, and is there a way to create a playlist, or does it just play everything in order?",
+    "I know it sounds basic but I genuinely haven't used one of these in years!",
+    "Thanks so much — I really appreciate it."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 8,
+   "vi": "Mượn máy MP3 nhưng làm hỏng – giải thích và đưa ra phương án giải quyết",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hey Minh, I need to talk to you about something — and I want to apologize in advance.",
+    "I accidentally dropped your MP3 player earlier today while I was jogging, and the screen cracked.",
+    "I feel really terrible about it — I should have been more careful with something I borrowed.",
+    "I completely take responsibility, and I want to make it right.",
+    "I'd like to pay for the screen repair, or if that's not practical, I'll replace it with a new equivalent model — whichever works better for you.",
+    "Could you check how much a repair would cost?",
+    "Or if you'd prefer a replacement, just let me know what you'd want.",
+    "Again, I'm really sorry — please don't hesitate to tell me how you'd like to handle it."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 9,
+   "vi": "Điện thoại mới mua bị lỗi – yêu cầu 2 giải pháp từ đại lý",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hello, I purchased a new smartphone from your store three days ago, and I've already run into a significant problem.",
+    "When I make calls, the person on the other end can barely hear me.",
+    "The microphone doesn't seem to be functioning properly.",
+    "I haven't dropped the phone or exposed it to water — the issue appeared from the very first day of use.",
+    "I have the receipt and original packaging here with me.",
+    "I'd like to request two possible solutions.",
+    "First, could you replace this unit with a brand-new one of the same model?",
+    "Alternatively, if that's not possible, could the phone be sent for warranty repair, with a temporary device provided in the meantime?",
+    "This is my primary work phone, so I'd really appreciate a quick resolution.",
+    "Thank you for your help."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 10,
+   "vi": "Mua nhầm áo – gọi điện giải quyết; nhờ chủ cửa hàng tư vấn",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hello, I bought a shirt from your store yesterday but when I got home I realized I'd accidentally picked up a large instead of a medium.",
+    "The shirt still has all its tags on and hasn't been worn.",
+    "Would it be possible to exchange it for the correct size?",
+    "Also, while I have you on the line — I was hoping you could give me some advice.",
+    "I'm looking for a versatile casual shirt — smart enough for the office but comfortable for weekends too.",
+    "Do you have any new arrivals that might fit that description, preferably in neutral colors?",
+    "I'll bring the original shirt and receipt when I come in.",
+    "Would this afternoon work?",
+    "Thanks so much for your help!"
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 11,
+   "vi": "Cửa sổ hỏng – gọi người sửa; gọi lại khi mãi không thấy tới",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "(Call 1 – Báo sự cố)",
+    "Hello, I'm calling to report a problem in my apartment — I'm in unit 812, Building A.",
+    "One of my bedroom windows is broken — the latch is completely stuck and I can't close it properly.",
+    "Could you arrange for a technician to come and fix it?",
+    "Rain is expected this afternoon and leaving it open could cause water damage.",
+    "Would it be possible to have someone come this morning?",
+    "(Call 2 – Follow-up)",
+    "Hello again, this is Son from unit 812.",
+    "I called this morning about the broken window and was told a technician would arrive by 2 PM.",
+    "It's now 3:30 and no one has come yet.",
+    "Could you check on the status of my request?",
+    "It's become quite urgent — it's already started raining and water is coming in through the gap.",
+    "Could you either send someone in the next 30 minutes, or at least let me know when to expect them?",
+    "I'll be available for the rest of the afternoon.",
+    "Thank you."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 12,
+   "vi": "Đi làm giấy tờ tùy thân mới gặp vấn đề / giấy tờ bị sai thông tin",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "(Báo lỗi)",
+    "Good morning.",
+    "I came here last month to apply for a new CCCD and I've recently received the card.",
+    "However, I noticed that my date of birth is printed incorrectly.",
+    "It shows the 15th, but the correct date is the 5th.",
+    "I have my old ID card and household registration book here to verify the correct information.",
+    "Could you please help me process a correction and reissue the card?",
+    "(Yêu cầu xử lý nhanh)",
+    "I understand this may take some time, but I have an important banking appointment next week that requires a valid ID.",
+    "Is there any way to expedite the correction, given that the error was on your end?",
+    "I'll cooperate with whatever documentation you need.",
+    "I really appreciate your help."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 13,
+   "vi": "Đến tiệm bảo cắt tóc / cắt không ưng, yêu cầu cắt lại",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "(Yêu cầu kiểu tóc)",
+    "Hi!",
+    "I'd like a haircut please.",
+    "I'd like to keep the top at around 5 centimeters — not too short — with the sides faded on a number two.",
+    "The front should be styled slightly forward, not too pushed back.",
+    "Here's a photo on my phone that shows roughly what I'm going for.",
+    "Take your time — I'm not in a hurry at all.",
+    "(Sau khi cắt – yêu cầu điều chỉnh)",
+    "Thank you!",
+    "I really like the overall shape, but I feel the top came out a little shorter than I was hoping for.",
+    "Would it be possible to blend the sides a bit more so the transition is a bit smoother?",
+    "I know the length can't be added back, but I think a cleaner fade would really improve it.",
+    "Thanks for your patience — and I'll make sure to bring a clearer reference photo next time!"
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 14,
+   "vi": "Công ty du lịch báo lỗi phòng – gọi điện trao đổi với bố mẹ đổi hành trình",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Mum, Dad — I just got off the phone with the travel agency and there's a small issue we need to sort out.",
+    "It turns out the hotel room they booked for us in Hue has had a double-booking problem, so our rooms won't be available on the original dates.",
+    "The agency has given us two options.",
+    "We can either shift the whole trip by three days to the week after, or they can arrange a different hotel of similar quality in the same city.",
+    "Personally, I think the second option is simpler — we wouldn't need to rebook our transport.",
+    "But if you'd prefer to push the dates back entirely, I can check whether we can get the time off work.",
+    "What do you think?",
+    "The agency needs an answer by tomorrow so they can finalize everything — just let me know your preference and I'll call them back right away."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 15,
+   "vi": "Mua đồ bị hỏng sau khi giặt – gọi điện phàn nàn / đòi bồi thường",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "Hello, I'm calling to report a problem with a shirt I bought at your store last week.",
+    "I followed the washing instructions on the label exactly — cold water, gentle cycle, air dry.",
+    "But after washing it just once, the color has faded dramatically and the fabric seems to have weakened — there are small pulls in the threads.",
+    "I believe this is a quality defect with the garment itself, since I followed all the care instructions properly.",
+    "I still have the receipt and the shirt as evidence.",
+    "I'd like to request either a full refund or a replacement of equivalent value.",
+    "Could you let me know your returns procedure for defective items?",
+    "Thank you."
+   ]
+  },
+  {
+   "bo": "A",
+   "rp": true,
+   "so": 16,
+   "vi": "Kể về chuyến thăm một gia đình người bạn nước ngoài",
+   "topic_src": [
+    9,
+    "TÌNH HUỐNG GIẢ ĐỊNH (ROLE-PLAY)"
+   ],
+   "cau": [
+    "I'd like to share a really memorable experience from when I visited my Korean colleague Jiwon's family home during a work trip to Seoul last year.",
+    "Jiwon very kindly invited me to have dinner at his parents' house, which I thought was a wonderful gesture.",
+    "When I arrived, his parents greeted me so warmly — even though they spoke very little English.",
+    "They'd prepared an elaborate traditional Korean dinner — galbi, japchae, all sorts of banchan side dishes, and of course kimchi.",
+    "I was a little nervous about the dining etiquette, but Jiwon guided me gently and made sure I felt comfortable the whole time.",
+    "What touched me most was the effort his family put into making a foreign guest feel genuinely welcome.",
+    "Despite the language barrier, the warmth communicated everything.",
+    "It was a humbling and heartwarming experience — a real reminder of how much we share across cultures when we approach each other with kindness."
+   ]
+  }
+ ],
+ "B": [
+  {
+   "bo": "B",
+   "so": 1,
+   "en": "You indicated in the survey that you listen to music. What kind of music do you listen to? Who are some of your favorite musicians or composers?",
+   "topic_src": "Music",
+   "cau": [
+    "I like listening to pop music, because it has catchy melodies, the lyrics are easy to understand, and the sound is smooth and attractive.",
+    "My favorite singer is Selena Gomez.",
+    "She is also a famous songwriter, and actress.",
+    "Many songs she has written have become viral trends on the Internet and YouTube.",
+    "She is also remarkable beautiful, and her dancing is very nice.",
+    "Among her songs, I like Love You Like a Love Song the most.",
+    "It is also one of her most famous songs.",
+    "I was attracted by the story in this song, and I listen to it many times each day."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 2,
+   "en": "When and where do you usually go to listen to music? Do you listen to the radio? Do you go to concerts? Tell me about the different ways you enjoy music.",
+   "topic_src": "Music",
+   "cau": [
+    "I don't go to concerts.",
+    "Most of the time, I listen to music on my cell phone, so I can enjoy it wherever I am.",
+    "I usually listen to music in the car when I'm driving, or when I'm walking down the street.",
+    "Sometimes, I also listen to music while cooking or cleaning my house.",
+    "Even when I'm bored, I listen to music because it helps improve my mood and reduce stress very effectively."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 3,
+   "en": "When did you first become interested in music? What kinds of music did you like at first? Tell me how your interested in music developed from your childhood until today?",
+   "topic_src": "Music",
+   "cau": [
+    "I don't remember exactly, but in my mind, I love music from when I was a kid.",
+    "At that time we were poor, I didn't have opportunity to listen many kind of music.",
+    "I just listened to traditional music on the old radio of my family and the song that my mom, my grandmother sang.",
+    "Now, life become better, I can approach and listen to many kind of music.",
+    "Some time I listen to pop music, but some time I listen to rock music, or country music, Some time I listen to EDM music when I do exercise.",
+    "In conclusion, I listen to many types of music now."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 3,
+   "en": "Can you tell me about a memorable experience with music?",
+   "topic_src": "Music",
+   "cau": [
+    "Yes, I remember one special time when I went to a live concert of my favorite singer.",
+    "It was about three years ago.",
+    "The concert was held in a big stadium, and there were so many fans.",
+    "When the singer came on stage, everyone was screaming and singing along.",
+    "I felt so excited and happy because it is the first time that I saw my idol in real life.",
+    "That night was unforgettable, and it made me love music even more."
+   ],
+   "bien_the": 1
+  },
+  {
+   "bo": "B",
+   "so": 4,
+   "en": "What kind of movies do you like to watch? Why do you like those type of movies?",
+   "topic_src": "Music",
+   "cau": [
+    "I watch many types of movies and TV programs, but my favorite types are action movies and nature documentaries.",
+    "Action movies are very interesting and help me to reduce stress very effectively",
+    "I also love nature, I love trees, flowers, and animals.",
+    "I want to know how beautiful wildlife is, and I want to understand how animals grow up and survive in the wild.",
+    "All of this attracts me a lot."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 4,
+   "en": "Who is your favorite actor or actress? Why do you like them?",
+   "topic_src": "Music",
+   "cau": [
+    "My favorite actor is Leonardo DiCaprio.",
+    "I first saw him in the movie Titanic, and his acting was amazing.",
+    "He is very talented and can play many different kinds of roles.",
+    "I also like that he helps poor children have opportunity to go to school and cares about the environment.",
+    "Whenever I watch his movies, I always feel very interested and enjoy them a lot."
+   ],
+   "bien_the": 1
+  },
+  {
+   "bo": "B",
+   "so": 5,
+   "en": "Tell me about when you went to the movies recently. Who did you go with and how was that day? What did you do before the movie and what did you after?",
+   "topic_src": "Music",
+   "cau": [
+    "Last weekend was my friend's birthday.",
+    "We celebrated a surprise birthday to her, we drove to the cinema to watch an action movie.",
+    "Before the movie, we bought some popcorn and soft drinks like Coca-Cola and orange juice.",
+    "After the movie, we went to a nearby fast-food restaurant and ordered dried chicken with some snacks.",
+    "We were very hungry, and the food was so good — it was a very delicious meal.",
+    "Moreover, after the meal, We got one ice cream each.",
+    "We were full after all.",
+    "It was a nice and memorable day for me."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 6,
+   "en": "What was a memorable movie that you watched in the past? What was it about? What was special about that movie?",
+   "topic_src": "Music",
+   "cau": [
+    "The most memorable movie that I have seen is Titanic.",
+    "It is a romantic movie based on the true story of the famous Titanic ship.",
+    "The film has participation of my favourite actor also.",
+    "It tells the sensational love story between Jack and Rose, the two main characters, on a ship that sank on its first journey.",
+    "Even though the movie doesn't have a happy ending for the main characters.",
+    "But it took me a lot of tear during movie.",
+    "I still remember every scene and every line in the movie until now."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 7,
+   "en": "You indicated in the survey that you go to parks with adults. Tell me about the kinds of parks that you like to visit? What do the parks look like?",
+   "topic_src": "Music",
+   "cau": [
+    "There are a lot of parks around where I live, but there is one I like the most.",
+    "It's a large park with many big trees.",
+    "There is also a lake with a walking path around it.",
+    "I can feel the fresh air and spaceful when I am at there.",
+    "The park has a lot of sports facilities such as exercise bikes and pull-up bars.",
+    "Additionally, there are also many children playing around the park, with attractions like electric trains, slides and bubble house"
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 8,
+   "en": "Describe a typical visit to a park is like for you. Tell me about the things you do and see at parks?",
+   "topic_src": "Music",
+   "cau": [
+    "I usually go to the park to get some fresh air and do exercise.",
+    "Sometimes I go running, and sometimes I just take a walk alone or with a friend.",
+    "When I'm tired after a long day at work, I will go to the park and listen to music while running.",
+    "I see that most people go to the park for the same reason.",
+    "They do exercise and enjoy the fresh air."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 9,
+   "en": "Tell me about the last time you went to a park? Which park was it? When was it that you went? Tell me everything you did from the moment you arrived at the park to time you left.",
+   "topic_src": "Music",
+   "cau": [
+    "Last Sunday, my friends and I went to the park near my house.",
+    "We like going to the park a lot.",
+    "When we arrived, we walked around the lake and then played on the slide until we got tired.",
+    "After taking a rest and drinking some water, we played another favorite game: hide and seek.",
+    "When we became hungry and thirsty, we left the park and went to a nearby restaurant.",
+    "We ordered some food and drinks for the meal.",
+    "After that, we went home late and fell asleep right away after had a nice day."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 9,
+   "en": "Tell me about the last time you went to a park? Which park was it? When was it that you went? Tell me everything you did from the moment you arrived at the park to time you left.",
+   "topic_src": "Music",
+   "cau": [
+    "I remember going to a park with my family last month.",
+    "We had a small picnic and played some games together.",
+    "The weather was nice, and we enjoyed the fresh air and green trees.",
+    "However, something bad happened — it suddenly started to rain heavily.",
+    "We didn't bring any raincoats, so we all got wet and had to run to the car.",
+    "Even though it was a bit uncomfortable, we laughed a lot and it became a fun memory."
+   ],
+   "bien_the": 1
+  },
+  {
+   "bo": "B",
+   "so": 10,
+   "en": "How did you first start going to parks? What made you visit parks in the first place? Why do you go to parks now?",
+   "topic_src": "Music",
+   "cau": [
+    "My purpose when I first went to the park was to get some fresh air.",
+    "At that time, I just enjoyed the trees and flowers there.",
+    "I usually sat on a bench and enjoyed the breeze.",
+    "But these days, I go to the park more frequently.",
+    "I go to the parks to get some exercise.",
+    "I can take a walk, ride a bicycle, or just do some simple exercise.",
+    "When I get tired after doing exercise, I can relax and enjoy the fresh air and open space of the park.",
+    "That is really great moments for me."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 12,
+   "en": "You indicated in the survey that you like to travel domestically. Tell me about some of the place you like to travel to and why you like going there?",
+   "topic_src": "Domestic Trips",
+   "cau": [
+    "There're a of beautiful place in VietNam.",
+    "But there's one I think I like most, It is Ha Long Bay.",
+    "It is a Bay in the North of VietNam, I love there because I like walking along the shore, gazing at the sea and starry sky in the evening",
+    "And, Nature scenery there is very beautiful, there're thousand small islands in HaLong bay with different shape.",
+    "I stand on ship go around the island and look them beauty clearly.",
+    "Additionally, there're many kind of sea foods and price is quite cheap/affordable.",
+    "This is why I make it a point to visit Ha Long Bay every summer."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 13,
+   "en": "Can you tell me about the things you do in order to prepair to trips?.",
+   "topic_src": "Domestic Trips",
+   "cau": [
+    "I'm a light packer, So when I travel.",
+    "I only bring essentials",
+    "Fistly, I pack a couple of clothers depending on the weather.",
+    "Then I add some basic emergency medicine.",
+    "I also bring a hat, a sunglasses and swim suit.",
+    "Of course ,I need toothbrush, toothpaste, and shampo for trip.",
+    "And I cannot forget bring my wallet and my phone and a charger.",
+    "That is all I need for my trip."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 14,
+   "en": "Tell me a bout one travel experience you had that was unforgettable. Start by telling me when this happended, where you were, and who you were with. Tell me about all the things that happended that make this experience so unforgettable?",
+   "topic_src": "Domestic Trips",
+   "cau": [
+    "Last summer, during a company team-building trip, I had quite an unpleasant experience.",
+    "After lunch, I believe I ate something that was not fresh.",
+    "Soon after, my stomach started hurting, and I developed food poisoning.",
+    "I had a high fever and a severe headache throughout the afternoon.",
+    "I had to keep running to the bathroom due to diarrhea.",
+    "To improve my condition, I went to a pharmacy and got some medicine.",
+    "Fortunately, after taking the medicine, I started feeling better.",
+    "However, I had to stay in my room and rest the next day, missing out on all the activities during the trip.",
+    "Since then, I've learned to be much more cautious about what I eat, especially in unfamiliar situations."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 15,
+   "en": "Tell me about some of the trips that you took in your youth. Where did you go? Who did you go with? And what did you do or see during those early trips?",
+   "topic_src": "Domestic Trips",
+   "cau": [
+    "When I was a kid, I often followed my parents going to the beach each summer.",
+    "We usually stayed at a beachside hotel with a great ocean view.",
+    "During the trip, we used to swim in the ocean.",
+    "We also played with ball and built sand castle.",
+    "Moreover, we also looked for seashell and crabs on the beach.",
+    "In the evening, we took a walk along the beach and listened to the sound of ocean."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 16,
+   "en": "You indicated in the survey that you travel internationally. Could you describe for me one of the countries you've visited? What did it look like? And what were the people like there?",
+   "topic_src": "Overseas trip",
+   "cau": [
+    "I went to Singapore last year.",
+    "It is a special trip because this is the first time I travel by plane.",
+    "Although It is small island country and large population, every where I saw is so clean and beautiful",
+    "People usually move by public transport or by foot so there is no traffic jam.",
+    "Food is delicious and price is expensive.",
+    "People are friendly and working hard.",
+    "That is so exciting expericence when I travel oversea."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 17,
+   "en": "Talk about the things that you typically do when you visit another country  or overseas city.",
+   "topic_src": "Overseas trip",
+   "cau": [
+    "When I visit another country , I try to visit the historic place there",
+    "I try to get expericence in street, go to special place at that country",
+    "I will try to taste local food.",
+    "Of course I will take picture to record the nice moment.",
+    "I also want to wear tradition clothes and take part in festival to understand more about the life and the human where I go to."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 18,
+   "en": "Tell me about your first trip to another country or city. When did you go? Where did you visit? What did you do there? Who did you go with? Tell me about that trip with lots of details.",
+   "topic_src": "Overseas trip",
+   "cau": [
+    "I went to China with some colleagues for a business trip 5 years ago.",
+    "When I arrived, I was supprised about modern and beauti of China captial: Beijing.",
+    "There was so much road, And they are so big.",
+    "There're many underground system with high speed.",
+    "All around are sky tower.",
+    "I also had exciting experience with food there, The local food is so delicious and taste is so good.",
+    "It's really a place that I want to come again."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 22,
+   "en": "You indicated that you take vacations at home. Who are the people you would like to see and spend time with on your vacation?",
+   "topic_src": "Vacation at home",
+   "cau": [
+    "I am always busy with work so when I am on my vacation I just want to spend time with my family.",
+    "We do many things together.",
+    "We often go camping at the park nearby, it has a campsite with a great view.",
+    "We sometimes cook meals and watch some comedies.",
+    "Moreover, we also go to a restaurant nearby, we talk about our story while enjoying the food.",
+    "I feel very relaxed and happy with my family.",
+    "So, in the future, I still want to spend time with my family on a vacation."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 23,
+   "en": "Describle exactly what you did during the last vacation that you spent at home? Give me a description of what you did from the first to the last day. Talk about all the people you saw and everything that you did?",
+   "topic_src": "Vacation at home",
+   "cau": [
+    "I had a 3 days of vacation last month.",
+    "During my vacation.",
+    "I spend first day for clean my house, I made the bed, clean the floor, washed the clothes and blanket, I also clean the kitchen and bathroom.",
+    "Second day, I meet some old friend at a coffee shop.",
+    "We talk together about our job, we talked about our family and children, we discuss about plan in the future.",
+    "In nextday, I spent time to hang out with my family.",
+    "We went to the zoo and played many game.",
+    "After that , we went to favourite restaurant.",
+    "We ate so much because we were very hungry at that time.",
+    "It was a very nice vacation I got last month."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 24,
+   "en": "Could you tell me about unusual or unexpected experience you had during a vacation you had at home? What happened? Who was involved? And why was this expericence so memorable?",
+   "topic_src": "Vacation at home",
+   "cau": [
+    "I had an unusual experience last year.",
+    "It was 2 days vacation at home.",
+    "It was peak of hot summer.",
+    "And unfortunately, electric power of my house was suddenly damaged.",
+    "It was so awful for me without electric at that hot weather.",
+    "No fan, no air conditioner, no cooking, no televison..",
+    "I called to electric agent to fix the damage but It took to 2 days of repairing.",
+    "It took all my vacation",
+    "That was really terrible vacation I have to spend on it."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 25,
+   "en": "You indicated that you work I would like to know about your company. What kind of company is it? When was it founded? Where is it located? That products or services does it offer?",
+   "topic_src": "Work",
+   "cau": [
+    "I work for a large electronics company.",
+    "It's a global company that does business worldwide.",
+    "I have worked here for about 10 years.",
+    "My company is one of the most famous companies in cell phones and home appliances products.",
+    "It was founded in the late 1960s.",
+    "It was small when it first started, but now it is a huge enterprise.",
+    "The headquarters is located in Korea.",
+    "There are many factories and R&D centers in several countries, such as Vietnam, China, India,",
+    "These are some details about the company I work for."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 26,
+   "en": "Tell me about your daily routine at work. What kind of work do you engage in on a normal workday? What do you typically do as soon as you arrive at the office? Tell me everything about your day at work?",
+   "topic_src": "Work",
+   "cau": [
+    "Currently, I am working in the software development department.",
+    "My work schedule is quite flexible.",
+    "I usually arrive at the office around 8 or 9 AM.",
+    "First, I turn on my computer and check all my emails.",
+    "Then, I create a task list for everything I need to accomplish that day.",
+    "Typically, my working day is quite busy, as I have numerous tasks and projects to handle.",
+    "I have regular meetings with my colleagues every morning.",
+    "Additionally, I need to respond to and send emails to customers daily.",
+    "I often leave the office around 5 or 6 PM, but sometimes I have to work late if there are any urgent or critical issues.",
+    "This is my typical working day"
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 27,
+   "en": "Now, tell me about a project you did at work last week. What kind of project was it? How did it go? What did you have to do for the project? Did you have any meetings to attend for the project?",
+   "topic_src": "Work",
+   "cau": [
+    "I had a hard work schedule last week.",
+    "It was a new project that we had to finish within one week.",
+    "I had a lot of work to do on it.",
+    "I had to research new technologies to apply to the project.",
+    "I had to create many documents, many reports, join many meetings and update status to my boss.",
+    "It seemed like I was burnt out from overworking.",
+    "Fortunately, I finished the project on time .",
+    "Great feedback from my boss and the customer and project bonus for my contributions make me really happy."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 28,
+   "en": "Describle a family or a friend  you have What is he or she like? What is special about that person?",
+   "topic_src": "Family/Friend",
+   "cau": [
+    "I'd like to share a little about my parents.",
+    "My dad and mom are similar in some ways.",
+    "They are very family-oriented, showing great love for each other and their children.",
+    "They are willing to do anything to improve and support their family.",
+    "However, they also have some differences.",
+    "My dad enjoys football, but my mom doesn't.",
+    "My mom loves cats, while my dad prefers dogs.",
+    "Sometimes, they face conflicts in family life, but they always find a way to resolve them.",
+    "That's what my parents are like.",
+    "I love them deeply, and I hope to spend more time with them in the future."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 29,
+   "en": "Tell me about what you commonly do with your friends or family members when you get together with them?.",
+   "topic_src": "Family/Friend",
+   "cau": [
+    "I have some friends who live near my area.",
+    "On weekends, we often meet up at a coffee shop or restaurant.",
+    "We order drinks and food, and then we start chatting.",
+    "We talk about our jobs, our families, and our plans for the future.",
+    "Sometimes, we also visit an online game store and play our favorite games together.",
+    "They are like family to me—always there to support me when I feel down.",
+    "I truly cherish them and love them so much."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 30,
+   "en": "Talk about a time when you visted a friend or a family member recently. What did you do when you visited them? What was memorable about that visit? Tell me everything from beginning to end.",
+   "topic_src": "Family/Friend",
+   "cau": [
+    "Last New Year's Day, I finally returned to my hometown where my parents live.",
+    "When I visited them, I brought some gifts and also purchased some new furniture for their home.",
+    "We gathered together to celebrate the holiday.",
+    "We cooked a variety of traditional foods, especially making Chung cake, which is a traditional cake in my country for New Year's Day.",
+    "During the holiday, we enjoyed delicious meals, spent time together, visited neighbors, and attended various festivals.",
+    "We left our works behind to fully embrace and enjoy this special occasion."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 31,
+   "en": "Talk about a time when you visited  a friend or a family member recently. What did you do when you visited them? What was memorable about that visit? Tell me everything from beginning to end..",
+   "topic_src": "Family/Friend",
+   "cau": [
+    "I remember visiting my friend's house on last New Year's Day.",
+    "We had dinner together and have some drinks.",
+    "However, I drank too much and got drunk.",
+    "My stomach was upset and I had a light headache.",
+    "I felt like I was hanging on a tree and I could not walk normally.",
+    "I still had a hangover the next day.",
+    "It took me quite a long time to sober up.",
+    "Since then, I've told myself to be more careful when drinking."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 32,
+   "en": "I would like to know where you live. Can you describe your home to me? What does it look like? How many rooms does it have?",
+   "topic_src": "Housing",
+   "cau": [
+    "I am living in an apartment with my family.",
+    "I have lived here for 5 years.",
+    "Our home is comfortably laid out with two bedrooms, a spacious living room, a well-equipped kitchen, two bathrooms, and a lovely balconyIn the living room, there are many funiture and home appliances.",
+    "The living room is the heart of our home, filled with essential furniture and modern appliances.",
+    "Connected to living room is the kitchen.",
+    "In included sink, a dining table and some cabinets.",
+    "We also have fridge, a microwave electric stove to make cooking easy and enjoyable.",
+    "In balcony, there is a washing machine and I also plant some trees there.",
+    "This is my home—a warm and inviting space where my family and I create wonderful memories every day."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 33,
+   "en": "What is your normal routine at home? Do you do housework everyday? What do you usually do on weekdays and what do you do on weekends?",
+   "topic_src": "Housing",
+   "cau": [
+    "I try to clean my apartment whenever I can.",
+    "First, I sweep the floor and wipe the furniture.",
+    "Then, I clean the bathroom after taking a shower.",
+    "After meals, I wash the dishes and also take out the garbage and recycling.",
+    "On weekends, I do the laundry.",
+    "I put the clothes in the washing machine, then hang them to dry on the rack.",
+    "When they are dry, I fold the clothes and put them in the dresser.",
+    "I also clean the kitchen on weekends, I clean the microwave, cabinets, and coffee machine.",
+    "So, these are my routine work at home."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 34,
+   "en": "I would like to know where you live. Tell me the different rooms in your home, tell me about your favorite room in your home. What does it look like?.",
+   "topic_src": "Housing",
+   "cau": [
+    "I live in an apartment.",
+    "My apartment has two bedrooms, one living room, and one kitchen.",
+    "There are also two bathrooms and one balcony.",
+    "I think my favorite room at home is the living room.",
+    "It has a television, a high-end soundbar speaker, a tea table, and a big sofa.",
+    "The sofa is the best place to rest and relax in the evening.",
+    "I usually lie on the sofa, surf the Internet, or listen to my favorite music after a tiring workday.",
+    "Sometimes I even fall asleep there and wake up the next morning."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 35,
+   "en": "Describle the home you lived in as a child. How was it different from the home you live in now?",
+   "topic_src": "Housing",
+   "cau": [
+    "When I was a child, I lived with my parents in a small house in the countryside.",
+    "The house was old and simple, but it had a garden with many trees and vegetables.",
+    "There was also a pond where I used to go fishing.",
+    "Now I live in an apartment.",
+    "It's very different because there are no trees and no garden.",
+    "But the apartment is modern and comfortable.",
+    "Around my place, there are many facilities like a post office, a school, a market, and even a hospital.",
+    "So, the place I live now is very convenient, but it's totally different from the house where I lived when I was young."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 36,
+   "en": "Talk about a special memory you had at home with your family members. Perhaps, you had guests over or had a party of some sort. Tell me about that experience in detail.",
+   "topic_src": "Housing",
+   "cau": [
+    "I attended the wedding party of my close friend recently.",
+    "It was the most unforgettable wedding I have ever been to.",
+    "The bride was so beautiful in white dress, and the groom looked very handsome in suit.",
+    "Many guests joined the party.",
+    "They ate, drank, sang songs, and gave their best wishes to the couple.",
+    "A live band played beautiful melodies throughout the meal, creating a wonderful atmosphere.",
+    "Overall, it was a very special and memorable experience for me."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 37,
+   "en": "There are always problem that happen in any home. Things break. Projects do not go as planned. Or people you live with do not cooperate. Tell me about some problems or issues that happened at your home?.",
+   "topic_src": "Housing",
+   "cau": [
+    "I remember a problem I had at home last month.",
+    "The water pipe suddenly broke on the weekend, and we had no backup water.",
+    "Because of that, we couldn't cook, take a shower, wash our face, or even brush our teeth.",
+    "We had to order fast food from outside instead.",
+    "The pipe wasn't fixed until the next day, and it was such an inconvenient experience.",
+    "Since then, I've prepared a backup water source to avoid the same problem in the future."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 38,
+   "en": "What do people do on the internet? Do they play games, watch television or watch movies? Talk about all the things people do online?",
+   "topic_src": "Internet",
+   "cau": [
+    "People do so many things on the internet these days.",
+    "They can send emails or check messages.",
+    "They post and share photos and information on social media such as Facebook or Twitter.",
+    "They also play online games, listen to music, or watch movies and video clips.",
+    "Additionally, they can do online shopping or even online banking.",
+    "With so many options available, the internet has become an essential part of daily life."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 39,
+   "en": "What do you usually do on the internet? Do you like to shop online? Do you like sharing videos with other people? Tell me about everything that you do online?",
+   "topic_src": "Internet",
+   "cau": [
+    "I do many things on the internet every day.",
+    "At work, I send emails and check messages.",
+    "Sometimes, I use Google search to get information or data for my job.",
+    "When I have free time, I usually surf the internet on my cell phone.",
+    "I read online articles or check Facebook and Twitter.",
+    "I also listen to music and watch videos or movies on some apps like Netflix or YouTube.",
+    "Sometimes I do online shopping.",
+    "I usually buy toys for my children or some electronic equipment.",
+    "So, these are the things I do on the internet every day."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 40,
+   "en": "Tell me about our early experience of surfing the internet. What do you remember particularly about that experience?",
+   "topic_src": "Internet",
+   "cau": [
+    "In my experience, the internet now is very different from before.",
+    "Back in the day, the internet connection was very slow.",
+    "It took a long time to do anything online.",
+    "When I logged into my email or opened a web page, I had to wait a lot—it was too slow.",
+    "At that time, using a computer was the only way to access the internet.",
+    "But now, the internet speed has improved so much.",
+    "When I load a web page or do something online, it responds almost immediately.",
+    "Also, there are many ways to access the internet now.",
+    "You can use a computer, or just a cell phone, and surf the internet wherever you want.",
+    "That's really great!"
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 41,
+   "en": "What do you like most about your phone? Maybe you like the camera or maybe you like certain applications. Tell me why you like those features and why?",
+   "topic_src": "Phones",
+   "cau": [
+    "The thing I like most is that I can access the internet with my phone.",
+    "When I have internet on my phone, I can do so many things.",
+    "I can read online magazines, check Facebook, Twitter, or other social networks.",
+    "I can also play online games, listen to music, and watch videos or movies.",
+    "Plus, I can do online banking or shopping easily with my phone.",
+    "So, there are tons of things I can do, and that's what I like the most."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 42,
+   "en": "Tell me about the first phone you used? How was it different from the phone you use now?",
+   "topic_src": "Phones",
+   "cau": [
+    "My first cell phone was a simple phone.",
+    "I can only used it to send messages and make phone calls.",
+    "The size of the phone was also very small.",
+    "But nowadays, phones have changed a lot.",
+    "They are called smartphones.",
+    "The size is much bigger, and they have high-quality cameras to take photos and videos.",
+    "Smartphones are like small computers with operating systems.",
+    "There are many apps, and we can also access the internet anytime.",
+    "So, cell phones have changed a lot from the past, and they have made a big difference in our modern life."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 43,
+   "en": "Tell me about a time when you had trouble while using your phone. What was the problem and how did you deal with it?.",
+   "topic_src": "Phones",
+   "cau": [
+    "Currently, I'm using a smartphone that I bought a long time ago, so the battery is not good anymore.",
+    "But I don't have enough money to buy a new phone or replace the battery.",
+    "It's very inconvenient because sometimes I can not use my phone when it runs out of battery.",
+    "To deal with this, I always carry a power bank.",
+    "When my phone is low on battery, I charge it right away.",
+    "It's just a temporary solution, but it's necessary for me at this time."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 48,
+   "en": "You indicated in survey that you exchange text messages with friends. What kinds of text messages do you send? What are they about?.",
+   "topic_src": "Text message",
+   "cau": [
+    "I usually keep in touch with my friends by exchanging text messages through an app called Facebook Messenger.",
+    "I talk about all kinds of things with my friends on that app.",
+    "First, we ask how each other is doing and do some catching up.",
+    "I also share pictures, video clips, and links with them.",
+    "We often talk about our work, our families, and our children.",
+    "Sometimes, we talk about trips or plans we want to go on.",
+    "So basically, there are tons of things I talk about with my friends through Facebook Messenger."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 49,
+   "en": "Tell me when and where you send text messages most offten. Plus, who do you exchange text messages with?",
+   "topic_src": "Text message",
+   "cau": [
+    "I usually chat with my friends in the evening, after I finish all my daily work.",
+    "But sometimes, I also send text messages to my colleagues or customers while I'm working at the company.",
+    "I even send and reply to messages when I'm on the bus or in the car, using my cell phone.",
+    "So, that's when and where I usually send text messages."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 50,
+   "en": "Tell me about a memorable text message you got in the past. Who was it from and what was it about? What made that text message more memorable than others?",
+   "topic_src": "Text message",
+   "cau": [
+    "I remember my last birthday.",
+    "I received a lot of birthday messages.",
+    "Many of my friends sent me congratulations and best wishes.",
+    "Some of them even sent me gift vouchers as presents and said nice things to me.",
+    "I was really surprised to get so many happy messages because I didn't expect that so many people would remember my birthday.",
+    "I was very happy, and I replied to each message one by one to thank them."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 51,
+   "en": "We sometimes have problems while sending text messages. Tell me about a time when you had trouble sending a text message. Start by giving me some background and then explain what you did to deal with the situation.",
+   "topic_src": "Text message",
+   "cau": [
+    "I think I am a careful person, but sometimes I still make mistakes when sending text messages.",
+    "I remember having trouble recently when I sent a message to the wrong chat room.",
+    "It was a personal message with sensitive content, but I accidentally sent it to a work chat room.",
+    "I immediately recalled the message and apologized for my mistake.",
+    "Since then, I always double-check carefully before sending a message.",
+    "That was a really bad experience for me."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 44,
+   "en": "Tell me about the weather at where you live? What is the weather like in each season? Which seaon do you personally like?",
+   "topic_src": "Weather",
+   "cau": [
+    "Vietnam has four distinct seasons: spring, summer, autumn, and winter.",
+    "The weather is very nice in spring and autumn.",
+    "The temperature is cool, and it's good for outdoor activities.",
+    "On the other hand, summer is extremely hot.",
+    "Moreover, sometimes it suddenly rains heavily with dangerous thunder.",
+    "Winter is the complete opposite.",
+    "It's freezing cold and there is no rain.",
+    "Of course, I like spring and autumn the most, for the reasons I mentioned before."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 45,
+   "en": "How is the weather today at where you are? Is it cold, is it warm? Talk about today's weather in detail.",
+   "topic_src": "Weather",
+   "cau": [
+    "It is the middle of autumn today, but it's still very hot.",
+    "I can feel the high temperature even in the early morning.",
+    "The sky is clear, and I don't see any clouds.",
+    "According to the weather forecast, it will rain today, but I haven't seen any signs of rain so far.",
+    "I really hope the rain will come soon to make the weather cooler."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 45,
+   "en": "How is the weather today at where you are? Is it cold, is it warm? Talk about today's weather in detail.",
+   "topic_src": "Weather",
+   "cau": [
+    "It is the beginning of winter today, and the weather is getting colder.",
+    "I can feel the cool air, especially in the early morning and at night.",
+    "The sky is a bit cloudy, and the wind is stronger than before.",
+    "According to the weather forecast, it might rain soon, but I haven't seen any rain so far.",
+    "I hope the weather stays cool and comfortable, not too cold."
+   ],
+   "bien_the": 1
+  },
+  {
+   "bo": "B",
+   "so": 46,
+   "en": "How has the weather in your country changed over the years? What was the weather like when you were a child? How is it different from now?",
+   "topic_src": "Weather",
+   "cau": [
+    "Vietnam still has four distinct seasons now.",
+    "But spring and summer have become longer, while winter and autumn have become shorter.",
+    "Also, summer seems much hotter and it has a lot of rain.",
+    "When it rains heavily, many places get flooded.",
+    "Sometimes people die, and many houses and fields are damaged by the summer rain."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 47,
+   "en": "Server weather conditions can do a lot of damage. Tell me about an experience you had related to severe weather conditions. Perhaps a city was flooded or maybe businesses or schools were closed due to heavy rain, that was the problem. How did people deal with the situation?",
+   "topic_src": "Weather",
+   "cau": [
+    "I remember when a strong typhoon hit Vietnam last summer.",
+    "There were strong winds and heavy rain, and floods were everywhere.",
+    "Many people lost their lives, and many houses, cars, and fields were underwater.",
+    "It was a terrible situation, and it took a long time to recover from the damage."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 52,
+   "en": "You indicated in the survey that you like to go shopping.  Talk about stores or shopping centers in your country. What are they like? Describle them in detail.",
+   "topic_src": "Shopping",
+   "cau": [
+    "There are tons of stores in Vietnam.",
+    "They are everywhere these days, especially on crowded streets with heavy traffic.",
+    "One of the largest places to shop is outlet malls.",
+    "There are many types of stores in outlet malls.",
+    "You can buy food, clothes, furniture, electronic devices, and so on.",
+    "You can often get discounts or bargain for the price of the product you want to buy.",
+    "So, whether the store is small or large, there are plenty of stores in my country."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 53,
+   "en": "Where do you go and when do you go shopping for something? What do you buy when you go there?  What is special about that place?",
+   "topic_src": "Shopping",
+   "cau": [
+    "I go to various places to shop, such as outlet malls or department stores.",
+    "However, I prefer to shop online.",
+    "Nowadays, online shopping is very convenient in many ways.",
+    "It saves me time and energy when I buy the things I need.",
+    "When I want to buy food or clothes, I usually go to physical stores because I believe they should be checked directly before buying.",
+    "But for things like electronic tools, equipment, or books, I usually buy them online.",
+    "So, I go shopping whenever I need something, but overall, I prefer online shopping in person."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 54,
+   "en": "Think of your early memories of shopping. Was there a store you remember from you childhood? What did it look like and what were your impressions of that place?",
+   "topic_src": "Shopping",
+   "cau": [
+    "I remember there was a grocery store near my house when I was a kid.",
+    "Even though it was small, it had everything I needed.",
+    "The prices were also very cheap, and sometimes we could bargain to get a better deal.",
+    "I used to go there to buy candy, ice cream, or milk.",
+    "Sometimes I also bought toys or school supplies.",
+    "The shop owner was very friendly with customers.",
+    "That is one of my earliest memories of shopping."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 55,
+   "en": "What kinds of clothes do people in your country typically wear?  Do they wear different clothes for work or for play?",
+   "topic_src": "Fashion",
+   "cau": [
+    "Life is very modern now.",
+    "Fashion and style are everywhere and influence everyone.",
+    "Vietnamese people are the same — they are very stylish.",
+    "They like to follow the latest fashion trends and wear different clothes for each season.",
+    "Fashion and styles also change depending on the season.",
+    "Plus, people wear different types of clothes depending on where they are — at the office, going out with friends, or attending an event.",
+    "So, I can say that people in my country are very fashionable these days."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 56,
+   "en": "What kind of clothes do you like to wear personally? What kind of fashion style do you like? What are you wearing today?",
+   "topic_src": "Fashion",
+   "cau": [
+    "Today, I am wearing a black T-shirt and blue jeans.",
+    "This is also my usual style.",
+    "I like a simple and strong look.",
+    "I usually wear a T-shirt and jeans with sneakers.",
+    "Most of my clothes are white, blue, or black — very simple colors.",
+    "So, that's my style: simple and strong."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 57,
+   "en": "Fashion styles are always changing. Tell me about the kinds of clothes that were popular when you were younger. How are they different from what is popular now?",
+   "topic_src": "Fashion",
+   "cau": [
+    "Actually, when I was a kid, I didn't have enough clothes to wear.",
+    "I had to use old clothes from my brother and cousins.",
+    "Most of my friends were the same with me at that time.",
+    "So, fashion style when I was young was not very stylish.",
+    "But now, the quality of life has become much better.",
+    "There are many styles and fashion trends, and people always update themselves with the latest trends, following famous models.",
+    "I see people wearing beautiful and fashionable clothes everywhere.",
+    "So, fashion between the past and now is very different."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 58,
+   "en": "Tell me about the furniture you have in your home? Is there a piece of furniture that is your favorite?",
+   "topic_src": "Funiture",
+   "cau": [
+    "There are many types of furniture in my apartment.",
+    "In the living room, there is a television, a sofa, and a tea table.",
+    "In my bedroom, there is a bed, a wardrobe, and a study table with a bookshelf.",
+    "There is also a dressing table and some closets in my bedroom.",
+    "I think my favorite piece of furniture is the sofa.",
+    "I often talk and play with my family on the sofa.",
+    "Sometimes, I lie down and watch TV or have a snack there.",
+    "It is very convenient and comfortable."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 59,
+   "en": "Recycling is a common practive in many places Tell me about all the different kinds of items that you recycle",
+   "topic_src": "Recycling",
+   "cau": [
+    "I gather recyclables at home every day.",
+    "I put cans, bottles, plastic, paper, and glass into the recycling bin.",
+    "On average, I take them out once a week, usually on my way to work.",
+    "I think recycling is a good habit because it helps us reuse resources and protect the environment."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 60,
+   "en": "Tell me what recycling was like when you were a child. Was there a particular place to which you took out the recyclables? Describle what is was like and what you did in detail?",
+   "topic_src": "Recycling",
+   "cau": [
+    "When I was a child, I wasn't aware of the benefits of recycling, so I didn't usually do it.",
+    "I only gathered paper at school sometimes because my teacher asked me to.",
+    "But now I know recycling is a good habit, and I try to do it everywhere and whenever I can.",
+    "I recycle everything possible — likes cans, bottles, plastic, paper, glass, and even metals."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 64,
+   "en": "Many people try to eat healthy these days What kinds of food are healthy and why are they healthy for us?",
+   "topic_src": "Food",
+   "cau": [
+    "Nowadays, people understand food and health better than in the past, so they try to eat healthier.",
+    "First, they eat vegetables and fruits as often as they can, because these contain a lot of vitamins and fiber.",
+    "Next, they eat fish, meat, and beans, which are rich in protein.",
+    "Also, many people choose organic food whenever possible, since it is not grown with chemicals and so it is much healthier.",
+    "So, these are the types of food that are considered healthy."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 65,
+   "en": "Tell me how you found out about eating healthy. Did your family eat healthy when you were growing up? Describe to me in detail how you started to eat healthy?",
+   "topic_src": "Food",
+   "cau": [
+    "When I was a kid, my parents really cared about food and health.",
+    "They made me eat vegetables and fruits every day, and they also made me drink milk.",
+    "But when I grew older, I started choosing my own food.",
+    "Because I'm very busy on weekdays, I often eat fast food, even though I know it's not good for my health.",
+    "I think I should take care more about food that I eat to protect my health."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 66,
+   "en": "What is a popular dish in your country? What is special about the dish? Please describle that dish in detail?",
+   "topic_src": "Food",
+   "cau": [
+    "The most popular dish in Vietnam is Pho.",
+    "You can find it everywhere, from the North to the South, from inland to the islands.",
+    "Moreover, some Vietnamese people bring Pho when they go abroad, so now it is also well known in many countries around the world.",
+    "Pho is a type of noodle soup, usually made with beef broth and spices, topped with rice noodles and thinly sliced beef or chicken.",
+    "Some vegetables and onions are also added.",
+    "It has a very unique taste that you cannot find in any other dish.",
+    "When I travel, I always try Pho at that place to compare and find out where the best pho is.",
+    "And actually, I often eat Pho for breakfast."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 67,
+   "en": "Describe a healthy person you know? What makes that person healthy? Tell me everything about the thing that make that person healthier?",
+   "topic_src": "Health",
+   "cau": [
+    "My wife is a very healthy person.",
+    "She always makes time to work out or exercise whenever she can.",
+    "She goes to the gym twice a week, she usually goes swimming on weekends, and walks for about 30 minutes every morning.",
+    "Plus, she always eats healthy.",
+    "She says no to fast food or junk food.",
+    "She has a strong and beautiful body.",
+    "I really admire her and I try to follow her habits to become healthier."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 68,
+   "en": "Have you ever changed a habit or a certain lifestyle for your health? Maybe you started to work out or started to eat healthy. Tell me about that change you made?",
+   "topic_src": "Health",
+   "cau": [
+    "In the past, I was really lazy.",
+    "I ate too much and didn't exercise.",
+    "My body became very big and I was overweight.",
+    "I often got sick and had to go to the hospital more frequently.",
+    "At that point,",
+    "So I changed myself.",
+    "I cut down on the food I ate and did hard exercise every day.",
+    "Day by day, I felt the changes in my body.",
+    "I felt better inside, I lost some weight, and I got sick less often.",
+    "I will continue doing this to stay strong and healthy."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 69,
+   "en": "Talk a bout one thing that you did for your health in detail. That kind of impact did it have you your health? Give me all the details about the effect that had on your health",
+   "topic_src": "Health",
+   "cau": [
+    "I am a very busy person, so I don't have much time to take care of my health.",
+    "But I always spend 15 minutes every morning to do push-ups.",
+    "It's a short amount of exercise, but I think it has a big impact on my health.",
+    "After doing push-ups, I feel strong and full of energy for a long working day.",
+    "My body also gets a nice shape when I keep doing push-ups every day.",
+    "Push-ups are simple, but they have a big effect on my health."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 70,
+   "en": "I would like to know about restaurants in your country. What do typical restaurants look like? What kinds of food do they commonly offer?",
+   "topic_src": "Restaurant",
+   "cau": [
+    "There are many kinds of restaurants in my country, such as fast food restaurants, traditional restaurants, and BBQ restaurants.",
+    "But these days, BBQ restaurants are the most popular and trending.",
+    "I can find them easily almost everywhere.",
+    "They serve many kinds of meat such as pork, beef, chicken, duck, and lamb.",
+    "There are also many types of seafood like shrimp, crab, fish, octopus, and squid.",
+    "It is so great when eat grilled meat with sause.",
+    "Among them, seafood BBQ usually attracts the largest number of diners."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 71,
+   "en": "Tell me about a restaurant you ate out recently, What kind of restaurant was it? What was their menu and what did you eat?  Who did you go with ? Did you like how the food tasted?",
+   "topic_src": "Restaurant",
+   "cau": [
+    "I remember going to a seafood BBQ restaurant with my friend last week.",
+    "It's a well-known restaurant in my area.",
+    "The food is delicious, the price is cheap, and the service is also good.",
+    "There were many kinds of seafood, such as salmon, shrimp, crab, squid, and octopus.",
+    "We had to wait a lot of times because the restaurant is very crowded.",
+    "The meal was so tasty, .We enjoyed the food with some beer.",
+    "we were satisfied with this meals .",
+    "It was a great dinner."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 72,
+   "en": "Now, tell me about a restaurant you used to go to as a child. What was it like? What did you eat? Who did you go with? What do you remember most about that place? Tell me about that restaurant in as much detail as possible.",
+   "topic_src": "Restaurant",
+   "cau": [
+    "I remember there was a fast food restaurant near my house when I was a kid.",
+    "It was a small restaurant, but it always had a lot of diners.",
+    "I used to go there on weekends with my parents.",
+    "They served many types of dishes, such as pizza, hamburgers, and Korean noodles",
+    "I usually ordered my favorite seafood pizza and a bottle of Coca-Cola.",
+    "The pizza tasted amazing.",
+    "But now, that restaurant has moved to another place, and I don't know where it is.",
+    "I really miss it and the delicious food of that restaurant."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 73,
+   "en": "How do busy working people usually get their meals on weekdays? Do they order food or goto restaurants. What do they usually do?",
+   "topic_src": "Restaurant",
+   "cau": [
+    "People have become a lot busier than in the past.",
+    "Sometimes, they don't even have time to cook for themselves, so they eat out or order in much more often.",
+    "At the same time, people also care more about their health than before.",
+    "Even when they eat out, they think about eating healthy.",
+    "So, they tend to choose restaurants that offer healthy menus.",
+    "This has become a trend: people eat out more often, but they focus on healthier options."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 75,
+   "en": "Talk about gatherings or celebrations in your country? What do people do when they get together to celebrate things?",
+   "topic_src": "Gatherings",
+   "cau": [
+    "In my country, people often go to restaurants for gatherings or celebrations.",
+    "They enjoy food and drinks with their friends.",
+    "During the celebration, they eat, drink, cheer together, and often have wine or beer.",
+    "They talk loudly and sometimes even sing together.",
+    "They leave all their work behind and enjoy this moment.",
+    "It makes their relationship closer and more intimate."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 76,
+   "en": "What did you do at your last gathering or celebration? What was the occasion? Give me all the details?",
+   "topic_src": "Gatherings",
+   "cau": [
+    "A few weeks ago, I had a team-building event with my team members in my family's garden.",
+    "Some members went fishing, and some chased and caught chickens to prepare for lunch.",
+    "Since all of us are office workers, we were not good at cooking, so it was really hard for us to make a meal by ourselves.",
+    "However, we were good at teamwork and knew how to support each other well.",
+    "In the end, we had a delicious meal, and it turned into a meaningful day of gathering.",
+    "It was such a great occasion for our team."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 77,
+   "en": "Talk about a memorable incident that happened at a gathering or a celebration? Why was it memorable? What made it unforgettable?.",
+   "topic_src": "Gatherings",
+   "cau": [
+    "I remember going to my friend's house at last his birthday party.",
+    "We had dinner together and had some drinks.",
+    "However I drank too much and got drunk.",
+    "My stomach was upset and I had a light headache.",
+    "I felt like hang on the tree and I could not walk normally.",
+    "I still had hangover the next day.",
+    "It took me quite a long to sober up.",
+    "Since then, I should be more careful when I'm drinking."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 83,
+   "en": "Tell me about how people get around in your country, Do they drive their own cars or take trains. What are some typical means of trainsportation to get around?",
+   "topic_src": "Transportation",
+   "cau": [
+    "There are various types of transportation in my country.",
+    "Some people take public buses or trains to get around the city, while others use their private cars.",
+    "When traveling to a faraway place, people can take a train or an airplane, but those are not very popular in Vietnam.",
+    "The most popular vehicle is the motorbike.",
+    "Most Vietnamese people use it as their private vehicle to go to work or travel around.",
+    "Currently, it is the most suitable option considering the road conditions, traffic, and lifestyle in Vietnam."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 84,
+   "en": "What means of transportation do you use to get around? Do you drive or take public transportation?",
+   "topic_src": "Transportation",
+   "cau": [
+    "I have one car and one motorbike, but I usually ride my bike to work or get around.",
+    "My workplace is not far from my home, so I use my bike to save gasoline and also to protect the environment.",
+    "When I go to my hometown or need to travel somewhere far, I drive my car instead, because it is much safer for long-distance trips.",
+    "So most of the time, I ride my bike to get around."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 85,
+   "en": "How did you travel when you were a child? Were the type of transportation different back then? Describe for me how people used to get around in your city or town?",
+   "topic_src": "Transportation",
+   "cau": [
+    "When I was a kid, transportation was not as good as it is now.",
+    "There were only a few cars and buses, and they were usually very old and ran very slowly.",
+    "It was inconvenient for people when they wanted to travel far.",
+    "But now, there are so many vehicles.",
+    "I can see a lot of cars, buses, and motorbikes moving on the road.",
+    "The road and traffic infrastructure have also become much better than in the past.",
+    "It is very convenient and easy to get from place to place.",
+    "Even though there are sometimes traffic jams, they don't have too much impact on people nowadays."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 86,
+   "en": "tell me about banks in your country. What do the typically look like? Where are they usually located?",
+   "topic_src": "Banks",
+   "cau": [
+    "There are a lot of banks in Vietnam.",
+    "They can be government-owned, private, or foreign banks.",
+    "Most of them are located on crowded streets with heavy traffic.",
+    "There are usually ATMs outside where I can withdraw cash.",
+    "That's what banks in my country look like."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 87,
+   "en": "What do you do from the moment you walk into the bank until you walkout? Tell me everything about what goes on when you visit the bank?",
+   "topic_src": "Banks",
+   "cau": [
+    "When I go to the bank, I first take a number and wait for my turn.",
+    "When the bank teller calls my number, I go to the counter and take care of my business.",
+    "Most often, I check my balance and make a wire transfer.",
+    "Sometimes I exchange foreign currency, and sometimes I apply for a loan.",
+    "So these are the things I usually do when I go to the bank."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 88,
+   "en": "Banks have definitely changed over time. Tell me about a bank you remember from your childhood. What did the bank look like? How was it defferent from banks today?",
+   "topic_src": "Banks",
+   "cau": [
+    "In the past, I had to go to actual banks to do my banking.",
+    "But now, I can use mobile banking anytime I want.",
+    "Banking has become a lot easier than in the past.",
+    "It takes much less time and effort.",
+    "To do mobile banking, I just need to install the app and log in with my password and security code.",
+    "I most often make wire transfers through mobile banking.",
+    "So, I think mobile banking is one of the biggest changes."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 89,
+   "en": "Sometimes, problems can rise when you are at the bank. Tell me in detail about a problem you had that involved your bank. Maybe the bank was closed or perhaps the bank might have made some kind of problem. Tell me about how you solved that problem?",
+   "topic_src": "Banks",
+   "cau": [
+    "I remember going to the bank to get a loan urgently.",
+    "But there were so many people at the bank.",
+    "First, I pulled out a number, but there were more than ten people waiting before me.",
+    "I waited and waited, but it was still not my turn.",
+    "In the end, I had to leave and go to another bank.",
+    "Since then, I try to avoid busy hours at the bank to save time and not affect my work."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 93,
+   "en": "Where do people in your country go to in their free time? Do they go to beaches? Do they go to parks or any other places? What are some popular locations that people go in their free time?",
+   "topic_src": "Free time",
+   "cau": [
+    "In my country, people often gather or travel when they have free time.",
+    "When they gather, they usually go to a bar or a restaurant to eat and drink with their friends.",
+    "When they travel, they often go with family or friends to beautiful places like mountains, beaches, or parks.",
+    "Of course, some people just stay at home and take a rest in their free time.",
+    "So these are the common things people do in my country when they are free."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 94,
+   "en": "talk about your free time in the past. Did you have more free time or less free time back then? How was it different from your free time now?",
+   "topic_src": "Free time",
+   "cau": [
+    "I had much more free time in the past when I was a student.",
+    "At that time, I only went to school for half a day, so I had the rest of the day free.",
+    "I usually hung out with my friends or played online games.",
+    "Sometimes, I also studied by myself.",
+    "But now, after I graduated, got a job, especially when I got married with two children, I'm very busy.",
+    "I rarely have free time.",
+    "Usually, I only have a little free time at the end of the day when my kids are asleep.",
+    "At that time, I just use my phone to read some news or online articles before going to bed.",
+    "So my free time now is very different from when I was a student."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 95,
+   "en": "Tell me about the last time you had some free time  When was it? What did you do ? Who did you spend time with?",
+   "topic_src": "Free time",
+   "cau": [
+    "The last time I had free time was two weeks ago when I took my company's annual leave.",
+    "On the first day, I just stayed at home.",
+    "I listened to music, watched some movies, and enjoyed my meals.",
+    "On the next day, I took my child to the park, the zoo, and a children's play center.",
+    "The weather was so nice that my child enjoyed ourdoor activities",
+    "We felt very relaxed at that time.",
+    "Hopefully, I will have more free time in the future."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 96,
+   "en": "Tell me about some popular holiday in your country Where do people typically celebarte these holidays? What kinds of thing do they do to celebrate?",
+   "topic_src": "Holidays",
+   "cau": [
+    "There are three big holidays in Vietnam.",
+    "They are Lunar New Year's Day, Victory Day, and National Day.",
+    "On these days, people have time off from work and they do gathering together.",
+    "They visit their families in their hometowns, meet friends, neighbors, and cook special meals.",
+    "They also exchange lots of presents.",
+    "These holidays are important break times in the working year for people in my country."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 97,
+   "en": "Tell me about holiday memory from your childhood. Tell me where you were and what that place look like. Tell me everything that you remember from that holiday.",
+   "topic_src": "Holidays",
+   "cau": [
+    "I remember a memory from Lunar New Year's Day when I was a kid.",
+    "Like other children, I liked playing with fireworks during the holiday.",
+    "But one day, I had an accident — the firework exploded and burned my hand.",
+    "It was really painful, and I had to go to the hospital for surgery/ and bandage the wound.",
+    "Since that time, I never play with fireworks anymore.",
+    "It was a really bad experience."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 98,
+   "en": "Who do you live with? how do you divide up the housework amongst the people who live with you? Tell me about it in as much detailed as possible.",
+   "topic_src": "Household Chores",
+   "cau": [
+    "I live in an apartment with my family.",
+    "I have lived here for 5 years.",
+    "Actually, we did not divide the housework clearly, we just try to clean our apartment whenever we can.",
+    "On weekdays, we sweep the floor and clean the bathroom after taking a shower.",
+    "After meals, I wash the dishes and also take out the garbage and recycling.",
+    "On weekend, I do a laundry, I put the clothes in the washing machine, then hang them to dry on the rack.",
+    "When they are dry, I fold the clothes and put them in the dresser.",
+    "We also clean the kitchen on weekends, I clean the microwave, cabinets, and coffee machine.",
+    "So these are our routine work at home."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 99,
+   "en": "Can you tell me about the most memorable house chore you have had? When was it? Why did it so memorable?",
+   "topic_src": "Household Chores",
+   "cau": [
+    "I remember about cleaning my whole house last year.",
+    "My parents came to visit, so I had to make everything clean and nice.",
+    "It took me almost a whole day to finish!",
+    "I was so tired, but I felt proud when I saw how clean my house was.",
+    "That's why it was so memorable."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 100,
+   "en": "I also have my responsibilities at home. Please ask me three or four questions about my responsibilities?",
+   "topic_src": "Household Chores",
+   "cau": [
+    "Hi, I'd like to ask you a few questions about your responsibilities at home.",
+    "First, what kind of house chores do you usually do?",
+    "How often do you do them?",
+    "Do you share your responsibilities with your family members?",
+    "And which house chore do you like or dislike the most?",
+    "That's all I want to ask.",
+    "Thank you."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 101,
+   "en": "You are going to visit in New City next month. Call your friend in the city and ask three or four questions to help you plan and successful trip",
+   "topic_src": "Household Chores",
+   "cau": [
+    "Hi there!",
+    "This is Toan.",
+    "I'm going to visit your city next month, and I need some help planning my trip.",
+    "First, can you tell me some nice places to visit there?",
+    "Also, what's the best way to get around the city — by bus, subway, or taxi?",
+    "Do you know any good restaurants or local food I should try?",
+    "And one more thing, what's the weather like these days?",
+    "I want to pack the right clothes.",
+    "Thanks a lot!",
+    "Talk to you soon."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 102,
+   "en": "Please tell me about the difference between jogging and another kind of sports. For example let's say the the other sport is Yoga. How are they different from each other? Which one do you think better your exercise?",
+   "topic_src": "Jogging",
+   "cau": [
+    "Jogging and yoga are very different from each other.",
+    "Jogging is a kind of outdoor exercise.",
+    "It helps me build strong legs and burn calories.",
+    "I usually sweat a lot when I jog.",
+    "On the other hand, yoga focus on stretching and relaxing the body.",
+    "It helps with balance, flexibility, and peace of mind.",
+    "If my goal is to lose weight, jogging is more effective",
+    "But if I am looking to relax and reduce stress, yoga is a better choice.",
+    "Personally, I prefer jogging more because it gives me more energy for the day."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 103,
+   "en": "Tell me about one of the most memorable episodes you have had jogging. What happened? Why is that so memorable for you? Tell me the whole story of that episode",
+   "topic_src": "Jogging",
+   "cau": [
+    "I remember one time when I went jogging in the park near my house last year.",
+    "That morning, the weather was very nice and cool, so I decided to jog a few laps.",
+    "When I was jogging, I suddenly saw a little dog running after me.",
+    "At first, I was scared, but soon I realized it just wanted to play.",
+    "The dog followed me for almost one kilometer, and it made me laugh a lot.",
+    "Later, its owner came and thanked me for keeping the dog safe.",
+    "It was a small thing, but it made my day special.",
+    "That's why this jogging episode is so memorable for me."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 104,
+   "en": "Have you experience visiting the countryside? What did you feel when you went there? Did anything interested happen?",
+   "topic_src": "Travel",
+   "cau": [
+    "Yes, I have visited the countryside several times.",
+    "The last time was when I visited my grandparents' hometown last summer.",
+    "The air there was so fresh and clean, and the people were very friendly.",
+    "I felt really relaxed because there was no noise or traffic like in the city.",
+    "One interesting thing was that I helped my uncle catch fish in a small river.",
+    "It was my first time doing that, and it was so much fun.",
+    "That trip made me love the peaceful life in the countryside."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 105,
+   "en": "Please tell me about one of the memorable dishes you've tried while traveling? Where did you go and what kind of food did you try there",
+   "topic_src": "Travel",
+   "cau": [
+    "Yes, I remember one special dish I tried when I traveled to Da Nang last summer.",
+    "I tried Mi Quang, which is a famous noodle dish in that area.",
+    "It was made with yellow noodles, pork, shrimp, and a little bit of soup.",
+    "The flavor was so rich and tasty, and it was very different from the noodles in my hometown.",
+    "I really enjoyed it and even ate it again the next day before I went home.",
+    "That's why it became one of the most memorable dishes I've ever tried."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 106,
+   "en": "Can you tell me about the difference identification cards you have now? When do you usually use each card?",
+   "topic_src": "ID card",
+   "cau": [
+    "I have several identification cards now.",
+    "First, I have my ID card, which I use most often for daily identification or at government offices.",
+    "Next, I have my driver's license, which I use when I drive or rent a car.",
+    "I also have my company ID card, and I use it to enter my office building every day.",
+    "Sometimes, I also use my bank card to withdraw money or make payments.",
+    "So, I use each card in different situations depending on what I need to do."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 107,
+   "en": "Please tell me about the procedurer you went through to get an ID card? What did you do first and what you did you do next?",
+   "topic_src": "ID card",
+   "cau": [
+    "I got my ID card when I turned 18.",
+    "First, I went to the local government office with my family.",
+    "Then, I filled out an application form and gave them my personal information.",
+    "Next, they took my photo and my fingerprints.",
+    "After that, I paid a small fee and waited for about a week.",
+    "Finally, I came back to the office to get my new ID card.",
+    "It was quite simple and didn't take much time."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 108,
+   "en": "Please tell me about the first ID card you got? How did you feel when you got it? When do you usually use it?",
+   "topic_src": "ID card",
+   "cau": [
+    "The first ID card I got was when I was 18 years old.",
+    "I went to the local government office to make it.",
+    "When I received my first ID card, I felt very proud and excited because it made me feel like an adult.",
+    "Since then, I usually use it when I need to verify my identity, like opening a bank account, taking an exam, or buying a train ticket.",
+    "It's a very important card that I always carry with me."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 109,
+   "en": "What kind of things do the police officer normally do in your country? What are some of their responsibilities?",
+   "topic_src": "Police",
+   "cau": [
+    "In my country, police officers do many important things.",
+    "They keep people safe and protect public order.",
+    "They control traffic on the streets and help when there are accidents.",
+    "They also catch criminals and investigate crimes.",
+    "Sometimes they help people who get lost or need support.",
+    "Overall, police officers work very hard to keep our community safe and peaceful."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 110,
+   "en": "Please describe a typical police officer in You country? How are they dressed? what does the police car look like? Tell me about it in as much detail as possible.",
+   "topic_src": "Police",
+   "cau": [
+    "In my country, police officers are easy to recognize.",
+    "They usually wear a green or yellow uniform with a red badge on their shoulders.",
+    "They also wear a hat with same color, which looks very official.",
+    "Police cars in Vietnam are white with blue stripes and the word \"Police\" written on the side",
+    "They often have a red and blue light on top, and you can hear their siren when they go on duty.",
+    "You can see police officers on the street, directing traffic, checking vehicles, or helping keep order.",
+    "They always look serious and professional."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 111,
+   "en": "Do you have any experience or memories related to police? Maybe you had help from a police officer or you might have seen a police officer on TV or in films. Tell me what you remember about the police officer.",
+   "topic_src": "Police",
+   "cau": [
+    "Yes, I have a memory related to the police.",
+    "A few years ago, I lost my wallet on the street when I was coming home from work.",
+    "I went to the local police station to ask for help.",
+    "The police officer there was very kind.",
+    "He asked me some questions and helped me check the CCTV camera nearby.",
+    "Luckily, someone had found my wallet and gave it to the police.",
+    "I was so happy and thankful to that officer.",
+    "Since then, I have had a good impression of police officers in country."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 112,
+   "en": "I'd like to know about the educational system in your country. How long do people have to go to school to complete formal education? How many classes are there in schools",
+   "topic_src": "Education",
+   "cau": [
+    "In Vietnam, students start school at the age of six.",
+    "First, they go to primary school for five years, from grade 1 to grade 5.",
+    "Then they move to secondary school for four years, from grade 6 to grade 9.",
+    "After that, they go to high school for three years, from grade 10 to grade 12.",
+    "When they finish high school, they can take the national exam to enter university or college.",
+    "So, in total, people study around 12 years to complete formal education in Vietnam."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 113,
+   "en": "Tell me about English education in your country. How did you learn English as a second language? Please tell me about it in as much detail as possible.",
+   "topic_src": "Education",
+   "cau": [
+    "In Vietnam, students start learning English from primary school.",
+    "We study grammar, vocabulary, reading and writing in class.",
+    "Later, many students go to private English centers to practice speaking and listening.",
+    "I started learning English at school, but I improved more by watching English movies and listening to songs.",
+    "Now, I try to speak English every day to get better."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 114,
+   "en": "There might have been changes in public school education in your country. What are they? What do you think is the most important way to improve public education in your country?",
+   "topic_src": "Education",
+   "cau": [
+    "Yes, there have been many changes in public schools in Vietnam.",
+    "Now students use computers and the internet more for studying.",
+    "English and soft skills are also more important than before.",
+    "To improve public education, I think we should have more good teachers and modern facilities.",
+    "That will help students learn better and be more creative."
+   ]
+  },
+  {
+   "bo": "B",
+   "so": 115,
+   "en": "Introduce yourself",
+   "topic_src": "Education",
+   "cau": [
+    "Hello, my name is Toan, and I'm 33 years old.",
+    "I graduated from a technical university.",
+    "Now, I'm working for a large electronics company, I work in the software development department.",
+    "I'm a friendly and easy-going person.",
+    "In my free time, I like listening to music, watching movies, and doing light exercise like walking or stretching.",
+    "I live with my wife and two children.",
+    "We enjoy spending time together on weekends.",
+    "In the future, I want to improve my English and travel to other countries.",
+    "That's a little bit about myself.",
+    "Thank you!"
+   ]
+  }
+ ]
+}

@@ -10,34 +10,29 @@ Giao diện web cho khoá **Heuristic từ cơ bản đến chuyên sâu** và h
 
 ## Chạy thử
 
-### Cách 1 — mở thẳng (nhanh nhất)
-
-Nhấp đúp vào [`index.html`](index.html).
-
-Chạy được ngay vì toàn bộ 51 tài liệu đã được nhúng sẵn vào `assets/content.js`
-dưới dạng một biến JavaScript — trang **không dùng `fetch`**, nên không vướng
-chặn CORS của giao thức `file://`.
-
-### Cách 2 — qua máy chủ cục bộ (khuyến nghị)
+Nội dung **không còn nằm trong trang**: nó ở database (bảng `courses`, `course_docs`…),
+và trang hỏi API `/courses/heuristic-2/…` của chính FastAPI. Vì vậy mở trang qua backend:
 
 ```bash
-cd samsung/web
-python -m http.server 8777 --bind 127.0.0.1
-# mở http://127.0.0.1:8777
+cd backend/fastapi
+uvicorn src.main:app --port 6789          # rồi mở http://127.0.0.1:6789/webapp/courses/heuristic-course-2/
 ```
 
-Cách này cần thiết nếu bạn muốn các liên kết tới **tệp mã nguồn** (`solution.cpp`,
-`judge.cpp`…) mở đúng.
+Database chưa có khoá này thì nạp bundle (một lần):
 
-### Cách 3 — đưa lên mạng
+```bash
+cd backend/fastapi
+DB_URL=sqlite+aiosqlite:///data/dev.sqlite3 python tools/manage_courses.py init-db   # chỉ khi dùng SQLite cục bộ
+python tools/manage_courses.py import ../course-content/heuristic-2.json                   # thêm --yes nếu đích là MySQL thật
+```
 
-Toàn bộ thư mục là trang tĩnh, chép thẳng lên GitHub Pages / Netlify / Cloudflare
-Pages là chạy. Không cần cấu hình gì.
+Trang mở từ máy chủ tĩnh (`python -m http.server`) hay `file://` thì thêm
+`?api=http://127.0.0.1:6789` vào địa chỉ để trỏ tới API (chỉ nhận API ở máy cục bộ, xem `engine/README.md`). Muốn chạy **hoàn toàn offline**:
+`python tools/manage_courses.py export heuristic-2 --js -o webapp/courses/heuristic-course-2/assets/content.js`
+rồi thêm lại `<script src="assets/content.js">` trước `cau-hinh.js` — engine thấy
+`window.COURSE` thì dùng nó thay cho API.
 
-> ℹ️ Trang nạp `marked`, `KaTeX` và `highlight.js` từ **cdnjs**, nên lần đầu mở cần
-> có mạng. Sau đó trình duyệt sẽ lưu đệm.
-
----
+> ℹ️ Lần đầu mở cần mạng để nạp `marked`, `KaTeX`, `highlight.js` từ cdnjs.
 
 ## Tính năng
 
@@ -103,11 +98,8 @@ web/
 │   ├── app.css         ★ BẢN SAO của engine/app.css — đừng sửa ở đây
 │   ├── app.js          ★ BẢN SAO của engine/app.js  — đừng sửa ở đây
 │   ├── chu-de.css      RIÊNG — bảng màu (nhấn tím chàm #5b4bd6)
-│   ├── cau-hinh.js     RIÊNG — window.CAU_HINH (trang chủ, mô tả phần, gợi ý tìm)
-│   └── content.js      ★ TỰ SINH — 51 tài liệu nhúng sẵn (0,85 MB)
-├── build.py            sinh lại content.js từ các tệp .md
-├── check.py            mỏng — gọi ../../engine/kiem.py
-├── shot.py             mỏng — khai báo tuyến đường, gọi ../../engine/chup.py
+│   └── cau-hinh.js     RIÊNG — window.CAU_HINH (trang chủ, mô tả phần, gợi ý tìm) · khoaHoc = "heuristic-2" (slug trong database)
+├── check.py            mỏng — gọi ../engine/kiem_khoa_hoc.py (tĩnh + FastAPI thật + Chromium)
 └── _shots/             ảnh chụp (không đưa vào git)
 ```
 
@@ -115,36 +107,37 @@ web/
 
 ## Cập nhật nội dung
 
-Nội dung **không** được đọc trực tiếp từ các tệp `.md` lúc chạy — nó được nhúng sẵn.
-Sau khi sửa bất kỳ tệp markdown nào của khoá học hay ca nghiên cứu:
+Sửa trực tiếp trong database — không còn bước build cho trang:
 
-```bash
-cd samsung/web
-python build.py      # sinh lại assets/content.js
-python check.py      # kiểm tra liên kết và cú pháp
-```
+| Cách | Khi nào |
+|---|---|
+| Trang [Quản lý khoá học](../quan-ly-khoa-hoc/) | sửa bài, sắp xếp mục lục, xuất bản / ẩn, nạp / xuất bundle |
+| `python tools/manage_courses.py …` (trong `backend/fastapi`) | nạp bundle lớn (vượt 4,5 MB thân request của Vercel), sao lưu, script |
+| API `PUT /courses/heuristic-2/docs/{id}`, `PUT /courses/heuristic-2/structure` | tự động hoá |
+| `/admin` (sqladmin) | sửa nhanh một hàng |
 
-`build.py` cũng là nơi khai báo **thứ tự học** và cách nhóm bài. Thêm tài liệu mới
-thì thêm một dòng `L("đường/dẫn.md")` vào biến `TREE`.
+Mọi đường ghi đều tăng `version` của khoá, nên trình duyệt xác thực lại manifest
+(ETag) và chỉ mục tìm kiếm phía server được dựng lại — không có bản cache cũ.
+
+Bundle `backend/course-content/heuristic-2.json` là bản sao lưu dạng tệp (định dạng
+`content.json` cũ cộng khối `course`). Thư mục markdown nguồn **không có trong repo**;
+nếu có, `backend/course-content/heuristic-2/build.py <thu-muc-nguon>` sinh lại bundle.
 
 ### Kiểm thử
 
 ```bash
-python -m http.server 8777 --bind 127.0.0.1   # cửa sổ 1
-python shot.py                                 # cửa sổ 2
+python check.py --tinh    # tĩnh: index.html, bản sao engine, khoaHoc, bundle
+python check.py           # + FastAPI thật trên SQLite tạm, nạp bundle, mở bằng Chromium
+python check.py --anh     # như trên, chụp ảnh vào _shots/
 ```
 
-`shot.py` dùng Chromium có sẵn (từ bộ cài Playwright) — **không cài thêm thư viện nào**.
-Nó tải trang bằng trình duyệt thật, xác nhận JavaScript chạy xong và dựng đúng nội dung
-(công thức, tô màu mã, bảng, hộp chú ý, liên kết, tìm kiếm), rồi chụp ảnh vào `_shots/`.
-
----
+Tầng trình duyệt không dùng mock: nó dựng uvicorn với `DB_URL` trỏ vào một SQLite tạm,
+nạp bundle bằng `manage_courses.py`, rồi mở trang qua route `/webapp/…` của FastAPI
+(`API_PREFIX=/api/v1`). Logic dùng chung ở [`engine/kiem_khoa_hoc.py`](../engine/kiem_khoa_hoc.py).
 
 ## Vài ghi chú kỹ thuật
 
-**Vì sao nhúng nội dung thay vì `fetch`?** Để mở được bằng `file://`. Trình duyệt chặn
-`fetch` trên giao thức này, nhưng `<script src>` thì không. Đổi lại là mỗi lần sửa
-markdown phải chạy `build.py`.
+**Nội dung tải từ API thay vì nhúng sẵn.** Trước đây toàn bộ khoá nằm trong `assets/content.js` để mở được bằng `file://`. Cái giá là trang nào cũng tải cả khoá (8 MB với khoá AI) và lập chỉ mục tìm kiếm trên trình duyệt. Giờ trang chỉ tải manifest, từng bài khi mở, và hỏi server khi tìm. Chế độ offline vẫn còn qua `manage_courses.py export --js` (xem *Chạy thử*).
 
 **Công thức toán được rút ra trước khi dựng markdown.** Nếu để markdown xử lý trước,
 dấu `\\` trong môi trường `cases` của LaTeX sẽ bị nuốt thành `\`. Bộ dựng thay mỗi
@@ -162,24 +155,18 @@ cỡ chữ nhỏ: dấu thanh nằm trên/dưới chữ cái nên biến mất �
 
 ---
 
-## Hai định dạng nội dung
+## Nội dung nằm ở đâu
 
-`build.py` sinh **hai** file từ cùng một dữ liệu, cả hai đều là **file sinh ra** —
-nguồn sự thật vẫn là các file `.md`:
-
-| File | Dùng để | Vì sao cần |
+| | Trước | Bây giờ |
 |---|---|---|
-| `assets/content.js` | **runtime** — trang web đọc | Mở bằng `file://` thì **không `fetch()` được** `.json`, nên nội dung phải đến bằng một thẻ `<script>`. Minify một dòng cho nhẹ. |
-| `assets/content.json` | **công cụ** — đọc, diff, xử lý | Định dạng đẹp, thụt lề 2, khoá giữ nguyên thứ tự. Đổi một câu trong bài giảng thì diff chỉ hiện đúng dòng đó. **Trang web không dùng file này.** |
+| Nội dung | `assets/content.js` + `content.json` nhúng trong trang (1,4 MB) | database: `courses` / `course_sections` / `course_groups` / `course_docs` |
+| Trang tải khi mở | toàn bộ khoá | **manifest**: mục lục + siêu dữ liệu, không markdown (≈ 6 KB gzip) |
+| Mở một bài | đã có sẵn | `GET /courses/heuristic-2/docs/{id}` — một bài, có ETag |
+| Tìm kiếm | lập chỉ mục cả khoá trên trình duyệt | `GET /courses/heuristic-2/search?q=` — xếp hạng phía server, cùng quy tắc |
+| Bundle tệp | sinh bởi `build.py` trong thư mục này | `backend/course-content/heuristic-2.json` — ngoài Root Directory của Vercel |
 
-```bash
-python build.py          # sinh cả hai, luôn khớp nhau
-```
-
-> ⚠️ **Đừng sửa `content.json` để cập nhật nội dung** — lần `build.py` sau sẽ ghi đè.
-> Sửa file `.md` tương ứng rồi chạy lại `build.py`.
-
----
+Tiến độ, ghi chú, đánh dấu sao vẫn trong `localStorage` (khoá theo `id` bài — không
+đổi khi chuyển sang database, nên tiến độ cũ của người học được giữ nguyên).
 
 ## Phụ lục trực quan
 

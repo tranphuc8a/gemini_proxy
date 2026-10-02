@@ -10,24 +10,29 @@ Giao diện web cho khoá [`system-design/khoa-hoc`](../khoa-hoc/README.md) —
 
 ## Chạy thử
 
-**Nhanh nhất:** nhấp đúp [`index.html`](index.html). Chạy được ngay vì toàn bộ 80 tài
-liệu đã nhúng sẵn vào `assets/content.js` — trang **không dùng `fetch`** nên không vướng
-chặn CORS của giao thức `file://`.
-
-**Khuyến nghị** (để liên kết tới tệp khác trong kho mở đúng):
+Nội dung **không còn nằm trong trang**: nó ở database (bảng `courses`, `course_docs`…),
+và trang hỏi API `/courses/system-design/…` của chính FastAPI. Vì vậy mở trang qua backend:
 
 ```bash
-cd system-design/web
-python -m http.server 8788 --bind 127.0.0.1
-# mở http://127.0.0.1:8788
+cd backend/fastapi
+uvicorn src.main:app --port 6789          # rồi mở http://127.0.0.1:6789/webapp/courses/system-design-course/
 ```
 
-**Đưa lên mạng:** chép cả thư mục lên GitHub Pages / Netlify / Cloudflare Pages.
-Không cần cấu hình.
+Database chưa có khoá này thì nạp bundle (một lần):
+
+```bash
+cd backend/fastapi
+DB_URL=sqlite+aiosqlite:///data/dev.sqlite3 python tools/manage_courses.py init-db   # chỉ khi dùng SQLite cục bộ
+python tools/manage_courses.py import ../course-content/system-design.json                   # thêm --yes nếu đích là MySQL thật
+```
+
+Trang mở từ máy chủ tĩnh (`python -m http.server`) hay `file://` thì thêm
+`?api=http://127.0.0.1:6789` vào địa chỉ để trỏ tới API (chỉ nhận API ở máy cục bộ, xem `engine/README.md`). Muốn chạy **hoàn toàn offline**:
+`python tools/manage_courses.py export system-design --js -o webapp/courses/system-design-course/assets/content.js`
+rồi thêm lại `<script src="assets/content.js">` trước `cau-hinh.js` — engine thấy
+`window.COURSE` thì dùng nó thay cho API.
 
 > ℹ️ Lần đầu mở cần mạng để nạp `marked`, `KaTeX`, `highlight.js` từ cdnjs.
-
----
 
 ## Tính năng
 
@@ -60,39 +65,41 @@ web/
 │   ├── app.css         ★ BẢN SAO của engine/app.css — đừng sửa ở đây
 │   ├── app.js          ★ BẢN SAO của engine/app.js  — đừng sửa ở đây
 │   ├── chu-de.css      RIÊNG — bảng màu (nhấn xanh mòng két #0e7490)
-│   ├── cau-hinh.js     RIÊNG — window.CAU_HINH (trang chủ, mô tả nhóm, gợi ý tìm)
-│   └── content.js      ★ TỰ SINH — 80 tài liệu nhúng sẵn (0,79 MB)
-├── build.py            sinh lại content.js; CŨNG LÀ NƠI KHAI BÁO THỨ TỰ HỌC
-├── check.py            mỏng — gọi ../../engine/kiem.py
-└── shot.py             mỏng — khai báo tuyến đường, gọi ../../engine/chup.py
+│   └── cau-hinh.js     RIÊNG — window.CAU_HINH (trang chủ, mô tả nhóm, gợi ý tìm) · khoaHoc = "system-design" (slug trong database)
+└── check.py            mỏng — gọi ../engine/kiem_khoa_hoc.py (tĩnh + FastAPI thật + Chromium)
 ```
 
 ---
 
 ## Cập nhật nội dung
 
-Trang **không** đọc trực tiếp tệp `.md` lúc chạy. Sau khi sửa bất kỳ bài nào:
+Sửa trực tiếp trong database — không còn bước build cho trang:
 
-```bash
-cd system-design/web
-python build.py      # sinh lại assets/content.js
-python check.py      # kiểm liên kết và cú pháp
-```
+| Cách | Khi nào |
+|---|---|
+| Trang [Quản lý khoá học](../quan-ly-khoa-hoc/) | sửa bài, sắp xếp mục lục, xuất bản / ẩn, nạp / xuất bundle |
+| `python tools/manage_courses.py …` (trong `backend/fastapi`) | nạp bundle lớn (vượt 4,5 MB thân request của Vercel), sao lưu, script |
+| API `PUT /courses/system-design/docs/{id}`, `PUT /courses/system-design/structure` | tự động hoá |
+| `/admin` (sqladmin) | sửa nhanh một hàng |
 
-Thêm bài mới → thêm tên tệp vào biến `TREE` trong `build.py`.
+Mọi đường ghi đều tăng `version` của khoá, nên trình duyệt xác thực lại manifest
+(ETag) và chỉ mục tìm kiếm phía server được dựng lại — không có bản cache cũ.
+
+Bundle `backend/course-content/system-design.json` là bản sao lưu dạng tệp (định dạng
+`content.json` cũ cộng khối `course`). Thư mục markdown nguồn **không có trong repo**;
+nếu có, `backend/course-content/system-design/build.py <thu-muc-nguon>` sinh lại bundle.
 
 ### Kiểm thử
 
 ```bash
-python -m http.server 8788 --bind 127.0.0.1   # cửa sổ 1
-python shot.py                                 # cửa sổ 2
+python check.py --tinh    # tĩnh: index.html, bản sao engine, khoaHoc, bundle
+python check.py           # + FastAPI thật trên SQLite tạm, nạp bundle, mở bằng Chromium
+python check.py --anh     # như trên, chụp ảnh vào _shots/
 ```
 
-`shot.py` dùng Chromium có sẵn (từ bộ cài Playwright) — **không cài thêm thư viện nào**.
-Nó nạp trang bằng trình duyệt thật, xác nhận JavaScript chạy xong và dựng đúng nội dung,
-rồi chụp ảnh vào `_shots/`.
-
----
+Tầng trình duyệt không dùng mock: nó dựng uvicorn với `DB_URL` trỏ vào một SQLite tạm,
+nạp bundle bằng `manage_courses.py`, rồi mở trang qua route `/webapp/…` của FastAPI
+(`API_PREFIX=/api/v1`). Logic dùng chung ở [`engine/kiem_khoa_hoc.py`](../engine/kiem_khoa_hoc.py).
 
 ## Quan hệ với trang [`samsung/web`](../../samsung/web/README.md)
 
@@ -113,8 +120,7 @@ Hai trang dùng **cùng một engine** (`app.js`, `app.css`), khác nhau ở:
 
 ## Ghi chú kỹ thuật
 
-**Nội dung nhúng sẵn thay vì `fetch`** để mở được bằng `file://` — trình duyệt chặn
-`fetch` trên giao thức này nhưng không chặn `<script src>`.
+**Nội dung tải từ API thay vì nhúng sẵn.** Trước đây toàn bộ khoá nằm trong `assets/content.js` để mở được bằng `file://`. Cái giá là trang nào cũng tải cả khoá (8 MB với khoá AI) và lập chỉ mục tìm kiếm trên trình duyệt. Giờ trang chỉ tải manifest, từng bài khi mở, và hỏi server khi tìm. Chế độ offline vẫn còn qua `manage_courses.py export --js` (xem *Chạy thử*).
 
 **Công thức toán được rút ra trước khi dựng markdown**, thay bằng thẻ giữ chỗ `<span>`
 (không phải `<div>`) để công thức khối vẫn đặt được bên trong khối trích dẫn và ô bảng.
@@ -130,24 +136,18 @@ chữ cái nên biến mất ở 10–11 px.
 
 ---
 
-## Hai định dạng nội dung
+## Nội dung nằm ở đâu
 
-`build.py` sinh **hai** file từ cùng một dữ liệu, cả hai đều là **file sinh ra** —
-nguồn sự thật vẫn là các file `.md`:
-
-| File | Dùng để | Vì sao cần |
+| | Trước | Bây giờ |
 |---|---|---|
-| `assets/content.js` | **runtime** — trang web đọc | Mở bằng `file://` thì **không `fetch()` được** `.json`, nên nội dung phải đến bằng một thẻ `<script>`. Minify một dòng cho nhẹ. |
-| `assets/content.json` | **công cụ** — đọc, diff, xử lý | Định dạng đẹp, thụt lề 2, khoá giữ nguyên thứ tự. Đổi một câu trong bài giảng thì diff chỉ hiện đúng dòng đó. **Trang web không dùng file này.** |
+| Nội dung | `assets/content.js` + `content.json` nhúng trong trang (0,8 MB) | database: `courses` / `course_sections` / `course_groups` / `course_docs` |
+| Trang tải khi mở | toàn bộ khoá | **manifest**: mục lục + siêu dữ liệu, không markdown (≈ 7 KB gzip) |
+| Mở một bài | đã có sẵn | `GET /courses/system-design/docs/{id}` — một bài, có ETag |
+| Tìm kiếm | lập chỉ mục cả khoá trên trình duyệt | `GET /courses/system-design/search?q=` — xếp hạng phía server, cùng quy tắc |
+| Bundle tệp | sinh bởi `build.py` trong thư mục này | `backend/course-content/system-design.json` — ngoài Root Directory của Vercel |
 
-```bash
-python build.py          # sinh cả hai, luôn khớp nhau
-```
-
-> ⚠️ **Đừng sửa `content.json` để cập nhật nội dung** — lần `build.py` sau sẽ ghi đè.
-> Sửa file `.md` tương ứng rồi chạy lại `build.py`.
-
----
+Tiến độ, ghi chú, đánh dấu sao vẫn trong `localStorage` (khoá theo `id` bài — không
+đổi khi chuyển sang database, nên tiến độ cũ của người học được giữ nguyên).
 
 ## Phụ lục trực quan
 

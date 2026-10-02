@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quản lý khoá học</title>
+<meta name="description" content="Quản lý nội dung khoá học trong database: tạo, nạp, xuất, xuất bản, sửa mục lục và bài giảng.">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b5bdb'/%3E%3Cg stroke='%23fff' stroke-width='2.2' fill='none' stroke-linecap='round'%3E%3Cpath d='M9 10h14M9 16h14M9 22h9'/%3E%3C/g%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">QL</span>
+    <span class="brand-txt"><b>Quản lý khoá học</b><i id="apiInfo">…</i></span>
+  </div>
+  <div class="hdr-right">
+    <span class="sess" id="sessInfo"></span>
+    <button class="btn sm" id="btnLock" hidden>Khoá lại</button>
+  </div>
+</header>
+
+<!-- Đăng nhập: khoá quản trị đổi lấy token phiên; trình duyệt KHÔNG giữ khoá -->
+<section class="login" id="login" hidden>
+  <div class="card">
+    <h1>Mở khoá quản trị</h1>
+    <p class="muted">Nhập <code>COURSE_ADMIN_KEY</code> của backend. Khoá được đổi lấy một token phiên có hạn;
+      trình duyệt chỉ giữ token, không giữ khoá. Xem nội dung công khai thì không cần đăng nhập.</p>
+    <form id="frmLogin" class="row">
+      <input type="password" id="inpKey" placeholder="Khoá quản trị" autocomplete="current-password" required>
+      <button class="btn pri" type="submit">Mở khoá</button>
+    </form>
+    <p class="err" id="loginErr" hidden></p>
+  </div>
+</section>
+
+<div class="shell" id="app" hidden>
+  <aside class="side">
+    <div class="side-h">
+      <b>Khoá học</b>
+      <span class="sp"></span>
+      <button class="btn sm" id="btnReload" title="Tải lại danh sách">↻</button>
+    </div>
+    <div class="side-act">
+      <button class="btn sm pri" id="btnNew">＋ Khoá mới</button>
+      <label class="btn sm" for="inpImport">Nạp bundle JSON</label>
+      <input type="file" id="inpImport" accept="application/json,.json" hidden>
+    </div>
+    <ul class="clist" id="courseList"></ul>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js" integrity="sha384-QsSpx6a0USazT7nK7w8qXDgpSAPhFsb2XtpoLFQ5+X2yFN6hvCKnwEzN8M5FWaJb" crossorigin="anonymous"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

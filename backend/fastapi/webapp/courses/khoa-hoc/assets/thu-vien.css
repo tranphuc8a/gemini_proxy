@@ -1,0 +1,24 @@
+/* ==========================================================================
+   Thư viện khoá học — phần riêng của trang đọc chung. Nạp SAU app.css.
+   ========================================================================== */
+
+/* Biểu tượng của khoá lấy từ database là một ký tự (emoji), không phải SVG. */
+.brand-mark{font-size:17px;line-height:1}
+
+/* Danh mục (không có ?khoa=): chưa chọn khoá nên không có mục lục, tiến độ,
+   ô tìm kiếm hay nút "tất cả khoá học". */
+body.thu-vien .side,
+body.thu-vien .hdr-prog,
+body.thu-vien #btnSearch,
+body.thu-vien #btnMenu,
+body.thu-vien #lnkThuVien,
+body.thu-vien .readbar{display:none}
+
+.tv-em{font-size:17px;background:var(--surf2)}
+.tv-foot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.tv-tag{margin-left:auto;font-size:11px;line-height:1;padding:4px 8px;border-radius:999px;
+  border:1px solid var(--bd);color:var(--tx3);background:var(--bg)}
+.tv-tag.rieng{border-color:var(--acbd);color:var(--ac);background:var(--acbg)}
+.tv-tag.nhap{border-color:var(--wabd);color:var(--wa);background:var(--wabg)}
+.tv-trong{padding:28px;border:1px dashed var(--bd2);border-radius:14px;color:var(--tx2);
+  font-size:14.5px;line-height:1.6;background:var(--surf)}
