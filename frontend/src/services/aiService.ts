@@ -82,7 +82,7 @@ export class AiError extends Error {
 }
 
 /** Whether a page should offer an AI feature at all. */
-export const canOfferAi = (status: AiStatus | null | undefined): boolean =>
+export const canOffer = (status: AiStatus | null | undefined): boolean =>
   Boolean(status?.enabled && (status.allowed || status.needs === 'code'));
 
 /**

@@ -172,6 +172,14 @@ def test_a_question_is_required_and_an_answer_without_sql_is_refused(ai):
         _sql(uc)
 
 
+def test_a_script_too_long_to_classify_whole_is_refused(ai):
+    many = "; ".join(["SELECT 1"] * ai_query_usecase.STATEMENTS_MAX) + "; DELETE FROM `orders`"
+    uc, _, sql, _ = ai({"sql": many, "explanation": ""})
+    with pytest.raises(BadGatewayError):                  # never "read only" with an unclassified DELETE at the end
+        _sql(uc)
+    assert sql.explained == []
+
+
 def test_the_editor_query_is_sent_for_a_revision(ai):
     uc, model, _, _ = ai({"sql": "SELECT 1", "explanation": ""})
     _sql(uc, question="chỉ lấy 10 dòng", current="SELECT * FROM `orders`")

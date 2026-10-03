@@ -85,14 +85,42 @@ chạy đúng.
 - **Chưa mở được trên trình duyệt thật.** Môi trường phiên này chặn gọi mạng tới
   localhost. Phần logic đã test kỹ, nhưng **phần nhìn và tương tác thì chưa ai xem** —
   mở `http://localhost:6789/webapp/postman-lite-pro/` bấm thử một lượt trước khi tin.
-- **Không có test render component.** Vitest + Testing Library đã cài sẵn (kế thừa
-  package.json của sql-administrator) nhưng mới chỉ test `lib/` và store.
+- **Test render component mới có ít** (`src/test/app.test.tsx`: link chia sẻ, dán cURL, AI);
+  phần còn lại vẫn chỉ test `lib/` và store.
 - `prompt()` / `confirm()` gốc của trình duyệt vẫn còn ở vài chỗ trong `Sidebar.tsx` và
   `Dialogs.tsx` (đổi tên collection, xác nhận xóa). Nên thay bằng modal cho đồng bộ.
 - **Chưa có auto-sync định kỳ** — `autoSync` mới chỉ kéo về lúc mở app, đẩy lên vẫn phải
   bấm tay. Có ô cài đặt sẵn nếu muốn làm tiếp.
 - Import OpenAPI chỉ đọc JSON; file `.yaml` phải tự chuyển sang JSON trước.
 - Upload file qua proxy đi qua bộ nhớ hai lần (dựng multipart rồi base64) — chưa stream.
+
+## Đợt 2026-10-03: AI, chia sẻ, dán cURL
+
+- **`lib/ai.ts`** — client cổng `${base}/ai/...`, hợp đồng chung với các app khác (bản tham
+  chiếu: `webapp/courses/engine/ai-khach.js`). Header danh tính đọc từ localStorage theo
+  gốc API tuyệt đối: `qlkh.phien@<root>.token` → `X-Admin-Session`, `ai.phien@<root>`
+  `{token, het}` → `X-AI-Session` (hết hạn thì xoá). `canOffer(s)` sai thì **ẩn mọi nút AI**.
+  Base dùng chung `ensureApiBase()` của `api.ts`.
+- **`lib/aiHttp.ts`** — dựng payload `POST /ai/http` từ draft đã thay biến env + `prepare()`;
+  che header theo `SECRET_NAME` (util.ts), body response ≤ 100 000 ký tự, request ≤ 20 000,
+  nhị phân → `''` + ghi chú. Kết quả AI giữ trong store (`aiExplain`/`aiTests`, theo tab,
+  khớp `response.receivedAt`); script test **chỉ hiện để xem**, không bao giờ tự chạy.
+- **`lib/share.ts`** — link workspace `?share=&backend=` (đã sửa: trước đây thiếu backend và
+  không ai đọc `?share=`); `SharedWorkspaceDialog` nhập vào **một collection mới mang tên
+  workspace**, id mới hết. Link một request `#req=<base64url JSON v1>`, mặc định bỏ auth và
+  header/param/field trông như thông tin đăng nhập; cookie/extract không bao giờ vào link.
+- Dán `curl …` vào ô URL → `specPatchFromCurl` (giữ tests/extract của tab).
+- Test: `src/test/ai.test.ts`, `share.test.ts`, `app.test.tsx` (render App/panel thật, có
+  timeout 30 s vì jsdom chậm trên máy này).
+- Test script (gõ tay, import, hay từ `#req=`) đọc được env qua `pm.environment`, nên worker
+  **tự khoá** trước khi chạy script: `LOCKDOWN_SOURCE` (`testRunner.ts`) xoá `fetch`, XHR,
+  WebSocket(Stream), EventSource, WebTransport, `importScripts`, Worker, SharedWorker,
+  `caches`, FontFace/`fonts`, Notification, `indexedDB`, BroadcastChannel khỏi global và
+  mọi prototype; không xoá được thì đè `undefined` chỉ-đọc. Nhánh inline (không Worker,
+  chạy trên trang) cố ý **không** khoá. Link `#req=` có script vẫn hiện toast cảnh báo.
+- Còn hở: `import()` động là cú pháp, không gỡ được — trình duyệt nào cho phép trong
+  worker thì vẫn gửi được một request. Muốn bịt hẳn cần CSP `script-src` cho trang (worker
+  blob thừa hưởng CSP của trang; đừng siết `connect-src` vì chế độ Direct cần gọi mọi host).
 
 ## Ghi chú khác
 

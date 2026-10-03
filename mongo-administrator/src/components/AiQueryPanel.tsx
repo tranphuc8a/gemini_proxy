@@ -81,6 +81,8 @@ export function AiQueryPanel({ id, view, status, onStatus, onClose, onFindApplie
   const [code, setCode] = useState('')
   const [codeError, setCodeError] = useState<string | null>(null)
   const [unlocking, setUnlocking] = useState(false)
+  /** What the last "Áp dụng" / "Chạy" did, once the answer itself has made way for the results. */
+  const [notice, setNotice] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
 
   const questionRef = useRef<HTMLTextAreaElement>(null)
@@ -104,6 +106,7 @@ export function AiQueryPanel({ id, view, status, onStatus, onClose, onFindApplie
     request.current?.abort()
     setAnswer(null)
     setError(null)
+    setNotice(null)
   }, [namespace])
 
   // Closing the panel cancels a question still on its way.
@@ -122,6 +125,7 @@ export function AiQueryPanel({ id, view, status, onStatus, onClose, onFindApplie
     setBusy(true)
     setError(null)
     setAnswer(null)
+    setNotice(null)
     setAnnouncement('AI đang viết truy vấn…')
     try {
       const result = await askMongo(
@@ -198,6 +202,18 @@ export function AiQueryPanel({ id, view, status, onStatus, onClose, onFindApplie
     }
   }
 
+  /**
+   * The answer has been run: it gives its room back to the results (in the
+   * browser it would push the grid off screen), and focus goes to the
+   * question box, ready for the next instruction.
+   */
+  function executed(message: string) {
+    setAnswer(null)
+    setNotice(message)
+    setAnnouncement(message)
+    questionRef.current?.focus()
+  }
+
   async function apply(run: boolean) {
     if (!answer || !activeDb) return
     const target = applyTarget(answer, view)
@@ -213,16 +229,21 @@ export function AiQueryPanel({ id, view, status, onStatus, onClose, onFindApplie
       setSortText(texts.sortText)
       setLimit(texts.limit)
       onFindApplied?.(texts)
-      setAnnouncement('Đã áp dụng truy vấn và chạy Find.')
+      executed('Đã điền truy vấn vào thanh tìm kiếm và chạy Find.')
       await runFind({ skip: 0 })
       return
     }
 
     setPipelineText(pipelineText(answer))
-    setAnnouncement(run ? 'Đã đưa pipeline vào console và chạy.' : 'Đã đưa pipeline vào console.')
     if (view !== 'aggregate') {
+      // This panel goes with the document browser; the console takes over.
       await setTab('aggregate')
       focusPipelineEditor()
+    } else if (run) {
+      executed('Đã đưa pipeline vào console và chạy.')
+    } else {
+      setNotice('Đã đưa pipeline vào ô Pipeline ở trên.')
+      setAnnouncement('Đã đưa pipeline vào ô Pipeline ở trên.')
     }
     if (run) await runAggregate()
   }
@@ -351,6 +372,13 @@ export function AiQueryPanel({ id, view, status, onStatus, onClose, onFindApplie
             </button>
           ) : null}
         </div>
+      ) : null}
+
+      {/* Seen here, heard through the live region above: hidden from screen readers to be said once. */}
+      {notice ? (
+        <p className="ai-notice" aria-hidden="true">
+          {notice}
+        </p>
       ) : null}
 
       {answer && target ? (

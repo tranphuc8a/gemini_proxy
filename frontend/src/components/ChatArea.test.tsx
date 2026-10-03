@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatArea } from './ChatArea';
@@ -6,7 +6,10 @@ import { useChatStore } from '../store/chatStore';
 import { conversationService } from '../services/conversationService';
 import { geminiService } from '../services/geminiService';
 import type { StreamHandlers } from '../services/geminiService';
+import { aiService, type AiStatus } from '../services/aiService';
+import { MARKDOWN_EDITOR_INBOX_KEY } from '../utils/markdownExport';
 import { ERole, type ChatMessage } from '../types';
+import i18n from '../i18n';
 
 vi.mock('../services/conversationService', () => ({
   conversationService: {
@@ -19,6 +22,26 @@ vi.mock('../services/conversationService', () => ({
 vi.mock('../services/geminiService', () => ({
   geminiService: { queryStream: vi.fn() },
 }));
+
+// The gateway's status decides whether "Compare models" is offered at all.
+vi.mock('../services/aiService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../services/aiService')>();
+  return {
+    ...actual,
+    aiService: { ...actual.aiService, getStatus: vi.fn(), chat: vi.fn(), unlock: vi.fn() },
+  };
+});
+
+const AI_ALLOWED: AiStatus = {
+  enabled: true,
+  access: 'public',
+  allowed: true,
+  needs: null,
+  admin: false,
+  model: 'gemini-2.5-flash',
+  limits: { perMinute: 5, perDay: 100 },
+};
+const AI_ADMIN_ONLY: AiStatus = { ...AI_ALLOWED, access: 'admin', allowed: false, needs: 'admin' };
 
 vi.mock('mermaid', () => ({
   default: { initialize: vi.fn(), render: vi.fn().mockResolvedValue({ svg: '<svg />' }) },
@@ -64,6 +87,7 @@ beforeEach(() => {
     has_more: false,
   });
   vi.mocked(conversationService.get).mockResolvedValue(CONVERSATION);
+  vi.mocked(aiService.getStatus).mockResolvedValue(AI_ADMIN_ONLY);
   openConversation();
 });
 
@@ -244,7 +268,8 @@ describe('ChatArea', () => {
 
   it('disables export with nothing to export', () => {
     render(<ChatArea />);
-    expect(screen.getByRole('button', { name: /markdown/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /xuất markdown|export markdown/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /mở trong markdown editor|open in markdown editor/i })).toBeDisabled();
   });
 
   it('shows a timestamp next to each message', () => {
@@ -260,5 +285,88 @@ describe('ChatArea', () => {
     render(<ChatArea />);
 
     expect(screen.getByTestId('message-m1')).toHaveTextContent(/\d{1,2}:\d{2}/);
+  });
+
+  describe('compare models', () => {
+    const COMPARE = /so sánh model|compare models/i;
+
+    it('is not offered when the AI gateway is admin-only for this visitor', async () => {
+      render(<ChatArea />);
+
+      await waitFor(() => expect(aiService.getStatus).toHaveBeenCalled());
+      // Let the status arrive before checking that nothing appeared.
+      await act(async () => undefined);
+      expect(screen.queryByRole('button', { name: COMPARE })).not.toBeInTheDocument();
+    });
+
+    it('is offered when the gateway allows it, prefilled from the message box', async () => {
+      vi.mocked(aiService.getStatus).mockResolvedValue(AI_ALLOWED);
+      const user = userEvent.setup();
+      render(<ChatArea />);
+
+      await user.type(screen.getByRole('textbox'), 'Which model is faster?');
+      await user.click(await screen.findByRole('button', { name: COMPARE }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByRole('textbox', { name: /câu hỏi|prompt/i })).toHaveValue('Which model is faster?');
+    });
+  });
+
+  describe('Markdown Editor', () => {
+    const MESSAGES: ChatMessage[] = [
+      { id: 'm1', conversation_id: 'c1', role: ERole.USER, content: 'what is the plan?', created_at: 1_789_223_400 },
+      { id: 'm2', conversation_id: 'c1', role: ERole.MODEL, content: 'Step **one**.', created_at: 1_789_223_460 },
+    ];
+
+    const readInbox = () => JSON.parse(localStorage.getItem(MARKDOWN_EDITOR_INBOX_KEY) ?? 'null');
+
+    it('opens the whole conversation in the editor', async () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      openConversation(MESSAGES);
+      const user = userEvent.setup();
+      render(<ChatArea />);
+
+      await user.click(screen.getByRole('button', { name: /mở trong markdown editor|open in markdown editor/i }));
+
+      const inbox = readInbox();
+      expect(inbox).toMatchObject({ name: 'Planning.md', from: 'Gemini Chat', at: expect.any(Number) });
+      // The same document the download produces.
+      expect(inbox.content).toMatch(/^# Planning\n/);
+      expect(inbox.content).toContain('what is the plan?');
+      expect(inbox.content).toContain('Step **one**.');
+      expect(open).toHaveBeenCalledWith('/webapp/tranphuc8a/markdown-editor-pro/?import=1', '_blank', 'noopener');
+      open.mockRestore();
+    });
+
+    it('sends a single message to the editor', async () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      openConversation(MESSAGES);
+      const user = userEvent.setup();
+      render(<ChatArea />);
+
+      await user.click(
+        within(screen.getByTestId('message-m2')).getByRole('button', {
+          name: /gửi sang markdown editor|send to markdown editor/i,
+        })
+      );
+
+      expect(readInbox()).toMatchObject({ name: 'Planning-Gemini.md', content: 'Step **one**.', from: 'Gemini Chat' });
+      expect(open).toHaveBeenCalledTimes(1);
+      open.mockRestore();
+    });
+  });
+
+  it('puts a prompt from the library in the message box, below what is already there', async () => {
+    const user = userEvent.setup();
+    render(<ChatArea />);
+    const textarea = screen.getByRole('textbox');
+
+    await user.type(textarea, 'Some context');
+    await user.click(screen.getByRole('button', { name: /thư viện prompt|prompt library/i }));
+    await user.click(await screen.findByRole('button', { name: /^(dịch sang tiếng anh|translate to english)$/i }));
+
+    expect(textarea).toHaveValue(`Some context\n${i18n.t('prompts.templates.translateToEnglish.text')}`);
+    await waitFor(() => expect(textarea).toHaveFocus());
+    expect(geminiService.queryStream).not.toHaveBeenCalled();
   });
 });

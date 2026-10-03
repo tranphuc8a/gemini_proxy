@@ -128,3 +128,20 @@ Hiện `.env` của BE để `API_PREFIX=` rỗng → FE dùng `http://localhost
 3. **Cursor pagination trên khoá thay đổi**: sidebar sắp theo `COALESCE(updated_at, created_at)`, nếu có conversation được cập nhật *trong lúc* user đang bấm "Tải thêm" thì có thể nhảy/lặp 1 item. Đánh đổi có chủ đích để đổi lấy UX đúng.
 4. **`created_at` vẫn là giây**. Thứ tự đã đúng nhờ ID có tiền tố thời gian, nhưng nếu muốn timestamp chính xác đến ms thì cần migration `INT` → `BIGINT`.
 5. Warning còn lại của pytest là từ `starlette.testclient` (thư viện ngoài), không phải code dự án.
+
+## 8. Đợt 2026-10-03 — So sánh model, thư viện prompt, Markdown Editor, xem trước HTML
+
+Chỉ sửa `frontend/` (backend `/ai/*` đã có sẵn). `npm test` **176 test / 16 file** · lint, typecheck sạch ·
+`node scripts/build-webapps.mjs --only frontend` publish + audit OK.
+
+| Phần | File | Ghi chú |
+|---|---|---|
+| Client cổng AI | `services/aiService.ts` | Cùng hợp đồng với `ai-khach.js` của khoá học: header `X-Admin-Session` (`qlkh.phien@<root>.token`) + `X-AI-Session` (`ai.phien@<root>`, hết hạn thì xoá), root = base tuyệt đối không `/` cuối. `getStatus` cache promise (lỗi thì không cache), `canOffer`, `unlock(code)`, `chat()`. Lỗi envelope → `AiError(message, data.code, status)`; mất mạng → code `network` |
+| Trạng thái AI | `hooks/useAiStatus.ts` | Hỏi `/ai/status` 1 lần khi ChatArea mount; lỗi → `null` → ẩn nút |
+| So sánh 2 model | `components/CompareModelsModal.tsx`, `AiAccessCodeForm.tsx` | Nút header chỉ hiện khi `canOffer`. Bắn 2 request song song, mỗi cột tự loading/lỗi; trả lời render bằng `MarkdownRenderer` + "ms · token". `needs==='code'` hoặc lỗi `ai_code_required` → form mã. State giữ khi đóng modal |
+| Thư viện prompt | `components/PromptLibrary.tsx`, `store/promptStore.ts`, `utils/promptLibrary.ts` | Drawer, 17 mẫu / 6 nhóm (i18n `prompts.templates.*`), "Prompt của tôi" ở `localStorage['gemini-chat:prompts']` = mảng trần `{id,title,text,createdAt}`; tìm bỏ dấu. Chèn: ô rỗng → thay, có chữ → xuống dòng nối thêm; focus lại ô nhập **sau** khi Drawer trả focus về nút |
+| Markdown Editor | `utils/markdownExport.ts`, `ChatArea.tsx` | `buildConversationMarkdown` dùng chung cho Xuất & Mở trong Editor. Inbox `markdown-editor:inbox` = `{name,content,at,from:'Gemini Chat'}` → mở `<webappBase>/tranphuc8a/markdown-editor-pro/?import=1`. Từng tin nhắn có nút "Gửi sang Markdown Editor" |
+| Xem trước HTML | `components/MarkdownRenderer.tsx` | ```` ```html/htm/svg ```` có nút "Xem trước" → `<iframe sandbox="allow-scripts">` (không `allow-same-origin` → không đọc được token trong localStorage). Mermaid đã có `securityLevel: 'strict'` |
+| i18n | `i18n/en.ts`, `vi.ts`, `i18n/i18n.test.ts` | Test mới bắt 2 file phải cùng bộ khoá (bỏ qua hậu tố số nhiều) |
+
+**Lưu ý test (jsdom)**: jsdom 29 có `TransitionEvent` nên rc-motion chờ `transitionend` không bao giờ tới → icon "loading" của antd Button và hiệu ứng đóng Drawer không bao giờ kết thúc trong test. Đừng assert tên nút ngay sau khi hết loading; `afterOpenChange` của Drawer không chạy trong test.

@@ -32,7 +32,7 @@ import { useAppStore } from '../store/appStore';
 import { conversationService } from '../services/conversationService';
 import { geminiService } from '../services/geminiService';
 import { describeApiError } from '../services/apiClient';
-import { canOfferAi } from '../services/aiService';
+import { canOffer } from '../services/aiService';
 import { useAiStatus } from '../hooks/useAiStatus';
 import { EModel, ERole, type ChatMessage } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -661,7 +661,7 @@ export const ChatArea: React.FC = () => {
           />
           {/* Goes through the AI gateway, unlike the chat itself: offered only
               when the gateway would let this visitor in (or just wants a code). */}
-          {canOfferAi(aiStatus) && (
+          {canOffer(aiStatus) && (
             <Button icon={<SwapOutlined />} onClick={() => setCompareOpen(true)} aria-haspopup="dialog">
               {t('compare.open')}
             </Button>

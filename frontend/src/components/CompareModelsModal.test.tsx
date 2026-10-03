@@ -85,7 +85,13 @@ const Harness: FC<{
   );
 };
 
-const runButton = (dialog: HTMLElement) => within(dialog).getByRole('button', { name: /^(so sánh|compare)$/i });
+/**
+ * The Compare button. While busy antd prefixes its name with the spinner's
+ * "loading" — and in jsdom the spinner never finishes its exit transition, so
+ * the prefix can outlive the busy state.
+ */
+const runButton = (dialog: HTMLElement) =>
+  within(dialog).getByRole('button', { name: /^(loading\s*)?(so sánh|compare)$/i });
 
 /** Pick `label` in the model picker named `name`. */
 const pickModel = async (user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement, name: RegExp, label: string) => {
@@ -232,7 +238,12 @@ describe('CompareModelsModal', () => {
     await waitFor(() => expect(gateway.chatBodies()).toHaveLength(2));
     await gateway.release();
 
-    expect(await within(dialog).findByLabelText(/mã truy cập ai|ai access code/i)).toBeInTheDocument();
+    // Both columns report the refusal…
+    await waitFor(() =>
+      expect(within(dialog).getAllByText('Cần mã truy cập AI — nhập mã để dùng tính năng này')).toHaveLength(2)
+    );
+    // …and the code form is back, with Compare held until it is unlocked.
+    expect(within(dialog).getByLabelText(/mã truy cập ai|ai access code/i)).toBeInTheDocument();
     expect(runButton(dialog)).toBeDisabled();
   });
 });

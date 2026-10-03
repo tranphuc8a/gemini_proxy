@@ -4,10 +4,10 @@ import { buildCurl, curlToSpec, parseCurl, shellSplit } from '../lib/curl'
 import { generateCode } from '../lib/codegen'
 import { envTable, findUnresolvedInSpec, resolve, resolveSpec } from '../lib/env'
 import { readPath, runExtracts } from '../lib/extract'
-import { importAny, importOpenApi, importPostmanCollection } from '../lib/importers'
+import { exportPostmanCollection, importAny, importOpenApi, importPostmanCollection } from '../lib/importers'
 import { buildTree, collectionPaths } from '../lib/tree'
 import { diffLines } from '../lib/diff'
-import { runTestsInline } from '../lib/testRunner'
+import { LOCKDOWN_SOURCE, LOCKED_GLOBALS, SANDBOX_SOURCE, WORKER_SOURCE, runTestsInline } from '../lib/testRunner'
 import { base64ToBytes, bytesToBase64, decodeBytes, fuzzy, kv } from '../lib/util'
 import { blankRequest, isDescendant } from '../store'
 import type { Collection, RequestSpec, ResponseData } from '../types'
@@ -415,6 +415,134 @@ describe('test runner sandbox', () => {
 })
 
 // ---------------------------------------------------------------------------
+describe('worker lockdown', () => {
+  // jsdom has no Worker, so the lockdown is exercised directly, on scopes shaped
+  // like a worker global - never on the real page global.
+  const lockdown = new Function(`${LOCKDOWN_SOURCE}; return __lockdown;`)() as (scope: unknown) => void
+
+  /** Own members, then a WorkerGlobalScope.prototype-like layer, then EventTarget-like. */
+  const workerLike = () => {
+    const eventTargetProto: Record<string, unknown> = { addEventListener() {} }
+    const workerGlobalProto: Record<string, unknown> = Object.create(eventTargetProto)
+    const scope: Record<string, unknown> = Object.create(Object.create(workerGlobalProto))
+    for (const name of LOCKED_GLOBALS) {
+      scope[name] = () => 'own'
+      workerGlobalProto[name] = () => 'inherited'
+    }
+    // An accessor, the way `caches` and `indexedDB` are attributes.
+    Object.defineProperty(workerGlobalProto, 'caches', { get: () => ({ open() {} }), configurable: true })
+    scope.postMessage = () => {}
+    return { scope, workerGlobalProto }
+  }
+
+  it('removes every network and escape API from the scope and from its prototype chain', () => {
+    const { scope, workerGlobalProto } = workerLike()
+    lockdown(scope)
+    for (const name of LOCKED_GLOBALS) {
+      expect(scope[name], name).toBeUndefined()
+      expect(name in scope, name).toBe(false) // removed outright, not just shadowed
+      expect(Object.prototype.hasOwnProperty.call(workerGlobalProto, name), name).toBe(false)
+    }
+  })
+
+  it('leaves the rest of the scope alone, postMessage included', () => {
+    const { scope } = workerLike()
+    lockdown(scope)
+    expect(typeof scope.postMessage).toBe('function')
+    expect(typeof scope.addEventListener).toBe('function')
+  })
+
+  it('leaves undefined behind a member that cannot be deleted from the prototype', () => {
+    const proto = {}
+    Object.defineProperty(proto, 'fetch', { value: () => 'leak', writable: false, configurable: false })
+    Object.defineProperty(proto, 'WebSocket', { value: class {}, writable: true, configurable: false })
+    Object.defineProperty(proto, 'importScripts', { get: () => () => 'leak', configurable: false })
+    const scope = Object.create(proto) as Record<string, unknown>
+
+    lockdown(scope)
+
+    expect(scope.fetch).toBeUndefined()
+    expect(scope.WebSocket).toBeUndefined()
+    expect(scope.importScripts).toBeUndefined()
+    // And a script cannot put them back.
+    expect(() => {
+      scope.fetch = () => 'again'
+    }).toThrow(TypeError)
+    expect(() => Object.defineProperty(scope, 'importScripts', { value: () => 'again' })).toThrow(TypeError)
+  })
+
+  it('does not throw on a frozen or odd scope', () => {
+    const frozen = Object.freeze(
+      Object.create(Object.freeze({ fetch() {} }), { WebSocket: { value: class {}, enumerable: true } }),
+    )
+    const hostile = new Proxy(
+      {},
+      {
+        getPrototypeOf: () => {
+          throw new Error('getPrototypeOf')
+        },
+        get: () => {
+          throw new Error('get')
+        },
+        has: () => {
+          throw new Error('has')
+        },
+        deleteProperty: () => {
+          throw new Error('deleteProperty')
+        },
+        defineProperty: () => {
+          throw new Error('defineProperty')
+        },
+        getOwnPropertyDescriptor: () => {
+          throw new Error('getOwnPropertyDescriptor')
+        },
+      },
+    )
+    const endless: object = new Proxy({}, { getPrototypeOf: () => endless })
+
+    for (const scope of [frozen, hostile, endless, Object.create(null), null, undefined, 42, 'self']) {
+      expect(() => lockdown(scope)).not.toThrow()
+    }
+  })
+
+  it('is the first thing the worker does, and the worker still answers afterwards', () => {
+    expect(WORKER_SOURCE.indexOf('__lockdown(self);')).toBeGreaterThan(-1)
+    expect(WORKER_SOURCE.indexOf('__lockdown(self);')).toBeLessThan(WORKER_SOURCE.indexOf('self.onmessage'))
+
+    const posted: unknown[] = []
+    const workerGlobal: Record<string, unknown> = {
+      fetch: () => 'leak',
+      importScripts: () => 'leak',
+      postMessage: (message: unknown) => posted.push(message),
+    }
+    // The worker source, with `self` bound to the fake global.
+    new Function('self', WORKER_SOURCE)(workerGlobal)
+    expect(workerGlobal.fetch).toBeUndefined()
+    expect(workerGlobal.importScripts).toBeUndefined()
+
+    const ctx = { status: 200, statusText: 'OK', timeMs: 1, sizeBytes: 2, headers: [], bodyText: '{}', env: {} }
+    ;(workerGlobal.onmessage as (event: unknown) => void)({
+      data: { script: 'pm.test("ok", () => pm.response.to.have.status(200))', ctx },
+    })
+    expect(posted).toEqual([{ ok: true, outcome: { results: [{ name: 'ok', passed: true }], envSets: {}, logs: [] } }])
+  })
+
+  it('never runs on the page: the inline fallback keeps the page global intact', () => {
+    expect(SANDBOX_SOURCE).not.toContain('__lockdown')
+    runTestsInline('pm.test("ok", () => {})', {
+      status: 200,
+      statusText: 'OK',
+      timeMs: 1,
+      sizeBytes: 2,
+      headers: [],
+      bodyText: '{}',
+      env: {},
+    })
+    expect(typeof globalThis.fetch).toBe('function')
+  })
+})
+
+// ---------------------------------------------------------------------------
 describe('importers', () => {
   const postmanDoc = {
     info: { name: 'Demo', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
@@ -526,6 +654,71 @@ describe('importers', () => {
       },
     })
     expect(result.requests).toHaveLength(1)
+  })
+
+  it('imports Swagger 2: scheme, host and basePath become BASE_URL; body and formData params become bodies', () => {
+    const result = importOpenApi({
+      swagger: '2.0',
+      info: { title: 'Pet store' },
+      host: 'petstore.example.com',
+      basePath: '/v2',
+      schemes: ['https'],
+      paths: {
+        '/pet': {
+          post: {
+            summary: 'Add pet',
+            parameters: [{ in: 'body', name: 'body', schema: { type: 'object', properties: { name: { type: 'string' } } } }],
+          },
+        },
+        '/pet/{petId}/upload': {
+          post: {
+            summary: 'Upload',
+            parameters: [
+              { in: 'path', name: 'petId', type: 'integer' },
+              { in: 'formData', name: 'note', type: 'string' },
+            ],
+          },
+        },
+      },
+    })
+
+    expect(result.environments[0].vars[0].value).toBe('https://petstore.example.com/v2')
+    const add = result.requests.find((r) => r.name === 'Add pet')!
+    expect(add.bodyMode).toBe('json')
+    expect(JSON.parse(add.body)).toEqual({ name: 'string' })
+    const upload = result.requests.find((r) => r.name === 'Upload')!
+    expect(upload.url).toBe('{{BASE_URL}}/pet/{{petId}}/upload')
+    expect(upload.bodyMode).toBe('form')
+    expect(upload.formFields.map((f) => f.key)).toEqual(['note'])
+  })
+
+  it('exports Postman v2.1 that imports back into the same requests', () => {
+    const shop: Collection = { id: 'c', name: 'Shop', parentId: null }
+    const buy = spec({
+      name: 'Buy',
+      collectionId: 'c',
+      method: 'POST',
+      url: 'https://a.dev/buy',
+      headers: [kv('X-A', '1')],
+      bodyMode: 'json',
+      body: '{"q":1}',
+      tests: 'pm.test("ok", () => {})\npm.test("again", () => {})',
+    })
+
+    const back = importAny(JSON.stringify(exportPostmanCollection([shop], [buy])))
+
+    expect(back.collections.map((c) => c.name)).toEqual(['Postman Lite Pro', 'Shop'])
+    const [request] = back.requests
+    expect(request).toMatchObject({
+      name: 'Buy',
+      collectionId: back.collections[1].id,
+      method: 'POST',
+      url: 'https://a.dev/buy',
+      bodyMode: 'json',
+      body: '{"q":1}',
+      tests: buy.tests,
+    })
+    expect(request.headers.map((h) => [h.key, h.value])).toEqual([['X-A', '1']])
   })
 
   it('sniffs the format so the user does not have to say which it is', () => {

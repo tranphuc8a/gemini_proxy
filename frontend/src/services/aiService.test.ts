@@ -4,7 +4,7 @@ import {
   adminSessionKey,
   aiRoot,
   aiSessionKey,
-  canOfferAi,
+  canOffer,
   createAiClient,
   type AiStatus,
 } from './aiService';
@@ -257,17 +257,17 @@ describe('unlock', () => {
   });
 });
 
-describe('canOfferAi', () => {
+describe('canOffer', () => {
   it.each([
     ['allowed', { ...STATUS }, true],
     ['missing only the access code', { ...STATUS, allowed: false, needs: 'code' as const }, true],
     ['admin-only, for a guest', { ...STATUS, access: 'admin' as const, allowed: false, needs: 'admin' as const }, false],
     ['switched off', { ...STATUS, enabled: false }, false],
   ])('when %s', (_label, status, expected) => {
-    expect(canOfferAi(status)).toBe(expected);
+    expect(canOffer(status)).toBe(expected);
   });
 
   it('offers nothing before the status is known', () => {
-    expect(canOfferAi(null)).toBe(false);
+    expect(canOffer(null)).toBe(false);
   });
 });

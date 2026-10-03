@@ -674,6 +674,11 @@
   font-size: 13px;
 }
 
+/* antd hangs the character count below the box: leave it room */
+.compare-modal-body .ant-input-textarea-show-count {
+  margin-bottom: 18px;
+}
+
 .compare-controls {
   display: flex;
   flex-wrap: wrap;
