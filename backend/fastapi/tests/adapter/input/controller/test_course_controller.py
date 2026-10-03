@@ -192,6 +192,22 @@ def test_search_ignores_diacritics_and_ranks_titles_first(client):
     assert hits and hits[0]["id"] == "p1/bai-02.md"
 
 
+def test_search_across_every_published_course(client):
+    _import(client)
+    other = {**BUNDLE, "course": {**BUNDLE["course"], "slug": "khac", "title": "Khoá khác"}}
+    _import(client, other)
+    hidden = {**BUNDLE, "course": {**BUNDLE["course"], "slug": "nhap", "title": "Nháp", "published": False}}
+    _import(client, hidden)
+    body = client.get(f"{BASE}/search", params={"q": "gradient", "limit": 50}).json()
+    courses = {h["course"] for h in body["hits"]}
+    assert courses == {"demo", "khac"}, "both published courses, never the draft"
+    assert body["hits"][0]["id"] == "p1/bai-01.md" and body["hits"][0]["courseTitle"] in ("Khoá thử nghiệm", "Khoá khác")
+    scores = [h["score"] for h in body["hits"]]
+    assert scores == sorted(scores, reverse=True)
+    assert client.get(f"{BASE}/search", params={"q": " "}).json()["hits"] == []
+    assert len(client.get(f"{BASE}/search", params={"q": "gradient", "limit": 2}).json()["hits"]) == 2
+
+
 def test_search_snippets_keep_the_original_diacritics(client):
     _import(client)
     hit = client.get(f"{BASE}/demo/search", params={"q": "phan phoi"}).json()["hits"][0]

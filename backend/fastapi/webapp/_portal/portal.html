@@ -30,6 +30,8 @@
   </div>
 
   <div class="topbar-actions">
+    <button class="btn btn-ghost palette-open" id="openPalette" title="Tìm mọi thứ: ứng dụng, khoá học, bài học, lab — hoặc hỏi AI">
+      Tìm mọi thứ <kbd>Ctrl K</kbd></button>
     <button class="icon-btn" id="themeToggle" aria-label="Đổi giao diện sáng/tối" title="Sáng / tối">🌙</button>
   </div>
 </header>
@@ -111,6 +113,25 @@
   </section>
 </main>
 
+<!-- Ctrl+K: tìm mọi thứ (palette.js) -->
+<div class="palette-scrim" id="palette" hidden>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Tìm mọi thứ">
+    <div class="palette-input">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="paletteInput" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Ứng dụng, khoá học, bài học, lab… hoặc gõ một câu hỏi" aria-label="Tìm mọi thứ"
+             role="combobox" aria-controls="paletteList" aria-expanded="true">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="palette-list" id="paletteList" role="listbox"></div>
+    <div class="palette-answer" id="paletteAnswer" hidden aria-live="polite"></div>
+    <div class="palette-foot hint">↑ ↓ chọn · Enter mở · Esc đóng</div>
+  </div>
+</div>
+
 <script src="./portal.js"></script>
+<script src="../courses/engine/ai-khach.js"></script>   <!-- quyền dùng AI + token (nguồn thật của engine) -->
+<script src="./palette.js"></script>
 </body>
 </html>

@@ -8,6 +8,12 @@ from pydantic import BaseModel
 import mimetypes
 from src.application.config.config import settings
 
+# Pin types that must not depend on the host: a Windows registry can map .js to
+# text/plain, and browsers refuse to register a service worker (sw.js) served with
+# a non-JavaScript type; older Pythons don't know .webmanifest at all.
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+
 # Resolve the repository-level "webapp" folder by walking up from this file
 def _find_webapp_root() -> Path:
     here = Path(__file__).resolve()

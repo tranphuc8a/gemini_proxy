@@ -356,6 +356,8 @@ var TABS = [["info", "Thông tin"], ["tree", "Cấu trúc & bài"], ["files", "T
 function docURL() {
   var h = location.hash.replace(/^#\/?/, "");
   if (h === "~thung-rac") return { thungRac: true };
+  if (h === "~ai") return { ai: true };
+  if (h === "~soan-ai") return { soanAI: true };
   var p = h.split("/");
   return {
     slug: p[0] ? decodeURIComponent(p[0]) : null,
@@ -364,7 +366,7 @@ function docURL() {
   };
 }
 var datURL = QL.datURL = function () {
-  var h = S.view === "trash" ? "#/~thung-rac" :
+  var h = S.view === "trash" ? "#/~thung-rac" : S.view === "ai" ? "#/~ai" : S.view === "soan-ai" ? "#/~soan-ai" :
     S.slug ? "#/" + encodeURIComponent(S.slug) + "/" + S.tab +
       (S.tab === "tree" && S.doc && !S.doc._moi ? "/" + QL.maHoaId(S.doc.id) : "") : "#/";
   if (location.hash !== h) history.replaceState(null, "", h + "");
@@ -372,6 +374,8 @@ var datURL = QL.datURL = function () {
 window.addEventListener("hashchange", function () {
   var u = docURL();
   if (u.thungRac) { moThungRac(); return; }
+  if (u.ai) { moAI(); return; }
+  if (u.soanAI) { QL.moSoanAI(); return; }
   if (!u.slug) return;
   if (u.slug !== S.slug) { chonKhoa(u.slug, { tab: u.tab, doc: u.doc }); return; }
   if (u.tab && u.tab !== S.tab) { doiTab(u.tab); }
@@ -384,7 +388,7 @@ function taiDanhSach(chon, o) {
     S.courses = r.courses || [];
     veDanhSach();
     if (chon) return chonKhoa(chon, Object.assign({ epBuoc: true }, o || {}));
-    if (!S.slug && S.view !== "trash") veChuaChon();
+    if (!S.slug && !S.view) veChuaChon();
   }, baoLoi);
 }
 QL.taiDanhSach = taiDanhSach;
@@ -415,8 +419,10 @@ $("#btnReload").addEventListener("click", function () {
   QL.boQua().then(function (ok) {
     if (!ok) return;
     S.infoDirty = S.dirty = false;
-    taiDanhSach(S.view === "trash" ? null : S.slug, { tab: S.tab, giuBai: true });
+    taiDanhSach(S.view ? null : S.slug, { tab: S.tab, giuBai: true });
     if (S.view === "trash") moThungRac();
+    else if (S.view === "ai") moAI();
+    else if (S.view === "soan-ai") QL.moSoanAI();
   });
 });
 
@@ -882,6 +888,82 @@ function khoiPhucKhoa(id, slug) {
 }
 $("#btnTrash").addEventListener("click", moThungRac);
 
+/* ---------- 11b. AI: lượt dùng, token, cấu hình -------------------------
+   Mọi lời gọi Gemini — chat lẫn các tính năng AI — đi qua một cửa có hạn mức
+   theo ngày (đếm trong database, mọi instance dùng chung). Màn này cho thấy đã
+   tiêu bao nhiêu, theo tính năng và theo ngày, và đang cấu hình ra sao. */
+var TEN_AI = {
+  chat: "Gemini Chat", tutor_summary: "Trợ giảng — tóm tắt bài", tutor_explain: "Trợ giảng — giải thích",
+  tutor_quiz: "Trợ giảng — câu hỏi ôn tập", tutor_ask: "Trợ giảng — hỏi đáp", tutor_cards: "Trợ giảng — thẻ ôn tập",
+  ask: "Hỏi đáp toàn trang", draft_outline: "Soạn khoá bằng AI — dàn ý", draft_lesson: "Soạn khoá bằng AI — bài",
+  opic: "Nhận xét bài nói OPIc", sql: "SQL từ câu hỏi",
+  mongo: "Mongo từ câu hỏi", postman: "Postman AI"
+};
+var QUYEN_AI = {
+  admin: "chỉ quản trị viên", code: "ai có mã truy cập (AI_ACCESS_CODE) và quản trị viên",
+  public: "mọi người — vẫn có giới hạn theo địa chỉ và hạn mức ngày"
+};
+function so(n) { return Number(n || 0).toLocaleString("vi-VN"); }
+function moAI() {
+  return QL.boQua().then(function (ok) {
+    if (!ok) return;
+    S.view = "ai"; S.slug = null; S.course = null; S.doc = null; S.dirty = S.docDirty = S.infoDirty = false;
+    veDanhSach();
+    document.body.classList.remove("ds-mo");
+    $("#main").onclick = null;
+    $("#main").innerHTML = '<div class="boot">Đang tải số liệu AI…</div>';
+    datURL();
+    return api("GET", "/ai/usage?days=30").then(veAI, function (e) {
+      $("#main").innerHTML = '<div class="empty">Không tải được số liệu AI: ' + esc(e.message) + "</div>";
+    });
+  });
+}
+function veAI(u) {
+  if (S.view !== "ai") return;
+  var c = u.config || {}, b = u.budget || {};
+  var tinhNang = {}, ngay = [], tongLuot = 0, tongToken = 0;
+  (u.rows || []).forEach(function (r) {
+    if (r.feature === "*") { ngay.push(r); tongLuot += r.requests; tongToken += r.prompt_tokens + r.output_tokens; return; }
+    var t = tinhNang[r.feature] || (tinhNang[r.feature] = { requests: 0, prompt_tokens: 0, output_tokens: 0 });
+    t.requests += r.requests; t.prompt_tokens += r.prompt_tokens; t.output_tokens += r.output_tokens;
+  });
+  ngay.sort(function (x, y) { return x.day < y.day ? 1 : -1; });
+  var ds = Object.keys(tinhNang).sort(function (x, y) { return tinhNang[y].requests - tinhNang[x].requests; });
+  var trangThai = !c.enabled ? '<span class="chip wa">đang tắt (AI_ENABLED=false)</span>' :
+    !c.configured ? '<span class="chip wa">chưa cấu hình GEMINI_URL / GEMINI_API_KEY</span>' : '<span class="chip ok">đang bật</span>';
+  $("#main").innerHTML = '<div class="stack rong"><h1 style="margin:0">AI — lượt dùng và hạn mức</h1>' +
+    '<p class="muted small">Mọi lời gọi Gemini (Gemini Chat và các tính năng AI) đều đi qua một cửa: giới hạn theo địa chỉ, ' +
+    "hạn mức theo ngày UTC cho cả hệ thống, và sổ ghi lượt / token dưới đây.</p>" +
+    '<div class="kv">' +
+    "<div><b>" + so(b.requestsUsed) + "</b><span>lượt hôm nay / " + so(b.requests) + "</span></div>" +
+    "<div><b>" + so(b.tokensUsed) + "</b><span>token hôm nay / " + so(b.tokens) + "</span></div>" +
+    "<div><b>" + so(tongLuot) + "</b><span>lượt từ " + esc(u.since) + "</span></div>" +
+    "<div><b>" + so(tongToken) + "</b><span>token từ " + esc(u.since) + "</span></div></div>" +
+    '<div class="card"><b>Cấu hình</b> ' + trangThai +
+    '<ul class="ai-cfg"><li>Ai được dùng tính năng AI: <b>' + esc(QUYEN_AI[c.access] || c.access) + "</b>" +
+    (c.access === "code" && !c.codeSet ? ' <span class="chip wa">chưa đặt AI_ACCESS_CODE</span>' : "") + "</li>" +
+    "<li>Model: <code>" + esc(c.model) + "</code></li>" +
+    "<li>Mỗi địa chỉ: " + so(c.perMinute) + " lượt / phút, " + so(c.perDay) + " lượt / ngày (quản trị viên không bị giới hạn)</li>" +
+    '</ul><p class="muted small" style="margin:6px 0 0">Đổi bằng biến môi trường của backend: <code>AI_ENABLED</code>, ' +
+    "<code>AI_ACCESS</code> (admin / code / public), <code>AI_ACCESS_CODE</code>, <code>AI_MODEL</code>, " +
+    "<code>AI_RATE_PER_MINUTE</code>, <code>AI_RATE_PER_DAY</code>, <code>AI_DAILY_REQUESTS</code>, <code>AI_DAILY_TOKENS</code>.</p></div>" +
+    "<h2>Theo tính năng (" + esc(u.since) + " — nay)</h2>" +
+    (ds.length ? '<table class="bang-ai"><thead><tr><th scope="col">Tính năng</th><th scope="col">Lượt</th>' +
+      '<th scope="col">Token vào</th><th scope="col">Token ra</th></tr></thead><tbody>' + ds.map(function (k) {
+        var t = tinhNang[k];
+        return "<tr><th scope=\"row\">" + esc(TEN_AI[k] || k) + (k === "chat" ? " *" : "") + "</th><td>" + so(t.requests) +
+          "</td><td>" + so(t.prompt_tokens) + "</td><td>" + so(t.output_tokens) + "</td></tr>";
+      }).join("") + "</tbody></table>" +
+      (tinhNang.chat ? '<p class="muted small">* Token của chat là ước lượng (không tính lịch sử hội thoại gửi kèm).</p>' : "") :
+      '<p class="muted">Chưa có lượt gọi AI nào trong 30 ngày.</p>') +
+    (ngay.length ? "<h2>Theo ngày</h2>" + '<table class="bang-ai"><thead><tr><th scope="col">Ngày (UTC)</th>' +
+      '<th scope="col">Lượt</th><th scope="col">Token</th></tr></thead><tbody>' + ngay.map(function (r) {
+        return "<tr><th scope=\"row\">" + esc(r.day) + "</th><td>" + so(r.requests) + "</td><td>" +
+          so(r.prompt_tokens + r.output_tokens) + "</td></tr>";
+      }).join("") + "</tbody></table>" : "") + "</div>";
+}
+$("#btnAI").addEventListener("click", moAI);
+
 /* ---------- 12. Phím tắt, ngăn kéo trên màn nhỏ ------------------------- */
 document.addEventListener("keydown", function (e) {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "s" || e.key === "S")) {
@@ -903,6 +985,8 @@ function vaoUngDung() {
   hienPhien();
   var u = docURL();
   if (u.thungRac) { taiDanhSach(); moThungRac(); return; }
+  if (u.ai) { taiDanhSach(); moAI(); return; }
+  if (u.soanAI) { taiDanhSach(); QL.moSoanAI(); return; }
   taiDanhSach(u.slug, { tab: u.tab || "info", doc: u.doc });
 }
 document.addEventListener("DOMContentLoaded", function () {

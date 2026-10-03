@@ -54,13 +54,9 @@ def tang_1():
                html.find('src="assets/thu-vien.js"'))
     (ok if 0 < h < a < b and 'src="assets/app.js"' not in html else sai)(
         "index.html nap hien-thi.js -> cau-hinh.js -> thu-vien.js (thu-vien.js moi quyet dinh nap engine)")
-    import sync                                           # courses/engine/sync.py (sys.path o tren)
-    for ten in ("app.js", "app.css", "hien-thi.js", "hien-thi.css"):
-        try:
-            ban = open(os.path.join(HERE, "assets", ten), encoding="utf-8", newline="").read()
-        except OSError:
-            ban = ""
-        (ok if ban == sync.noi_dung_dich(ten) else sai)("assets/%s khop courses/engine/ (engine/sync.py)" % ten)
+    import kiem_pwa                                       # courses/engine/kiem_pwa.py (sys.path o tren)
+    for dat, msg in kiem_pwa.tinh(HERE):
+        (ok if dat else sai)(msg)
     json.load(open(os.path.join(HERE, "metadata.json"), encoding="utf-8"))
     ok("metadata.json doc duoc (trang hien trong portal)")
     for ten in ("hien-thi.js", "cau-hinh.js", "thu-vien.js", "app.js"):
@@ -115,6 +111,11 @@ def tang_2(chup):
             (ok if the.get("system-design") == "/webapp/courses/system-design-course/" else sai)(
                 "danh muc: khoa co trang rieng tro sang trang rieng — %r" % the.get("system-design"))
             (ok if "nhap-thu" not in the else sai)("danh muc: ban nhap an voi khach")
+            try:
+                pg.wait_for_function("() => !!navigator.serviceWorker.controller", timeout=15000)
+                ok("danh muc (khong nap engine) tu nap pwa.js: service worker dieu khien trang")
+            except Exception:
+                sai("danh muc khong dang ky service worker — thu-vien.js phai nap assets/pwa.js")
             if chup:
                 os.makedirs(anh, exist_ok=True)
                 pg.screenshot(path=os.path.join(anh, "thu-vien.png"))

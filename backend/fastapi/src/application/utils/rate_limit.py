@@ -1,4 +1,5 @@
-"""Counting failures in a sliding window — enough to stop guessing a secret.
+"""Counting events in a sliding window — failed logins (enough to stop guessing
+a secret), or requests (a rate limit).
 
 In-process and per instance: on a serverless platform each instance counts on
 its own, so this slows an attacker down rather than stopping a distributed
@@ -40,9 +41,13 @@ class FailureWindow:
                 return None
             return max(1, int(q[0] + self.window - now) + 1)
 
-    def fail(self, key: str) -> None:
+    def add(self, key: str) -> None:
+        """Count one event for `key`."""
         with self._lock:
             self._trim(key, self._clock()).append(self._clock())
+
+    #: A failed attempt is the event the login limits count.
+    fail = add
 
     def reset(self, key: Optional[str] = None) -> None:
         with self._lock:

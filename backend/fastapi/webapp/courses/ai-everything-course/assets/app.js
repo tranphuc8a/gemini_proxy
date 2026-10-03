@@ -22,6 +22,9 @@
      ② assets/app.js       engine     (file này — dùng chung)
    Có window.COURSE (một content.js xuất bằng `manage_courses.py export --js`)
    thì engine dùng nó thay cho API — cách để trang vẫn chạy offline bằng file://.
+
+   Tính năng thêm (đọc offline, gia sư AI, ôn tập…) là MÔ-ĐUN riêng assets/mo-*.js,
+   engine tự nạp sau khi chạy (mục 15) và cho chúng một API nhỏ: window.KhoaHoc.
    ========================================================================== */
 (function () {
 "use strict";
@@ -163,6 +166,11 @@ function nguonApi(goc, khoa) {
       return lay("/search?limit=24&q=" + encodeURIComponent(q), signal).then(function (r) { return r.hits || []; });
     },
     prefetch: function (id) { if (id && !cache[id]) api.doc(id).catch(function () {}); },
+    /* Địa chỉ thật của mục lục / một bài — mô-đun đọc offline tải thẳng qua service
+       worker (bỏ qua bộ nhớ đệm trong trang) để bản lưu nằm ở bộ nhớ đệm của worker. */
+    manifestUrl: function () { return url("/manifest"); },
+    docUrl: function (id) { return url("/docs/" + maHoa(id)); },
+    dauRequest: dau,
     /* Tệp tải lên khoá ("assets/hinh.png" trong markdown). */
     asset: function (ten) { return url("/assets/" + encodeURIComponent(ten)); },
     /* Bản nháp: ảnh của khoá chưa xuất bản chỉ trả cho quản trị viên, mà <img>
@@ -435,6 +443,7 @@ function viewHome() {
 
   document.title = TIEU_DE;
   $("#readbarFill").style.width = "0%";
+  phat("trang-chu", $("#main"));
 }
 
 /* Nhãn ngắn cho chip: cắt ở dấu phân cách rồi ở ranh giới TỪ, không cắt giữa
@@ -604,6 +613,7 @@ function veDoc(doc, anchor) {
   buildToc(body);
   veMermaid();                    /* so do chi ve duoc khi da nam trong DOM */
   LS.set("last", { id: doc.id, at: Date.now() });
+  phat("bai", doc, $("#body"));
 
   if (anchor) {
     var el = document.getElementById(anchor);
@@ -882,6 +892,14 @@ function route() {
     if (el) { el.scrollIntoView({ block: "start" }); window.scrollBy(0, -70); }
     return;
   }
+  if (h.indexOf("/~") === 0) {             /* trang của một mô-đun: #/~on-tap, #/~so-tay… */
+    var ten = h.slice(2).split(/[?#/]/)[0];
+    state.doc = null;
+    if (MO.trang[ten]) MO.trang[ten]($("#main"), h.slice(2 + ten.length));
+    else $("#main").innerHTML = '<div class="home"><div class="boot">' + icon("book") + "Đang tải…</div></div>";
+    buildNav(); paintProgress();
+    return;
+  }
   var rest = h.slice(1);
   var hi = rest.indexOf("#");
   var slug = hi >= 0 ? rest.slice(0, hi) : rest;
@@ -947,6 +965,95 @@ function apDungThongTinKhoa(c) {
   document.title = TIEU_DE;
 }
 
+/* ---------- 15. Mô-đun: window.KhoaHoc --------------------------------
+   Mô-đun (assets/mo-*.js) dùng engine qua API này thay vì đọc biến nội bộ:
+     KhoaHoc.nghe("san-sang" | "trang-chu" | "bai" | "tien-do", fn)
+       san-sang  manifest đã về (gọi ngay nếu đã về rồi)
+       trang-chu fn(mainEl) — trang chủ vừa dựng
+       bai       fn(doc, bodyEl) — một bài vừa dựng xong (công thức, sơ đồ đã vẽ)
+       tien-do   fn(id, daXong) — người học đánh dấu một bài
+     KhoaHoc.dangKyTrang(ten, fn(mainEl, phanSau))   → trang "#/~ten"
+     KhoaHoc.themNut({ma, nhan, title, khi})           → nút trên header
+   Lỗi trong một mô-đun không được làm hỏng engine: mọi lời gọi đều có try. */
+var MO = { trang: {}, nghe: {} };
+function phat(su) {
+  var thamSo = Array.prototype.slice.call(arguments, 1);
+  (MO.nghe[su] || []).forEach(function (fn) {
+    try { fn.apply(null, thamSo); } catch (e) { if (window.console) console.error(e); }
+  });
+}
+window.KhoaHoc = {
+  khoa: ch("khoaHoc", ""),
+  cauHinh: ch,
+  gocApi: gocApi,
+  nguon: function () { return NGUON; },
+  manifest: function () { return D; },
+  docs: function () { return DOCS; },
+  thuTu: function () { return ORDER; },
+  docOf: docOf,
+  baiDangDoc: function () { return state.doc; },
+  daXong: function (id) { return done.has(id); },
+  danhDau: function (id, xong) {
+    if (!DOCS[id]) return;
+    if (xong) done.add(id); else done.delete(id);
+    saveDone(); paintProgress(); buildNav();
+    phat("tien-do", id, !!xong);
+  },
+  coSao: function (id) { return stars.has(id); },
+  ghiChu: function () { return notes; },
+  LS: LS, esc: esc, icon: icon, toast: toast, norm: norm, render: render, denBai: denBai,
+  veMermaid: function (goc) { HienThi.veMermaid(goc || $("#body")); },
+  nghe: function (su, fn) {
+    (MO.nghe[su] = MO.nghe[su] || []).push(fn);
+    if (su === "san-sang" && D) { try { fn(); } catch (e) { if (window.console) console.error(e); } }
+  },
+  dangKyTrang: function (ten, fn) {
+    MO.trang[ten] = fn;
+    if (D && location.hash.indexOf("#/~" + ten) === 0) route();   /* mở thẳng bằng địa chỉ */
+  },
+  themNut: function (o) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "ic-btn" + (o.chu ? " ic-chu" : "");
+    if (o.ma) b.id = o.ma;
+    b.title = o.title || "";
+    b.setAttribute("aria-label", o.title || o.chu || "");
+    b.innerHTML = o.icon ? icon(o.icon) : esc(o.chu || "");
+    b.addEventListener("click", o.khi);
+    var phai = $(".hdr-right"), theme = $("#btnTheme");
+    if (phai) phai.insertBefore(b, theme && theme.parentNode === phai ? theme : null);
+    return b;
+  },
+  /* Thêm một biểu tượng vào sprite của trang (<symbol id="i-ten">, nét 24×24 như
+     các biểu tượng sẵn có) — mô-đun không phải sửa index.html của từng khoá. */
+  themBieuTuong: function (ten, net) {
+    if (document.getElementById("i-" + ten)) return;
+    var co = document.querySelector("symbol"), sprite = co && co.parentNode;
+    if (!sprite) return;
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "symbol");
+    s.setAttribute("id", "i-" + ten);
+    s.setAttribute("viewBox", "0 0 24 24");
+    s.innerHTML = net;
+    sprite.appendChild(s);
+  },
+  dieuHuong: function () { route(); }
+};
+
+/* Nạp mô-đun cạnh engine (cùng thư mục assets/). cau-hinh.js có thể đổi danh sách:
+   moDun: [] tắt hết. pwa.js không phải mô-đun engine (dùng chung với OPIc, lab):
+   đăng ký service worker và nút cài ứng dụng. mo-offline: "Lưu cả khoá";
+   mo-on-tap: thẻ ghi nhớ + lặp lại ngắt quãng; mo-ai: trợ giảng AI cạnh mỗi bài —
+   dùng ai-khach.js (khách gọi /ai/*, chung với OPIc) nên ai-khach đứng trước
+   (nạp sau mo-on-tap để đưa thẻ AI soạn vào bộ ôn tập). */
+var GOC_JS = ((document.currentScript && document.currentScript.src) || "").replace(/[^/]*$/, "");
+ch("moDun", ["pwa", "ai-khach", "mo-offline", "mo-on-tap", "mo-ai"]).forEach(function (ten) {
+  if (!/^[a-z0-9-]+$/.test(ten)) return;
+  var s = document.createElement("script");
+  s.src = GOC_JS + ten + ".js";
+  s.async = false;
+  document.head.appendChild(s);
+});
+
 /* ---------- 14. Khởi động ---------------------------------------------
    Nạp manifest (mục lục + siêu dữ liệu, không có markdown), rồi mới dựng
    trang. Trong lúc chờ: một dòng trạng thái; lỗi: trang báo lỗi có nút thử lại. */
@@ -974,6 +1081,7 @@ function khoiDong() {
     try {
       paintProgress();
       route();
+      phat("san-sang");
     } catch (e) {
       if (window.console) console.error(e);
       veLoi("Không dựng được trang khoá học", e, khoiDong);

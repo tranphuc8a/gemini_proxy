@@ -19,6 +19,9 @@
        toast(msg),       báo "không chép được" (tuỳ chọn)
        assetUrl(name),   địa chỉ thật của tệp "assets/<name>" (tuỳ chọn)
        taiAnh(url)       → Promise<url dùng được>: tải ảnh có kèm token (bản nháp)
+       labUrl,           trang lab trực quan (mặc định "../lab-visual/")
+       labCho            true: khối lab chỉ hiện nút "Chạy" (khung xem trước khi soạn,
+                         vẽ lại theo từng phím — không nạp lại lab mỗi lần gõ)
      }) → <div class="prose">
      HienThi.veMermaid(root)   vẽ sơ đồ SAU KHI root đã nằm trong DOM
    ========================================================================== */
@@ -113,6 +116,74 @@ function tenTep(href) {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+/* ---- lab trực quan nhúng trong bài -----------------------------------------
+   ```lab
+   raft?nut=5&mat=1          ← id lab + tham số (đúng dạng "Chép liên kết" của trang lab;
+                               dán cả địa chỉ đầy đủ cũng được)
+   Chú thích (tuỳ chọn, các dòng sau)
+   ```
+   → khung mô phỏng chạy ngay trong bài. Trang lab cùng origin, nên khung tự cao
+   theo nội dung. Bộ lọc HTML gỡ mọi <iframe> của markdown; khung này do CHÍNH bộ
+   dựng tạo, với địa chỉ ghép từ id + tham số đã lọc — markdown không chọn được src. */
+var LAB_ID = /^[a-z0-9][a-z0-9-]{0,40}$/;
+var LAB_THAM_SO = /^[A-Za-z0-9_-]{1,32}=[A-Za-z0-9_.%+-]{0,64}$/;
+function phanTichLab(text) {
+  var dong = String(text || "").trim().split(/\r?\n/);
+  var dau = (dong.shift() || "").trim();
+  var m = /#\/(.*)$/.exec(dau);
+  if (m) dau = m[1];
+  var i = dau.indexOf("?");
+  var id = i >= 0 ? dau.slice(0, i) : dau;
+  if (!LAB_ID.test(id)) return null;
+  var q = (i >= 0 ? dau.slice(i + 1) : "").split("&").filter(function (p) { return LAB_THAM_SO.test(p); }).join("&");
+  return { id: id, q: q, chu: dong.join(" ").replace(/\s+/g, " ").trim() };
+}
+function tuCao(ifr) {
+  var doc;
+  try { doc = ifr.contentDocument; } catch (e) { return; }
+  if (!doc || !doc.body) return;
+  function dat() {
+    var h = Math.ceil(doc.body.getBoundingClientRect().height);
+    if (h > 60) ifr.style.height = Math.min(h + 4, 1600) + "px";
+  }
+  dat();
+  if (root.ResizeObserver) new root.ResizeObserver(dat).observe(doc.body);
+}
+function taoLab(text, o) {
+  var L = phanTichLab(text);
+  if (!L) return null;
+  var goc = o.labUrl || "../lab-visual/";
+  var duoi = "#/" + L.id + (L.q ? "?" + L.q : "");
+  var theme = document.documentElement.getAttribute("data-theme") || "";
+  var fig = document.createElement("figure");
+  fig.className = "lab-nhung";
+  fig.setAttribute("data-lab", L.id);
+  function chay() {
+    var ifr = document.createElement("iframe");
+    ifr.src = goc + "?nhung=1" + (theme === "dark" || theme === "light" ? "&theme=" + theme : "") + duoi;
+    ifr.title = "Mô phỏng: " + (L.chu || L.id);
+    ifr.setAttribute("loading", "lazy");
+    ifr.setAttribute("allow", "fullscreen");
+    ifr.addEventListener("load", function () { tuCao(ifr); });
+    return ifr;
+  }
+  if (o.labCho) {
+    var nut = document.createElement("button");
+    nut.type = "button";
+    nut.className = "lab-cho";
+    nut.innerHTML = "▶ Chạy mô phỏng <code>" + esc(L.id) + "</code>";
+    nut.addEventListener("click", function () { fig.replaceChild(chay(), nut); });
+    fig.appendChild(nut);
+  } else {
+    fig.appendChild(chay());
+  }
+  var cap = document.createElement("figcaption");
+  cap.innerHTML = (L.chu ? esc(L.chu) + " · " : "") + '<a href="' + esc(goc + duoi) + '" target="_blank" rel="noopener">' +
+    "Mở trang mô phỏng ↗</a>";
+  fig.appendChild(cap);
+  return fig;
+}
+
 if (root.marked) root.marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
 
 function render(md, o) {
@@ -167,6 +238,10 @@ function render(md, o) {
   $$("pre", host).forEach(function (pre) {
     var code = pre.querySelector("code");
     var lang = code && (code.className.match(/language-([\w+#-]+)/) || [])[1];
+    if (lang === "lab") {
+      var lab = taoLab(code.textContent, o);
+      if (lab) { pre.parentNode.replaceChild(lab, pre); return; }
+    }
     if (lang === "mermaid") {
       var mm = document.createElement("div");
       mm.className = "mermaid";
@@ -333,6 +408,6 @@ function veMermaid(goc) {
 
 root.HienThi = {
   norm: norm, slugifyHeading: slugifyHeading, lamSach: lamSach, htmlSach: htmlSach,
-  resolveHref: resolveHref, render: render, veMermaid: veMermaid, tenTep: tenTep
+  resolveHref: resolveHref, render: render, veMermaid: veMermaid, tenTep: tenTep, phanTichLab: phanTichLab
 };
 })(window);

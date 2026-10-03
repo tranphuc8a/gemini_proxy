@@ -29,7 +29,10 @@
       "app.js",
       "app.css",
       "hien-thi.js",
-      "hien-thi.css"
+      "hien-thi.css",
+      "mo-offline.js",
+      "mo-on-tap.js",
+      "mo-ai.js"
     ],
     "dich": [
       "ai-everything-course",
@@ -49,6 +52,59 @@
     ],
     "dich": [
       "quan-ly-khoa-hoc"
+    ]
+  },
+  "pwa": {
+    "_ghi_chu": [
+      "Doc offline + cai thanh ung dung: pwa.js (dang ky worker, nut cai, bao mat mang) vao assets/."
+    ],
+    "tep": [
+      "pwa.js"
+    ],
+    "dich": [
+      "ai-everything-course",
+      "heuristic-course",
+      "heuristic-course-2",
+      "system-design-course",
+      "khoa-hoc",
+      "opic-course",
+      "lab-visual"
+    ]
+  },
+  "pwa_goc": {
+    "_ghi_chu": [
+      "sw.js vao GOC trang: pham vi mac dinh cua service worker la thu muc chua no,",
+      "dat trong assets/ thi worker khong dieu khien duoc trang."
+    ],
+    "tep": [
+      "sw.js"
+    ],
+    "dich": [
+      "ai-everything-course",
+      "heuristic-course",
+      "heuristic-course-2",
+      "system-design-course",
+      "khoa-hoc",
+      "opic-course",
+      "lab-visual"
+    ],
+    "vao": "."
+  },
+  "ai_khach": {
+    "_ghi_chu": [
+      "Khach goi tinh nang AI (/ai/status, /ai/session, header nhan dien) — chung cho tro giang",
+      "cua trang khoa hoc (mo-ai.js) va cham bai noi OPIc."
+    ],
+    "tep": [
+      "ai-khach.js"
+    ],
+    "dich": [
+      "ai-everything-course",
+      "heuristic-course",
+      "heuristic-course-2",
+      "system-design-course",
+      "khoa-hoc",
+      "opic-course"
     ]
   }
 }

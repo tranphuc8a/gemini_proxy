@@ -48,6 +48,9 @@ function gocApi() {
   var cfg = window.__WEBAPP_CONFIG__;
   return cfg && typeof cfg.apiBase === "string" ? cfg.apiBase.replace(/\/+$/, "") : "";
 }
+/* Khách AI (engine/ai-khach.js): nhận xét bài nói. Không có máy chủ thì không có AI. */
+var AI = window.AiKhach && !window.OPIC ? window.AiKhach.tao(gocApi()) : null;
+
 function taiNoiDung() {
   if (window.OPIC) return Promise.resolve(window.OPIC);
   var url = gocApi() + "/courses/" + KHOA_HOC + "/bundle";
@@ -327,12 +330,14 @@ var IDB = {
   theoCau: function (qid) {
     return IDB.mo().then(function (db) {
       return new Promise(function (res, rej) {
-        var out = [], idx = db.transaction("ban-ghi").objectStore("ban-ghi").index("qid");
+        /* IDBIndex KHÔNG có .transaction — gán onerror vào đó từng ném TypeError ngay trong
+           promise, .catch nuốt lỗi và danh sách bản ghi luôn trống. Giữ transaction riêng. */
+        var out = [], tx = db.transaction("ban-ghi"), idx = tx.objectStore("ban-ghi").index("qid");
         idx.openCursor(IDBKeyRange.only(qid)).onsuccess = function (e) {
           var c = e.target.result;
           if (c) { out.push(c.value); c.continue(); } else res(out.sort(function (a, b) { return b.luc - a.luc; }));
         };
-        idx.transaction.onerror = function () { rej(idx.transaction.error); };
+        tx.onerror = function () { rej(tx.error); };
       });
     }).catch(function () { return []; });
   },
@@ -393,6 +398,47 @@ var REC = {
   dung: function () { if (REC.dang && REC.mr && REC.mr.state !== "inactive") REC.mr.stop(); },
   giayDaGhi: function () { return REC.dang ? Math.round((Date.now() - REC.batDauLuc) / 1000) : 0; }
 };
+
+/* ---------- 7b. Bản ghi → WAV cho AI --------------------------------
+   MediaRecorder ghi webm/ogg tuỳ trình duyệt; Gemini nghe chắc chắn được WAV.
+   Giải mã, trộn về một kênh, lấy mẫu lại 16 kHz, PCM 16 bit: 90 giây ≈ 2,9 MB —
+   vừa giới hạn thân request 4,5 MB của Vercel sau khi mã hoá base64. */
+var AI_GIAY = 90, AI_HZ = 16000;
+function maWav(f32, hz) {
+  var n = f32.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  function chu(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+  chu(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); chu(8, "WAVE"); chu(12, "fmt ");
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, hz, true);
+  v.setUint32(28, hz * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  chu(36, "data"); v.setUint32(40, n * 2, true);
+  for (var i = 0; i < n; i++) {
+    var s = Math.max(-1, Math.min(1, f32[i]));
+    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Uint8Array(buf);
+}
+function base64(u8) {
+  var s = "";
+  for (var i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function sangWav(blob) {
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC || !window.OfflineAudioContext) return Promise.reject(new Error("Trình duyệt không xử lý được âm thanh"));
+  return blob.arrayBuffer().then(function (buf) {
+    var ac = new AC();
+    return new Promise(function (ok, hong) { ac.decodeAudioData(buf, ok, hong); }).then(function (am) {
+      if (ac.close) ac.close();
+      var giay = Math.min(am.duration, AI_GIAY);
+      var oc = new OfflineAudioContext(1, Math.max(1, Math.ceil(giay * AI_HZ)), AI_HZ);
+      var src = oc.createBufferSource();
+      src.buffer = am; src.connect(oc.destination); src.start(0);
+      return oc.startRendering().then(function (r) {
+        return { wav: maWav(r.getChannelData(0), AI_HZ), giay: giay, cat: am.duration > AI_GIAY + 0.5 };
+      });
+    });
+  });
+}
 
 /* ---------- 8. Markdown tối giản --------------------------------------
    Đủ cho bài hướng dẫn: tiêu đề, đoạn, danh sách lồng nhau, trích dẫn (thành
@@ -711,6 +757,7 @@ function viewScript(id) {
       '<div class="scard myscript" style="margin-top:14px"><div class="sh"><b>Script của tôi</b><span class="chip">tự lưu</span><span class="sp"></span><button class="btn sm" id="btnDocToi">' + icon("volume") + 'Nghe</button><button class="btn sm" id="btnChepMau" title="Chép script mẫu xuống làm nháp">' + icon("edit") + 'Lấy mẫu làm nháp</button></div>' +
         '<div class="tool"><textarea id="taToi" placeholder="Viết script của riêng bạn cho câu này — 5 đến 7 câu, dùng chi tiết thật của bạn (tên, nơi ở, sở thích). Viết tiếng Việt trước cũng được, rồi chuyển sang tiếng Anh.">' + esc(cuaToi[id] || "") + '</textarea>' +
         '<div class="cnt"><span><b id="cTu">0</b> từ</span><span>nói ≈ <b id="cGiay">0:00</b></span><span id="cNhan" class="muted"></span></div></div></div>' +
+      '<div class="scard ai-op" id="aiOp" style="margin-top:14px" hidden></div>' +
       '<div class="scard note" style="margin-top:14px"><div class="sh"><b>Ghi chú</b><span class="chip">từ khó · lỗi hay mắc · ý thay thế</span></div><div class="tool"><textarea id="taGhiChu" placeholder="Ví dụ: nhớ nhấn âm /θ/ trong three; thay Samsung bằng công ty mình…">' + esc(ghiChu[id] || "") + '</textarea></div></div>' +
       '<div class="related"><div class="sec-h"><h2>Cùng chủ đề</h2><a class="more" href="#/chu-de/' + c.id + '">tất cả ' + ds.length + ' câu</a></div>' +
         ds.filter(function (x) { return x !== q; }).slice(0, 6).map(hangCau).join("") + '</div>' +
@@ -842,12 +889,74 @@ function viewScript(id) {
         var url = URL.createObjectURL(r.blob);
         return '<li><span style="min-width:72px">' + L.dinhDangGiay(r.giay) + ' · ' + new Date(r.luc).toLocaleDateString("vi-VN") + '</span><audio controls preload="none" src="' + url + '"></audio>' +
           '<a class="ic-btn" style="width:28px;height:28px" href="' + url + '" download="opic-' + id + '-' + r.luc + '.webm" title="Tải về">' + icon("download") + '</a>' +
-          '<button class="ic-btn" style="width:28px;height:28px" data-xoa="' + r.id + '" title="Xoá">' + icon("trash") + '</button></li>';
+          '<button class="ic-btn" style="width:28px;height:28px" data-xoa="' + r.id + '" title="Xoá">' + icon("trash") + '</button>' +
+          '<button class="btn sm ai-op-nut" data-ai="' + r.id + '" title="AI nghe và nhận xét bản ghi này" hidden>🤖 Nhận xét</button></li>';
       }).join("") || '<li class="muted">Chưa có bản ghi nào.</li>';
+      if (AI && ds.length) AI.trangThai().then(function (s) {
+        if (AI.dungDuoc(s)) $$("#dsGhi [data-ai]").forEach(function (b) { b.hidden = false; });
+      }, function () {});
     });
+  }
+
+  /* --- AI nhận xét bài nói: bản ghi → WAV → POST /ai/opic --- */
+  var TEN_TIEU_CHI = { fluency: "Trôi chảy", grammar: "Ngữ pháp", vocabulary: "Từ vựng", pronunciation: "Phát âm",
+                       task: "Đúng trọng tâm" };
+  function nhanXet(recId) {
+    var hop = $("#aiOp");
+    hop.hidden = false;
+    hop.onclick = null;
+    hop.innerHTML = '<div class="sh"><b>🤖 Nhận xét của AI</b></div><div class="tool"><p class="small muted">Đang chuẩn bị bản ghi…</p></div>';
+    hop.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    var tool = hop.querySelector(".tool");
+    IDB.theoCau(id).then(function (ds) {
+      var r = ds.filter(function (x) { return x.id === recId; })[0];
+      if (!r) throw new Error("Không tìm thấy bản ghi");
+      return sangWav(r.blob);
+    }).then(function (w) {
+      tool.innerHTML = '<p class="small muted">AI đang nghe và chấm' + (w.cat ? " " + AI_GIAY + " giây đầu" : "") + "…</p>";
+      return AI.goi("opic", {
+        question: q.en, questionVi: q.vi, kind: (D.dang[q.dang] || {}).ten || q.dang || "", script: cuaToi[id] || "",
+        audio: base64(w.wav), mime: "audio/wav", seconds: Math.round(w.giay)
+      }).then(function (kq) { veNhanXet(hop, kq, w); });
+    }).catch(function (e) {
+      tool.innerHTML = '<p class="ai-op-loi">' + esc(e && e.message || e) + "</p>";
+      if (e && e.ma === "ai_code_required") tool.appendChild(AI.oMa(function () { nhanXet(recId); }, "btn sm pri"));
+    });
+  }
+  function veNhanXet(hop, kq, w) {
+    function ds(xs) { return "<ul>" + xs.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>"; }
+    var diem = Object.keys(TEN_TIEU_CHI).map(function (k) {
+      var v = Math.max(0, Math.min(5, +kq.scores[k] || 0));
+      return '<div class="ai-op-tc"><span>' + TEN_TIEU_CHI[k] + '</span><span class="ai-op-cham" aria-hidden="true">' +
+        "●●●●●".slice(0, v) + "<i>" + "●●●●●".slice(v) + "</i></span><b>" + v + "/5</b></div>";
+    }).join("");
+    hop.innerHTML = '<div class="sh"><b>🤖 Nhận xét của AI</b><span class="chip ac">Ước lượng ' + esc(kq.level) + "</span>" +
+      (kq.cached ? '<span class="chip">đã chấm trước đó</span>' : "") + '</div><div class="tool ai-op-than">' +
+      (w.cat ? '<p class="small muted">Bản ghi dài hơn ' + AI_GIAY + " giây — AI chấm " + AI_GIAY + " giây đầu.</p>" : "") +
+      (kq.summary ? "<p>" + esc(kq.summary) + "</p>" : "") +
+      '<div class="ai-op-diem">' + diem + "</div>" +
+      "<h4>Lời bạn đã nói</h4><p class=\"ai-op-chep\">" + (esc(kq.transcript) || "<i>(AI không nghe rõ lời nói)</i>") + "</p>" +
+      (kq.strengths.length ? "<h4>Điểm mạnh</h4>" + ds(kq.strengths) : "") +
+      (kq.fixes.length ? '<h4>Sửa cho tốt hơn</h4><ul class="ai-op-sua">' + kq.fixes.map(function (f) {
+        return "<li><s>" + esc(f.said) + "</s> → <b>" + esc(f.better) + "</b>" + (f.why ? "<span>" + esc(f.why) + "</span>" : "") + "</li>";
+      }).join("") + "</ul>" : "") +
+      (kq.tips.length ? "<h4>Luyện tiếp</h4>" + ds(kq.tips) : "") +
+      (kq.better_answer ? '<h4>Một câu trả lời tốt hơn</h4><p class="ai-op-mau">' + esc(kq.better_answer) + "</p>" +
+        '<div class="row"><button class="btn sm" data-op="nghe">' + icon("volume") + 'Nghe</button>' +
+        '<button class="btn sm" data-op="lay">' + icon("edit") + "Dùng làm script của tôi</button></div>" : "") +
+      '<p class="small muted" style="margin-bottom:0">Mức ước lượng chỉ dựa trên một câu trả lời — để tham khảo, không thay bài thi thật.</p></div>';
+    hop.onclick = function (e) {
+      var b = e.target.closest("[data-op]");
+      if (!b) return;
+      if (b.dataset.op === "nghe") { dungMoiAmThanh(); TTS.doc(kq.better_answer); return; }
+      if (ta.value.trim() && !confirm("Ghi đè script hiện có bằng câu trả lời AI gợi ý?")) return;
+      ta.value = kq.better_answer; ta.dispatchEvent(new Event("input")); ta.focus();
+    };
   }
   veDsGhi();
   $("#dsGhi").addEventListener("click", function (e) {
+    var a = e.target.closest("[data-ai]");
+    if (a) { nhanXet(+a.dataset.ai); return; }
     var b = e.target.closest("[data-xoa]"); if (!b) return;
     IDB.xoa(+b.dataset.xoa).then(veDsGhi);
   });

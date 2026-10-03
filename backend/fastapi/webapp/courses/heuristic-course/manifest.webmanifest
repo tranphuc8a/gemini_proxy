@@ -1,0 +1,31 @@
+{
+  "name": "Học Heuristic — từ cơ bản đến chuyên sâu",
+  "short_name": "Heuristic",
+  "description": "Khoá tối ưu hoá tổ hợp và heuristic: biểu diễn nghiệm, greedy, tìm kiếm cục bộ, metaheuristic, cận trên/cận dưới và cách đo lường cho đúng. Kèm hai ca nghiên cứu đề thi thật (2605, 2607).",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5b4bd6",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

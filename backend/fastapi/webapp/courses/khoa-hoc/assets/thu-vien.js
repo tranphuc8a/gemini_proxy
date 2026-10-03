@@ -24,6 +24,12 @@ if (!window.THU_VIEN) {
   return;
 }
 
+/* Danh mục không nạp engine (engine tự nạp pwa.js khi đọc khoá) — tự nạp để trang
+   này cũng cài được thành ứng dụng và mở được khi mất mạng. */
+var pwa = document.createElement("script");
+pwa.src = "assets/pwa.js";
+document.body.appendChild(pwa);
+
 var $ = function (q, r) { return (r || document).querySelector(q); };
 var esc = function (v) {
   return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {

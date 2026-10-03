@@ -162,6 +162,16 @@ def test_plain_assets_are_served_untouched(client):
     assert "__WEBAPP_CONFIG__" not in r.text
 
 
+def test_a_service_worker_and_its_manifest_get_their_web_types(client, webapp_root):
+    # Browsers refuse to register a service worker served as anything but JavaScript.
+    (webapp_root / "solo" / "sw.js").write_text("self.addEventListener('fetch', () => {})", encoding="utf-8")
+    (webapp_root / "solo" / "manifest.webmanifest").write_text('{"name": "Solo"}', encoding="utf-8")
+
+    assert client.get("/webapp/solo/sw.js").headers["content-type"].startswith("text/javascript")
+    manifest = client.get("/webapp/solo/manifest.webmanifest")
+    assert manifest.headers["content-type"].startswith("application/manifest+json")
+
+
 def test_a_missing_app_is_still_404(client):
     assert client.get("/webapp/nope/", follow_redirects=True).status_code == 404
 

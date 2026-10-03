@@ -1,0 +1,197 @@
+[
+ {
+  "id": "collatz",
+  "ten": "Collatz 3n+1 — bốn cách nhìn cùng một quy tắc",
+  "nhom": "Giả thuyết Collatz"
+ },
+ {
+  "id": "logistic",
+  "ten": "Logistic map — đường vào hỗn loạn",
+  "nhom": "Hệ động lực & hỗn loạn"
+ },
+ {
+  "id": "fourier",
+  "ten": "Fourier — vẽ mọi hình bằng những vòng tròn quay",
+  "nhom": "Toán & số học"
+ },
+ {
+  "id": "xoan-oc-ulam",
+  "ten": "Xoắn ốc Ulam — trật tự trong số nguyên tố",
+  "nhom": "Toán & số học"
+ },
+ {
+  "id": "monte-carlo",
+  "ten": "Monte Carlo — lấy ngẫu nhiên để ra một hằng số",
+  "nhom": "Xác suất & ngẫu nhiên"
+ },
+ {
+  "id": "gioi-han-trung-tam",
+  "ten": "Giới hạn trung tâm — vì sao cái gì cũng hoá hình chuông",
+  "nhom": "Xác suất & ngẫu nhiên"
+ },
+ {
+  "id": "schelling",
+  "ten": "Schelling — thiên kiến rất nhẹ, phân ly hoàn toàn",
+  "nhom": "Xã hội & trò chơi"
+ },
+ {
+  "id": "game-of-life",
+  "ten": "Game of Life — hai dòng luật, vô hạn hành vi",
+  "nhom": "Tự động tế bào"
+ },
+ {
+  "id": "rule-1d",
+  "ten": "256 luật một chiều — hỗn loạn từ ba ô",
+  "nhom": "Tự động tế bào"
+ },
+ {
+  "id": "tham",
+  "ten": "Thấm — chuyện gì xảy ra đúng tại 59,27%",
+  "nhom": "Tự động tế bào"
+ },
+ {
+  "id": "dong-cat",
+  "ten": "Đống cát — hệ tự đẩy mình tới bờ vực",
+  "nhom": "Tự động tế bào"
+ },
+ {
+  "id": "kien-langton",
+  "ten": "Kiến Langton — 10 000 bước hỗn loạn rồi bất ngờ có trật tự",
+  "nhom": "Tự động tế bào"
+ },
+ {
+  "id": "boids",
+  "ten": "Đàn chim — ba luật, không ai chỉ huy",
+  "nhom": "Bầy đàn & tác tử"
+ },
+ {
+  "id": "dich-te",
+  "ten": "Dịch tễ — miễn dịch cộng đồng nhìn thấy được",
+  "nhom": "Bầy đàn & tác tử"
+ },
+ {
+  "id": "ket-xe",
+  "ten": "Kẹt xe ma và nghịch lý Braess",
+  "nhom": "Bầy đàn & tác tử"
+ },
+ {
+  "id": "nam-nhay",
+  "ten": "Nấm nhầy — mạng lưới mọc ra từ hai quy tắc",
+  "nhom": "Bầy đàn & tác tử"
+ },
+ {
+  "id": "sinh-ton-xa-hoi",
+  "ten": "Sinh tồn xã hội — bất bình đẳng mọc ra từ hư không",
+  "nhom": "Xã hội & trò chơi"
+ },
+ {
+  "id": "bam-nhat-quan",
+  "ten": "Băm nhất quán — thêm một máy chủ, bao nhiêu khoá phải chuyển?",
+  "nhom": "Mạng lưới & phân tán"
+ },
+ {
+  "id": "mang-luoi",
+  "ten": "Thế giới nhỏ — và vì sao mạng thật luôn có siêu nút",
+  "nhom": "Mạng lưới & phân tán"
+ },
+ {
+  "id": "lan-truyen",
+  "ten": "Lan truyền trên mạng — tiêm cho ai nếu chỉ đủ cho 10%?",
+  "nhom": "Mạng lưới & phân tán"
+ },
+ {
+  "id": "raft",
+  "ten": "Raft — làm sao để một đám máy thống nhất khi máy cứ chết",
+  "nhom": "Mạng lưới & phân tán"
+ },
+ {
+  "id": "mandelbrot",
+  "ten": "Mandelbrot — vô hạn chi tiết từ z² + c",
+  "nhom": "Toán & số học"
+ },
+ {
+  "id": "gray-scott",
+  "ten": "Phản ứng–khuếch tán — vân da báo mọc ra từ hai phương trình",
+  "nhom": "Hệ động lực & hỗn loạn"
+ },
+ {
+  "id": "hon-loan",
+  "ten": "Hiệu ứng cánh bướm — đo được bằng số",
+  "nhom": "Hệ động lực & hỗn loạn"
+ },
+ {
+  "id": "n-body",
+  "ten": "Hấp dẫn — và năm điểm mà lực triệt tiêu",
+  "nhom": "Hệ động lực & hỗn loạn"
+ },
+ {
+  "id": "dua-optimizer",
+  "ten": "Đua optimizer — cùng mặt lỗi, cùng ngân sách, bốn kết cục",
+  "nhom": "Tối ưu hoá & heuristic"
+ },
+ {
+  "id": "dau-truong",
+  "ten": "Đấu trường metaheuristic — không ai thắng ở mọi địa hình",
+  "nhom": "Tối ưu hoá & heuristic"
+ },
+ {
+  "id": "giam-chieu",
+  "ten": "Giảm chiều — và cái cụm không có thật",
+  "nhom": "Học máy & dữ liệu"
+ },
+ {
+  "id": "can-xu",
+  "ten": "Cân xu — và chỗ cận dưới nói dối",
+  "nhom": "Câu đố quyết định"
+ },
+ {
+  "id": "tha-trung",
+  "ten": "Thả trứng — vì sao đáp số là 14 chứ không phải 10",
+  "nhom": "Câu đố quyết định"
+ },
+ {
+  "id": "doan-chuoi",
+  "ten": "Đoán chuỗi — và câu hỏi mà bạn biết chắc là sai",
+  "nhom": "Câu đố quyết định"
+ },
+ {
+  "id": "don-hat",
+  "ten": "Dồn hạt — dồn về đâu cũng thế",
+  "nhom": "Tối ưu hoá & heuristic"
+ },
+ {
+  "id": "quan-ma",
+  "ten": "Quân mã — hai ô kề nhau mà tốn 4 nước",
+  "nhom": "Câu đố quyết định"
+ },
+ {
+  "id": "chia-khoa",
+  "ten": "Thử chìa khoá — sắp xếp mà không so được hai chìa với nhau",
+  "nhom": "Câu đố quyết định"
+ },
+ {
+  "id": "thuoc-doc",
+  "ten": "Tìm chai thuốc độc — mỗi người thử là một bit",
+  "nhom": "Câu đố quyết định"
+ },
+ {
+  "id": "ha-noi",
+  "ten": "Tháp Hà Nội — đồ thị trạng thái là tam giác Sierpinski",
+  "nhom": "Câu đố quyết định"
+ },
+ {
+  "id": "markov",
+  "ten": "Chuỗi Markov — một con số của ma trận đoán trước được cả quá trình",
+  "nhom": "Ngẫu nhiên & hội tụ"
+ },
+ {
+  "id": "bloom",
+  "ten": "Bloom filter — công thức mô tả trung bình, không phải lời hứa",
+  "nhom": "Ngẫu nhiên & hội tụ"
+ },
+ {
+  "id": "kien-truc",
+  "ten": "Mô phỏng kiến trúc — p99 nổ trước khi máy chủ chạm 100%",
+  "nhom": "Mạng lưới & phân tán"
+ }
+]

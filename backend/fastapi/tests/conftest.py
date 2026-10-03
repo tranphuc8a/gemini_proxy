@@ -13,9 +13,21 @@ sqlgateway and sql-admin tests.
 import asyncio
 import os
 
+import pytest
+
 os.environ.setdefault("TESTING", "1")
 
 from src.adapter.output.mysql.db.base import Base, get_async_engine, get_async_session
+from src.application.usecases import ai_usecase
+
+
+@pytest.fixture(autouse=True)
+def _fresh_ai_limits():
+    """The AI rate limits count per process: every test starts from zero, so
+    one file's requests never throttle another's (the chat shares them)."""
+    ai_usecase.reset_limits()
+    yield
+    ai_usecase.reset_limits()
 
 
 def arun(coro):

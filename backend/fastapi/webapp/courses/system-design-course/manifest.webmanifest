@@ -1,0 +1,31 @@
+{
+  "name": "Học System Design — từ số 0 đến kiến trúc production",
+  "short_name": "System Design",
+  "description": "Khoá thiết kế hệ thống: 58 bài giảng, 6 đồ án, 9 tài liệu tra cứu. Ước lượng dung lượng, hàng đợi, nhân bản, phân mảnh, nhất quán, caching, khả năng quan sát và các đánh đổi vận hành.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0e7490",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

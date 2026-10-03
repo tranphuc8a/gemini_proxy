@@ -293,6 +293,24 @@ main{padding:26px 30px 80px;min-width:0}
 .ve.co .cv{width:100%;height:auto}
 
 /* ---- Che do tap trung: an muc luc, khung ve an het be ngang ---- */
+/* Nhung trong bai giang (?nhung=1): chi con tieu de lab, khung ve, bang dieu khien. */
+html.nhung .hdr,html.nhung .side,html.nhung .only-nar,html.nhung .phim-tat,html.nhung .gt-box,
+html.nhung .d-mo-ta,html.nhung .d-lk,html.nhung .d-bai,html.nhung .d-nhom,html.nhung .chan{display:none!important}
+html.nhung .shell{display:block}
+html.nhung main{padding:10px 12px 14px}
+html.nhung body{min-height:0}
+html.nhung .d-head{max-width:none;margin-bottom:8px}
+html.nhung .d-head h1{font-size:18px;margin:0}
+/* Trong cot bai (~700 px) khung ve va bang dieu khien xep CANH NHAU, bang dieu
+   khien tu cuon: xep chong thi canvas vuong chiem het chieu ngang va ca lab cao
+   ~2000 px. KHONG dung vh: khung nhung tu cao theo noi dung, vh se tu nuoi nhau. */
+@media (min-width:560px){
+  /* (de len luat man hep <=980px: cot doc, ve / dks rong 100%) */
+  html.nhung .demo-body{flex-direction:row;flex-wrap:nowrap}
+  html.nhung .ve{flex:1 1 auto;min-width:0;width:auto}
+  html.nhung .dks{flex:0 0 270px;width:270px;max-width:270px;max-height:520px;overflow:auto}
+}
+.d-bai{font-size:14px;margin:6px 0 0}
 body.tap-trung .side{display:none}
 body.tap-trung .shell{grid-template-columns:minmax(0,1fr)}
 body.tap-trung .d-head,body.tap-trung .gt-box{max-width:none}
