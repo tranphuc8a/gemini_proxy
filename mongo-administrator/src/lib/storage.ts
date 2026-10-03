@@ -87,10 +87,10 @@ export const storage = {
   setToken: (token: string) => write(TOKEN_KEY, token),
   clearToken: () => remove(TOKEN_KEY),
 
-  /** Connection form pre-fill. Deliberately excludes the password. */
+  /** Remember profile fields, but never retain a pasted connection URI. */
   getProfile: (): RememberedProfile | null => readJson<RememberedProfile | null>(PROFILE_KEY, null),
   setProfile: (profile: RememberedProfile) =>
-    write(PROFILE_KEY, JSON.stringify({ ...profile, uri: stripPassword(profile.uri) })),
+    write(PROFILE_KEY, JSON.stringify({ ...profile, uri: '' })),
 
   getHistory: (): QueryHistoryEntry[] => readJson<QueryHistoryEntry[]>(HISTORY_KEY, []),
   setHistory: (entries: QueryHistoryEntry[]) =>

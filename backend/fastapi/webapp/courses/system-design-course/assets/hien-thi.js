@@ -158,14 +158,21 @@ function taoLab(text, o) {
   var L = phanTichLab(text);
   if (!L) return null;
   var goc = o.labUrl || "../lab-visual/";
-  var duoi = "#/" + L.id + (L.q ? "?" + L.q : "");
   var theme = document.documentElement.getAttribute("data-theme") || "";
+  var diaChiGoc = new URL(goc, root.location.href);
+  if (diaChiGoc.origin !== root.location.origin || diaChiGoc.username || diaChiGoc.password) return null;
+  var thamSo = new URLSearchParams(L.q).toString();
+  var diaChiMo = new URL(diaChiGoc.href);
+  diaChiMo.hash = "/" + encodeURIComponent(L.id) + (thamSo ? "?" + thamSo : "");
+  var diaChiKhung = new URL(diaChiMo.href);
+  diaChiKhung.searchParams.set("nhung", "1");
+  if (theme === "dark" || theme === "light") diaChiKhung.searchParams.set("theme", theme);
   var fig = document.createElement("figure");
   fig.className = "lab-nhung";
   fig.setAttribute("data-lab", L.id);
   function chay() {
     var ifr = document.createElement("iframe");
-    ifr.src = goc + "?nhung=1" + (theme === "dark" || theme === "light" ? "&theme=" + theme : "") + duoi;
+    ifr.src = diaChiKhung.href;
     ifr.title = "Mô phỏng: " + (L.chu || L.id);
     ifr.setAttribute("loading", "lazy");
     ifr.setAttribute("allow", "fullscreen");
@@ -176,15 +183,23 @@ function taoLab(text, o) {
     var nut = document.createElement("button");
     nut.type = "button";
     nut.className = "lab-cho";
-    nut.innerHTML = "▶ Chạy mô phỏng <code>" + esc(L.id) + "</code>";
+    nut.appendChild(document.createTextNode("▶ Chạy mô phỏng "));
+    var ma = document.createElement("code");
+    ma.textContent = L.id;
+    nut.appendChild(ma);
     nut.addEventListener("click", function () { fig.replaceChild(chay(), nut); });
     fig.appendChild(nut);
   } else {
     fig.appendChild(chay());
   }
   var cap = document.createElement("figcaption");
-  cap.innerHTML = (L.chu ? esc(L.chu) + " · " : "") + '<a href="' + esc(goc + duoi) + '" target="_blank" rel="noopener">' +
-    "Mở trang mô phỏng ↗</a>";
+  if (L.chu) cap.appendChild(document.createTextNode(L.chu + " · "));
+  var lienKet = document.createElement("a");
+  lienKet.href = diaChiMo.href;
+  lienKet.target = "_blank";
+  lienKet.rel = "noopener";
+  lienKet.textContent = "Mở trang mô phỏng ↗";
+  cap.appendChild(lienKet);
   fig.appendChild(cap);
   return fig;
 }

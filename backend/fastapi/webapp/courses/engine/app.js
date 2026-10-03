@@ -892,7 +892,8 @@ function route() {
   if (h.indexOf("/~") === 0) {             /* trang của một mô-đun: #/~on-tap, #/~so-tay… */
     var ten = h.slice(2).split(/[?#/]/)[0];
     state.doc = null;
-    if (MO.trang[ten]) MO.trang[ten]($("#main"), h.slice(2 + ten.length));
+    var trang = Object.prototype.hasOwnProperty.call(MO.trang, ten) ? MO.trang[ten] : null;
+    if (typeof trang === "function") trang($("#main"), h.slice(2 + ten.length));
     else $("#main").innerHTML = '<div class="home"><div class="boot">' + icon("book") + "Đang tải…</div></div>";
     buildNav(); paintProgress();
     return;
@@ -975,7 +976,7 @@ function apDungThongTinKhoa(c) {
      KhoaHoc.themViecChon({chu, toiThieu, khi(chu, range)}) → việc trên thanh nổi khi
                                                        người học bôi đen một đoạn bài
    Lỗi trong một mô-đun không được làm hỏng engine: mọi lời gọi đều có try. */
-var MO = { trang: {}, nghe: {} };
+var MO = { trang: Object.create(null), nghe: {} };
 
 /* Bôi đen trong bài → MỘT thanh việc nổi ngay dưới đoạn đó; mô-đun góp việc vào
    (trợ giảng: "Giải thích", sổ tay: "Tô sáng") thay vì mỗi mô-đun một nút riêng đè nhau. */

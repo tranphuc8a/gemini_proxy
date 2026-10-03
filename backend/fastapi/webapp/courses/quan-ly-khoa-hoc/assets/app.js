@@ -353,6 +353,12 @@ $("#btnTheme").addEventListener("click", function () {
 
 /* ---------- 7. Điều hướng: #/<khoá>/<tab>/<id bài> --------------------- */
 var TABS = [["info", "Thông tin"], ["tree", "Cấu trúc & bài"], ["files", "Tệp"], ["links", "Kiểm tra liên kết"], ["search", "Tìm kiếm thử"]];
+function tabHopLe(tab) {
+  for (var i = 0; i < TABS.length; i++) {
+    if (TABS[i][0] === tab) return TABS[i][0];
+  }
+  return TABS[0][0];
+}
 function docURL() {
   var h = location.hash.replace(/^#\/?/, "");
   if (h === "~thung-rac") return { thungRac: true };
@@ -361,7 +367,7 @@ function docURL() {
   var p = h.split("/");
   return {
     slug: p[0] ? decodeURIComponent(p[0]) : null,
-    tab: TABS.some(function (t) { return t[0] === p[1]; }) ? p[1] : null,
+    tab: p[1] ? tabHopLe(p[1]) : null,
     doc: p.length > 2 ? p.slice(2).map(decodeURIComponent).join("/") : null
   };
 }
@@ -451,7 +457,7 @@ var chonKhoa = QL.chonKhoa = function (slug, o) {
       S.nav = JSON.parse(JSON.stringify(r[0].nav || []));
       S.dirty = false; S.infoDraft = null; S.infoDirty = false;
       if (!giuBai || (!giuBai._moi && !S.manifest.docs[giuBai.id])) { S.doc = null; S.docDirty = false; }
-      if (o.tab) S.tab = o.tab;
+      if (o.tab) S.tab = tabHopLe(o.tab);
       veDanhSach(); veKhoa();
       document.body.classList.remove("ds-mo");
       if (o.doc && QL.soan) QL.soan.moBai(o.doc);
@@ -503,6 +509,8 @@ function veTrangRieng(c) {
 
 var veKhoa = QL.veKhoa = function () {
   var c = S.course;
+  var tab = tabHopLe(S.tab);
+  S.tab = tab;
   $("#main").onclick = null;
   $("#main").innerHTML =
     '<div class="ch"><span class="em" aria-hidden="true">' + esc(c.icon || "📘") + '</span><div class="ch-t"><h1>' + esc(c.title) + "</h1>" +
@@ -516,15 +524,16 @@ var veKhoa = QL.veKhoa = function () {
     '<button type="button" class="btn sm" id="bNhanBan">Nhân bản…</button></div>' +
     "</div></div>" +
     '<div class="tabs" role="tablist" aria-label="Phần của khoá">' + TABS.map(function (t) {
-      return '<button type="button" class="tab' + (S.tab === t[0] ? " on" : "") + '" id="tab-' + t[0] + '" data-tab="' + t[0] +
+      return '<button type="button" class="tab' + (tab === t[0] ? " on" : "") + '" id="tab-' + t[0] + '" data-tab="' + t[0] +
         '" role="tab" aria-selected="' + (S.tab === t[0]) + '" aria-controls="tabBody">' + t[1] + "</button>";
-    }).join("") + '</div><div id="tabBody" role="tabpanel" aria-labelledby="tab-' + S.tab + '"></div>';
+    }).join("") + '</div><div id="tabBody" role="tabpanel" aria-labelledby="tab-' + tab + '"></div>';
   $$(".tab").forEach(function (b) { b.addEventListener("click", function () { doiTab(b.dataset.tab); }); });
   $("#bNhanBan").addEventListener("click", nhanBanKhoa);
   veTrangRieng(c);
   veTab();
 };
 function doiTab(tab) {
+  tab = tabHopLe(tab);
   S.tab = tab;
   $$(".tab").forEach(function (b) {
     var on = b.dataset.tab === tab;
