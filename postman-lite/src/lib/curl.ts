@@ -358,6 +358,28 @@ export function curlToSpec(parsed: ParsedCurl, name = 'Imported from cURL'): Req
   }
 }
 
+/** Text that should be read as a curl command rather than typed into the URL bar. */
+export function looksLikeCurl(text: string): boolean {
+  return /^curl\s/i.test(text.trimStart())
+}
+
+/**
+ * The request a curl command describes, as a patch for the current tab.
+ *
+ * Only what the command can say is replaced - method, URL and params, headers,
+ * cookies, auth and body. The tab's identity, its tests and its extract rules
+ * stay, so pasting a fresh command over a request does not wipe its checks.
+ * The URL keeps its query string, the way the URL bar shows the params.
+ */
+export function specPatchFromCurl(command: string): { patch: Partial<RequestSpec>; unsupported: string[] } {
+  const parsed = parseCurl(command)
+  const { method, params, headers, cookies, auth, bodyMode, body, formFields } = curlToSpec(parsed)
+  return {
+    patch: { method, url: parsed.url, params, headers, cookies, auth, bodyMode, body, formFields },
+    unsupported: parsed.unsupported,
+  }
+}
+
 /** Wrap a value in single quotes, escaping any single quote inside it. */
 export function shQuote(value: unknown): string {
   return "'" + String(value ?? '').replace(/'/g, "'\\''") + "'"

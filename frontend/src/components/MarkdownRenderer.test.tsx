@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -70,5 +71,46 @@ describe('MarkdownRenderer', () => {
   it('renders nothing but stays mounted for empty content', () => {
     const { container } = render(<MarkdownRenderer content="" />);
     expect(container.querySelector('.markdown-body')).not.toBeNull();
+  });
+
+  describe('HTML preview', () => {
+    const HTML = '<h1>Hello</h1>\n<p style="color: teal">World</p>';
+
+    it('shows an HTML block in a frame that may run scripts but nothing more', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<MarkdownRenderer content={'```html\n' + HTML + '\n```'} />);
+
+      // Source first; the preview only on request.
+      expect(container.querySelector('iframe')).toBeNull();
+      const toggle = screen.getByRole('button', { name: /xem trước|preview/i });
+      expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+      await user.click(toggle);
+
+      const frame = container.querySelector('iframe');
+      expect(frame).not.toBeNull();
+      // Exactly "allow-scripts": without allow-same-origin the markup runs in an
+      // opaque origin and cannot reach this page, its storage or its cookies.
+      expect(frame).toHaveAttribute('sandbox', 'allow-scripts');
+      expect(frame?.getAttribute('sandbox')).not.toMatch(/allow-same-origin|allow-forms|allow-popups|allow-top-navigation/);
+      expect(frame).toHaveAttribute('srcdoc', HTML);
+      expect(frame).toHaveAttribute('referrerpolicy', 'no-referrer');
+      expect(frame?.getAttribute('title')).toBeTruthy();
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      // And back to the source.
+      await user.click(toggle);
+      expect(container.querySelector('iframe')).toBeNull();
+    });
+
+    it.each(['htm', 'svg', 'HTML'])('offers a preview for %s blocks too', (language) => {
+      render(<MarkdownRenderer content={'```' + language + '\n<svg></svg>\n```'} />);
+      expect(screen.getByRole('button', { name: /xem trước|preview/i })).toBeInTheDocument();
+    });
+
+    it('offers no preview for other languages', () => {
+      render(<MarkdownRenderer content={'```js\nconsole.log(1)\n```'} />);
+      expect(screen.queryByRole('button', { name: /xem trước|preview/i })).not.toBeInTheDocument();
+    });
   });
 });

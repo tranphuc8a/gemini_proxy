@@ -181,3 +181,42 @@ def test_drafting_a_course_over_http_is_for_the_administrator(client, monkeypatc
     r = client.post(f"{AI}/draft/lesson", json=plan, headers=admin)
     assert r.status_code == 200 and r.json()["md"].startswith("# Bài B\n\n## Mục tiêu")
 
+
+
+def test_the_dev_tool_routes_over_http(client, monkeypatch):
+    from src.adapter.factory.sql_admin_factory import get_sql_admin_input_port
+    from src.application.exceptions.exceptions import UnauthorizedError
+    from tests.application.test_ai_query_usecase import FakeSql
+
+    class Sql(FakeSql):
+        async def current_session(self, token):
+            if token != "tok":
+                raise UnauthorizedError("Session expired or not found; please connect again")
+            return await super().current_session(token)
+
+    monkeypatch.setattr(settings, "GEMINI_URL", "https://gemini.test/v1beta/models/gemini-2.5-flash:generateContent")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k")
+    model = FakeModel([json.dumps({"sql": "SELECT `id` FROM `orders`", "explanation": "Mã đơn."}),
+                       json.dumps({"summary": "OK.", "details": [], "problems": [], "next": []}),
+                       "Câu trả lời của Pro"])
+    app.dependency_overrides[get_ai_usecase] = lambda: AiUseCase(FakeStore(), model)
+    app.dependency_overrides[get_sql_admin_input_port] = lambda: Sql()
+    admin = {"X-Admin-Key": ADMIN_KEY}
+    ask = {"database": "shop", "question": "mã các đơn"}
+
+    assert client.post(f"{AI}/sql", json=ask, headers={"X-Session-Token": "tok"}).status_code == 403   # AI access first
+    assert client.post(f"{AI}/sql", json=ask, headers=admin).status_code == 401                       # then the DB session
+    r = client.post(f"{AI}/sql", json=ask, headers={**admin, "X-Session-Token": "tok"})
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
+    assert r.json()["statements"] == [{"sql": "SELECT `id` FROM `orders`", "readOnly": True, "checked": True,
+                                       "error": None}]
+
+    seen = {"request": {"method": "GET", "url": "https://api.test/x", "headers": [["Accept", "*/*"]]},
+            "response": {"status": 200, "headers": [], "body": "{}"}}
+    r = client.post(f"{AI}/http", json={"action": "explain", **seen}, headers=admin)
+    assert r.status_code == 200 and r.json()["summary"] == "OK."
+    assert client.post(f"{AI}/http", json={"action": "run", **seen}, headers=admin).status_code == 422
+
+    r = client.post(f"{AI}/chat", json={"prompt": "chào", "model": "gemini-2.5-pro"}, headers=admin)
+    assert r.status_code == 200 and r.json()["text"] == "Câu trả lời của Pro" and model.calls[-1]["model"] == "gemini-2.5-pro"
+    assert client.post(f"{AI}/chat", json={"prompt": "chào", "model": "gemini-2.5-pro"}).status_code == 403

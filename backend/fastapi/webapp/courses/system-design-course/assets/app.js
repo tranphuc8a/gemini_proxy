@@ -310,7 +310,7 @@ function buildNav() {
   }).join("");
 
   var nav = $("#sideNav");
-  nav.innerHTML = html;
+  nav.innerHTML = html + veLoiTat();
   $$(".nav-sec-h", nav).forEach(function (b) {
     b.addEventListener("click", function () {
       var s = b.parentNode;
@@ -601,6 +601,7 @@ function veDoc(doc, anchor) {
   $("#btnDone").addEventListener("click", function () {
     if (done.has(doc.id)) done.delete(doc.id); else done.add(doc.id);
     saveDone(); paintDone(); paintProgress(); buildNav();
+    phat("tien-do", doc.id, done.has(doc.id));
   });
   $("#btnStar").addEventListener("click", function () {
     var b = $("#btnStar");
@@ -886,6 +887,7 @@ function route() {
   var h = location.hash.replace(/^#/, "");
   document.body.classList.remove("nav-open");
 
+  anThanhChon();
   if (!h || h === "/" ) { state.doc = null; viewHome(); buildNav(); paintProgress(); return; }
   if (h[0] !== "/") {                       /* neo thuần trong trang hiện tại */
     var el = document.getElementById(h);
@@ -974,8 +976,59 @@ function apDungThongTinKhoa(c) {
        tien-do   fn(id, daXong) — người học đánh dấu một bài
      KhoaHoc.dangKyTrang(ten, fn(mainEl, phanSau))   → trang "#/~ten"
      KhoaHoc.themNut({ma, nhan, title, khi})           → nút trên header
+     KhoaHoc.themLoiTat({ten, icon, href})            → lối tắt trong "Công cụ học" (mục lục)
+     KhoaHoc.themViecChon({chu, toiThieu, khi(chu, range)}) → việc trên thanh nổi khi
+                                                       người học bôi đen một đoạn bài
    Lỗi trong một mô-đun không được làm hỏng engine: mọi lời gọi đều có try. */
 var MO = { trang: {}, nghe: {} };
+
+/* Bôi đen trong bài → MỘT thanh việc nổi ngay dưới đoạn đó; mô-đun góp việc vào
+   (trợ giảng: "Giải thích", sổ tay: "Tô sáng") thay vì mỗi mô-đun một nút riêng đè nhau. */
+/* Lối tắt tới trang của mô-đun, cuối mục lục trái — trên điện thoại header không đủ chỗ
+   cho mọi nút, còn mục lục (ngăn kéo ☰) thì luôn mở được. */
+var LOI_TAT = [];
+function veLoiTat() {
+  if (!LOI_TAT.length) return "";
+  return '<div class="nav-cc"><div class="nav-cc-h">Công cụ học</div>' + LOI_TAT.map(function (o) {
+    return '<a class="nav-cc-i" href="' + esc(o.href) + '">' + icon(o.icon) + "<span>" + esc(o.ten) + "</span></a>";
+  }).join("") + "</div>";
+}
+var VIEC_CHON = [], thanhChon = null, doanChon = null;
+function anThanhChon() { if (thanhChon) thanhChon.hidden = true; }
+function xetChon() {
+  var body = $("#body"), sel = window.getSelection && window.getSelection();
+  var chu = sel ? String(sel).replace(/\s+/g, " ").trim() : "";
+  var viec = VIEC_CHON.filter(function (v) { return chu.length >= (v.toiThieu || 3); });
+  if (!viec.length || !body || !state.doc || !sel.rangeCount || !body.contains(sel.anchorNode) ||
+      !body.contains(sel.focusNode)) { anThanhChon(); return; }
+  if (!thanhChon) {
+    thanhChon = document.createElement("div");
+    thanhChon.className = "chon-thanh";
+    thanhChon.setAttribute("role", "toolbar");
+    thanhChon.setAttribute("aria-label", "Việc với đoạn đang chọn");
+    thanhChon.addEventListener("mousedown", function (e) { e.preventDefault(); });   /* giữ vùng chọn */
+    thanhChon.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-i]");
+      if (!b || !doanChon) return;
+      var v = VIEC_CHON[+b.getAttribute("data-i")];
+      anThanhChon();
+      try { v.khi(doanChon.chu, doanChon.range); } catch (er) { if (window.console) console.error(er); }
+    });
+    document.body.appendChild(thanhChon);
+  }
+  doanChon = { chu: chu.slice(0, 4000), range: sel.getRangeAt(0).cloneRange() };
+  thanhChon.innerHTML = VIEC_CHON.map(function (v, i) {
+    return viec.indexOf(v) < 0 ? "" : '<button type="button" data-i="' + i + '">' + esc(v.chu) + "</button>";
+  }).join("");
+  var r = sel.getRangeAt(0).getBoundingClientRect();
+  thanhChon.style.top = Math.round(window.scrollY + r.bottom + 8) + "px";
+  thanhChon.style.left = Math.round(Math.max(8, Math.min(window.scrollX + r.left,
+    window.scrollX + window.innerWidth - 40 - 120 * viec.length))) + "px";
+  thanhChon.hidden = false;
+}
+document.addEventListener("mouseup", function () { setTimeout(xetChon, 0); });
+document.addEventListener("keyup", function (e) { if (e.shiftKey || e.key === "Shift") setTimeout(xetChon, 0); });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") anThanhChon(); });
 function phat(su) {
   var thamSo = Array.prototype.slice.call(arguments, 1);
   (MO.nghe[su] || []).forEach(function (fn) {
@@ -1011,6 +1064,8 @@ window.KhoaHoc = {
     MO.trang[ten] = fn;
     if (D && location.hash.indexOf("#/~" + ten) === 0) route();   /* mở thẳng bằng địa chỉ */
   },
+  themViecChon: function (o) { VIEC_CHON.push(o); },
+  themLoiTat: function (o) { LOI_TAT.push(o); if (D) buildNav(); },
   themNut: function (o) {
     var b = document.createElement("button");
     b.type = "button";
@@ -1043,10 +1098,14 @@ window.KhoaHoc = {
    moDun: [] tắt hết. pwa.js không phải mô-đun engine (dùng chung với OPIc, lab):
    đăng ký service worker và nút cài ứng dụng. mo-offline: "Lưu cả khoá";
    mo-on-tap: thẻ ghi nhớ + lặp lại ngắt quãng; mo-ai: trợ giảng AI cạnh mỗi bài —
-   dùng ai-khach.js (khách gọi /ai/*, chung với OPIc) nên ai-khach đứng trước
+   dùng ai-khach.js (khách gọi /ai/*, chung với OPIc) nên ai-khach đứng trước;
+   mo-so-tay: tô sáng + sổ tay; mo-ban-do: bản đồ kiến thức; mo-doc: chế độ đọc,
+   đọc to; mo-thanh-tich: chuỗi ngày học, huy hiệu, chứng chỉ (dùng nhật ký ôn
+   của mo-on-tap nên đứng sau nó)
    (nạp sau mo-on-tap để đưa thẻ AI soạn vào bộ ôn tập). */
 var GOC_JS = ((document.currentScript && document.currentScript.src) || "").replace(/[^/]*$/, "");
-ch("moDun", ["pwa", "ai-khach", "mo-offline", "mo-on-tap", "mo-ai"]).forEach(function (ten) {
+ch("moDun", ["pwa", "ai-khach", "mo-offline", "mo-on-tap", "mo-ai", "mo-so-tay", "mo-ban-do", "mo-doc",
+             "mo-thanh-tich"]).forEach(function (ten) {
   if (!/^[a-z0-9-]+$/.test(ten)) return;
   var s = document.createElement("script");
   s.src = GOC_JS + ten + ".js";

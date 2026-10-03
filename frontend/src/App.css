@@ -346,6 +346,8 @@
 
 .chat-message-foot {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 6px;
 }
 
@@ -422,6 +424,11 @@
   opacity: 0.55;
 }
 
+/* Prompt library trigger, at the start of the input row. */
+.chat-library-btn {
+  flex: none;
+}
+
 /* ------------------------------------------------------------ Empty states */
 
 .empty-state {
@@ -465,7 +472,8 @@
 
 .chat-message-user .chat-message-time,
 .chat-message-user .message-copy-btn,
-.chat-message-user .message-copy-btn-bottom {
+.chat-message-user .message-copy-btn-bottom,
+.chat-message-user .message-action-btn {
   color: rgba(255, 255, 255, 0.8) !important;
 }
 
@@ -503,7 +511,8 @@
   }
 }
 
-.message-copy-btn-bottom {
+.message-copy-btn-bottom,
+.message-action-btn {
   border-radius: 6px;
   font-size: 12px;
   height: 24px;
@@ -652,6 +661,243 @@
   background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
 }
 
+/* ---------------------------------------------------------- Compare models */
+
+.compare-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.compare-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.compare-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.compare-model-select {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.compare-versus {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.compare-note {
+  margin: 0 !important;
+  font-size: 12px;
+}
+
+/* Side by side; stacked once there is no room for two readable columns. */
+.compare-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.compare-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 160px;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.dark .compare-column {
+  border-color: #3a3a3a;
+  background: #1f1f1f;
+}
+
+.compare-column-head {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.dark .compare-column-head {
+  border-bottom-color: #3a3a3a;
+}
+
+.compare-column-title {
+  font-weight: 600;
+}
+
+.compare-column-body {
+  flex: 1;
+  padding: 12px 16px;
+  max-height: 60vh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.compare-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.compare-column-meta {
+  padding: 8px 16px;
+  border-top: 1px solid #e8e8e8;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.dark .compare-column-meta {
+  border-top-color: #3a3a3a;
+}
+
+/* ------------------------------------------------------------ AI access code */
+
+.ai-code-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(24, 144, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(24, 144, 255, 0.06);
+}
+
+.dark .ai-code-form {
+  background: rgba(24, 144, 255, 0.12);
+}
+
+.ai-code-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.ai-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-code-row .ant-input-affix-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-code-hint {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.ai-code-error {
+  font-size: 13px;
+  color: #a8071a;
+}
+
+.dark .ai-code-error {
+  color: #ffa39e;
+}
+
+/* ---------------------------------------------------------- Prompt library */
+
+.prompt-search {
+  margin-bottom: 6px;
+}
+
+.prompt-library-hint {
+  font-size: 12px;
+  opacity: 0.65;
+  margin-bottom: 12px;
+}
+
+.prompt-section + .prompt-section {
+  margin-top: 16px;
+}
+
+.prompt-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.prompt-section-title {
+  margin: 0 !important;
+}
+
+.prompt-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prompt-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.prompt-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.prompt-item-main:hover {
+  border-color: #1890ff;
+  background: rgba(24, 144, 255, 0.06);
+}
+
+.dark .prompt-item-main {
+  border-color: #3a3a3a;
+}
+
+.dark .prompt-item-main:hover {
+  border-color: #1890ff;
+  background: rgba(24, 144, 255, 0.12);
+}
+
+.prompt-item-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Two lines of the text are enough to recognise a prompt. */
+.prompt-item-text {
+  font-size: 12px;
+  opacity: 0.7;
+  white-space: pre-line;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.prompt-empty {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
 /* --------------------------------------------------------------- Responsive */
 
 @media (max-width: 768px) {
@@ -705,6 +951,14 @@
   .chat-jump-latest {
     right: 16px;
     bottom: 120px;
+  }
+
+  .compare-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-column-body {
+    max-height: none;
   }
 }
 
@@ -1028,7 +1282,14 @@
   color: #8b949e;
 }
 
-.code-block-copy-btn {
+.code-block-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.code-block-copy-btn,
+.code-block-action-btn {
   font-size: 12px;
   color: #57606a;
   transition: all 0.2s ease;
@@ -1037,18 +1298,47 @@
   padding: 0 10px;
 }
 
-.dark .code-block-copy-btn {
+.dark .code-block-copy-btn,
+.dark .code-block-action-btn {
   color: #8b949e;
 }
 
-.code-block-copy-btn:hover {
+.code-block-copy-btn:hover,
+.code-block-action-btn:hover,
+.code-block-action-btn-active {
   color: #1890ff !important;
   background: rgba(24, 144, 255, 0.1) !important;
   border-color: rgba(24, 144, 255, 0.2) !important;
 }
 
-.dark .code-block-copy-btn:hover {
+.dark .code-block-copy-btn:hover,
+.dark .code-block-action-btn:hover,
+.dark .code-block-action-btn-active {
   background: rgba(24, 144, 255, 0.15) !important;
+}
+
+/* HTML/SVG preview: a white page whatever the theme, since that is what the
+   markup was written for. */
+.code-block-preview-wrap {
+  padding: 8px;
+  background: #f6f8fa;
+}
+
+.dark .code-block-preview-wrap {
+  background: #161b22;
+}
+
+.code-block-preview {
+  display: block;
+  width: 100%;
+  height: 360px;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.dark .code-block-preview {
+  border-color: #30363d;
 }
 
 /* Override react-syntax-highlighter styles */

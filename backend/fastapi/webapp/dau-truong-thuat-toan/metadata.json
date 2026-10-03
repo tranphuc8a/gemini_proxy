@@ -1,0 +1,7 @@
+{
+  "title": "Đấu trường thuật toán",
+  "description": "Viết heuristic bằng JavaScript cho bài toán người du lịch (60, 200, 1000 thành phố), chạy ngay trong trình duyệt và nộp lên bảng xếp hạng — máy chủ dựng lại đề và tự đo mọi lời giải.",
+  "category": "Học tập",
+  "tags": ["thuat-toan", "heuristic", "tsp", "toi-uu-hoa", "javascript", "bang-xep-hang", "game"],
+  "icon": "🏟️"
+}

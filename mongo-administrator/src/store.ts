@@ -124,6 +124,8 @@ export interface AppState {
   setTheme: (theme: Theme) => void
   toast: (kind: Toast['kind'], message: string) => void
   dismissToast: (id: number) => void
+  /** A 401 met outside `guard` (the AI panel): back to the login screen, as for any other. */
+  sessionExpired: (message: string) => void
 }
 
 let toastId = 0
@@ -148,6 +150,15 @@ function applyTheme(theme: Theme): void {
 
 export const useStore = create<AppState>((set, get) => {
   /**
+   * The session is gone: drop straight back to the login screen rather than
+   * leaving a shell full of stale data behind.
+   */
+  function dropSession(): void {
+    storage.clearToken()
+    set({ status: 'idle', session: null, databases: [], collections: {}, activeDb: null, activeCollection: null })
+  }
+
+  /**
    * Run an API call, reporting failures as toasts.
    * Returns `null` on failure so callers can branch without try/catch.
    */
@@ -157,12 +168,7 @@ export const useStore = create<AppState>((set, get) => {
       return await operation()
     } catch (error) {
       const apiError = error instanceof ApiError ? error : null
-      if (apiError?.isAuthError) {
-        // The session is gone: drop straight back to the login screen rather
-        // than leaving a shell full of stale data behind.
-        storage.clearToken()
-        set({ status: 'idle', session: null, databases: [], collections: {}, activeDb: null, activeCollection: null })
-      }
+      if (apiError?.isAuthError) dropSession()
       if (!options.silent) {
         get().toast('error', apiError?.message ?? (error as Error).message ?? 'Something went wrong')
       }
@@ -636,5 +642,10 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     dismissToast: (id) => set({ toasts: get().toasts.filter((toast) => toast.id !== id) }),
+
+    sessionExpired: (message) => {
+      dropSession()
+      get().toast('error', message)
+    },
   }
 })

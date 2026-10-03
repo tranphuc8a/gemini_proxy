@@ -32,7 +32,11 @@
       "hien-thi.css",
       "mo-offline.js",
       "mo-on-tap.js",
-      "mo-ai.js"
+      "mo-ai.js",
+      "mo-so-tay.js",
+      "mo-ban-do.js",
+      "mo-doc.js",
+      "mo-thanh-tich.js"
     ],
     "dich": [
       "ai-everything-course",

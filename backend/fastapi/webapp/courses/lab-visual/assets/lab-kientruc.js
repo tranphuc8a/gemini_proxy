@@ -241,8 +241,9 @@
                        het: het / MAU, tonDong: tonDong });
         }
         ghiChu.innerHTML = "";
-        [[V.mau("ok"), "tải < 60%"], [V.mau("ba"), "60–85%"], [V.mau("loi"), "≥ 85% / quá tải"],
-         [V.mau("ac"), "p50"], [V.mau("loi"), "p99"]].forEach(function (x) {
+        [[V.mau("ok"), "khối: tải < 60%"], [V.mau("ba"), "60–85%"], [V.mau("loi"), "≥ 85% / quá tải"],
+         [V.mau("ac"), "p50 · tải máy app"], [V.mau("loi"), "p99"], [V.mau("ba"), "tải DB chính"],
+         [V.mau("ok"), "tải bản sao"], [V.mau("tx3"), "tải cache"]].forEach(function (x) {
           ghiChu.appendChild(V.el("span", {}, [V.el("i", { class: "o-mau", style: "background:" + x[0] }), x[1]]));
         });
         ghiChu.appendChild(V.el("span", { text: "· bấm “−” trên một khối để bỏ thành phần đó" }));
@@ -283,17 +284,27 @@
         g.restore();
       }
 
-      function canh(x1, y1, x2, y2, lam, chu, net) {
+      /* Một luồng yêu cầu: gấp khúc qua các điểm, dày theo lưu lượng; nhãn ở giữa đoạn dài
+         nhất, trên đường (hoặc dưới — để hai luồng song song không đè nhãn nhau). */
+      function canh(diem, lam, chu, o) {
         if (lam <= 0) return;
+        o = o || {};
         g.save();
         g.strokeStyle = V.mau("tx3");
         g.lineWidth = Math.max(1, Math.min(7, Math.log(1 + lam) / Math.LN10 * 1.6));
-        if (net) g.setLineDash([5, 4]);
-        g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+        if (o.net) g.setLineDash([5, 4]);
+        g.beginPath(); g.moveTo(diem[0][0], diem[0][1]);
+        var dai = -1, mx = 0, my = 0;
+        for (var i = 1; i < diem.length; i++) {
+          g.lineTo(diem[i][0], diem[i][1]);
+          var d = Math.hypot(diem[i][0] - diem[i - 1][0], diem[i][1] - diem[i - 1][1]);
+          if (d > dai) { dai = d; mx = (diem[i][0] + diem[i - 1][0]) / 2; my = (diem[i][1] + diem[i - 1][1]) / 2; }
+        }
+        g.stroke();
         g.setLineDash([]);
         g.fillStyle = V.mau("tx2"); g.font = "10.5px ui-monospace,monospace";
-        g.textAlign = "center"; g.textBaseline = "bottom";
-        g.fillText((chu ? chu + " " : "") + soGon(lam) + "/s", (x1 + x2) / 2, (y1 + y2) / 2 - 5);
+        g.textAlign = "center"; g.textBaseline = o.duoi ? "top" : "bottom";
+        g.fillText((chu ? chu + " " : "") + soGon(lam) + "/s", mx, my + (o.duoi ? 6 : -5));
         g.restore();
       }
 
@@ -307,16 +318,18 @@
         var docDb = c.lam * G.doc / 100 * (T.cache ? 1 - G.trungCache / 100 : 1);
         var ghi = c.lam * (1 - G.doc / 100);
 
-        canh(xU + 26, giua, xL - bw / 2, giua, c.lam);
-        canh(xL + bw / 2, giua, xA - bw / 2, giua, c.lam);
-        if (T.cache) canh(xA + bw / 2, giua - 8, xC - bw / 2, yC, c.lam * G.doc / 100, "đọc");
-        if (R) canh(xA + bw / 2, giua, xR - 34, giua, docDb, T.cache ? "trượt cache" : "đọc");
-        else canh(xA + bw / 2, giua - 4, xD - bw / 2, giua - 4, docDb, T.cache ? "trượt cache" : "đọc");
+        var nhanDoc = T.cache ? "trượt cache" : "đọc", lan = giua - Math.max(34, Hd * 0.13);
+        canh([[xU + 26, giua], [xL - bw / 2, giua]], c.lam);
+        canh([[xL + bw / 2, giua], [xA - bw / 2, giua]], c.lam);
+        if (T.cache) canh([[xA + bw / 2, giua - 14], [xC - bw / 2, yC]], c.lam * G.doc / 100, "đọc");
+        /* đọc xuống bản sao: đi làn trên, vòng qua khối DB chính chứ không cắt ngang nó */
+        if (R) canh([[xA + bw / 2, giua - 6], [xA + bw / 2 + 24, lan], [xR - 52, lan], [xR - 34, giua - 6]], docDb, nhanDoc);
+        else canh([[xA + bw / 2, giua - 6], [xD - bw / 2, giua - 6]], docDb, nhanDoc);
         if (T.hangDoi) {
-          canh(xA + bw / 2, giua + 8, xC - bw / 2, yQ, ghi, "ghi");
-          canh(xC + bw / 2, yQ, xD - bw / 2, giua + 10, ghi, "", true);
+          canh([[xA + bw / 2, giua + 14], [xC - bw / 2, yQ]], ghi, "ghi", { duoi: true });
+          canh([[xC + bw / 2, yQ], [xD - bw / 2, giua + 12]], ghi, "", { net: true, duoi: true });
         } else {
-          canh(xA + bw / 2, giua + 10, xD - bw / 2, giua + 10, ghi, "ghi");
+          canh([[xA + bw / 2, giua + 10], [xD - bw / 2, giua + 10]], ghi, "ghi", { duoi: true });
         }
 
         g.save();
@@ -348,7 +361,10 @@
           le: { t: tren + 22, r: cv.W / 2 + 14, b: 34, l: 58 },
           x: { min: 0, max: GIAY - 1, nhan: "giây", vach: 6, dinhDang: function (x) { return String(Math.round(x)); } },
           y: { min: 1, max: HET_GIO_MS, log: true, nhan: "độ trễ (ms, thang log)",
-               dinhDang: function (x) { return x >= 1000 ? x / 1000 + " s" : String(Math.round(x)); } },
+               dinhDang: function (x) {          /* 10^log10(3000) không ra số tròn: làm tròn trước khi in */
+                 return x >= 1000 ? (x / 1000).toFixed(1).replace(/\.0$/, "").replace(".", ",") + " s" :
+                   x >= 10 ? String(Math.round(x)) : x.toFixed(1).replace(".", ",");
+               } },
           luoi: 4
         });
         var B2 = V.bieuDo(cv, {
@@ -372,7 +388,7 @@
         g.save();
         g.font = "600 11.5px system-ui,sans-serif"; g.textAlign = "left"; g.textBaseline = "top"; g.fillStyle = V.mau("tx2");
         g.fillText("Độ trễ p50 / p99 theo thời gian", B1.x0(), tren + 4);
-        g.fillText("Tải: app (xanh nhấn) · DB chính (cam) · bản sao (lục) · cache (xám)", B2.x0(), tren + 4);
+        g.fillText("Tải từng tầng (đường đứt: 100%)", B2.x0(), tren + 4);
         g.restore();
       }
 

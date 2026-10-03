@@ -32,6 +32,11 @@ TANG 2 — trinh duyet that, KHONG mock
    Tro giang AI (Gemini GIA): khach khong thay khi AI chi danh cho quan tri vien;
    quan tri vien tom tat, lam cau hoi on tap, hoi dap co nguon — bai gui toi model.
    On tap: the AI soan vao bo the, trang #/~on-tap lat the + cham (SM-2) hen ngay sau.
+   Ma chay duoc trong bai (```js-chay, ```js-bai-tap): chay, nop sai / dung, ma sua duoc
+   giu qua tai lai, vong lap vo han bi dung sau 5 giay. (Python can mang de tai Pyodide —
+   khong kiem tu dong.)
+   Cong cu hoc: muc "Cong cu hoc" trong muc luc; to sang -> so tay -> tai lai van to;
+   ban do kien thuc (/graph) + duong ngan nhat; che do doc (co chu); thanh tich + huy hieu.
    Roi cac ca bien: ?api= tro ra may chu la bi bo qua; tieu de / meta mang the
    HTML (sua qua API) hien thanh chu, khong chay; nhom rong va muc luc rong
    khong lam trang chu ket o "Dang tai muc luc".
@@ -368,7 +373,8 @@ def tang_1(thu_muc, B):
     node = shutil.which("node")
     if node:
         for f in ("assets/hien-thi.js", "assets/cau-hinh.js", "assets/app.js", "assets/mo-offline.js",
-                  "assets/mo-on-tap.js", "assets/mo-ai.js", "assets/ai-khach.js", "assets/pwa.js", "sw.js"):
+                  "assets/mo-on-tap.js", "assets/mo-ai.js", "assets/ai-khach.js", "assets/mo-so-tay.js",
+                  "assets/mo-ban-do.js", "assets/mo-doc.js", "assets/mo-thanh-tich.js", "assets/pwa.js", "sw.js"):
             r = subprocess.run([node, "--check", os.path.join(thu_muc, f)], capture_output=True, text=True)
             (B.ok if r.returncode == 0 else B.sai)("cu phap " + f + ("" if r.returncode == 0 else ": " + r.stderr.strip()[-200:]))
     else:
@@ -509,6 +515,8 @@ def tang_2(thu_muc, info, B, chup):
             kiem_lab_nhung(pg, bundle, B)
             kiem_offline(br, may, url, bundle, B)            # truoc ca_bien: ca bien xoa muc luc
             kiem_tro_giang(br, may, url, bundle, B)
+            kiem_chay_ma(br, may, info, url, B)
+            kiem_cong_cu(br, url, bundle, B)
             ca_bien(pg, may, info, url, order, yeu_cau, B)
             br.close()
         if loi:
@@ -666,6 +674,146 @@ def kiem_tro_giang(br, may, url, bundle, B):
         ctx.close()
     if loi:
         B.sai("tro giang AI: pageerror %s" % loi[0][:200])
+
+
+MD_CHAY = ("\n\n```js-chay\nconsole.log(1 + 2)\n```\n\n"
+           "```js-bai-tap\nfunction tong(a, b) {\n  return 0;\n}\n---kiem---\n"
+           "kiem(tong(1, 2) === 3, \"tong(1, 2) phải bằng 3\");\n```\n")
+
+
+def kiem_chay_ma(br, may, info, url, B):
+    """O ma chay duoc + bai tap tu cham (engine/hien-thi.js taoChay), trong Web Worker."""
+    bundle = info["bundle"]
+    order = bundle.get("order") or list(bundle["docs"])
+    bai = bundle["docs"][order[-1]]
+    duong = "/".join(urllib.parse.quote(x, safe="") for x in bai["id"].split("/"))
+    req = urllib.request.Request(
+        may.api + "/courses/" + info["khoa"] + "/docs/" + duong, method="PUT",
+        data=json.dumps({"md": "# " + bai["title"] + MD_CHAY}).encode("utf-8"),
+        headers={"X-Admin-Key": may.khoa_admin, "Content-Type": "application/json"})
+    urllib.request.urlopen(req, timeout=30).read()
+    ctx = br.new_context(viewport={"width": 1280, "height": 860})
+    try:
+        pg = ctx.new_page()
+        pg.goto(url + "&t=9#/" + bai["slug"], wait_until="load")
+        pg.wait_for_selector(".chay .chay-ma", timeout=20000)
+        o1, o2 = pg.locator(".chay").nth(0), pg.locator(".chay.bai-tap")
+        o1.locator('[data-viec="chay"]').click()
+        o1.locator(".chay-ra:has-text('3')").wait_for(timeout=10000)
+        (B.ok if o1.locator(".chay-ra").inner_text().strip() == "3" else B.sai)(
+            "ma chay duoc: console.log(1 + 2) in ra 3 (Web Worker)")
+
+        o2.locator('[data-viec="nop"]').click()
+        o2.locator(".chay-ra.chua-dat").wait_for(timeout=10000)
+        sai_tb = o2.locator(".chay-ra").inner_text()
+        o2.locator(".chay-ma").fill("function tong(a, b) {\n  return a + b;\n}")
+        o2.locator('[data-viec="nop"]').click()
+        o2.locator(".chay-ra.dat").wait_for(timeout=10000)
+        (B.ok if "tong(1, 2) phải bằng 3" in sai_tb and o2.locator(".chay-dat").is_visible() else B.sai)(
+            "bai tap tu cham: nop sai bao loi cua kiem tra, nop dung -> Dat (%r)" % sai_tb.strip()[:60])
+
+        pg.reload(wait_until="load")
+        pg.wait_for_selector(".chay.bai-tap .chay-ma", timeout=20000)
+        giu = pg.locator(".chay.bai-tap .chay-ma").input_value()
+        (B.ok if "a + b" in giu and pg.locator(".chay.bai-tap .chay-dat").is_visible() else B.sai)(
+            "ma da sua va trang thai Dat giu qua tai lai trang")
+
+        o1 = pg.locator(".chay").nth(0)
+        o1.locator(".chay-ma").fill("while (true) {}")
+        o1.locator('[data-viec="chay"]').click()
+        o1.locator(".chay-ra:has-text('Dừng sau')").wait_for(timeout=12000)
+        o1.locator(".chay-ma").fill("console.log('chay lai duoc')")
+        o1.locator('[data-viec="chay"]').click()
+        o1.locator(".chay-ra:has-text('chay lai duoc')").wait_for(timeout=10000)
+        B.ok("vong lap vo han bi dung sau 5 giay (worker bi huy), o ma chay lai duoc")
+    except Exception as e:  # noqa: BLE001
+        B.sai("ma chay duoc trong bai: %s" % str(e).splitlines()[0])
+    finally:
+        ctx.close()
+
+
+def kiem_cong_cu(br, url, bundle, B):
+    """So tay / ban do / che do doc / thanh tich (engine/mo-*.js) trong context moi."""
+    order = bundle.get("order") or list(bundle["docs"])
+    bai = bundle["docs"][order[1] if len(order) > 1 else order[0]]
+    ctx = br.new_context(viewport={"width": 1280, "height": 860})
+    loi = []
+    try:
+        pg = ctx.new_page()
+        pg.on("pageerror", lambda e: loi.append(str(e)))
+        pg.goto(url + "&t=11#/" + bai["slug"], wait_until="load")
+        pg.wait_for_selector("#body .prose p", timeout=20000)
+        cc = pg.eval_on_selector_all(".nav-cc-i", "e => e.map(a => a.getAttribute('href'))")
+        (B.ok if cc == ["#/~on-tap", "#/~so-tay", "#/~ban-do", "#/~thanh-tich"] else B.sai)(
+            "muc 'Cong cu hoc' trong muc luc: %s" % cc)
+
+        # to sang: chon chu cua doan dau tien co du chu -> thanh viec -> To sang
+        pg.evaluate("""() => { const p = [...document.querySelectorAll('#body .prose p')].find(x => x.textContent.trim().length > 20);
+            const r = document.createRange(); r.selectNodeContents(p);
+            const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+            document.dispatchEvent(new MouseEvent('mouseup', {bubbles: true})); }""")
+        pg.wait_for_selector('.chon-thanh:not([hidden]) button:has-text("Tô sáng")', timeout=5000)
+        pg.click('.chon-thanh button:has-text("Tô sáng")')
+        pg.wait_for_timeout(200)
+        hl = pg.evaluate("() => window.CSS && CSS.highlights && CSS.highlights.get('so-tay') ? CSS.highlights.get('so-tay').size : -1")
+        pg.reload(wait_until="load")
+        pg.wait_for_selector("#body .prose p", timeout=20000)
+        pg.wait_for_timeout(300)
+        hl2 = pg.evaluate("() => CSS.highlights.get('so-tay') ? CSS.highlights.get('so-tay').size : 0")
+        pg.evaluate("() => { location.hash = '#/~so-tay'; }")
+        pg.wait_for_selector(".st-trang", timeout=10000)
+        n_to = pg.locator(".st-to").count()
+        (B.ok if hl == 1 and hl2 == 1 and n_to == 1 else B.sai)(
+            "to sang: ve bang CSS Highlight, tai lai van to, so tay co 1 doan (%s, %s, %s)" % (hl, hl2, n_to))
+
+        # so tay -> Markdown Editor that (ban da publish): hop thu localStorage + ?import=1, nhan dung mot lan
+        doan = " ".join(pg.text_content(".st-to blockquote").split())[:30]
+        with ctx.expect_page(timeout=10000) as moi:
+            pg.click('[data-st="mo"]')
+        ed = moi.value
+        ed.wait_for_function("t => { const a = document.querySelector('textarea.editor-input'); "
+                             "return a && a.value.replace(/\\s+/g, ' ').includes(t); }", arg=doan, timeout=20000)
+        con = ed.evaluate("() => localStorage.getItem('markdown-editor:inbox')")
+        (B.ok if con is None and "import=1" not in ed.url else B.sai)(
+            "so tay -> Markdown Editor: tab moi nhan dung noi dung, hop thu da xoa, bo ?import=1")
+        ed.close()
+
+        # ban do kien thuc + duong ngan nhat
+        pg.evaluate("() => { location.hash = '#/~ban-do'; }")
+        pg.wait_for_selector(".bd-svg .bd-nut", timeout=20000)
+        n_nut = pg.locator(".bd-svg .bd-nut").count()
+        pg.click("#bdTim")
+        pg.wait_for_selector("#bdBen ol li", timeout=5000)
+        buoc = pg.locator("#bdBen ol li").count()
+        (B.ok if n_nut == len(order) and buoc >= 2 else B.sai)(
+            "ban do kien thuc: %d/%d bai, duong ngan nhat %d bai" % (n_nut, len(order), buoc))
+
+        # che do doc: tang co chu -> bien CSS tren <html>; dat lai -> bo
+        pg.evaluate("h => { location.hash = h; }", "#/" + bai["slug"])
+        pg.wait_for_selector("#body .prose p", timeout=10000)
+        pg.click("#btnDoc")
+        pg.click('.doc-hop [data-co="1"]')
+        co = pg.evaluate("() => [document.documentElement.hasAttribute('data-doc'), getComputedStyle(document.querySelector('#body .prose')).fontSize]")
+        pg.click('.doc-hop [data-lai="1"]')
+        lai = pg.evaluate("() => document.documentElement.hasAttribute('data-doc')")
+        (B.ok if co[0] and co[1] == "17.5px" and not lai else B.sai)("che do doc: co chu %s, dat lai %s" % (co, lai))
+
+        # thanh tich: danh dau bai xong -> huy hieu 'Buoc dau', trang chu co o chuoi ngay hoc
+        pg.keyboard.press("Escape")
+        pg.click("#btnDone")
+        pg.evaluate("() => { location.hash = '#/~thanh-tich'; }")
+        pg.wait_for_selector(".tt-luoi", timeout=10000)
+        mo = pg.eval_on_selector_all(".tt-hh.co b", "e => e.map(x => x.textContent)")
+        pg.evaluate("() => { location.hash = '#/'; }")
+        pg.wait_for_selector("#ttO", timeout=10000)
+        (B.ok if "Bước đầu" in mo and "ngày liên tiếp" in pg.text_content("#ttO") else B.sai)(
+            "thanh tich: huy hieu %s, trang chu bao chuoi ngay hoc" % mo)
+    except Exception as e:  # noqa: BLE001
+        B.sai("cong cu hoc: %s" % str(e).splitlines()[0])
+    finally:
+        ctx.close()
+    if loi:
+        B.sai("cong cu hoc: pageerror %s" % loi[0][:200])
 
 
 def ca_bien(pg, may, info, url, order, yeu_cau, B):

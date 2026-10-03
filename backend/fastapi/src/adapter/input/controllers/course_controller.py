@@ -376,6 +376,13 @@ async def search_course(request: Request, slug: str, q: str = Query("", max_leng
     return _json(request, {"query": q, "hits": [h.model_dump() for h in hits]})
 
 
+@router.get("/{slug}/graph")
+async def course_graph(request: Request, slug: str, is_admin: bool = Depends(optional_admin),
+                       uc: CourseUseCase = Depends(get_course_usecase)):
+    """Links between lessons, for the reader's knowledge map."""
+    return _json(request, await uc.graph(slug, include_unpublished=is_admin))
+
+
 @router.get("/{slug}/links", dependencies=[Depends(require_admin)])
 async def course_links(request: Request, slug: str, uc: CourseUseCase = Depends(get_course_usecase)):
     return _json(request, await uc.links(slug))

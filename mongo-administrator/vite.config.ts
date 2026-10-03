@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       // never needs CORS headers for the dev server.
       proxy: {
         '/mongoadmin': { target: apiTarget, changeOrigin: true },
+        '/ai': { target: apiTarget, changeOrigin: true },
         '/api': { target: apiTarget, changeOrigin: true },
       },
     },

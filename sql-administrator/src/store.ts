@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import type { AiSqlEntry } from './lib/aiSql'
 import { ApiError, api, configureApi } from './lib/api'
 import { pushHistory, storage } from './lib/storage'
 import type {
@@ -53,6 +54,8 @@ interface State {
   results: QueryResult[]
   running: boolean
   history: QueryHistoryEntry[]
+  /** The last "Hỏi AI" answer: kept until the next question, dropped with its database. */
+  aiAnswer: AiSqlEntry | null
 
   // server
   overview: ServerOverview | null
@@ -92,6 +95,7 @@ interface Actions {
   setSql(sql: string): void
   runSql(sqlOverride?: string): Promise<void>
   clearHistory(): void
+  setAiAnswer(entry: AiSqlEntry | null): void
 
   loadServer(): Promise<void>
 
@@ -130,6 +134,7 @@ const initialState: State = {
   results: [],
   running: false,
   history: [],
+  aiAnswer: null,
 
   overview: null,
   processes: [],
@@ -172,7 +177,8 @@ export const useStore = create<Store>((set, get) => ({
         username: input.username,
         database: input.database ?? '',
       })
-      set({ session, connecting: false, connectError: null })
+      // A new connection may be another server: an AI answer from the last one must not carry over.
+      set({ session, connecting: false, connectError: null, aiAnswer: null })
       await get().loadDatabases()
       if (input.database) await get().selectDatabase(input.database)
       return true
@@ -222,11 +228,20 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   async selectDatabase(database) {
+    // An AI answer was written for one database's tables and must not run on another.
+    const { aiAnswer } = get()
     if (!database) {
-      set({ currentDatabase: null, tables: [], currentTable: null, page: null, structure: null })
+      set({ currentDatabase: null, tables: [], currentTable: null, page: null, structure: null, aiAnswer: null })
       return
     }
-    set({ currentDatabase: database, loadingTables: true, currentTable: null, page: null, structure: null })
+    set({
+      currentDatabase: database,
+      loadingTables: true,
+      currentTable: null,
+      page: null,
+      structure: null,
+      aiAnswer: aiAnswer?.database === database ? aiAnswer : null,
+    })
     try {
       set({ tables: await api.listTables(database), loadingTables: false })
     } catch (error) {
@@ -475,6 +490,10 @@ export const useStore = create<Store>((set, get) => ({
   clearHistory() {
     storage.clearHistory()
     set({ history: [] })
+  },
+
+  setAiAnswer(entry) {
+    set({ aiAnswer: entry })
   },
 
   // ------------------------------------------------------------------

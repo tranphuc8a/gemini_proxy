@@ -211,9 +211,12 @@ export const api = {
       { method: 'POST', accessKey, query: { enabled, backend } },
     ),
 
-  getShared: (token: string) => request<Omit<WorkspaceDto, 'environments' | 'share_token' | 'created_at'>>(
-    `/postman/shared/${encodeURIComponent(token)}`,
-  ),
+  /** A share token is only valid in the store that minted it, so the link carries the backend. */
+  getShared: (token: string, backend?: StorageBackend) =>
+    request<Omit<WorkspaceDto, 'environments' | 'share_token' | 'created_at'>>(
+      `/postman/shared/${encodeURIComponent(token)}`,
+      { query: { backend } },
+    ),
 
   listHistory: (id: string, accessKey: string, limit = 50, offset = 0, backend?: StorageBackend) =>
     request<{ items: any[]; total: number }>(`/postman/workspaces/${encodeURIComponent(id)}/history`, {

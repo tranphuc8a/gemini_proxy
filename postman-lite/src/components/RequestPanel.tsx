@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import type { AuthType, BodyMode, ExtractRule, HttpMethod, KeyValue, Tab } from '../types'
 import { HTTP_METHODS } from '../types'
 import { buildUrl, extractParams, stripQuery } from '../lib/sender'
 import { CODE_LANGUAGES, type CodeLanguage, generateCode } from '../lib/codegen'
-import { buildCurl, curlToSpec, parseCurl } from '../lib/curl'
+import { buildCurl, curlToSpec, looksLikeCurl, parseCurl, specPatchFromCurl } from '../lib/curl'
 import { envTable, findUnresolvedInSpec } from '../lib/env'
 import { copyToClipboard, objectToKv, prettyJson, uid } from '../lib/util'
 import { KeyValueEditor } from './KeyValueEditor'
-import { IconCode, IconCopy, IconPlay, IconSave, IconSend, IconStop, IconTrash } from './Icons'
+import { AiTestsButton, AiTestsPreview } from './Ai'
+import { IconCode, IconCopy, IconLink, IconPlay, IconSave, IconSend, IconStop, IconTrash } from './Icons'
 
 type SubTab = 'params' | 'headers' | 'auth' | 'body' | 'cookies' | 'tests' | 'extract' | 'code'
 
@@ -33,11 +34,13 @@ pm.test("Trả về JSON có field id", function () {
 interface RequestPanelProps {
   tab: Tab
   onSaveAs: () => void
+  /** Open the "share this request as a link" dialog. */
+  onShare: () => void
   onSelectFiles: (files: File[]) => void
   files: File[]
 }
 
-export function RequestPanel({ tab, onSaveAs, onSelectFiles, files }: RequestPanelProps) {
+export function RequestPanel({ tab, onSaveAs, onShare, onSelectFiles, files }: RequestPanelProps) {
   const patchDraft = useStore((s) => s.patchDraft)
   const sendRequest = useStore((s) => s.sendRequest)
   const cancelRequest = useStore((s) => s.cancelRequest)
@@ -49,9 +52,28 @@ export function RequestPanel({ tab, onSaveAs, onSelectFiles, files }: RequestPan
   const [subTab, setSubTab] = useState<SubTab>('params')
   const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>('curl')
   const [curlInput, setCurlInput] = useState('')
+  const testsRef = useRef<HTMLTextAreaElement>(null)
 
   const draft = tab.draft
   const patch = (next: Parameters<typeof patchDraft>[1]) => patchDraft(tab.id, next)
+
+  /**
+   * A curl command pasted into the URL bar fills the request instead of landing
+   * there as text - which is what everyone does with "Copy as cURL".
+   */
+  const onUrlPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = event.clipboardData.getData('text')
+    if (!looksLikeCurl(pasted)) return
+    event.preventDefault()
+    try {
+      const { patch: fromCurl, unsupported } = specPatchFromCurl(pasted)
+      patch(fromCurl)
+      if (unsupported.length) toast('warn', `Đã nạp lệnh cURL, bỏ qua: ${unsupported.join(', ')}`)
+      else toast('success', 'Đã nạp lệnh cURL')
+    } catch (err) {
+      toast('error', `Không đọc được lệnh cURL: ${(err as Error).message}`)
+    }
+  }
 
   const vars = useMemo(
     () => envTable(environments.find((e) => e.id === activeEnvironmentId)),
@@ -104,8 +126,10 @@ export function RequestPanel({ tab, onSaveAs, onSelectFiles, files }: RequestPan
           value={draft.url}
           placeholder="https://api.example.com/users hoặc {{BASE_URL}}/users"
           onChange={(e) => onUrlChange(e.target.value)}
+          onPaste={onUrlPaste}
           spellCheck={false}
           aria-label="URL"
+          title="Dán cả lệnh curl vào đây để nạp toàn bộ request"
         />
 
         {tab.sending ? (
@@ -124,6 +148,10 @@ export function RequestPanel({ tab, onSaveAs, onSelectFiles, files }: RequestPan
           title="Lưu request (Ctrl+S)"
         >
           <IconSave /> Lưu
+        </button>
+
+        <button className="btn" onClick={onShare} title="Chia sẻ request này bằng một link, không qua server">
+          <IconLink /> Chia sẻ
         </button>
 
         {missingVars.length ? (
@@ -204,13 +232,17 @@ export function RequestPanel({ tab, onSaveAs, onSelectFiles, files }: RequestPan
               <button className="btn btn-sm" onClick={() => patch({ tests: '' })}>
                 Xóa
               </button>
+              <AiTestsButton tab={tab} />
             </div>
+            <AiTestsPreview tab={tab} onDone={() => testsRef.current?.focus()} />
             <textarea
+              ref={testsRef}
               className="code-area"
               value={draft.tests}
               placeholder={SAMPLE_TEST}
               onChange={(e) => patch({ tests: e.target.value })}
               spellCheck={false}
+              aria-label="Test script"
             />
             <p className="hint">
               Chạy sau mỗi response, trong Web Worker riêng (không truy cập được DOM, có timeout nên vòng lặp vô hạn

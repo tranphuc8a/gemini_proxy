@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 export interface ConfirmOptions {
   title: string
   message: string
+  /** Shown under the message, e.g. the statements a run would execute. */
+  details?: React.ReactNode
   confirmLabel?: string
+  cancelLabel?: string
   danger?: boolean
   /** When set, the user must type this exact text before confirming. */
   requireText?: string
@@ -17,7 +20,9 @@ interface Props extends ConfirmOptions {
 export function ConfirmDialog({
   title,
   message,
+  details,
   confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   danger = false,
   requireText,
   onConfirm,
@@ -52,6 +57,7 @@ export function ConfirmDialog({
       >
         <h2 className="modal-title">{title}</h2>
         <p className="modal-message">{message}</p>
+        {details ?? null}
 
         {requireText ? (
           <label className="field">
@@ -64,7 +70,7 @@ export function ConfirmDialog({
 
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onCancel}>
-            Cancel
+            {cancelLabel}
           </button>
           <button
             ref={confirmRef}

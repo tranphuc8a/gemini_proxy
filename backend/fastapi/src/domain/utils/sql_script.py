@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import datetime as _dt
 import decimal
+import re
 from typing import Any, Iterator
 
 _QUOTES = {"'", '"', "`"}
@@ -90,6 +91,72 @@ def statement_kind(statement: str) -> str:
     """Classify a statement as 'read' or 'write' so the UI can pick a result view."""
     token = _first_keyword(statement)
     return "read" if token in _READ_ONLY_PREFIXES else "write"
+
+
+_SAFE_FIRST = frozenset(("select", "show", "describe", "desc", "explain", "with", "table", "values"))
+_WRITE_WORDS = frozenset((
+    "insert", "update", "delete", "replace", "merge", "upsert", "drop", "alter", "create", "truncate",
+    "rename", "grant", "revoke", "call", "load", "lock", "unlock", "handler", "do", "set", "flush", "kill",
+    "shutdown", "install", "uninstall", "reset", "purge", "optimize", "repair", "import", "outfile",
+    "dumpfile", "prepare", "execute", "deallocate", "begin", "commit", "rollback", "savepoint", "xa",
+))
+_WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_$]*")
+
+
+def read_only(statement: str) -> bool:
+    """True only when `statement` cannot change data, rights or files.
+
+    Stricter than `statement_kind`: a read keyword first AND no write keyword
+    anywhere outside strings, comments and quoted identifiers — so `WITH ...
+    DELETE`, `SELECT ... FOR UPDATE` and `SELECT ... INTO OUTFILE` are not read
+    only. A column that happens to be called `load` costs a confirmation, which
+    is the right way round. A stored function with side effects still passes:
+    this guards against mistakes, it is not a sandbox.
+    """
+    words = [word.lower() for word in _WORD_RE.findall(_code_only(statement))]
+    return bool(words) and words[0] in _SAFE_FIRST and not any(word in _WRITE_WORDS for word in words)
+
+
+def _code_only(statement: str) -> str:
+    """`statement` with every string, quoted identifier and comment blanked out."""
+    out: list[str] = []
+    quote: str | None = None
+    index, length = 0, len(statement)
+    while index < length:
+        char = statement[index]
+        nxt = statement[index + 1] if index + 1 < length else ""
+        if quote:
+            if char == "\\" and quote in {"'", '"'}:
+                index += 2
+                continue
+            if char == quote:
+                if nxt == quote:
+                    index += 2
+                    continue
+                quote = None
+                out.append(" ")
+            index += 1
+            continue
+        if char == "-" and nxt == "-" and (index + 2 >= length or statement[index + 2] in " \t\r\n"):
+            index = _skip_to_eol(statement, index)
+            out.append(" ")
+            continue
+        if char == "#":
+            index = _skip_to_eol(statement, index)
+            out.append(" ")
+            continue
+        if char == "/" and nxt == "*":
+            end = statement.find("*/", index + 2)
+            index = length if end == -1 else end + 2
+            out.append(" ")
+            continue
+        if char in _QUOTES:
+            quote = char
+            index += 1
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
 
 
 def _first_keyword(statement: str) -> str:

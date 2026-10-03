@@ -8,6 +8,8 @@
 
 import { create } from 'zustand'
 import type {
+  AiJob,
+  AiJobError,
   Collection,
   Environment,
   ExtractRule,
@@ -23,6 +25,16 @@ import type {
   WorkspaceLink,
 } from './types'
 import { ApiError, api } from './lib/api'
+import { AiError, type AiStatus, getStatus as getAiStatus, unlockWithCode } from './lib/ai'
+import {
+  type HttpAiAction,
+  type HttpAiPayload,
+  type HttpExplanation,
+  type HttpTests,
+  buildHttpAiPayload,
+  explainHttp,
+  testsForHttp,
+} from './lib/aiHttp'
 import { envTable, findUnresolvedInSpec, resolveSpec } from './lib/env'
 import { runExtracts } from './lib/extract'
 import { ProxyError, send } from './lib/sender'
@@ -107,6 +119,12 @@ export interface StoreState {
   syncing: boolean
   proxyAvailable: boolean | null
 
+  // ai - null until the server has said what this person may do
+  aiStatus: AiStatus | null
+  /** By tab id. A job only counts while its `responseAt` matches the tab's response. */
+  aiExplain: Record<string, AiJob<HttpExplanation>>
+  aiTests: Record<string, AiJob<HttpTests>>
+
   // in-flight
   abortControllers: Record<string, AbortController>
 }
@@ -174,6 +192,15 @@ export interface StoreActions {
   toggleShare: (enabled: boolean) => Promise<void>
   checkProxy: () => Promise<void>
   resetEverything: () => void
+
+  // ai
+  loadAiStatus: (refresh?: boolean) => Promise<void>
+  /** Trade the access code for an AI session. Throws the server's refusal for the form to show. */
+  unlockAi: (code: string) => Promise<void>
+  explainResponse: (tabId: string) => Promise<void>
+  /** Draft tests for the tab's response. They are only shown: nothing runs until the user sends again. */
+  generateTests: (tabId: string) => Promise<void>
+  dismissAiTests: (tabId: string) => void
 }
 
 export type Store = StoreState & StoreActions
@@ -195,6 +222,9 @@ export const useStore = create<Store>((set, get) => ({
   workspace: null,
   syncing: false,
   proxyAvailable: null,
+  aiStatus: null,
+  aiExplain: {},
+  aiTests: {},
   abortControllers: {},
 
   // ------------------------------------------------------------------ setup
@@ -208,6 +238,7 @@ export const useStore = create<Store>((set, get) => ({
     document.documentElement.dataset.theme = settings.theme
 
     get().checkProxy()
+    get().loadAiStatus()
     if (workspace && settings.autoSync) get().pullWorkspace()
   },
 
@@ -253,13 +284,15 @@ export const useStore = create<Store>((set, get) => ({
     get().cancelRequest(tabId)
     set((s) => {
       const remaining = s.tabs.filter((tab) => tab.id !== tabId)
+      const aiExplain = withJob(s.aiExplain, tabId, undefined)
+      const aiTests = withJob(s.aiTests, tabId, undefined)
       // Never leave the editor with no tab at all.
       if (!remaining.length) {
         const fresh = newTab(blankRequest())
-        return { tabs: [fresh], activeTabId: fresh.id }
+        return { tabs: [fresh], activeTabId: fresh.id, aiExplain, aiTests }
       }
       const activeTabId = s.activeTabId === tabId ? remaining[remaining.length - 1].id : s.activeTabId
-      return { tabs: remaining, activeTabId }
+      return { tabs: remaining, activeTabId, aiExplain, aiTests }
     })
   },
 
@@ -818,10 +851,106 @@ export const useStore = create<Store>((set, get) => ({
   resetEverything: () => {
     clearStorage()
     const fresh = newTab(blankRequest())
-    set({ ...EMPTY_STATE, tabs: [fresh], activeTabId: fresh.id, workspace: null, runnerRows: [] })
+    set({ ...EMPTY_STATE, tabs: [fresh], activeTabId: fresh.id, workspace: null, runnerRows: [], aiExplain: {}, aiTests: {} })
     get().toast('success', 'Đã xóa toàn bộ dữ liệu cục bộ')
   },
+
+  // --------------------------------------------------------------------- ai
+  loadAiStatus: async (refresh = false) => {
+    try {
+      set({ aiStatus: await getAiStatus(refresh) })
+    } catch {
+      // No answer: keep what we knew. Never having known keeps AI hidden.
+    }
+  },
+
+  unlockAi: async (code) => {
+    set({ aiStatus: await unlockWithCode(code) })
+  },
+
+  explainResponse: (tabId) =>
+    runAiJob(get, tabId, 'explain', explainHttp, (s) => s.aiExplain[tabId], (job) =>
+      set((s) => ({ aiExplain: withJob(s.aiExplain, tabId, job) })),
+    ),
+
+  generateTests: (tabId) =>
+    runAiJob(get, tabId, 'tests', testsForHttp, (s) => s.aiTests[tabId], (job) =>
+      set((s) => ({ aiTests: withJob(s.aiTests, tabId, job) })),
+    ),
+
+  dismissAiTests: (tabId) => set((s) => ({ aiTests: withJob(s.aiTests, tabId, undefined) })),
 }))
+
+// ---------------------------------------------------------------------------
+function withJob<T>(jobs: Record<string, T>, tabId: string, job: T | undefined): Record<string, T> {
+  if (job) return { ...jobs, [tabId]: job }
+  if (!(tabId in jobs)) return jobs
+  const rest = { ...jobs }
+  delete rest[tabId]
+  return rest
+}
+
+const CODE_REQUIRED: AiJobError = {
+  message: 'Cần mã truy cập AI — nhập mã để dùng tính năng này',
+  code: 'ai_code_required',
+  status: 403,
+}
+
+/**
+ * Ask the AI about a tab's current response, tracking the job by that response.
+ *
+ * The request is the draft with the active environment substituted - what was
+ * sent - so the AI sees real URLs, not `{{BASE_URL}}`. An answer that arrives
+ * after the tab moved on (a new response, a newer job, the tab closed) is dropped.
+ */
+async function runAiJob<T>(
+  get: () => Store,
+  tabId: string,
+  action: HttpAiAction,
+  ask: (payload: HttpAiPayload) => Promise<T>,
+  current: (s: Store) => AiJob<T> | undefined,
+  put: (job: AiJob<T>) => void,
+): Promise<void> {
+  const state = get()
+  const tab = state.tabs.find((t) => t.id === tabId)
+  const response = tab?.response
+  if (!tab || !response) return
+
+  const responseAt = response.receivedAt
+  const existing = current(state)
+  if (existing?.busy && existing.responseAt === responseAt) return
+
+  // Code mode without a code yet: ask for it before spending a round trip.
+  const status = state.aiStatus
+  if (status && !status.allowed && status.needs === 'code') {
+    put({ responseAt, busy: false, error: CODE_REQUIRED, notes: [] })
+    return
+  }
+
+  put({ responseAt, busy: true, notes: [] })
+  const stillOurs = () => {
+    const job = current(get())
+    return Boolean(job?.busy && job.responseAt === responseAt)
+  }
+
+  let notes: string[] = []
+  try {
+    const environment = state.environments.find((e) => e.id === state.activeEnvironmentId)
+    const built = await buildHttpAiPayload(action, resolveSpec(tab.draft, envTable(environment)), response)
+    notes = built.notes
+    const result = await ask(built.payload)
+    if (stillOurs()) put({ responseAt, busy: false, result, notes })
+  } catch (err) {
+    const error: AiJobError =
+      err instanceof AiError
+        ? { message: err.message, code: err.code, status: err.status }
+        : { message: (err as Error)?.message || 'Lỗi không xác định', code: '', status: 0 }
+    if (stillOurs()) put({ responseAt, busy: false, error, notes })
+    // The server disagrees with the status we hold (token expired, code
+    // changed, admin logged out): ask again so the UI offers the right thing.
+    if (error.code === 'ai_code_required' || error.code === 'ai_admin_only') get().loadAiStatus(true)
+  }
+}
 
 // ---------------------------------------------------------------------------
 export function isDescendant(collections: Collection[], collectionId: string, candidateParentId: string): boolean {

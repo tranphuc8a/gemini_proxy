@@ -1,11 +1,15 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import { type AiStatus, canOffer, getStatus } from '../lib/ai'
 import { formatDuration, formatNumber } from '../lib/format'
 import { statementAtCursor, toCsv, toJson } from '../lib/sql'
 import { downloadText } from '../lib/storage'
 import { useStore } from '../store'
+import { AiSqlPanel } from './AiSqlPanel'
 import { DataGrid } from './DataGrid'
 import { DownloadIcon, PlayIcon, TrashIcon } from './Icons'
+
+const AI_PANEL_ID = 'ai-sql-panel'
 
 export function SqlConsole() {
   const sql = useStore((state) => state.sql)
@@ -16,9 +20,34 @@ export function SqlConsole() {
   const history = useStore((state) => state.history)
   const clearHistory = useStore((state) => state.clearHistory)
   const currentDatabase = useStore((state) => state.currentDatabase)
+  const hasAiAnswer = useStore((state) => state.aiAnswer !== null)
 
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null)
+  // 'opened' by the user (focus moves into it) or 'restored' with the last answer on coming back.
+  const [aiPanel, setAiPanel] = useState<'opened' | 'restored' | null>(hasAiAnswer ? 'restored' : null)
+
+  useEffect(() => {
+    let alive = true
+    // No AI on this server, or no answer from it, simply means no AI button.
+    getStatus().then(
+      (status) => {
+        if (alive) setAiStatus(status)
+      },
+      () => {
+        if (alive) setAiStatus(null)
+      },
+    )
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  function putInEditor(text: string) {
+    setSql(text)
+    editorRef.current?.focus()
+  }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     // Ctrl/Cmd+Enter runs everything; Ctrl/Cmd+Shift+Enter runs just the
@@ -56,6 +85,17 @@ export function SqlConsole() {
           <button type="button" className="btn btn-sm" onClick={() => setSql('')} disabled={!sql}>
             Clear
           </button>
+          {aiStatus && canOffer(aiStatus) ? (
+            <button
+              type="button"
+              className="btn btn-sm ai-toggle"
+              aria-expanded={aiPanel !== null}
+              aria-controls={AI_PANEL_ID}
+              onClick={() => setAiPanel((open) => (open ? null : 'opened'))}
+            >
+              <span aria-hidden="true">✨</span> Hỏi AI
+            </button>
+          ) : null}
         </div>
         <div className="toolbar-group console-context">
           <span className="hint">
@@ -66,6 +106,17 @@ export function SqlConsole() {
           </button>
         </div>
       </div>
+
+      {aiStatus && canOffer(aiStatus) && aiPanel ? (
+        <AiSqlPanel
+          id={AI_PANEL_ID}
+          status={aiStatus}
+          onStatusChange={setAiStatus}
+          editorSql={sql}
+          onUseSql={putInEditor}
+          autoFocus={aiPanel === 'opened'}
+        />
+      ) : null}
 
       <textarea
         ref={editorRef}

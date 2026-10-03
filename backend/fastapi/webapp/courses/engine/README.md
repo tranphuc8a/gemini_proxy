@@ -23,8 +23,12 @@ Hai engine, cả hai **là nguồn thật ở đây**; bản trong `<trang>/asse
 | [`app.css`](app.css) | Giao diện trang đọc bài giảng; mỗi khoá đè màu bằng `assets/chu-de.css` |
 | [`hien-thi.js`](hien-thi.js) | Bộ dựng bài từ markdown, `window.HienThi`: marked + bộ lọc HTML, KaTeX, tô màu mã, mermaid (nạp khi cần), hộp chú ý, link giữa các bài, ảnh `assets/…` của khoá. Trang đọc và bản xem trước ở trang Quản lý dùng **chung** tệp này — xem trước giống hệt trang thật |
 | [`hien-thi.css`](hien-thi.css) | Kiểu chữ bài đọc (`.prose`, khối mã, mermaid) đi cùng `hien-thi.js` |
-| [`sync.py`](sync.py) | Chép engine sang các trang đích khai báo trong `dong-bo.json` (cả hai engine) |
-| [`dong-bo.json`](dong-bo.json) | `tep`/`dich`: engine trực quan · `khoa_hoc`: engine đọc bài giảng · `quan_ly`: bộ dựng bài sang trang Quản lý |
+| [`ai-khach.js`](ai-khach.js) | Khách AI cho trang tĩnh (khoá học, OPIc, portal): `GET /ai/status`, ô mã truy cập, gửi `X-Admin-Session` / `X-AI-Session` — token chỉ gửi về đúng gốc API đã cấp nó |
+| [`mo-offline.js`](mo-offline.js) · [`mo-on-tap.js`](mo-on-tap.js) · [`mo-ai.js`](mo-ai.js) · [`mo-so-tay.js`](mo-so-tay.js) · [`mo-ban-do.js`](mo-ban-do.js) · [`mo-doc.js`](mo-doc.js) · [`mo-thanh-tich.js`](mo-thanh-tich.js) | Mô-đun học tập của trang đọc — xem mục *Mô-đun học tập* bên dưới |
+| [`pwa.js`](pwa.js) · [`sw.js`](sw.js) | PWA: đăng ký service worker + viên "đang offline" (không hiện khi trang nằm trong khung nhúng) · service worker đặt ở **gốc** trang (phạm vi = thư mục trang): nội dung khoá *mạng trước*, tệp tĩnh *stale-while-revalidate*, CDN *cache trước* |
+| [`tao_pwa.py`](tao_pwa.py) · [`kiem_pwa.py`](kiem_pwa.py) | Sinh `manifest.webmanifest` + biểu tượng 192/512/maskable cho từng trang · kiểm PWA tĩnh và trên trình duyệt (`check.py` các trang gọi vào) |
+| [`sync.py`](sync.py) | Chép engine sang các trang đích khai báo trong `dong-bo.json` (cả hai engine); `--kiem` chỉ so, không chép |
+| [`dong-bo.json`](dong-bo.json) | `tep`/`dich`: engine trực quan · `khoa_hoc`: engine đọc bài giảng + mô-đun · `quan_ly`: bộ dựng bài sang trang Quản lý · `pwa`: `pwa.js` sang 7 trang · `pwa_goc`: `sw.js` vào **gốc** trang (`"vao": "."`) · `ai_khach`: `ai-khach.js` |
 | [`kiem_demo.py`](kiem_demo.py) | Module mà `check.py` của từng trang `*-visual` gọi vào |
 | [`kiem_khoa_hoc.py`](kiem_khoa_hoc.py) | Module mà `check.py` của từng trang `*-course` gọi vào; `MayChuThu` dựng FastAPI thật trên SQLite tạm cho mọi bài kiểm trình duyệt |
 | [`thu-nhanh.js`](thu-nhanh.js) | Chạy thật engine + mọi lab trong Node trên DOM/canvas giả |
@@ -63,6 +67,43 @@ dùng nó và lập chỉ mục tìm kiếm trên trình duyệt như trước �
 ```bash
 cd ../system-design-course && python check.py      # tĩnh + FastAPI thật + Chromium
 ```
+
+### Mô-đun học tập (`moDun`)
+
+Engine nạp lần lượt các tệp trong `moDun` của `assets/cau-hinh.js`; mặc định:
+
+```js
+moDun: ["pwa", "ai-khach", "mo-offline", "mo-on-tap", "mo-ai", "mo-so-tay", "mo-ban-do", "mo-doc", "mo-thanh-tich"]
+```
+
+Bỏ tên nào là tắt mô-đun đó. Mọi thứ của người học (thẻ ôn, tô sáng, huy hiệu…) cất trong
+`localStorage` theo từng khoá (`K.LS`) — không cần tài khoản.
+
+| Mô-đun | Việc |
+|---|---|
+| `mo-offline` | Thẻ "Tải về đọc offline": tải hết bài của khoá vào bộ nhớ đệm của service worker |
+| `mo-ai` | Hàng **Trợ giảng AI** dưới tiêu đề bài: *Tóm tắt*, *Giải thích* (cả đoạn đang bôi đen — nút ✨ trên thanh chọn chữ), *Trắc nghiệm* (5 câu, đổi bộ khác), *Thẻ ghi nhớ* (→ ôn tập), *Hỏi* (trả lời từ bài + các bài liên quan, có trích `[n]`). Gọi `POST /ai/tutor`; chỉ hiện khi `/ai/status` cho phép — chế độ "chỉ quản trị viên" thì khách không thấy gì |
+| `mo-on-tap` | Ôn tập ngắt quãng **SM-2**: trang `#/~on-tap` (Space lật, 1–4 chấm), thẻ "Hôm nay cần ôn N thẻ" ở trang chủ, nút có số ở thanh trên; `K.onTap = {them, denHan, nhatKy}` |
+| `mo-so-tay` | Tô sáng bằng CSS Custom Highlight API (không đụng DOM bài), trang `#/~so-tay` với chú thích; *Tải .md*, *Chép markdown*, *Mở trong Markdown Editor* (hộp thư `markdown-editor:inbox` + `?import=1`) |
+| `mo-ban-do` | Bản đồ kiến thức `#/~ban-do`: đồ thị lực từ `GET /courses/<slug>/graph` (liên kết giữa các bài), kéo/zoom, đường học ngắn nhất (BFS) giữa hai bài |
+| `mo-doc` | Nút **Aa**: cỡ chữ, giãn dòng, độ rộng cột, chữ có chân (Noto Serif), nền dịu, đọc to bằng `speechSynthesis` giọng vi-VN |
+| `mo-thanh-tich` | Chuỗi ngày học, 11 huy hiệu, trang `#/~thanh-tich`, **chứng chỉ** in được `#/~chung-chi` khi xong cả khoá |
+
+API engine cho mô-đun (`window.KhoaHoc`, gọi tắt `K`): `K.nghe("san-sang" | "trang-chu" | "bai" |
+"tien-do", fn)` · `K.dangKyTrang(ten, ve)` → route `#/~ten` · `K.themNut`, `K.themBieuTuong` (thanh
+trên) · `K.themViecChon({chu, toiThieu, lam})` (thanh nổi khi bôi đen chữ trong bài) ·
+`K.themLoiTat` (mục "Công cụ học" ở mục lục) · `K.render(md)` · `K.LS` · `K.nguon()` · `K.gocApi()`.
+
+### Khối đặc biệt trong markdown bài học
+
+| Khối | Thành |
+|---|---|
+| ` ```lab ` — dòng 1: `id-lab?tham=so&…` (dạng "Chép liên kết" của trang lab, dán cả địa chỉ đầy đủ cũng được); các dòng sau: chú thích | Lab của `lab-visual` chạy ngay trong bài (khung tự cao theo nội dung). Địa chỉ khung do bộ dựng ghép từ id + tham số đã lọc — markdown không chọn được `src` |
+| ` ```py-chay ` / ` ```js-chay ` | Ô mã sửa được + nút **Chạy**, kết quả in bên dưới |
+| ` ```py-bai-tap ` / ` ```js-bai-tap ` | Bài tập tự chấm: phần **trước** dòng `---kiem---` là mã người học sửa, phần **sau** là kiểm tra ẩn (Python: `assert`; JS: `kiem(dieuKien, "thông báo")`). Đạt khi kiểm tra không ném lỗi; "✓ Đã đạt" cất trên máy |
+
+Mã chạy trong Web Worker (không chạm được trang, cookie hay token), bị dừng hẳn khi quá giờ (JS 5 s,
+Python 15 s). Python là Pyodide v0.26.4 tải từ jsdelivr ở lần chạy đầu (~10 MB, trình duyệt giữ lại).
 
 ---
 

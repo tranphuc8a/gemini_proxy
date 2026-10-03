@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from 'antd';
-import { CopyOutlined, CheckOutlined } from '@ant-design/icons';
+import { CopyOutlined, CheckOutlined, EyeOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -41,10 +41,36 @@ const configureMermaid = (theme: 'dark' | 'light') => {
 
 let diagramSeq = 0;
 
-// Code block component with copy button
+/** Fenced-block languages that can be shown rendered, not just as source. */
+const PREVIEW_LANGUAGES = new Set(['html', 'htm', 'svg']);
+
+/**
+ * The frame an HTML/SVG preview runs in.
+ *
+ * `sandbox="allow-scripts"` and nothing more: the markup comes from a model,
+ * so it may run its own scripts but in an opaque origin -- without
+ * allow-same-origin it cannot read this page, its storage (which holds the AI
+ * and admin tokens) or its cookies -- and it may not submit forms, open pop-ups
+ * or navigate the chat away.
+ */
+const HtmlPreview: React.FC<{ code: string; title: string }> = ({ code, title }) => (
+  <div className="code-block-preview-wrap">
+    <iframe
+      className="code-block-preview"
+      sandbox="allow-scripts"
+      srcDoc={code}
+      title={title}
+      referrerPolicy="no-referrer"
+    />
+  </div>
+);
+
+// Code block component with copy button, and a rendered preview for HTML/SVG
 const CodeBlock: React.FC<{ code: string; language: string; theme: 'dark' | 'light' }> = ({ code, language, theme }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const canPreview = PREVIEW_LANGUAGES.has(language.toLowerCase());
 
   const handleCopy = async () => {
     try {
@@ -60,28 +86,46 @@ const CodeBlock: React.FC<{ code: string; language: string; theme: 'dark' | 'lig
     <div className="code-block-wrapper">
       <div className="code-block-header">
         <span className="code-block-language">{language || t('chat.plainText')}</span>
-        <Button
-          type="text"
-          size="small"
-          icon={copied ? <CheckOutlined /> : <CopyOutlined />}
-          onClick={handleCopy}
-          className="code-block-copy-btn"
-        >
-          {copied ? t('chat.copied') : t('common.copy')}
-        </Button>
+        <div className="code-block-actions">
+          {canPreview && (
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => setPreviewing((shown) => !shown)}
+              aria-pressed={previewing}
+              className={`code-block-action-btn${previewing ? ' code-block-action-btn-active' : ''}`}
+            >
+              {t('chat.preview')}
+            </Button>
+          )}
+          <Button
+            type="text"
+            size="small"
+            icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+            onClick={handleCopy}
+            className="code-block-copy-btn"
+          >
+            {copied ? t('chat.copied') : t('common.copy')}
+          </Button>
+        </div>
       </div>
-      <SyntaxHighlighter
-        style={theme === 'dark' ? oneDark : oneLight}
-        language={language || 'text'}
-        PreTag="div"
-        showLineNumbers
-        customStyle={{
-          margin: 0,
-          borderRadius: '0 0 6px 6px',
-        }}
-      >
-        {code}
-      </SyntaxHighlighter>
+      {canPreview && previewing ? (
+        <HtmlPreview code={code} title={t('chat.previewTitle', { language: language.toUpperCase() })} />
+      ) : (
+        <SyntaxHighlighter
+          style={theme === 'dark' ? oneDark : oneLight}
+          language={language || 'text'}
+          PreTag="div"
+          showLineNumbers
+          customStyle={{
+            margin: 0,
+            borderRadius: '0 0 6px 6px',
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
+      )}
     </div>
   );
 };

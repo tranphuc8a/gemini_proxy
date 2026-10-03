@@ -4,6 +4,7 @@ import { formatDuration, formatTimestamp } from '../lib/format'
 import { downloadText } from '../lib/storage'
 import { IconDownload, IconPlay, IconTrash } from './Icons'
 import { JsonEditor } from './JsonEditor'
+import { useAiAssistant } from './useAiAssistant'
 
 const SNIPPETS: { label: string; pipeline: string }[] = [
   { label: 'Count by field', pipeline: '[\n  { $group: { _id: "$status", n: { $sum: 1 } } },\n  { $sort: { n: -1 } }\n]' },
@@ -23,6 +24,7 @@ export function AggregateConsole() {
   const history = useStore((state) => state.history)
   const applyHistory = useStore((state) => state.applyHistory)
   const clearHistory = useStore((state) => state.clearHistory)
+  const ai = useAiAssistant('aggregate')
 
   if (!activeDb || !activeCollection) {
     return <div className="placeholder">Select a collection to run an aggregation.</div>
@@ -47,6 +49,7 @@ export function AggregateConsole() {
             <IconPlay />
             Run
           </button>
+          {ai.toggle}
           <span className="modal-hint">⌘/Ctrl + Enter</span>
           <div className="snippets">
             {SNIPPETS.map((snippet) => (
@@ -61,6 +64,8 @@ export function AggregateConsole() {
             ))}
           </div>
         </div>
+
+        {ai.panel}
 
         {error ? <div className="query-error">{error}</div> : null}
 

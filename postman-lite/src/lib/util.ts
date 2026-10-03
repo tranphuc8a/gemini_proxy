@@ -145,6 +145,24 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+/**
+ * Names that usually carry a credential: `Authorization`, `Cookie`, `X-API-Key`,
+ * `access_token`, `X-Session-Id`… Used both to mask what goes to the AI and to
+ * strip what goes into a share link, so the two never disagree.
+ */
+export const SECRET_NAME = /auth|cookie|token|secret|passw|api[-_]?key|session|signature|credential/i
+
+export function isSecretName(name: string): boolean {
+  return SECRET_NAME.test(name)
+}
+
+/** The first `limit` UTF-16 units, never ending in the middle of a surrogate pair. */
+export function cutText(text: string, limit: number): string {
+  if (text.length <= limit) return text
+  const last = text.charCodeAt(limit - 1)
+  return text.slice(0, last >= 0xd800 && last <= 0xdbff ? limit - 1 : limit)
+}
+
 /** Subsequence match: "opnrq" finds "open request". */
 export function fuzzy(haystack: string, needle: string): boolean {
   let i = 0

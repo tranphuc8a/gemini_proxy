@@ -13,11 +13,21 @@ import {
   RunnerDialog,
   SaveRequestDialog,
   SettingsDialog,
+  ShareRequestDialog,
+  SharedWorkspaceDialog,
   WorkspaceDialog,
 } from './components/Dialogs'
 import { IconClose, IconPlus } from './components/Icons'
+import type { RequestSpec } from './types'
+import {
+  SHARE_REQUEST_PREFIX,
+  decodeSharedRequest,
+  readWorkspaceShare,
+  sharedRequestToSpec,
+  withoutShareParams,
+} from './lib/share'
 
-type DialogName = 'save' | 'env' | 'settings' | 'import' | 'workspace' | 'diff' | null
+type DialogName = 'save' | 'env' | 'settings' | 'import' | 'workspace' | 'diff' | 'share-request' | null
 
 export default function App() {
   const init = useStore((s) => s.init)
@@ -40,8 +50,12 @@ export default function App() {
   const settings = useStore((s) => s.settings)
   const pullWorkspace = useStore((s) => s.pullWorkspace)
   const pushWorkspace = useStore((s) => s.pushWorkspace)
+  const openDraft = useStore((s) => s.openDraft)
+  const toast = useStore((s) => s.toast)
 
   const [dialog, setDialog] = useState<DialogName>(null)
+  // `?share=<token>&backend=<store>`: a workspace someone shared, read once at startup.
+  const [sharedLink, setSharedLink] = useState(() => readWorkspaceShare(window.location.search))
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [requestRatio, setRequestRatio] = useState(0.5)
   // Files live outside the store: a File is not serialisable, and the store is
@@ -51,12 +65,52 @@ export default function App() {
   const panesRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef(false)
 
+  /**
+   * `#req=…` from a request share link: open it in a new, unsaved tab, then drop
+   * the fragment so a reload does not open it again.
+   */
+  const openSharedRequest = useCallback(() => {
+    const hash = window.location.hash
+    if (!hash.startsWith(SHARE_REQUEST_PREFIX)) return
+    history.replaceState(history.state, '', `${window.location.pathname}${window.location.search}`)
+
+    let spec: RequestSpec
+    try {
+      spec = sharedRequestToSpec(decodeSharedRequest(hash.slice(SHARE_REQUEST_PREFIX.length)))
+    } catch (err) {
+      toast('error', (err as Error).message)
+      return
+    }
+
+    // The blank tab the app starts with has nothing to keep; let the link take its place.
+    const { tabs } = useStore.getState()
+    const blank = tabs.length === 1 && !tabs[0].requestId && !tabs[0].dirty && !tabs[0].draft.url && !tabs[0].response
+    openDraft(spec)
+    if (blank) closeTab(tabs[0].id)
+
+    toast('info', `Đã mở request được chia sẻ "${spec.name}" trong tab mới (chưa lưu).`)
+    // Test scripts run on every send; one from somebody else deserves a look first.
+    if (spec.tests.trim()) toast('warn', 'Request này kèm test script — xem lại tab Tests trước khi gửi.')
+  }, [openDraft, closeTab, toast])
+
   const bootstrapped = useRef(false)
   useEffect(() => {
     if (bootstrapped.current) return
     bootstrapped.current = true
     init()
-  }, [init])
+    openSharedRequest()
+  }, [init, openSharedRequest])
+
+  // A link pasted into the address bar of an open app only changes the fragment.
+  useEffect(() => {
+    window.addEventListener('hashchange', openSharedRequest)
+    return () => window.removeEventListener('hashchange', openSharedRequest)
+  }, [openSharedRequest])
+
+  const closeSharedLink = useCallback(() => {
+    setSharedLink(null)
+    history.replaceState(history.state, '', withoutShareParams(window.location.href))
+  }, [])
 
   const toggleSidebar = useCallback(() => setSidebarCollapsed((value) => !value), [])
 
@@ -120,6 +174,7 @@ export default function App() {
       { id: 'new-tab', label: 'Tab mới', hint: 'Ctrl+T', run: newTab },
       { id: 'send', label: 'Gửi request', hint: 'Ctrl+Enter', run: () => activeTabId && sendRequest(activeTabId) },
       { id: 'save', label: 'Lưu request…', hint: 'Ctrl+S', run: () => setDialog('save') },
+      { id: 'share-request', label: 'Chia sẻ request hiện tại bằng link', run: () => setDialog('share-request') },
       { id: 'env', label: 'Mở Environments', run: () => setDialog('env') },
       { id: 'workspace', label: 'Workspace: đồng bộ / chia sẻ', run: () => setDialog('workspace') },
       { id: 'pull', label: 'Workspace: tải về từ server', run: () => pullWorkspace() },
@@ -208,6 +263,7 @@ export default function App() {
                   <RequestPanel
                     tab={activeTab}
                     onSaveAs={() => setDialog('save')}
+                    onShare={() => setDialog('share-request')}
                     files={filesByTab[activeTab.id] ?? []}
                     onSelectFiles={(files) => setFilesByTab((map) => ({ ...map, [activeTab.id]: files }))}
                   />
@@ -239,7 +295,11 @@ export default function App() {
       {dialog === 'import' ? <ImportDialog onClose={() => setDialog(null)} /> : null}
       {dialog === 'workspace' ? <WorkspaceDialog onClose={() => setDialog(null)} /> : null}
       {dialog === 'diff' ? <DiffDialog onClose={() => setDialog(null)} /> : null}
+      {dialog === 'share-request' && activeTab ? (
+        <ShareRequestDialog tab={activeTab} onClose={() => setDialog(null)} />
+      ) : null}
       {runnerOpen ? <RunnerDialog onClose={() => setRunnerOpen(false)} /> : null}
+      {sharedLink ? <SharedWorkspaceDialog link={sharedLink} onClose={closeSharedLink} /> : null}
     </div>
   )
 }

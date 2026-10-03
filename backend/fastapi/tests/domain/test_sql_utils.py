@@ -11,7 +11,7 @@ from src.domain.utils.sql_identifier import (
     sort_direction,
     validate_identifier,
 )
-from src.domain.utils.sql_script import jsonify, split_statements, statement_kind
+from src.domain.utils.sql_script import jsonify, read_only, split_statements, statement_kind
 
 
 class TestQuoteIdentifier:
@@ -99,6 +99,33 @@ class TestStatementKind:
     @pytest.mark.parametrize("sql", ["INSERT INTO t VALUES (1)", "update t set a=1", "DROP TABLE t", "CREATE DATABASE d"])
     def test_write_statements(self, sql):
         assert statement_kind(sql) == "write"
+
+
+class TestReadOnly:
+    @pytest.mark.parametrize("sql", [
+        "SELECT * FROM `orders` WHERE status = 'delete me' LIMIT 100",
+        "select `update`, `drop` from t",                       # quoted identifiers are names, not verbs
+        "SELECT 1 -- then DROP TABLE t\n",
+        "SELECT /* UPDATE t SET a = 1 */ 1",
+        "SHOW TABLES", "DESCRIBE t", "EXPLAIN SELECT * FROM t",
+        "WITH x AS (SELECT 1) SELECT * FROM x",
+        "SELECT updated_at, deleted FROM t",                    # words that merely contain a verb
+        'SELECT "it\\"s set" AS s',
+        "(SELECT 1) UNION (SELECT 2)",                          # only a query expression opens with "("
+    ])
+    def test_reads(self, sql):
+        assert read_only(sql)
+
+    @pytest.mark.parametrize("sql", [
+        "UPDATE t SET a = 1", "DELETE FROM t", "DROP TABLE t", "TRUNCATE t", "CALL p()",
+        "WITH x AS (SELECT id FROM t) DELETE FROM t WHERE id IN (SELECT id FROM x)",
+        "SELECT * FROM t FOR UPDATE",
+        "SELECT * FROM t INTO OUTFILE '/tmp/x'",
+        "EXPLAIN ANALYZE DELETE FROM t",
+        "SET @a = 1", "LOCK TABLES t READ", "GRANT ALL ON *.* TO u", "", "USE shop",
+    ])
+    def test_anything_else_is_not(self, sql):
+        assert not read_only(sql)
 
 
 class TestJsonify:

@@ -278,6 +278,35 @@ class TestTables:
         with pytest.raises(NotFoundError):
             run(usecase.table_structure("tok", "shop", "ghost"))
 
+    def test_the_whole_schema_in_three_queries(self, monkeypatch):
+        from src.application.usecases import sql_admin_usecase
+
+        monkeypatch.setattr(sql_admin_usecase, "SCHEMA_MAX_TABLES", 2)
+        gateway = FakeGateway([
+            ("information_schema.TABLES", result(["a", "b", "c"], [
+                ["customers", "BASE TABLE", "khách"], ["orders", "BASE TABLE", ""], ["zz_more", "VIEW", ""]])),
+            ("information_schema.COLUMNS", result(["a"] * 10, [
+                ["customers", "id", "int", "int", "NO", "PRI", None, "auto_increment", "", 1],
+                ["orders", "id", "int", "int", "NO", "PRI", None, "", "", 1],
+                ["orders", "customer_id", "int", "int", "YES", "MUL", None, "", "người mua", 2],
+                ["zz_more", "x", "int", "int", "YES", "", None, "", "", 1],
+            ])),
+            ("KEY_COLUMN_USAGE", result(["a"] * 6, [["orders", "fk_c", "customer_id", "shop", "customers", "id"]])),
+        ])
+        usecase, _, _ = build(gateway)
+        schema = run(usecase.database_schema("tok", "shop"))
+        assert [t.name for t in schema.tables] == ["customers", "orders"] and schema.truncated is True
+        orders = schema.tables[1]
+        assert [c.name for c in orders.columns] == ["id", "customer_id"] and orders.columns[1].comment == "người mua"
+        assert orders.foreign_keys[0].referenced_table == "customers" and schema.tables[0].comment == "khách"
+        assert len(gateway.calls) == 3 and all(c["params"] == ["shop"] for c in gateway.calls)
+
+    def test_the_schema_needs_a_valid_database_name(self):
+        usecase, gateway, _ = build()
+        with pytest.raises(ValueError):                       # InvalidIdentifierError → 400
+            run(usecase.database_schema("tok", "x" * 65))
+        assert gateway.calls == []
+
     def test_drop_and_truncate_are_qualified(self):
         usecase, gateway, _ = build()
         run(usecase.drop_table("tok", "shop", "users"))
