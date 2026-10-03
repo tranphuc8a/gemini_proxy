@@ -156,8 +156,14 @@ def terms_of(query: str) -> List[str]:
 # --------------------------------------------------------- outline and stats
 
 _FENCE = re.compile(r"^\s*(```|~~~)")
-_HEADING = re.compile(r"^(#{2,3})\s+(.+?)\s*$")
-_H1 = re.compile(r"^#\s+(.+?)\s*$", re.M)
+# Markdown arrives in requests (a save, an import). The old forms, `\s+(.+?)\s*$`,
+# let the lazy group and the trailing `\s*` both claim spaces, so a run of spaces
+# inside a heading was rescanned once per space: 16 000 spaces took 4 s, a 1 MB
+# lesson hours, on the request path (CodeQL py/polynomial-redos). Now the text
+# starts at a non-space and runs to the end of the line; callers strip the end.
+_HEADING = re.compile(r"^(#{2,3})\s+(\S.*)")
+#: [ \t], not \s: a lone "#" must not take its title from the next line.
+_H1 = re.compile(r"^#[ \t]+(\S.*)", re.M)
 
 
 def strip_fences(md: str) -> str:
@@ -241,10 +247,14 @@ def first_position(body_f: str, terms: Sequence[str]) -> int:
 
 
 _SNIPPET_JUNK = re.compile(r"[|│┌┐└┘─━├┤┬┴┼╌▲▼►◄●○→←↑↓]")
+#: An excerpt is 250 characters, but the headings a snippet falls back to are
+#: not bounded — and the link patterns below are quadratic on a run of "[".
+_SNIPPET_MAX = 600
 
 
 def clean_snippet(s: str) -> str:
     """Strip markdown syntax from an excerpt: links, tables, ASCII drawings."""
+    s = s[:_SNIPPET_MAX]
     s = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", s)
     s = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", s)
     s = re.sub(r"\]\([^)]*\)", "", s)          # a link whose "[" the excerpt cut off

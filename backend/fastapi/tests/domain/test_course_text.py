@@ -5,6 +5,8 @@ keep giving the same answers here, or a search that found a lesson yesterday
 stops finding it today.
 """
 
+import time
+
 from src.domain.utils import course_text as ct
 
 
@@ -110,3 +112,35 @@ def test_the_regex_path_keeps_the_boundary_rule():
     assert ct.find_word(hay, "an") == len(hay) - 2
     assert ct.count_word(hay, "an") == 1
     assert ct.find_word("xab", "ab", 1) == -1, "the boundary looks before the start offset"
+
+
+# ---------------------------------------- markdown is request input too
+#
+# CodeQL py/polynomial-redos #221: the heading patterns rescanned a run of
+# spaces once per space — 16 000 spaces took 4 s, so a 1 MB lesson held its
+# save for hours. Every hostile input below is quadratic under the old forms.
+
+def _quick(fn, *args):
+    started = time.perf_counter()
+    out = fn(*args)
+    assert time.perf_counter() - started < 0.5, fn.__name__
+    return out
+
+
+def test_headings_read_as_before():
+    md = "# Tiêu đề  \n\n## A  \n##\tB\n### C ##\n#### D\n##\n## **Đậm** `mã`\n## CRLF\r\n#không\n"
+    assert ct.outline(md) == [{"d": 2, "t": "A"}, {"d": 2, "t": "B"}, {"d": 3, "t": "C ##"},
+                              {"d": 2, "t": "Đậm mã"}, {"d": 2, "t": "CRLF"}]
+    assert ct.outline("##    \n") == [], "spaces only: no entry (the old pattern gave an empty one)"
+    assert ct.title_of(md, "x") == "Tiêu đề"
+    assert ct.title_of("văn bản\n#   Tiêu đề muộn \r\n", "x") == "Tiêu đề muộn"
+    assert ct.title_of("#\nKhông phải tiêu đề\n", "tệp") == "tệp", "a lone '#' is an empty heading"
+
+
+def test_long_runs_cost_linear_time():
+    run = " " * 100_000
+    assert _quick(ct.outline, "## a" + run + "b") == [{"d": 2, "t": "a" + run + "b"}]
+    assert _quick(ct.outline, "##" + run) == []
+    assert _quick(ct.title_of, "# a" + run + "b", "x") == "a" + run + "b"
+    assert _quick(ct.title_of, "#" + run + "\n" * 1000, "x") == "x"
+    assert _quick(ct.snippet, "", -1, [{"t": "[" * 100_000}]) == ""

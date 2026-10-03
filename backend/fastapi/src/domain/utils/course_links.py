@@ -19,7 +19,12 @@ import re
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 # [text](target "title") and ![alt](target) — the target stops at whitespace or ")".
-_LINK = re.compile(r"!?\[(?:[^\]\\]|\\.)*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
+# Neither the text nor the target holds a "[": when they could, every "[" of a
+# line like "[[[[…" or "[]([](…" was scanned to the end of the line — 16 000 of
+# them took 12 s and 66 s (CodeQL py/polynomial-redos). A stray "[" before a link
+# is harmless, the scan restarts there; only nested brackets or an escaped "\]"
+# in the text, or a "[" in the target, leave a link unjudged.
+_LINK = re.compile(r"!?\[[^\[\]]*\]\(\s*<?([^)\s>\[]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 _FENCE = re.compile(r"^\s*(```|~~~)")
 ASSET_PREFIX = re.compile(r"^(?:\./)?assets/(.+)$")
 
