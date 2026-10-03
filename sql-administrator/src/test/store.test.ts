@@ -28,6 +28,7 @@ vi.mock('../lib/api', async () => {
   }
 })
 
+import type { AiSqlEntry } from '../lib/aiSql'
 import { ApiError, api } from '../lib/api'
 import { useStore } from '../store'
 import type { BrowsePage, SessionInfo, TableStructure } from '../types'
@@ -79,6 +80,21 @@ const page: BrowsePage = {
   limit: 50,
   offset: 0,
   duration_ms: 1,
+}
+
+const aiEntry: AiSqlEntry = {
+  database: 'shop',
+  question: 'đơn mới nhất',
+  answer: {
+    sql: 'SELECT 1',
+    explanation: '',
+    statements: [{ sql: 'SELECT 1', readOnly: true, checked: true, error: null }],
+    readOnly: true,
+    repaired: false,
+    tables: 1,
+    truncated: false,
+    cached: false,
+  },
 }
 
 function reset() {
@@ -145,6 +161,14 @@ describe('connect', () => {
     expect(useStore.getState().session).toBeNull()
     expect(useStore.getState().connectError).toBe('Access denied for user')
     expect(useStore.getState().connecting).toBe(false)
+  })
+
+  it('drops an AI answer left over from the previous connection', async () => {
+    useStore.setState({ currentDatabase: 'shop', aiAnswer: aiEntry })
+    mocked.connect.mockResolvedValue(session)
+
+    await useStore.getState().connect({ host: 'other-host', port: 3306, username: 'root', password: '' })
+    expect(useStore.getState().aiAnswer).toBeNull()
   })
 
   it('opens the database supplied on the login form', async () => {
@@ -244,6 +268,20 @@ describe('navigation', () => {
     expect(useStore.getState().offset).toBe(0)
     expect(useStore.getState().sort).toBeNull()
     expect(useStore.getState().search).toBe('')
+  })
+
+  it('drops the AI answer with its database, and keeps it when the same one is picked again', async () => {
+    useStore.setState({ currentDatabase: 'shop', aiAnswer: aiEntry })
+
+    await useStore.getState().selectDatabase('shop')
+    expect(useStore.getState().aiAnswer).toBe(aiEntry)
+
+    await useStore.getState().selectDatabase('other')
+    expect(useStore.getState().aiAnswer).toBeNull()
+
+    useStore.setState({ currentDatabase: 'shop', aiAnswer: aiEntry })
+    await useStore.getState().selectDatabase(null)
+    expect(useStore.getState().aiAnswer).toBeNull()
   })
 
   it('reports a failure to list tables as a toast', async () => {

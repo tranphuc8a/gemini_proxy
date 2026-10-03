@@ -82,6 +82,23 @@ class TableStructure(BaseModel):
     ddl: str | None = None
 
 
+class SchemaTable(BaseModel):
+    name: str
+    type: str = "BASE TABLE"
+    comment: str | None = None
+    columns: list[ColumnInfo] = Field(default_factory=list)
+    foreign_keys: list[ForeignKeyInfo] = Field(default_factory=list)
+
+
+class DatabaseSchema(BaseModel):
+    """Every table of a database at once, for a reader that needs the whole picture."""
+
+    database: str
+    tables: list[SchemaTable] = Field(default_factory=list)
+    #: More tables exist than were read.
+    truncated: bool = False
+
+
 class QueryResult(BaseModel):
     """One statement's outcome. `columns`/`rows` are empty for write statements."""
 

@@ -34,7 +34,7 @@ import type {
 // Resolved per call rather than once at module load: the injected config is
 // on the page before this bundle runs, and reading it lazily also keeps the
 // value correct for tests that stub window.__WEBAPP_CONFIG__.
-const apiBase = () => resolveApiBase(import.meta.env?.VITE_API_BASE)
+export const apiBase = () => resolveApiBase(import.meta.env?.VITE_API_BASE)
 
 export class ApiError extends Error {
   readonly status: number
@@ -64,6 +64,11 @@ export function configureApi(options: {
   if (options.onUnauthorized) onUnauthorized = options.onUnauthorized
 }
 
+/** For calls made outside `request` (the AI gateway): an expired session is handled the same way. */
+export function reportUnauthorized(): void {
+  onUnauthorized?.()
+}
+
 function buildUrl(path: string, query?: Record<string, unknown>): string {
   const url = `${apiBase()}${path}`
   if (!query) return url
@@ -76,7 +81,7 @@ function buildUrl(path: string, query?: Record<string, unknown>): string {
   return qs ? `${url}?${qs}` : url
 }
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const token = tokenProvider()
   return token ? { 'X-Session-Token': token } : {}
 }

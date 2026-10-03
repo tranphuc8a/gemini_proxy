@@ -175,6 +175,22 @@ Trang đọc và khung xem trước ở trang Quản lý dùng chung một bộ 
 | `<details><summary>Đáp án</summary>` … `</details>` | khối gập; để dòng trống quanh markdown bên trong |
 | `<b>` `<br>` `<kbd>` `<sub>` `<sup>` `<mark>` `<img width>` | giữ nguyên |
 | `<script>` `<iframe>` `<style>` `<form>` `<object>`, thuộc tính `on…=`, `javascript:` | **bị gỡ** |
+| ` ```lab ` — dòng 1 `id-lab?tham=so&…`, các dòng sau là chú thích | lab của `lab-visual` chạy ngay trong bài (id + tham số như nút "Chép liên kết" của trang lab; dán cả địa chỉ đầy đủ cũng được). Danh sách id: `webapp/courses/lab-visual/danh-sach.json` |
+| ` ```py-chay ` · ` ```js-chay ` | ô mã sửa được + nút **Chạy** (Python = Pyodide tải lần đầu ~10 MB; JS trong Worker, dừng sau 5 s) |
+| ` ```py-bai-tap ` · ` ```js-bai-tap ` | bài tập tự chấm: phần TRƯỚC dòng `---kiem---` là mã người học sửa, phần SAU là kiểm tra ẩn — Python `assert …`, JS `kiem(dieuKien, "thông báo")`. Đạt khi kiểm tra không ném lỗi |
+
+Ví dụ bài tập tự chấm:
+
+````markdown
+```py-bai-tap
+def tong_chan(ds):
+    # trả về tổng các số chẵn trong ds
+    return 0
+---kiem---
+assert tong_chan([1, 2, 3, 4]) == 6, "tong_chan([1, 2, 3, 4]) phải là 6"
+assert tong_chan([]) == 0
+```
+````
 
 ### 5.2 Liên kết
 

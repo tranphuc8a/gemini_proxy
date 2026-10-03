@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đấu trường thuật toán</title>
+<meta name="description" content="Viết heuristic bằng JavaScript cho bài toán người du lịch, chạy ngay trong trình duyệt, nộp lên bảng xếp hạng — máy chủ tự đo lại mọi lời giải.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b45309'/%3E%3Cg stroke='%23fff' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 22 13 10l6 8 5-9'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='8' cy='22' r='2.2'/%3E%3Ccircle cx='13' cy='10' r='2.2'/%3E%3Ccircle cx='19' cy='18' r='2.2'/%3E%3Ccircle cx='24' cy='9' r='2.2'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<header class="dau">
+  <a class="ve" href="../">← Portal</a>
+  <div class="ten"><b>🏟️ Đấu trường thuật toán</b><span>Viết heuristic — máy chủ đo lại — lên bảng xếp hạng</span></div>
+  <button type="button" class="nut phu" id="btnTheme" aria-label="Đổi giao diện sáng / tối">◐</button>
+</header>
+
+<main class="khung">
+  <nav class="de" id="dsDe" aria-label="Chọn đề"></nav>
+
+  <section class="luoi">
+    <div class="the ve-hop">
+      <canvas id="cv" width="640" height="640" aria-label="Các thành phố và chu trình"></canvas>
+      <div class="so" id="so"><span>Chưa chạy</span></div>
+    </div>
+
+    <div class="the ma-hop">
+      <div class="ma-dau">
+        <label>Mẫu
+          <select id="mau">
+            <option value="nn">Láng giềng gần nhất</option>
+            <option value="2opt">Láng giềng gần nhất + 2-opt</option>
+            <option value="ngau-nhien">Ngẫu nhiên (để so)</option>
+          </select>
+        </label>
+        <span class="goi-y">Ctrl+Enter để chạy</span>
+      </div>
+      <textarea id="ma" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Mã JavaScript"></textarea>
+      <div class="ma-chan">
+        <button type="button" class="nut chinh" id="btnChay">▶ Chạy</button>
+        <input id="ten" maxlength="30" placeholder="Tên của bạn" aria-label="Tên trên bảng xếp hạng">
+        <button type="button" class="nut" id="btnNop" disabled>Nộp lên bảng xếp hạng</button>
+      </div>
+      <pre class="ra" id="ra" aria-live="polite"></pre>
+    </div>
+  </section>
+
+  <section class="the bang-hop">
+    <div class="bang-dau"><b id="bangTen">Bảng xếp hạng</b><button type="button" class="nut phu" id="btnTai">↻</button></div>
+    <table class="bang"><thead><tr><th>#</th><th>Tên</th><th>Độ dài chu trình</th><th>Lúc</th></tr></thead><tbody id="bang"></tbody></table>
+    <p class="goi-y">Máy chủ dựng lại các thành phố từ hạt giống của đề, kiểm lời giải đi qua mỗi thành phố đúng một lần, rồi
+      tự đo độ dài — con số trên trang không được tin. Mỗi tên giữ kết quả tốt nhất.</p>
+  </section>
+</main>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

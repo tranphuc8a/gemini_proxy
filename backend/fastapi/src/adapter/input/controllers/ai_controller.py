@@ -8,11 +8,17 @@
     POST /ai/draft/outline   a course outline from a topic / text / URL / PDF  [admin]
     POST /ai/draft/lesson    one lesson of that outline, as markdown           [admin]
     POST /ai/opic       feedback on a recorded OPIc answer (audio → transcript, level, fixes)
+    POST /ai/sql        a question → SQL for one database, classified and EXPLAINed   [SQL admin session]
+    POST /ai/mongo      a question → find / aggregate for one collection, flagged      [Mongo admin session]
+    POST /ai/http       explain a response, or write `pm.*` tests for it (Postman Lite)
+    POST /ai/chat       one stateless answer from a chosen model (the chat's "compare")
 
 A caller is identified by the headers the course pages already send:
 `X-Admin-Session` / `X-Admin-Key` (course administrator) and `X-AI-Session`
-(a token issued for `AI_ACCESS_CODE`). Answers are bare JSON like the course
-API; errors use the common envelope with `data.code`.
+(a token issued for `AI_ACCESS_CODE`). `/ai/sql` and `/ai/mongo` also take the
+administrator app's own `X-Session-Token`: they read that connection's schema.
+Answers are bare JSON like the course API; errors use the common envelope with
+`data.code`.
 """
 
 from __future__ import annotations
@@ -23,12 +29,16 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.adapter.factory.ai_factory import (get_ai_course_usecase, get_ai_draft_usecase, get_ai_speaking_usecase,
+from src.adapter.factory.ai_factory import (get_ai_chat_usecase, get_ai_course_usecase, get_ai_draft_usecase,
+                                            get_ai_http_usecase, get_ai_query_usecase, get_ai_speaking_usecase,
                                             get_ai_usecase)
 from src.adapter.input.controllers.admin_auth import client_address, is_admin, require_admin
 from src.application.usecases import ai_usecase
+from src.application.usecases.ai_chat_usecase import PROMPT_CHARS, AiChatUseCase
 from src.application.usecases.ai_course_usecase import SELECTION_CHARS, AiCourseUseCase
 from src.application.usecases.ai_draft_usecase import AiDraftUseCase
+from src.application.usecases.ai_http_usecase import AiHttpUseCase
+from src.application.usecases.ai_query_usecase import CURRENT_CHARS, QUESTION_CHARS, AiQueryUseCase
 from src.application.usecases.ai_speaking_usecase import AiSpeakingUseCase
 from src.application.usecases.ai_usecase import AiUseCase
 from src.domain.models.ai_domain import AiCaller
@@ -111,6 +121,52 @@ class DraftLesson(BaseModel):
     notes: str = Field(default="", max_length=2000)
 
 
+class SqlAsk(BaseModel):
+    database: str = Field(..., min_length=1, max_length=64)
+    question: str = Field(..., min_length=1, max_length=QUESTION_CHARS)
+    # The query in the editor, so "only the paid ones" can revise it.
+    current: str = Field(default="", max_length=CURRENT_CHARS)
+
+
+class MongoAsk(BaseModel):
+    database: str = Field(..., min_length=1, max_length=64)
+    collection: str = Field(..., min_length=1, max_length=255)
+    question: str = Field(..., min_length=1, max_length=QUESTION_CHARS)
+    current: str = Field(default="", max_length=CURRENT_CHARS)
+
+
+HeaderPair = Annotated[List[Annotated[str, Field(max_length=8000)]], Field(min_length=2, max_length=2)]
+
+
+class HttpRequestSeen(BaseModel):
+    method: str = Field(default="GET", max_length=16)
+    url: str = Field(..., min_length=1, max_length=8000)
+    headers: List[HeaderPair] = Field(default_factory=list, max_length=200)
+    body: str = Field(default="", max_length=100_000)
+
+
+class HttpResponseSeen(BaseModel):
+    status: int = Field(..., ge=0, le=999)
+    statusText: str = Field(default="", max_length=200)
+    headers: List[HeaderPair] = Field(default_factory=list, max_length=200)
+    contentType: str = Field(default="", max_length=200)
+    timeMs: float = Field(default=0, ge=0)
+    sizeBytes: int = Field(default=0, ge=0)
+    # The page sends the start of a large body; the use case cuts it further.
+    body: str = Field(default="", max_length=200_000)
+
+
+class HttpAsk(BaseModel):
+    action: Literal["explain", "tests"]
+    request: HttpRequestSeen
+    response: HttpResponseSeen
+
+
+class ChatCompare(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=PROMPT_CHARS)
+    model: str = Field(..., min_length=1, max_length=60)
+
+
 @router.get("/status")
 async def ai_status(caller: AiCaller = Depends(ai_caller)):
     return JSONResponse(AiUseCase.status(caller), headers={"Cache-Control": "no-store"})
@@ -154,6 +210,37 @@ async def ai_draft_lesson(body: DraftLesson, caller: AiCaller = Depends(ai_calle
     out = await uc.lesson(caller, course=body.course.model_dump(), outline=body.outline, part=body.part,
                           lesson=body.lesson.model_dump(), level=body.level, notes=body.notes)
     return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/sql")
+async def ai_sql(body: SqlAsk, caller: AiCaller = Depends(ai_caller),
+                 uc: AiQueryUseCase = Depends(get_ai_query_usecase),
+                 x_session_token: Optional[str] = Header(default=None)):
+    out = await uc.sql(caller, token=x_session_token or "", **body.model_dump())
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/mongo")
+async def ai_mongo(body: MongoAsk, caller: AiCaller = Depends(ai_caller),
+                   uc: AiQueryUseCase = Depends(get_ai_query_usecase),
+                   x_session_token: Optional[str] = Header(default=None)):
+    out = await uc.mongo(caller, token=x_session_token or "", **body.model_dump())
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/http")
+async def ai_http(body: HttpAsk, caller: AiCaller = Depends(ai_caller),
+                  uc: AiHttpUseCase = Depends(get_ai_http_usecase)):
+    run = uc.explain if body.action == "explain" else uc.tests
+    out = await run(caller, request=body.request.model_dump(), response=body.response.model_dump())
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/chat")
+async def ai_chat(body: ChatCompare, caller: AiCaller = Depends(ai_caller),
+                  uc: AiChatUseCase = Depends(get_ai_chat_usecase)):
+    return JSONResponse(await uc.compare(caller, prompt=body.prompt, model=body.model),
+                        headers={"Cache-Control": "no-store"})
 
 
 @router.get("/usage", dependencies=[Depends(require_admin)])

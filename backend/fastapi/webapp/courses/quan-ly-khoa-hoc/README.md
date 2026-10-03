@@ -46,6 +46,8 @@ trong `webapp/` (ví dụ `courses/system-design-course`): khi trang đó có th
 | Kiểm tra liên kết | link hỏng giữa các bài (đường dẫn `.md`, `#/slug`) và tới `assets/…`, theo từng bài; bấm là mở bài, chọn sẵn dòng có link |
 | Tìm kiếm thử | đúng API trang khoá học dùng; tô sáng từ khoá; bấm kết quả mở bài trong tab Cấu trúc |
 | Thùng rác | khoá và bài đã xoá, giữ 30 ngày · khôi phục khoá (slug đã có khoá khác thì hỏi slug mới) · khôi phục bài về đúng nhóm cũ · xoá hẳn |
+| **✨ Soạn khoá bằng AI** (`#/~soan-ai`) | nguồn: chủ đề, văn bản dán, URL (máy chủ tải an toàn — chỉ địa chỉ công khai) hoặc PDF ≤ 3 MB · trình độ, số bài, ghi chú → **dàn ý** sửa được (phần, bài, ý chính) → soạn **từng bài** thành markdown (xem trước bằng bộ dựng chung, sửa, soạn lại) → tạo khoá **nháp** với cây và các bài đã soạn. Gọi `POST /ai/draft/outline` · `/ai/draft/lesson` (chỉ quản trị viên) |
+| 🤖 AI | trạng thái AI, mức dùng theo ngày và theo tính năng (`GET /ai/usage`), hạn mức hôm nay |
 
 **Không mất việc đang làm.** Thông tin, cây và bài đang sửa chung một chốt "chưa lưu": đổi
 khoá, ↻, thùng rác, khoá mới, khoá phiên, đóng tab đều hỏi trước. Lưu kèm `If-Match`: ai đó
@@ -79,6 +81,7 @@ python tools/manage_courses.py import ../course-content/ai-everything.json --yes
 | `assets/cay.js` | tab Cấu trúc: cây, kéo-thả, hộp thoại section / nhóm / bài mới |
 | `assets/soan.js` | trình soạn: xem trước, bản nháp trên máy, lưu và xung đột, lịch sử, khác biệt (Myers) |
 | `assets/tep.js` | tab Tệp và Kiểm tra liên kết |
+| `assets/soan-ai.js` | `QL.moSoanAI`: soạn khoá bằng AI (dàn ý → từng bài → khoá nháp) |
 | `assets/hien-thi.js`, `hien-thi.css` | **bản sao** từ `../engine/` (`python ../engine/sync.py`) — đừng sửa ở đây |
 
 ## Kiểm tra

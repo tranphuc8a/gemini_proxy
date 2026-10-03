@@ -23,6 +23,7 @@ import {
   uniqueName
 } from './lib/tree'
 import { DEFAULT_SETTINGS, clearLegacyStorage, loadFiles, loadSettings, saveFiles, saveSettings } from './lib/persistence'
+import type { InboxDocument } from './lib/inbox'
 
 /** Keystrokes inside this window collapse into a single undo step. */
 export const HISTORY_DEBOUNCE_MS = 600
@@ -84,6 +85,8 @@ interface StoreState extends EditorState {
   moveNode: (nodeId: string, parentId: string | null) => void
   copyNode: (nodeId: string, parentId: string | null) => void
   importFile: (name: string, content: string) => void
+  /** A document handed over by another app (see lib/inbox). */
+  importInbox: (doc: InboxDocument) => void
 
   loginAdmin: (key: string) => Promise<boolean>
   restoreAdminSession: () => Promise<void>
@@ -107,7 +110,8 @@ interface StoreState extends EditorState {
   loadBackendStorage: () => Promise<void>
   saveBackendStorage: () => Promise<void>
 
-  hydrate: () => void
+  /** Settles once the stored admin session has been re-checked. */
+  hydrate: () => Promise<void>
   persist: () => void
   flushPersist: () => void
 
@@ -396,6 +400,14 @@ export const useEditorStore = create<StoreState>((set, get) => {
       schedulePersist()
     },
 
+    importInbox: (doc) => {
+      get().importFile(doc.name, doc.content)
+      if (!get().isAdmin) {
+        const from = doc.from ? ` from ${doc.from}` : ''
+        get().pushToast(`Opened ${doc.name}${from} — sign in as admin to keep it`, 'info')
+      }
+    },
+
     loginAdmin: async (key: string) => {
       // The backend decides. Comparing against a key held in the browser proved
       // nothing, and required shipping that key to every visitor. On success it
@@ -510,7 +522,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
       set({ ...settings })
       // Admin mode is not read from storage -- it is re-proved against the
       // backend, which is what makes an expired or revoked session take effect.
-      void get().restoreAdminSession()
+      const sessionChecked = get().restoreAdminSession()
 
       if (stored?.files.length) {
         const current = findNode(stored.files, stored.currentFileId)
@@ -526,6 +538,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
         })
       }
       clearLegacyStorage()
+      return sessionChecked
     },
 
     persist: schedulePersist,

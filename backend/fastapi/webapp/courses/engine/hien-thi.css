@@ -160,6 +160,28 @@ h2:hover .anch,h3:hover .anch{opacity:1}
 }
 .prose .mermaid svg{max-width:100%;height:auto}
 /* lab trực quan nhúng (```lab id?tham-so```) */
+/* Ô mã chạy được / bài tập tự chấm (hien-thi.js: taoChay) */
+.prose .chay{margin:1.3em 0;border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:var(--code,var(--surf2))}
+.prose .chay.bai-tap{border-color:var(--acbd)}
+.prose .chay-dau{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--bd);
+  background:var(--surf);font-size:12.5px}
+.prose .chay-nhan{font-weight:600;color:var(--tx2);margin-right:auto}
+.prose .chay-dat{color:var(--ok);font-weight:600}
+.prose .chay-nut{height:28px;padding:0 11px;border-radius:7px;border:1px solid var(--bd);background:var(--surf2);
+  color:var(--tx);font:600 12.5px/1 inherit;cursor:pointer}
+.prose .chay-nut:hover:not(:disabled){border-color:var(--acbd);color:var(--ac)}
+.prose .chay-nut.chinh{background:var(--ac);border-color:var(--ac);color:var(--actx,#fff)}
+.prose .chay-nut.phu{padding:0 8px}
+.prose .chay-nut:disabled{opacity:.55;cursor:default}
+.prose .chay-ma{display:block;width:100%;min-height:72px;margin:0;padding:12px 14px;border:0;resize:vertical;
+  background:transparent;color:var(--codetx,var(--tx));font:13.5px/1.6 var(--fm,ui-monospace,monospace);tab-size:4;outline:none}
+.prose .chay-ma:focus{box-shadow:inset 0 0 0 2px var(--acbd)}
+.prose .chay-ra{margin:0;padding:10px 14px;border-top:1px dashed var(--bd);background:var(--surf);max-height:320px;overflow:auto;
+  font:12.5px/1.55 var(--fm,ui-monospace,monospace);white-space:pre-wrap;color:var(--tx)}
+.prose .chay-ra .loi{color:var(--ba)}
+.prose .chay-ra .cho{color:var(--tx3)}
+.prose .chay-ra.dat{background:var(--okbg,var(--surf));color:var(--ok)}
+.prose .chay-ra.chua-dat{background:var(--babg,var(--surf))}
 .prose figure.lab-nhung{margin:24px 0;border:1px solid var(--bd);border-radius:var(--rad);overflow:hidden;background:var(--surf)}
 .prose figure.lab-nhung iframe{display:block;width:100%;height:560px;border:0;background:var(--surf)}
 .prose figure.lab-nhung figcaption{padding:8px 14px;font-size:13px;color:var(--tx3);border-top:1px solid var(--bd)}

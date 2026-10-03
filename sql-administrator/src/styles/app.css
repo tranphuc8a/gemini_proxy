@@ -1427,3 +1427,157 @@ input[type='checkbox'] {
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
+
+/* ===========================================================================
+   Hỏi AI (SQL console)
+
+   A panel between the toolbar and the editor. Each statement the model wrote
+   carries two badges, read only or not and what MySQL's EXPLAIN said, because
+   together they decide whether "Chạy" runs at once or asks first.
+   =========================================================================== */
+
+.ai-toggle[aria-expanded='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+  flex-shrink: 0;
+}
+
+.ai-panel .field {
+  margin-bottom: 0;
+}
+
+.ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-form textarea {
+  min-height: 52px;
+  resize: vertical;
+}
+
+.ai-form-actions,
+.ai-result-actions,
+.ai-unlock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ai-unlock {
+  align-items: flex-end;
+}
+
+.ai-unlock .field {
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.ai-unlock .ai-error {
+  flex-basis: 100%;
+}
+
+.ai-status {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ai-error {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.ai-result p {
+  margin: 0;
+}
+
+.ai-explanation {
+  line-height: 1.6;
+}
+
+.ai-statements {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-statement {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.ai-statement-sql {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.ai-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+/* The text is mixed toward --text so it stays readable on its tint in both themes. */
+.ai-badge.is-read,
+.ai-badge.is-ok {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: color-mix(in srgb, var(--success) 75%, var(--text));
+}
+
+.ai-badge.is-write {
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: color-mix(in srgb, var(--warning) 75%, var(--text));
+}
+
+.ai-badge.is-bad {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: color-mix(in srgb, var(--danger) 75%, var(--text));
+  word-break: break-word;
+}
+
+.ai-confirm-list li {
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+}

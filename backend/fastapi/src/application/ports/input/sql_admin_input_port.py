@@ -15,6 +15,7 @@ from src.domain.vo.sqladmin_vo import (
     CreateDatabaseRequest,
     CreateTableRequest,
     DatabaseInfo,
+    DatabaseSchema,
     DropColumnRequest,
     ForeignKeyRequest,
     IndexRequest,
@@ -67,6 +68,9 @@ class SqlAdminInputPort(ABC):
 
     @abstractmethod
     async def table_structure(self, token: str, database: str, table: str) -> TableStructure: ...
+
+    @abstractmethod
+    async def database_schema(self, token: str, database: str) -> DatabaseSchema: ...
 
     @abstractmethod
     async def drop_table(self, token: str, database: str, table: str) -> MutationResult: ...

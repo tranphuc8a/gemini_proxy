@@ -11,9 +11,20 @@ import {
   statusClass,
   toBlobPart,
 } from '../lib/util'
+import { canOffer } from '../lib/ai'
 import { IconCopy, IconDiff, IconDownload, IconTrash } from './Icons'
+import { AiExplainView } from './Ai'
 
-type ViewTab = 'body' | 'headers' | 'preview' | 'tests' | 'raw'
+type ViewTab = 'body' | 'headers' | 'preview' | 'tests' | 'raw' | 'ai'
+
+const VIEW_LABELS: Record<ViewTab, string> = {
+  body: 'Body',
+  headers: 'Headers',
+  preview: 'Preview',
+  tests: 'Tests',
+  raw: 'Raw',
+  ai: '✨ AI',
+}
 
 const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -45,8 +56,14 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
   const setDiff = useStore((s) => s.setDiff)
   const clearResponse = useStore((s) => s.clearResponse)
   const toast = useStore((s) => s.toast)
+  const aiStatus = useStore((s) => s.aiStatus)
+  const explainJob = useStore((s) => s.aiExplain[tab.id])
+  const explainResponse = useStore((s) => s.explainResponse)
 
   const response = tab.response
+  // Only a job about the response on screen counts; an older one is stale.
+  const explanation = explainJob && response && explainJob.responseAt === response.receivedAt ? explainJob : undefined
+  const offerAi = canOffer(aiStatus)
 
   if (tab.sending && !response) {
     return (
@@ -84,6 +101,10 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
   }
 
   const failedTests = tab.testResults?.filter((t) => !t.passed).length ?? 0
+  const views: ViewTab[] = ['body', 'headers', 'preview', 'tests', 'raw']
+  if (offerAi || explanation) views.push('ai')
+  // The AI view can disappear under the user (another tab, AI turned off).
+  const shown: ViewTab = views.includes(view) ? view : 'body'
 
   return (
     <section className="pane" style={{ flex: 1 }}>
@@ -102,6 +123,20 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
           </span>
         ) : null}
         <div style={{ flex: 1 }} />
+        {offerAi ? (
+          <button
+            className="btn btn-ghost btn-sm"
+            title="Nhờ AI đọc và giải thích response này"
+            disabled={!response || tab.sending || Boolean(explanation?.busy)}
+            onClick={() => {
+              setView('ai')
+              // An answer already here is shown again rather than asked for twice.
+              if (!explanation?.result) explainResponse(tab.id)
+            }}
+          >
+            {explanation?.busy ? 'Đang giải thích…' : '✨ Giải thích'}
+          </button>
+        ) : null}
         <button className="btn btn-ghost btn-sm" title="Đưa vào ô so sánh trái" onClick={() => setDiff('left', response)}>
           <IconDiff /> A
         </button>
@@ -134,9 +169,9 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
       ) : null}
 
       <nav className="subtabs">
-        {(['body', 'headers', 'preview', 'tests', 'raw'] as ViewTab[]).map((id) => (
-          <button key={id} className={`subtab${view === id ? ' active' : ''}`} onClick={() => setView(id)}>
-            {id === 'body' ? 'Body' : id === 'headers' ? 'Headers' : id === 'preview' ? 'Preview' : id === 'tests' ? 'Tests' : 'Raw'}
+        {views.map((id) => (
+          <button key={id} className={`subtab${shown === id ? ' active' : ''}`} onClick={() => setView(id)}>
+            {VIEW_LABELS[id]}
             {id === 'headers' ? <span className="subtab-count">{response.headers.length}</span> : null}
             {id === 'tests' && tab.testResults?.length ? (
               <span className="subtab-count">{tab.testResults.length}</span>
@@ -145,7 +180,7 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
         ))}
       </nav>
 
-      {view === 'body' || view === 'raw' ? (
+      {shown === 'body' || shown === 'raw' ? (
         <div className="response-toolbar">
           <input
             type="search"
@@ -181,11 +216,12 @@ export function ResponsePanel({ tab }: { tab: Tab }) {
         </div>
       ) : null}
 
-      {view === 'body' ? <BodyView response={response} search={search} wrap={wrap} pretty /> : null}
-      {view === 'raw' ? <BodyView response={response} search={search} wrap={wrap} /> : null}
-      {view === 'headers' ? <HeadersView response={response} /> : null}
-      {view === 'preview' ? <PreviewView response={response} /> : null}
-      {view === 'tests' ? <TestsView tab={tab} /> : null}
+      {shown === 'body' ? <BodyView response={response} search={search} wrap={wrap} pretty /> : null}
+      {shown === 'raw' ? <BodyView response={response} search={search} wrap={wrap} /> : null}
+      {shown === 'headers' ? <HeadersView response={response} /> : null}
+      {shown === 'preview' ? <PreviewView response={response} /> : null}
+      {shown === 'tests' ? <TestsView tab={tab} /> : null}
+      {shown === 'ai' ? <AiExplainView tab={tab} /> : null}
     </section>
   )
 }

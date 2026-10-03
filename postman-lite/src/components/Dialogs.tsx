@@ -1,10 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
-import { api } from '../lib/api'
+import { ApiError, api } from '../lib/api'
 import type { Environment, StorageBackend, StorageBackendInfo, Tab } from '../types'
 import { KeyValueEditor } from './KeyValueEditor'
 import { Modal } from './Modal'
 import { exportPostmanCollection, importAny } from '../lib/importers'
+import {
+  SHARE_LINK_WARN_CHARS,
+  type SharedWorkspaceDto,
+  type WorkspaceShareLink,
+  sharedRequestUrl,
+  sharedWorkspaceToBundle,
+  toSharedRequest,
+  workspaceShareUrl,
+} from '../lib/share'
 import { copyToClipboard, download, formatRelativeTime, kv } from '../lib/util'
 import { collectionPaths } from '../lib/tree'
 import { diffLines, diffableBody } from '../lib/diff'
@@ -383,6 +392,7 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
   const [joinKey, setJoinKey] = useState('')
   const [backend, setBackend] = useState<StorageBackend | undefined>(undefined)
   const [backends, setBackends] = useState<StorageBackendInfo[]>([])
+  const [serverDefault, setServerDefault] = useState<StorageBackend | undefined>(undefined)
 
   // Which stores this deployment can serve, and which one it defaults to. Asked
   // for once when the dialog opens; a failure just leaves the picker on the
@@ -395,6 +405,7 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
         if (cancelled) return
         setBackends(info.backends)
         setBackend((current) => current ?? info.default)
+        setServerDefault(info.default)
       })
       .catch(() => undefined)
     return () => {
@@ -402,8 +413,15 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
     }
   }, [])
 
+  // The share token only exists in the store that minted it, so the link names
+  // that store. A workspace linked before the choice existed lives in the
+  // server default; spelling that out keeps the link valid if the default moves.
   const shareUrl = workspace?.shareToken
-    ? `${location.origin}${location.pathname}?share=${workspace.shareToken}`
+    ? workspaceShareUrl(
+        `${location.origin}${location.pathname}`,
+        workspace.shareToken,
+        workspace.storageBackend ?? serverDefault,
+      )
     : ''
 
   return (
@@ -548,6 +566,192 @@ export function WorkspaceDialog({ onClose }: { onClose: () => void }) {
           </p>
         </>
       )}
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Opening a workspace share link
+// ---------------------------------------------------------------------------
+type SharedState =
+  | { phase: 'loading' }
+  | { phase: 'ready'; workspace: SharedWorkspaceDto }
+  | { phase: 'error'; message: string; status: number }
+
+/**
+ * `?share=<token>&backend=<store>`: what the link holds, and an explicit choice
+ * to copy it into this browser. Nothing is imported until the person asks.
+ */
+export function SharedWorkspaceDialog({ link, onClose }: { link: WorkspaceShareLink; onClose: () => void }) {
+  const importBundle = useStore((s) => s.importBundle)
+  const toast = useStore((s) => s.toast)
+  const [state, setState] = useState<SharedState>({ phase: 'loading' })
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .getShared(link.token, link.backend)
+      .then((workspace) => {
+        if (!cancelled) setState({ phase: 'ready', workspace })
+      })
+      .catch((err) => {
+        if (cancelled) return
+        const status = err instanceof ApiError ? err.status : 0
+        const message = err instanceof TypeError ? 'Không kết nối được máy chủ' : (err as Error).message
+        setState({ phase: 'error', message, status })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [link.token, link.backend])
+
+  const workspace = state.phase === 'ready' ? state.workspace : null
+  const name = typeof workspace?.name === 'string' && workspace.name.trim() ? workspace.name.trim() : 'không tên'
+  const collectionCount = Array.isArray(workspace?.collections) ? workspace.collections.length : 0
+  const requestCount = Array.isArray(workspace?.requests) ? workspace.requests.length : 0
+
+  const doImport = () => {
+    if (!workspace) return
+    const bundle = sharedWorkspaceToBundle(workspace)
+    importBundle(bundle)
+    toast(
+      'success',
+      `Đã nhập ${bundle.collections.length - 1} collection, ${bundle.requests.length} request vào collection "${bundle.root.name}"`,
+    )
+    onClose()
+  }
+
+  return (
+    <Modal
+      title="Link chia sẻ workspace"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Đóng
+          </button>
+          <button className="btn btn-primary" onClick={doImport} disabled={!workspace}>
+            Nhập vào máy này
+          </button>
+        </>
+      }
+    >
+      <div role="status" aria-live="polite">
+        {state.phase === 'loading' ? <p className="shared-summary">Đang tải workspace được chia sẻ…</p> : null}
+        {workspace ? (
+          <p className="shared-summary">
+            Workspace được chia sẻ: {name} — {collectionCount} collection, {requestCount} request
+          </p>
+        ) : null}
+      </div>
+
+      {state.phase === 'error' ? (
+        <>
+          <div className="notice notice-error" role="alert">
+            Không mở được link chia sẻ: {state.message}
+          </div>
+          <p className="hint">
+            {state.status === 404
+              ? `Có thể chủ workspace đã thu hồi link, hoặc workspace nằm ở kho khác${
+                  link.backend ? ` (link này trỏ tới kho "${link.backend}")` : ''
+                }.`
+              : 'Thử lại sau, hoặc hỏi lại người đã gửi link.'}
+          </p>
+        </>
+      ) : null}
+
+      {workspace ? (
+        <p className="hint">
+          "Nhập vào máy này" thêm tất cả vào một collection mới tên "{name}" trong trình duyệt này; dữ liệu đang có
+          không bị đổi. Link chia sẻ không kèm environment, nên biến như <code>{'{{BASE_URL}}'}</code> cần khai báo
+          lại.
+        </p>
+      ) : null}
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Sharing one request as a link
+// ---------------------------------------------------------------------------
+export function ShareRequestDialog({ tab, onClose }: { tab: Tab; onClose: () => void }) {
+  const toast = useStore((s) => s.toast)
+  const [strip, setStrip] = useState(true)
+
+  const { url, removed } = useMemo(() => {
+    const { shared, removed } = toSharedRequest(tab.draft, { stripSecrets: strip })
+    return { url: sharedRequestUrl(`${location.origin}${location.pathname}`, shared), removed }
+  }, [tab.draft, strip])
+
+  const copy = async (text: string) => {
+    const ok = await copyToClipboard(text)
+    toast(ok ? 'success' : 'error', ok ? 'Đã copy link chia sẻ request' : 'Trình duyệt chặn clipboard — hãy copy link bằng tay')
+  }
+
+  // Copied as the dialog opens: the click that opened it asked for exactly that.
+  const copiedOnOpen = useRef(false)
+  useEffect(() => {
+    if (copiedOnOpen.current) return
+    copiedOnOpen.current = true
+    void copy(url)
+  })
+
+  const tooLong = url.length > SHARE_LINK_WARN_CHARS
+
+  return (
+    <Modal
+      title="Chia sẻ request"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Đóng
+          </button>
+          <button className="btn btn-primary" onClick={() => copy(url)}>
+            <IconLink /> Copy link
+          </button>
+        </>
+      }
+    >
+      <p className="hint" style={{ marginTop: 0 }}>
+        Cả request nằm trong link (phần sau dấu <code>#</code>) và không lưu lên server — ai có link đều đọc được nội
+        dung.
+      </p>
+
+      <label className="checkbox">
+        <input type="checkbox" checked={strip} onChange={(e) => setStrip(e.target.checked)} />
+        Bỏ thông tin đăng nhập
+      </label>
+      <p className="hint">
+        {strip
+          ? removed.length
+            ? `Đã bỏ: ${removed.join(', ')}.`
+            : 'Không có auth hay header đăng nhập nào cần bỏ.'
+          : 'Link sẽ chứa cả tab Auth và các header như Authorization, Cookie, X-API-Key.'}{' '}
+        Body đi kèm nguyên văn; cookie, rule Extract và file không bao giờ nằm trong link.
+      </p>
+
+      <div className="form-group" style={{ marginTop: 12 }}>
+        <label htmlFor="share-request-link">Link</label>
+        <textarea
+          id="share-request-link"
+          className="code-area share-link"
+          readOnly
+          value={url}
+          onFocus={(e) => e.target.select()}
+          spellCheck={false}
+        />
+      </div>
+
+      <div className="field-row">
+        <span className={`chip${tooLong ? ' chip-warn' : ''}`}>{url.length.toLocaleString('vi-VN')} ký tự</span>
+      </div>
+      {tooLong ? (
+        <div className="notice notice-warn">
+          Link dài hơn {SHARE_LINK_WARN_CHARS.toLocaleString('vi-VN')} ký tự: ứng dụng chat, email hay một số máy chủ có
+          thể cắt mất phần cuối. Bớt body hoặc test script nếu được.
+        </div>
+      ) : null}
     </Modal>
   )
 }

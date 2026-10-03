@@ -156,6 +156,24 @@ export interface WorkspaceLink {
   storageBackend?: StorageBackend
 }
 
+export interface AiJobError {
+  message: string
+  /** The gateway's `data.code` (`ai_code_required`, `ai_rate_limited`…), `network`, or ''. */
+  code: string
+  status: number
+}
+
+/** One AI request about one tab's response: in flight, answered, or failed. */
+export interface AiJob<T> {
+  /** `receivedAt` of the response it is about; a newer response makes it stale. */
+  responseAt: string
+  busy: boolean
+  result?: T
+  error?: AiJobError
+  /** What the AI was not shown (binary body, a cut-off body…). */
+  notes: string[]
+}
+
 export interface ToastMessage {
   id: string
   kind: 'success' | 'info' | 'warn' | 'error'

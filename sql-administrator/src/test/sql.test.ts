@@ -12,6 +12,7 @@ import {
   quoteIdentifier,
   quoteValue,
   rowKey,
+  splitStatements,
   statementAtCursor,
   toCsv,
   toJson,
@@ -185,6 +186,39 @@ describe('statementAtCursor', () => {
 
   it('returns an empty string for an empty script', () => {
     expect(statementAtCursor('', 0)).toBe('')
+  })
+})
+
+describe('splitStatements', () => {
+  it('splits on semicolons and trims each statement', () => {
+    expect(splitStatements('SELECT 1;\n  SELECT 2 ;')).toEqual(['SELECT 1', 'SELECT 2'])
+  })
+
+  it('keeps semicolons inside strings and quoted identifiers', () => {
+    expect(splitStatements('SELECT \';\', "a;b", `c;d` FROM t; SELECT 2')).toEqual([
+      'SELECT \';\', "a;b", `c;d` FROM t',
+      'SELECT 2',
+    ])
+  })
+
+  it('understands doubled and backslash-escaped quotes', () => {
+    expect(splitStatements("SELECT 'it''s; fine', 'a\\'; b'; SELECT 3")).toEqual([
+      "SELECT 'it''s; fine', 'a\\'; b'",
+      'SELECT 3',
+    ])
+  })
+
+  it('drops comments, semicolons inside them included', () => {
+    expect(splitStatements('-- a; b\nSELECT 1; # c; d\n/* e; f */ SELECT 2')).toEqual(['SELECT 1', 'SELECT 2'])
+  })
+
+  it('needs whitespace after -- for it to start a comment, as MySQL does', () => {
+    expect(splitStatements('SELECT 1--2; SELECT 3')).toEqual(['SELECT 1--2', 'SELECT 3'])
+  })
+
+  it('returns nothing for an empty or comment-only script', () => {
+    expect(splitStatements('')).toEqual([])
+    expect(splitStatements('  ;  -- nothing here')).toEqual([])
   })
 })
 

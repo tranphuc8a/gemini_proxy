@@ -1,6 +1,6 @@
 {
   "title": "Wukong Xiangqi",
-  "description": "Engine cờ tướng viết bằng JavaScript, chạy hoàn toàn trong trình duyệt. Gồm ba phần: đấu với máy ở nhiều cấp độ và nhiều kiểu bàn cờ, xem lại ván đấu theo từng nước để phân tích, và giải các thế cờ có kiểm tra nước đi. Engine và giao diện của Code Monkey King.",
+  "description": "Engine cờ tướng viết bằng JavaScript, chạy hoàn toàn trong trình duyệt. Gồm bốn phần: đấu với máy ở nhiều cấp độ và nhiều kiểu bàn cờ, xem lại ván đấu theo từng nước để phân tích, giải các thế cờ có kiểm tra nước đi, và Cờ tướng mỗi ngày — đoán nước đi của kỳ thủ trong một ván thật, giữ chuỗi ngày chơi. Engine và giao diện của Code Monkey King.",
   "tags": [
     "xiangqi",
     "chinese-chess",
@@ -10,7 +10,8 @@
     "board-game",
     "puzzle",
     "javascript",
-    "ai"
+    "ai",
+    "daily"
   ],
   "icon": "🐵"
 }

@@ -44,6 +44,7 @@ from src.domain.vo.sqladmin_vo import (
     CreateDatabaseRequest,
     CreateTableRequest,
     DatabaseInfo,
+    DatabaseSchema,
     DropColumnRequest,
     ForeignKeyInfo,
     ForeignKeyRequest,
@@ -62,6 +63,7 @@ from src.domain.vo.sqladmin_vo import (
     RoutineRequest,
     RowDeleteRequest,
     RowMutation,
+    SchemaTable,
     ServerOverview,
     SessionInfo,
     TableInfo,
@@ -70,6 +72,9 @@ from src.domain.vo.sqladmin_vo import (
     ViewInfo,
     ViewRequest,
 )
+
+#: `database_schema` reads at most this many tables (alphabetically).
+SCHEMA_MAX_TABLES = 200
 
 # Charsets/collations are identifiers in CREATE DATABASE and cannot be bound.
 _CHARSET_PATTERN = re.compile(r"^[A-Za-z0-9_]{1,64}$")
@@ -338,6 +343,55 @@ class SqlAdminUseCase(SqlAdminInputPort):
             ] or [c.name for c in columns if c.key == "PRI"],
             ddl=ddl,
         )
+
+    async def database_schema(self, token: str, database: str) -> DatabaseSchema:
+        """Tables, columns and foreign keys of a whole database in three queries.
+
+        `table_structure` per table would be four round trips each (and a SHOW
+        CREATE); the AI query helper needs every table at once and no DDL.
+        """
+        session = await self._require_session(token)
+        validate_identifier(database, "database")
+        listed = await self._run(
+            session,
+            "SELECT TABLE_NAME, TABLE_TYPE, TABLE_COMMENT FROM information_schema.TABLES "
+            "WHERE TABLE_SCHEMA = %s ORDER BY TABLE_NAME",
+            [database],
+        )
+        tables = {
+            row[0]: SchemaTable(name=row[0], type=row[1] or "BASE TABLE", comment=row[2] or None)
+            for row in listed.rows[:SCHEMA_MAX_TABLES]
+        }
+        column_rows = await self._run(
+            session,
+            "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, "
+            "EXTRA, COLUMN_COMMENT, ORDINAL_POSITION FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA = %s ORDER BY TABLE_NAME, ORDINAL_POSITION",
+            [database],
+        )
+        for row in column_rows.rows:
+            if row[0] in tables:
+                tables[row[0]].columns.append(ColumnInfo(
+                    name=row[1], data_type=row[2], column_type=row[3], nullable=str(row[4]).upper() == "YES",
+                    key=row[5] or None, default=row[6], extra=row[7] or None, comment=row[8] or None,
+                    position=int(row[9] or 0),
+                ))
+        fk_rows = await self._run(
+            session,
+            "SELECT TABLE_NAME, CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_TABLE_SCHEMA, REFERENCED_TABLE_NAME, "
+            "REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE "
+            "WHERE TABLE_SCHEMA = %s AND REFERENCED_TABLE_NAME IS NOT NULL "
+            "ORDER BY TABLE_NAME, CONSTRAINT_NAME, ORDINAL_POSITION",
+            [database],
+        )
+        for row in fk_rows.rows:
+            if row[0] in tables:
+                tables[row[0]].foreign_keys.append(ForeignKeyInfo(
+                    name=row[1], column=row[2], referenced_schema=row[3], referenced_table=row[4],
+                    referenced_column=row[5],
+                ))
+        return DatabaseSchema(database=database, tables=list(tables.values()),
+                              truncated=len(listed.rows) > SCHEMA_MAX_TABLES)
 
     async def drop_table(self, token: str, database: str, table: str) -> MutationResult:
         session = await self._require_session(token)

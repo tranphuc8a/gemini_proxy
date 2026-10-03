@@ -78,6 +78,7 @@ _SEARCH_CACHE: "OrderedDict[str, Tuple[str, List[Dict[str, Any]]]]" = OrderedDic
 #: the revision, so an entry is only ever reused for the content it came from.
 HITS_CACHE_SIZE = 256
 _HITS_CACHE: "OrderedDict[Tuple[str, str, str, int], List[CourseSearchHit]]" = OrderedDict()
+_GRAPH_CACHE: "OrderedDict[str, tuple]" = OrderedDict()   # slug -> (revision, graph)
 
 #: Rankings running at once in this process. Each holds the GIL for its whole
 #: run, so more at once only queue for it — and a burst of public queries
@@ -88,6 +89,7 @@ _RANK_SLOTS = threading.BoundedSemaphore(2)
 def reset_search_cache() -> None:
     _SEARCH_CACHE.clear()
     _HITS_CACHE.clear()
+    _GRAPH_CACHE.clear()
 
 
 def _forget(slug: str) -> None:
@@ -424,6 +426,26 @@ class CourseUseCase(CourseInputPort):
                      "webapp": webapp} for h in hits]
         out.sort(key=lambda h: h["score"], reverse=True)
         return out[:limit]
+
+    async def graph(self, slug: str, include_unpublished: bool = False) -> Dict[str, Any]:
+        """Who links to whom — the reader's knowledge map: `edges` [from, to] between lessons
+        (links in the markdown). Reading every lesson is the expensive part, so the result
+        is kept per course revision, like the search index."""
+        revision = await self._visible(slug, include_unpublished)
+        cached = _GRAPH_CACHE.get(slug)
+        if cached is not None and cached[0] == revision:
+            _GRAPH_CACHE.move_to_end(slug)
+            return cached[1]
+        course = await self.repo.get_course(slug)
+        docs = await self.repo.list_docs_full(slug)
+        report = course_links.scan({d.id: d.md for d in docs}, {d.slug: d.id for d in docs},
+                                   dict(((course.config if course else None) or {}).get("slugAliases") or {}), [])
+        out = {"edges": sorted([src, dst] for dst, srcs in report["inbound"].items() for src in srcs),
+               "docCount": len(docs)}
+        _GRAPH_CACHE[slug] = (revision, out)
+        while len(_GRAPH_CACHE) > SEARCH_CACHE_SIZE:
+            _GRAPH_CACHE.popitem(last=False)
+        return out
 
     async def links(self, slug: str) -> Dict[str, Any]:
         """Broken internal links, and who links to whom (for "delete this lesson?")."""

@@ -247,5 +247,6 @@
     }
   });
 
+  K.themLoiTat({ ten: "Ôn tập", icon: "the-on", href: "#/~on-tap" });
   K.nghe("san-sang", capNhatNut);
 })();

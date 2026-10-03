@@ -103,6 +103,83 @@ export function statementAtCursor(sql: string, cursor: number): string {
   return sql.slice(start, end).trim()
 }
 
+/**
+ * Splits a script on the semicolons outside strings, quoted identifiers and
+ * comments, dropping the comments: a port of the backend's `split_statements`
+ * (backend/fastapi/src/domain/utils/sql_script.py), so both count alike.
+ */
+export function splitStatements(script: string): string[] {
+  const statements: string[] = []
+  const length = script.length
+  let buffer = ''
+  let quote: string | null = null
+  let index = 0
+
+  const skipToEol = (from: number) => {
+    const end = script.indexOf('\n', from)
+    return end === -1 ? length : end + 1
+  }
+
+  while (index < length) {
+    const char = script[index]
+    const next = index + 1 < length ? script[index + 1] : ''
+
+    if (quote) {
+      buffer += char
+      if (char === '\\' && quote !== '`') {
+        // A backslash escapes the next character inside a MySQL string.
+        if (next) {
+          buffer += next
+          index += 2
+          continue
+        }
+      } else if (char === quote) {
+        // A doubled quote is an escaped quote, not the end of the literal.
+        if (next === quote) {
+          buffer += next
+          index += 2
+          continue
+        }
+        quote = null
+      }
+      index += 1
+      continue
+    }
+
+    if (char === '-' && next === '-' && (index + 2 >= length || ' \t\r\n'.includes(script[index + 2]))) {
+      index = skipToEol(index)
+      continue
+    }
+    if (char === '#') {
+      index = skipToEol(index)
+      continue
+    }
+    if (char === '/' && next === '*') {
+      const end = script.indexOf('*/', index + 2)
+      index = end === -1 ? length : end + 2
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char
+      buffer += char
+      index += 1
+      continue
+    }
+    if (char === ';') {
+      statements.push(buffer)
+      buffer = ''
+      index += 1
+      continue
+    }
+
+    buffer += char
+    index += 1
+  }
+
+  statements.push(buffer)
+  return statements.map((statement) => statement.trim()).filter(Boolean)
+}
+
 export function toCsv(columns: string[], rows: CellValue[][]): string {
   const cell = (value: CellValue) => {
     if (value === null || value === undefined) return ''

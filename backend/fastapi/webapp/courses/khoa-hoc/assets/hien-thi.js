@@ -189,10 +189,207 @@ function taoLab(text, o) {
   return fig;
 }
 
+/* ---- mã chạy được trong bài ------------------------------------------------
+   ```py-chay / ```js-chay        ô mã sửa được + nút Chạy, in kết quả bên dưới
+   ```py-bai-tap / ```js-bai-tap  bài tập tự chấm: phần TRƯỚC dòng `---kiem---` là
+                                  mã người học sửa, phần SAU là kiểm tra ẩn (Python:
+                                  `assert`; JS: `kiem(dieuKien, "thông báo")`)
+   Mã chạy trong Web Worker: không chạm được trang, cookie phiên hay token trong
+   localStorage, và bị dừng hẳn khi quá giờ (vòng lặp vô hạn). Python là Pyodide
+   (CPython biên dịch sang WebAssembly) tải từ CDN ở lần chạy đầu (~10 MB, trình
+   duyệt giữ lại). Mã người học sửa và trạng thái "đã đạt" cất trên máy này. */
+var PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+var HAN_JS = 5000, HAN_PY = 15000, HAN_NAP_PY = 90000;
+var MA_THO = {
+  js: "self.onmessage = function (e) {\n" +
+      "  var d = e.data, daChayMa = false;\n" +
+      "  function gui(loai, chu) { self.postMessage({ loai: loai, chu: String(chu) }); }\n" +
+      "  function noi(a) { return Array.prototype.map.call(a, function (x) {\n" +
+      "    if (typeof x === 'string') return x; try { return JSON.stringify(x); } catch (er) { return String(x); } }).join(' '); }\n" +
+      "  self.console = { log: function () { gui('in', noi(arguments)); }, info: function () { gui('in', noi(arguments)); },\n" +
+      "    warn: function () { gui('in', noi(arguments)); }, error: function () { gui('loi-in', noi(arguments)); } };\n" +
+      "  function kiem(dk, tb) { if (!dk) throw new Error(tb || 'một kiểm tra không qua'); }\n" +
+      "  try {\n" +
+      "    (new Function('kiem', '__xongMa', d.ma + '\\n;__xongMa();\\n' + (d.kiem || '')))(kiem, function () { daChayMa = true; });\n" +
+      "    self.postMessage({ loai: 'xong', ok: true });\n" +
+      "  } catch (er) {\n" +
+      "    self.postMessage({ loai: 'xong', ok: false, loi: (er && er.name ? er.name + ': ' : '') + (er && er.message || er),\n" +
+      "                       oKiem: daChayMa && !!d.kiem });\n" +
+      "  }\n" +
+      "};\n",
+  py: "var san = null;\n" +
+      "self.onmessage = function (e) {\n" +
+      "  var d = e.data, buoc = 'nap';\n" +
+      "  function gui(loai, chu) { self.postMessage({ loai: loai, chu: chu }); }\n" +
+      "  if (!san) {\n" +
+      "    gui('nap', '');\n" +
+      "    try { importScripts(d.goc + 'pyodide.js'); san = loadPyodide({ indexURL: d.goc }); }\n" +
+      "    catch (er) { self.postMessage({ loai: 'xong', ok: false, loi: String(er && er.message || er), oNap: true }); return; }\n" +
+      "  }\n" +
+      "  san.then(function (p) {\n" +
+      "    p.setStdout({ batched: function (s) { gui('in', s); } });\n" +
+      "    p.setStderr({ batched: function (s) { gui('loi-in', s); } });\n" +
+      "    buoc = 'ma';\n" +
+      "    return p.loadPackagesFromImports(d.ma + '\\n' + (d.kiem || '')).then(function () {\n" +
+      "      var ns = p.globals.get('dict')();\n" +
+      "      p.runPython(d.ma, { globals: ns });\n" +
+      "      buoc = 'kiem';\n" +
+      "      if (d.kiem) p.runPython(d.kiem, { globals: ns });\n" +
+      "      ns.destroy();\n" +
+      "      self.postMessage({ loai: 'xong', ok: true });\n" +
+      "    });\n" +
+      "  }).catch(function (er) {\n" +
+      "    self.postMessage({ loai: 'xong', ok: false, loi: String(er && er.message || er), oKiem: buoc === 'kiem',\n" +
+      "                       oNap: buoc === 'nap' });\n" +
+      "  });\n" +
+      "};\n"
+};
+var THO = {};
+function layTho(ngon) {
+  if (!THO[ngon]) {
+    var url = URL.createObjectURL(new Blob([MA_THO[ngon]], { type: "text/javascript" }));
+    THO[ngon] = { w: new Worker(url), daNap: ngon === "js", ban: false };
+  }
+  return THO[ngon];
+}
+/* Một lần chạy: xong(ok, loi, oKiem); dòng in ra đi qua inRa(chu, laLoi). */
+function chayTrongTho(ngon, ma, kiem, inRa, nap, xong) {
+  var t = layTho(ngon);
+  if (t.ban) { xong(false, "Đang chạy một ô mã khác — đợi nó xong.", false); return; }
+  t.ban = true;
+  var han = ngon === "js" ? HAN_JS : t.daNap ? HAN_PY : HAN_NAP_PY;
+  var hen = setTimeout(function () {
+    t.w.terminate();
+    delete THO[ngon];
+    xong(false, "Dừng sau " + Math.round(han / 1000) + " giây — có thể là vòng lặp vô hạn.", false);
+  }, han);
+  t.w.onmessage = function (e) {
+    var d = e.data || {};
+    if (d.loai === "nap") nap();
+    else if (d.loai === "in" || d.loai === "loi-in") inRa(d.chu, d.loai === "loi-in");
+    else if (d.loai === "xong") {
+      clearTimeout(hen);
+      t.ban = false;
+      if (d.ok || !d.oNap) t.daNap = true;
+      if (d.oNap) { t.w.terminate(); delete THO[ngon]; }
+      xong(!!d.ok, d.loi || "", !!d.oKiem, !!d.oNap);
+    }
+  };
+  /* lỗi không ai bắt trong worker (cú pháp lạ, hết bộ nhớ…): báo ngay, không treo tới hết giờ */
+  t.w.onerror = function (ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    clearTimeout(hen);
+    t.w.terminate();
+    delete THO[ngon];
+    xong(false, (ev && ev.message) || "Trình chạy mã gặp lỗi", false, !t.daNap);
+  };
+  t.w.postMessage({ ma: ma, kiem: kiem, goc: PYODIDE });
+}
+/* Lỗi Python: dòng cuối của traceback; assert không lời nhắn thì chỉ ra dòng kiểm tra hỏng. */
+function tomTatLoi(ngon, loi, kiem, oKiem) {
+  var s = String(loi || "").replace(/\s+$/, "");
+  if (ngon !== "py") return oKiem ? s.replace(/^Error:\s*/, "") : s;
+  var dong = s.split("\n"), cuoi = dong[dong.length - 1];
+  if (oKiem && /^AssertionError\s*$/.test(cuoi)) {
+    var so = (s.match(/line (\d+)/g) || []).pop();
+    var dk = so ? kiem.split("\n")[+so.replace(/\D/g, "") - 1] : "";
+    return dk ? dk.trim() : "một kiểm tra không qua";
+  }
+  if (oKiem) return cuoi.replace(/^AssertionError:\s*/, "");
+  var tu = dong.length;
+  for (var i = dong.length - 1; i >= 0; i--) if (/File "<exec>"/.test(dong[i])) { tu = i; break; }
+  return dong.slice(Math.min(tu, dong.length - 1)).join("\n");
+}
+
+var demChay = 0;
+function taoChay(text, ngon, baiTap, o) {
+  ngon = /^py/.test(ngon) ? "py" : "js";
+  var phan = baiTap ? String(text).split(/^[ \t]*(?:#|\/\/)?[ \t]*---[ \t]*kiem[ \t]*---[ \t]*$/m) : [text];
+  var goc = phan[0].replace(/\s+$/, ""), kiem = baiTap ? (phan[1] || "").replace(/^\s*\n|\s+$/g, "") : "";
+  var khoa = "hien-thi.chay@" + location.pathname + location.search.replace(/[?&]t=\d+/, "") + "|" + (o.docId || "") + "|" + (demChay++);
+  function doc(k, d) { try { var v = localStorage.getItem(khoa + k); return v == null ? d : v; } catch (e) { return d; } }
+  function ghi(k, v) { try { if (v == null) localStorage.removeItem(khoa + k); else localStorage.setItem(khoa + k, v); } catch (e) {} }
+
+  var hop = document.createElement("div");
+  hop.className = "chay" + (baiTap ? " bai-tap" : "");
+  var ten = ngon === "py" ? "Python" : "JavaScript";
+  hop.innerHTML = '<div class="chay-dau"><span class="chay-nhan">' + (baiTap ? "✍️ Bài tập · " : "▶ ") + ten +
+    (baiTap ? "" : " · chạy được") + '</span><span class="chay-dat"' + (doc(".dat", "") ? "" : " hidden") + ">✓ Đã đạt</span>" +
+    '<button type="button" class="chay-nut" data-viec="chay">▶ Chạy</button>' +
+    (baiTap && kiem ? '<button type="button" class="chay-nut chinh" data-viec="nop">✓ Nộp bài</button>' : "") +
+    '<button type="button" class="chay-nut phu" data-viec="lai" title="Khôi phục mã ban đầu" aria-label="Khôi phục mã ban đầu">↺</button></div>' +
+    '<textarea class="chay-ma" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Mã ' + ten + '"></textarea>' +
+    '<pre class="chay-ra" aria-live="polite" hidden></pre>';
+  var ta = hop.querySelector(".chay-ma"), ra = hop.querySelector(".chay-ra"), dat = hop.querySelector(".chay-dat");
+  ta.value = doc("", goc);
+  function cao() { ta.style.height = "auto"; ta.style.height = Math.min(560, ta.scrollHeight + 2) + "px"; }
+  ta.addEventListener("input", function () { cao(); ghi("", ta.value === goc ? null : ta.value); });
+  ta.addEventListener("keydown", function (e) {
+    if (e.key === "Tab" && !e.shiftKey) {                 /* Tab thụt lề, không nhảy ô */
+      e.preventDefault();
+      var a = ta.selectionStart;
+      ta.setRangeText("    ", a, ta.selectionEnd, "end");
+      ta.dispatchEvent(new Event("input"));
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      chay(baiTap && kiem ? "nop" : "chay");
+    }
+  });
+  function inRa(chu, laLoi) {
+    ra.hidden = false;
+    var s = document.createElement("span");
+    if (laLoi) s.className = "loi";
+    s.textContent = chu.slice(-4000) + "\n";
+    ra.appendChild(s);
+    if (ra.childNodes.length > 400) ra.removeChild(ra.firstChild);
+  }
+  function chay(viec) {
+    var nut = hop.querySelectorAll(".chay-nut");
+    Array.prototype.forEach.call(nut, function (b) { b.disabled = true; });
+    ra.innerHTML = ""; ra.hidden = false; ra.className = "chay-ra";
+    var cho = document.createElement("span");
+    cho.className = "cho"; cho.textContent = "Đang chạy…";
+    ra.appendChild(cho);
+    chayTrongTho(ngon, ta.value, viec === "nop" ? kiem : "", function (chu, laLoi) {
+      if (cho.parentNode) cho.remove();
+      inRa(chu, laLoi);
+    }, function () {
+      cho.textContent = "Đang tải Python (Pyodide, ~10 MB — chỉ lần đầu)…";
+    }, function (ok, loi, oKiem, oNap) {
+      if (cho.parentNode) cho.remove();
+      Array.prototype.forEach.call(nut, function (b) { b.disabled = false; });
+      if (!ok) {
+        inRa(oNap ? "Không tải được Python: " + loi + " — cần mạng ở lần chạy đầu." :
+             oKiem ? "✗ Chưa đạt — " + tomTatLoi(ngon, loi, kiem, true) : tomTatLoi(ngon, loi, kiem, false), true);
+        if (viec === "nop") ra.classList.add("chua-dat");
+        return;
+      }
+      if (viec === "nop") {
+        inRa("✓ Đạt — mọi kiểm tra đều qua.", false);
+        ra.classList.add("dat");
+        dat.hidden = false;
+        ghi(".dat", "1");
+      } else if (!ra.textContent.trim()) {
+        inRa("(chạy xong, không in gì)", false);
+      }
+    });
+  }
+  hop.addEventListener("click", function (e) {
+    var b = e.target.closest(".chay-nut");
+    if (!b) return;
+    var v = b.getAttribute("data-viec");
+    if (v === "lai") { ta.value = goc; ghi("", null); cao(); ta.focus(); return; }
+    chay(v);
+  });
+  setTimeout(cao, 0);
+  return hop;
+}
+
 if (root.marked) root.marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
 
 function render(md, o) {
   o = o || {};
+  demChay = 0;                  /* khoá cất mã người học sửa: theo thứ tự ô trong MỘT bài */
   var docs = o.docs || {}, docId = o.docId || "";
   var icon = o.icon || function () { return ""; };
   var toast = o.toast || function () {};
@@ -243,6 +440,11 @@ function render(md, o) {
   $$("pre", host).forEach(function (pre) {
     var code = pre.querySelector("code");
     var lang = code && (code.className.match(/language-([\w+#-]+)/) || [])[1];
+    var chayDuoc = /^(py|python|js|javascript)-(chay|bai-tap)$/.exec(lang || "");
+    if (chayDuoc && root.Worker && root.Blob) {
+      pre.parentNode.replaceChild(taoChay(code.textContent, chayDuoc[1], chayDuoc[2] === "bai-tap", o), pre);
+      return;
+    }
     if (lang === "lab") {
       var lab = taoLab(code.textContent, o);
       if (lab) { pre.parentNode.replaceChild(lab, pre); return; }

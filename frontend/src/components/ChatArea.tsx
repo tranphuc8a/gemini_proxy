@@ -10,6 +10,7 @@ import {
   Avatar,
   Tooltip,
   Typography,
+  type GetRef,
 } from 'antd';
 import {
   SendOutlined,
@@ -21,6 +22,9 @@ import {
   StopOutlined,
   ReloadOutlined,
   ArrowDownOutlined,
+  SwapOutlined,
+  FileMarkdownOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../store/chatStore';
@@ -28,15 +32,30 @@ import { useAppStore } from '../store/appStore';
 import { conversationService } from '../services/conversationService';
 import { geminiService } from '../services/geminiService';
 import { describeApiError } from '../services/apiClient';
+import { canOfferAi } from '../services/aiService';
+import { useAiStatus } from '../hooks/useAiStatus';
 import { EModel, ERole, type ChatMessage } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { EmptyState } from './EmptyState';
+import { CompareModelsModal } from './CompareModelsModal';
+import { PromptLibrary } from './PromptLibrary';
 import { showToast } from '../utils/toast';
 import { formatDateTime, formatTime, toSafeFilename } from '../utils/helpers';
+import {
+  buildConversationMarkdown,
+  buildMarkdownEditorInbox,
+  sendToMarkdownEditor,
+} from '../utils/markdownExport';
+import { insertPromptText } from '../utils/promptLibrary';
 
 const { Content } = Layout;
 const { TextArea } = Input;
 const { Title } = Typography;
+
+type TextAreaHandle = GetRef<typeof TextArea>;
+
+/** Author shown for the model's turns, in the transcript and the export alike. */
+const ASSISTANT_NAME = 'Gemini';
 
 const MESSAGE_PAGE_SIZE = 20;
 /** How close to the bottom still counts as "following along". */
@@ -52,6 +71,8 @@ interface MessageBubbleProps {
   language: string;
   onCopy: (content: string) => void;
   onRetry?: () => void;
+  /** Hand this one message to Markdown Editor. */
+  onSendToEditor?: (message: ChatMessage) => void;
 }
 
 /**
@@ -61,7 +82,7 @@ interface MessageBubbleProps {
  * each chunk re-rendered — and re-parsed the Markdown of — every message in the
  * conversation, which is what made long answers stutter.
  */
-const MessageBubble = memo<MessageBubbleProps>(({ message, language, onCopy, onRetry }) => {
+const MessageBubble = memo<MessageBubbleProps>(({ message, language, onCopy, onRetry, onSendToEditor }) => {
   const { t } = useTranslation();
   const isUser = message.role === ERole.USER;
 
@@ -78,7 +99,7 @@ const MessageBubble = memo<MessageBubbleProps>(({ message, language, onCopy, onR
               icon={isUser ? <UserOutlined /> : <RobotOutlined />}
               style={{ backgroundColor: isUser ? '#40a9ff' : '#52c41a' }}
             />
-            <span className="chat-message-author">{isUser ? t('chat.you') : 'Gemini'}</span>
+            <span className="chat-message-author">{isUser ? t('chat.you') : ASSISTANT_NAME}</span>
             <Tooltip title={formatDateTime(message.created_at, language)}>
               <span className="chat-message-time">{formatTime(message.created_at, language)}</span>
             </Tooltip>
@@ -127,6 +148,17 @@ const MessageBubble = memo<MessageBubbleProps>(({ message, language, onCopy, onR
             >
               {t('chat.copyMessage')}
             </Button>
+            {onSendToEditor && (
+              <Button
+                type="text"
+                size="small"
+                icon={<ExportOutlined />}
+                onClick={() => onSendToEditor(message)}
+                className="message-action-btn"
+              >
+                {t('chat.sendToEditor')}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -143,7 +175,10 @@ export const ChatArea: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const { status: aiStatus, setStatus: setAiStatus } = useAiStatus();
 
+  const inputRef = useRef<TextAreaHandle>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   /** Whether the viewport should track new content; false once the user scrolls up. */
@@ -186,6 +221,7 @@ export const ChatArea: React.FC = () => {
 
   const currentMessages = currentConversationId ? messages[currentConversationId] || [] : [];
   const currentConversation = conversations.find((c) => c.id === currentConversationId);
+  const conversationName = currentConversation?.name || 'Conversation';
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     requestAnimationFrame(() => {
@@ -205,6 +241,19 @@ export const ChatArea: React.FC = () => {
     [t]
   );
 
+  /** The open conversation as one Markdown document, for the download and the editor alike. */
+  const conversationMarkdown = () =>
+    buildConversationMarkdown(
+      conversationName,
+      currentMessages,
+      {
+        user: t('chat.you'),
+        assistant: ASSISTANT_NAME,
+        exportedOn: t('chat.exportedOn', { date: formatDateTime(Math.floor(Date.now() / 1000), language) }),
+      },
+      language
+    );
+
   // Export conversation to markdown
   const handleExportMarkdown = () => {
     if (!currentConversationId || currentMessages.length === 0) {
@@ -212,18 +261,7 @@ export const ChatArea: React.FC = () => {
       return;
     }
 
-    const conversationName = currentConversation?.name || 'Conversation';
-
-    let markdown = `# ${conversationName}\n\n`;
-    markdown += `*${t('chat.exportedOn', { date: formatDateTime(Math.floor(Date.now() / 1000), language) })}*\n\n`;
-    markdown += `---\n\n`;
-
-    currentMessages.forEach((msg) => {
-      const role = msg.role === ERole.USER ? t('chat.you') : 'Gemini';
-      markdown += `## ${role} - ${formatDateTime(msg.created_at, language)}\n\n`;
-      markdown += `${msg.content}\n\n`;
-      markdown += `---\n\n`;
-    });
+    const markdown = conversationMarkdown();
 
     const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -237,6 +275,44 @@ export const ChatArea: React.FC = () => {
 
     showToast.success(t('chat.exportSuccess'));
   };
+
+  /** Hand the whole conversation to Markdown Editor, in a new tab. */
+  const handleOpenInEditor = () => {
+    if (!currentConversationId || currentMessages.length === 0) {
+      showToast.warning(t('chat.noMessagesToExport'));
+      return;
+    }
+    const sent = sendToMarkdownEditor(
+      buildMarkdownEditorInbox({ title: conversationName, content: conversationMarkdown() })
+    );
+    if (!sent) showToast.error(t('chat.editorInboxFailed'));
+  };
+
+  /** Hand one message to Markdown Editor. Stable, so the memoised bubbles stay memoised. */
+  const handleSendMessageToEditor = useCallback(
+    (message: ChatMessage) => {
+      const author = message.role === ERole.USER ? t('chat.you') : ASSISTANT_NAME;
+      const sent = sendToMarkdownEditor(
+        buildMarkdownEditorInbox({ title: `${conversationName}-${author}`, content: message.content })
+      );
+      if (!sent) showToast.error(t('chat.editorInboxFailed'));
+    },
+    [conversationName, t]
+  );
+
+  const focusInput = useCallback(() => {
+    inputRef.current?.focus({ cursor: 'end' });
+  }, []);
+
+  /** A prompt from the library: replaces an empty box, otherwise goes on a new line below. */
+  const handleInsertPrompt = useCallback(
+    (text: string) => {
+      setInputValue((current) => insertPromptText(current, text));
+      // After React has put the new value in the box, so the caret lands at its end.
+      requestAnimationFrame(focusInput);
+    },
+    [focusInput]
+  );
 
   const loadRecentMessages = useCallback(
     async (conversationId: string) => {
@@ -583,12 +659,26 @@ export const ChatArea: React.FC = () => {
               value: model,
             }))}
           />
+          {/* Goes through the AI gateway, unlike the chat itself: offered only
+              when the gateway would let this visitor in (or just wants a code). */}
+          {canOfferAi(aiStatus) && (
+            <Button icon={<SwapOutlined />} onClick={() => setCompareOpen(true)} aria-haspopup="dialog">
+              {t('compare.open')}
+            </Button>
+          )}
           <Button
             icon={<DownloadOutlined />}
             onClick={handleExportMarkdown}
             disabled={currentMessages.length === 0}
           >
             {t('chat.exportMarkdown')}
+          </Button>
+          <Button
+            icon={<FileMarkdownOutlined />}
+            onClick={handleOpenInEditor}
+            disabled={currentMessages.length === 0}
+          >
+            {t('chat.openInEditor')}
           </Button>
         </Space>
       </div>
@@ -614,6 +704,7 @@ export const ChatArea: React.FC = () => {
               language={language}
               onCopy={handleCopyMessage}
               onRetry={msg.error ? () => handleRetry(msg) : undefined}
+              onSendToEditor={handleSendMessageToEditor}
             />
           ))
         )}
@@ -636,7 +727,13 @@ export const ChatArea: React.FC = () => {
 
       <div className="chat-input-area">
         <div className="chat-input-row">
+          <PromptLibrary
+            currentInput={inputValue}
+            onInsert={handleInsertPrompt}
+            onClosedAfterInsert={focusInput}
+          />
           <TextArea
+            ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -670,6 +767,14 @@ export const ChatArea: React.FC = () => {
         </div>
         <div className="chat-input-hint">{t('chat.sendHint')}</div>
       </div>
+
+      <CompareModelsModal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        initialPrompt={inputValue}
+        status={aiStatus}
+        onStatusChange={setAiStatus}
+      />
     </Content>
   );
 };

@@ -46,6 +46,8 @@ pages read it through this API:
 | `GET /courses/{slug}` · `/manifest` | public | course + navigation tree · tree + document metadata, **no markdown** (ETag, gzip); the manifest carries `aliases` (old slug → document) and `idAliases` (old id → new id) |
 | `GET /courses/{slug}/docs/{id}` | public | one document with markdown (ETag, gzip) |
 | `GET /courses/{slug}/search?q=` | public | server-side ranking, diacritic-insensitive, word-start matching; at most 6 distinct terms of 2+ letters, ranked off the event loop, answers cached per revision |
+| `GET /courses/search?q=` | public | the same ranking across every published course (the portal's Ctrl+K); each hit carries `course`, `courseTitle`, `courseIcon`, `webapp` |
+| `GET /courses/{slug}/graph` | public like the course | links between the course's documents `{edges, docCount}` (the knowledge map), cached per revision |
 | `GET /courses/{slug}/bundle` | public, small courses only | the whole course (`COURSE_BULK_MAX_BYTES`) |
 | `GET /courses/{slug}/assets/{name}` | public like the course | an uploaded file (type from the extension; SVG under a sandbox CSP) |
 | `POST /courses/admin/verify` · `/admin/session` | — | `COURSE_ADMIN_KEY` → session token (5 failures per address in 5 min, 50 overall → 429 `Retry-After`) · refresh (until `COURSE_SESSION_MAX_DAYS` after the login) |
@@ -102,7 +104,32 @@ budget and the books are skipped with a warning; the per-address limits stay.
 | `GET /ai/status` | public | what this caller may do: `enabled`, `access`, `allowed`, `needs` (`code` / `admin`) |
 | `POST /ai/session` | public (rate limited) | `{code}` → AI token, sent back as `X-AI-Session` |
 | `GET /ai/usage?days=30` | admin | rows per day and feature, today's budget, the configuration |
+| `POST /ai/tutor` | `AI_ACCESS` | the tutor beside a lesson: `summary`, `explain` (+ a selected passage), `quiz`, `cards`, `ask` (answers from the lesson and related lessons, citing them); cached per lesson revision |
+| `POST /ai/ask` | `AI_ACCESS` | a question about anything in the published courses, answered from the best lessons with citations; `found: false` and no model call when nothing matches |
+| `POST /ai/draft/outline` · `/ai/draft/lesson` | admin | a course outline from a topic / text / URL (fetched SSRF-safe: public addresses only, no redirects to private ones, size cap) / PDF (≤ 3 MB base64, Vercel's body limit) · one lesson of it as markdown |
+| `POST /ai/opic` | `AI_ACCESS` | feedback on a recorded OPIc answer (WAV ≤ 90 s): transcript, level NL…AL, five scores, fixes |
+| `POST /ai/sql` | `AI_ACCESS` + SQL admin `X-Session-Token` | a question → SQL for one database. The model reads that connection's tables, columns and foreign keys (never rows); every statement comes back classified `readOnly` (strict: `FOR UPDATE`, `INTO OUTFILE`, `WITH … DELETE` are not) and EXPLAINed on the user's connection — EXPLAIN never runs it; the first failure goes back to the model once with MySQL's error. The app runs reads on request and asks before anything else |
+| `POST /ai/mongo` | `AI_ACCESS` + Mongo admin `X-Session-Token` | a question → `find` (filter/projection/sort/limit) or an aggregation pipeline, as Extended JSON. The model sees field paths and types of a 30-document sample and only the values of short repeated strings; `writes` flags `$out`/`$merge`, `risky` flags `$where`/`$function`/`$accumulator` |
+| `POST /ai/http` | `AI_ACCESS` | Postman Lite: `explain` a response (summary, details, problems, next steps) or write `tests` for it (`pm.*` only — scripts naming network, timers, eval, globals or prototype tricks are refused). Credentials in headers, query strings and JSON bodies, and JWTs, are masked before the model sees them |
+| `POST /ai/chat` | `AI_ACCESS` | one stateless answer from a chosen model (`gemini-2.5-pro`, `…-flash`, `…-flash-lite`, `2.0-flash`, `2.0-flash-lite`, `flash-latest`) — Gemini Chat's "compare two models" sends two of these side by side. Never cached |
 
-The course management page shows the same as **🤖 AI**. Browser checks never
-reach the real Gemini: `webapp/courses/engine/kiem_khoa_hoc.MayChuThu` points
-`GEMINI_URL` at a local stand-in (`GeminiGia`) that answers by `responseSchema`.
+Each feature books its usage under its own name (`tutor_summary`, `ask`, `sql`,
+`mongo`, `http_explain`, `http_tests`, `compare`, …). The course management page
+shows the same as **🤖 AI**. Browser checks never reach the real Gemini:
+`webapp/courses/engine/kiem_khoa_hoc.MayChuThu` points `GEMINI_URL` at a local
+stand-in (`GeminiGia`) that answers by `responseSchema`; unit tests use
+`tests/support/fake_ai.py`.
+
+## Algorithm arena (`/arena`)
+
+`webapp/dau-truong-thuat-toan/` — write a travelling-salesman heuristic in
+JavaScript, run it in a Web Worker in the browser (10 s limit), submit the tour.
+The server rebuilds the cities from the problem's seed, checks the tour visits
+every city exactly once and measures it itself — the number the page shows is
+never trusted. Table `arena_scores` (migration `0006`), best score per name.
+
+| Endpoint | What |
+|---|---|
+| `GET /arena/problems` · `/arena/problems/{id}` | the problems (`tsp-60`, `tsp-200`, `tsp-1000`) · one with its city coordinates (cached a day) |
+| `POST /arena/problems/{id}/submit` | `{name, tour}` → `{score, improved, rank}` (the server's own measurement); 60 submissions per hour per address |
+| `GET /arena/problems/{id}/leaderboard` | `{problem, rows: [{rank, name, score, updatedAt}]}` — the top 20 |

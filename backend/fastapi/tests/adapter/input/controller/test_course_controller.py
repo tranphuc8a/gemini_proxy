@@ -208,6 +208,19 @@ def test_search_across_every_published_course(client):
     assert len(client.get(f"{BASE}/search", params={"q": "gradient", "limit": 2}).json()["hits"]) == 2
 
 
+def test_the_graph_lists_links_between_lessons_and_follows_edits(client):
+    _import(client)
+    assert client.get(f"{BASE}/demo/graph").json() == {"edges": [], "docCount": 5}
+    md = "# Gradient\n\nXem [xác suất](../p1/bai-02.md) và [học sâu](#/bai/p2-bai-01).\n"
+    assert client.put(f"{BASE}/demo/docs/p1/bai-01.md", json={"md": md}, headers=ADMIN).status_code == 200
+    graph = client.get(f"{BASE}/demo/graph").json()
+    assert graph["edges"] == [["p1/bai-01.md", "p1/bai-02.md"], ["p1/bai-01.md", "p2/bai-01.md"]]
+    hidden = {**BUNDLE, "course": {**BUNDLE["course"], "slug": "nhap", "published": False}}
+    _import(client, hidden)
+    assert client.get(f"{BASE}/nhap/graph").status_code == 404
+    assert client.get(f"{BASE}/nhap/graph", headers=ADMIN).status_code == 200
+
+
 def test_search_snippets_keep_the_original_diacritics(client):
     _import(client)
     hit = client.get(f"{BASE}/demo/search", params={"q": "phan phoi"}).json()["hits"][0]

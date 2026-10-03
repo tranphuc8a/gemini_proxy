@@ -4,8 +4,9 @@
    ★ NGUỒN THẬT: courses/engine/mo-ai.js (engine/sync.py chép). Engine nạp tệp
      này sau app.js và cho nó API window.KhoaHoc.
 
-   Dưới tiêu đề mỗi bài: Tóm tắt · Giải thích dễ hiểu · Câu hỏi ôn tập · Hỏi về
-   bài này. Bôi đen một đoạn trong bài → nút "Giải thích đoạn này". Câu trả lời
+   Dưới tiêu đề mỗi bài: Tóm tắt · Giải thích dễ hiểu · Câu hỏi ôn tập · Thẻ ôn tập
+   · Hỏi về bài này. Bôi đen một đoạn trong bài → việc "✨ Giải thích" trên thanh nổi
+   của engine (KhoaHoc.themViecChon). Câu trả lời
    mở trong khung bên phải; câu hỏi tự do có kèm nguồn — những bài trong khoá mà
    câu trả lời dựa vào, bấm để mở.
 
@@ -22,7 +23,7 @@
   if (!K || K.nguon().kieu !== "api" || !window.AiKhach) return;   /* tệp tĩnh: không có máy chủ AI */
 
   var AI = window.AiKhach.tao(K.gocApi());
-  var CHON_MIN = 12, CHON_MAX = 4000;
+  var CHON_MIN = 12;
   var TEN_VIEC = { summary: "Tóm tắt bài", explain: "Giải thích dễ hiểu", quiz: "Câu hỏi ôn tập",
                    cards: "Thẻ ôn tập", ask: "Hỏi" };
 
@@ -257,44 +258,14 @@
     }
   }
 
-  /* ---------------- bôi đen để hỏi ---------------- */
-  var nutChon = null, doanChon = "";
-  function anNutChon() { if (nutChon) nutChon.hidden = true; }
-  function xetChon() {
-    var body = document.getElementById("body");
-    var sel = window.getSelection && window.getSelection();
-    var txt = sel ? String(sel).trim() : "";
-    if (!body || !baiHienTai || txt.length < CHON_MIN || !sel.rangeCount || !body.contains(sel.anchorNode)) {
-      anNutChon();
-      return;
-    }
-    if (!nutChon) {
-      nutChon = document.createElement("button");
-      nutChon.type = "button";
-      nutChon.className = "ai-chon";
-      nutChon.textContent = "✨ Giải thích đoạn này";
-      /* giữ vùng bôi đen khi bấm */
-      nutChon.addEventListener("mousedown", function (e) { e.preventDefault(); });
-      nutChon.addEventListener("click", function () { anNutChon(); hoi("explain", { selection: doanChon }); });
-      document.body.appendChild(nutChon);
-    }
-    doanChon = txt.slice(0, CHON_MAX);
-    var r = sel.getRangeAt(0).getBoundingClientRect();
-    nutChon.style.top = Math.round(window.scrollY + r.bottom + 8) + "px";
-    nutChon.style.left = Math.round(Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + window.innerWidth - 230))) + "px";
-    nutChon.hidden = false;
-  }
-
   /* ---------------- gắn vào engine ---------------- */
   var dangNghe = false;
   function batDau(s) {
     if (dangNghe || !AI.dungDuoc(s)) return;
     dangNghe = true;
-    document.addEventListener("mouseup", function () { setTimeout(xetChon, 0); });
-    document.addEventListener("keyup", function (e) { if (e.shiftKey) setTimeout(xetChon, 0); });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") { anNutChon(); dongKhung(); }
-    });
+    K.themViecChon({ chu: "✨ Giải thích", toiThieu: CHON_MIN,
+                     khi: function (chu) { hoi("explain", { selection: chu }); } });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") dongKhung(); });
   }
 
   function hangViec(d) {
@@ -317,7 +288,6 @@
 
   K.nghe("bai", function (d) {
     baiHienTai = d;
-    anNutChon();
     AI.trangThai().then(function (s) {
       if (!AI.dungDuoc(s) || baiHienTai !== d) return;
       batDau(s);
@@ -325,5 +295,5 @@
       if (khung && !khung.hidden) veKhung();
     }, function () { /* không hỏi được máy chủ (offline…): không hiện trợ giảng */ });
   });
-  K.nghe("trang-chu", function () { baiHienTai = null; anNutChon(); dongKhung(); });
+  K.nghe("trang-chu", function () { baiHienTai = null; dongKhung(); });
 })();

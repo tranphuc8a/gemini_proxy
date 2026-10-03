@@ -100,18 +100,19 @@ def _error(status: int, message: str, code: str, *, headers: Optional[Dict[str, 
 
 
 def generation_config(*, schema: Optional[Dict[str, Any]] = None, temperature: float = 0.5,
-                      max_tokens: int = 2048) -> Dict[str, Any]:
+                      max_tokens: int = 2048, model: Optional[str] = None) -> Dict[str, Any]:
     """Gemini `generationConfig`: JSON output when a schema is given.
 
     Thinking is switched off on 2.5 Flash: these are short, well-specified tasks
     where it adds seconds and output tokens but little else. (Pro cannot turn it
-    off, and older models do not know the field.)
+    off, and older models do not know the field.) `model` is the one the call
+    goes to when it is not `AI_MODEL`.
     """
     config: Dict[str, Any] = {"temperature": temperature, "maxOutputTokens": max_tokens}
     if schema is not None:
         config["responseMimeType"] = "application/json"
         config["responseSchema"] = schema
-    if "2.5-flash" in str(settings.AI_MODEL):
+    if "2.5-flash" in str(model or settings.AI_MODEL):
         config["thinkingConfig"] = {"thinkingBudget": 0}
     return config
 
@@ -247,12 +248,14 @@ class AiUseCase:
     async def ask(self, caller: AiCaller, feature: str, *, contents: List[Dict[str, Any]],
                   system: Optional[str] = None, config: Optional[Dict[str, Any]] = None,
                   cache: Optional[str] = None,
-                  parse: Optional[Callable[[str], Any]] = None) -> Tuple[Any, AiCompletion]:
+                  parse: Optional[Callable[[str], Any]] = None,
+                  model: Optional[str] = None) -> Tuple[Any, AiCompletion]:
         """One model call behind every rule above.
 
         `parse` turns the answer text into the feature's result and raises
         ValueError when the model did not keep to the format; only a parsed
-        answer is cached. Returns (result, completion).
+        answer is cached. `model` overrides `AI_MODEL` (the caller vets it).
+        Returns (result, completion).
         """
         self.check_access(caller)
         if not configured():
@@ -268,7 +271,7 @@ class AiUseCase:
         await self.admit(caller, feature)
         try:
             completion = await asyncio.wait_for(
-                self.model.complete(model=settings.AI_MODEL, contents=contents, system=system,
+                self.model.complete(model=model or settings.AI_MODEL, contents=contents, system=system,
                                     generation_config=config),
                 timeout=float(settings.AI_TIMEOUT_SECONDS))
         except asyncio.TimeoutError as exc:

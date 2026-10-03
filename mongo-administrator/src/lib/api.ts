@@ -32,7 +32,8 @@ import type {
 // Resolved per call rather than once at module load: the injected config is
 // on the page before this bundle runs, and reading it lazily also keeps the
 // value correct for tests that stub window.__WEBAPP_CONFIG__.
-const apiBase = () => resolveApiBase(import.meta.env?.VITE_API_BASE)
+// Exported for the AI client, which talks to `${apiBase()}/ai/...`.
+export const apiBase = () => resolveApiBase(import.meta.env?.VITE_API_BASE)
 
 export class ApiError extends Error {
   readonly status: number

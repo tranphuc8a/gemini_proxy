@@ -42,7 +42,7 @@ self.addEventListener("activate", function (e) {
 });
 
 function noiDungKhoa(url) {
-  return /\/courses\/[^/]+\/(manifest|bundle|docs\/|assets\/)/.test(url.pathname) ||
+  return /\/courses\/[^/]+\/(manifest|bundle|graph|docs\/|assets\/)/.test(url.pathname) ||
          /\/courses$/.test(url.pathname) ||                     /* danh mục của trang Thư viện */
          /^\/webapp\/_api\/(list|config)/.test(url.pathname);
 }

@@ -297,7 +297,7 @@ describe('persistence', () => {
 
   it('never restores admin from storage', () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ theme: 'dark', isAdmin: true }))
-    act(() => store().hydrate())
+    act(() => { void store().hydrate() })
     expect(store().isAdmin).toBe(false)
     expect(store().theme).toBe('dark')
   })
@@ -319,7 +319,7 @@ describe('persistence', () => {
         ]
       })
     )
-    act(() => store().hydrate())
+    act(() => { void store().hydrate() })
 
     expect(store().theme).toBe('dark')
     expect(store().isAdmin).toBe(false)
@@ -332,7 +332,7 @@ describe('persistence', () => {
   it('survives unparsable storage', () => {
     localStorage.setItem(FILES_KEY, '{not json')
     localStorage.setItem(SETTINGS_KEY, '{also not json')
-    expect(() => act(() => store().hydrate())).not.toThrow()
+    expect(() => act(() => { void store().hydrate() })).not.toThrow()
     expect(store().files.length).toBeGreaterThan(0)
   })
 

@@ -10,9 +10,12 @@ import HelpModal from './components/HelpModal'
 import CommandPalette from './components/CommandPalette'
 import Toasts from './components/Toasts'
 import { emitJump } from './lib/paneSync'
+import { consumeImportFlag, takeInbox } from './lib/inbox'
 import './App.css'
 
 type Drag = 'pane' | 'sidebar' | null
+
+const INBOX_SESSION_WAIT_MS = 4000
 
 function App() {
   const theme = useEditorStore((state) => state.theme)
@@ -34,7 +37,17 @@ function App() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    hydrate()
+    const sessionChecked = hydrate()
+    // Opened by another app with a document waiting (?import=1). Imported once
+    // the admin session is known -- that decides whether the file is kept --
+    // but not held hostage by a slow backend.
+    if (!consumeImportFlag()) return
+    const doc = takeInbox()
+    if (!doc) return
+    const settled = new Promise<void>((resolve) => setTimeout(resolve, INBOX_SESSION_WAIT_MS))
+    void Promise.race([sessionChecked.catch(() => undefined), settled]).then(() =>
+      useEditorStore.getState().importInbox(doc)
+    )
   }, [hydrate])
 
   // Apply the resolved theme to <html> so tokens, form controls and the

@@ -7,6 +7,7 @@ import type { EjsonDocument } from '../types'
 import { DocumentEditor } from './DocumentEditor'
 import { IconCopy, IconDownload, IconPencil, IconPlay, IconPlus, IconRefresh, IconTrash } from './Icons'
 import { JsonEditor } from './JsonEditor'
+import { useAiAssistant } from './useAiAssistant'
 import { useConfirm } from './useConfirm'
 
 const PAGE_SIZES = [10, 25, 50, 100, 200]
@@ -43,6 +44,12 @@ export function DocumentBrowser() {
   const { confirm, dialog } = useConfirm()
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [editing, setEditing] = useState<{ mode: 'insert' | 'edit'; document: EjsonDocument | null } | null>(null)
+  const ai = useAiAssistant('documents', {
+    // A sort or projection from the AI must not hide behind a collapsed toggle.
+    onFindApplied: (texts) => {
+      if (texts.sortText || texts.projectionText) setShowAdvanced(true)
+    },
+  })
 
   const namespace = activeDb && activeCollection ? `${activeDb}.${activeCollection}` : ''
   const documents = page?.documents ?? []
@@ -98,6 +105,8 @@ export function DocumentBrowser() {
 
   const hasPrevious = skip > 0
   const hasNext = page ? (page.total ? skip + documents.length < page.total : page.truncated) : false
+  // A limit set by an AI answer (any 1–1000) is listed too, or the select would show the wrong size.
+  const pageSizes = PAGE_SIZES.includes(limit) ? PAGE_SIZES : [...PAGE_SIZES, limit].sort((a, b) => a - b)
 
   return (
     <div className="browser">
@@ -124,6 +133,7 @@ export function DocumentBrowser() {
             >
               {showAdvanced ? 'Fewer options' : 'Sort & project'}
             </button>
+            {ai.toggle}
           </div>
         </div>
 
@@ -149,6 +159,7 @@ export function DocumentBrowser() {
         ) : null}
 
         {queryError ? <div className="query-error">{queryError}</div> : null}
+        {ai.panel}
       </div>
 
       <div className="toolbar">
@@ -200,7 +211,7 @@ export function DocumentBrowser() {
                 runFind({ skip: 0 })
               }}
             >
-              {PAGE_SIZES.map((size) => (
+              {pageSizes.map((size) => (
                 <option key={size} value={size}>
                   {size}
                 </option>
