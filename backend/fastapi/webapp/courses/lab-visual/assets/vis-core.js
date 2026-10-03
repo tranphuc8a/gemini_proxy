@@ -34,7 +34,23 @@
   var KHOA_LUU = ch("khoaLuu", "vis-theme");
   /* Bat/tat tung tinh nang tu cau-hinh.js. Mac dinh bat het. */
   var TN = ch("tinhNang", {});
-  function bat(k) { return TN[k] !== false; }
+
+  /* Nhung trong bai giang: trang bai dat lab vao
+       <iframe src="…/lab-visual/?nhung=1&theme=dark#/raft?n=5">
+     — an header, muc luc, mo ta va giai thich dai (bai giang da noi nhung dieu
+     do), giu tieu de lab, khung ve va bang dieu khien. Doc location.search CO
+     PHONG BI: bo thu Node (thu-nhanh.js) gia lap location khong co `search`. */
+  var QS = String((window.location && window.location.search) || "");
+  var NHUNG = /[?&]nhung=1(&|$)/.test(QS);
+  var THEME_QS = (QS.match(/[?&]theme=(light|dark)(&|$)/) || [])[1] || "";
+  function bat(k) {
+    if (NHUNG && k === "tapTrung") return false;       /* khung nhung khong co muc luc de an */
+    return TN[k] !== false;
+  }
+  /* Dia chi trang lab DAY DU (bo ?nhung, ?theme) voi tham so hien tai. */
+  function urlDayDu() {
+    return String(location.href).split("#")[0].split("?")[0] + (location.hash || "");
+  }
 
   /* ---------- 1. Tien ich DOM ---------------------------------------- */
   function el(tag, attrs, children) {
@@ -2086,6 +2102,13 @@
       }, [ico('<path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/>'),
            el("span", { text: "Chép liên kết" })]));
     }
+    if (NHUNG) {
+      cong.push(el("button", {
+        class: "cg", title: "Mở lab này trên trang đầy đủ (tab mới), giữ nguyên tham số",
+        onclick: function () { window.open(urlDayDu(), "_blank", "noopener"); }
+      }, [ico('<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/>'),
+           el("span", { text: "Mở trang đầy đủ" })]));
+    }
     if (o.bang && bat("xuat")) {
       cong.push(el("button", {
         class: "cg", title: "Lưu khung hình hiện tại thành PNG",
@@ -2111,7 +2134,8 @@
   }
 
   function chepLienKet(nutEl) {
-    var url = location.href;
+    /* Trong khung nhung: chep dia chi trang day du — nguoi nhan khong can khung bai. */
+    var url = NHUNG ? urlDayDu() : location.href;
     function xong() {
       if (!nutEl) return;
       var sp = nutEl.querySelector("span");
@@ -2243,7 +2267,8 @@
       el("div", { class: "d-nhom", text: d.nhom }),
       el("h1", { text: d.ten }),
       el("p", { class: "d-mo-ta", html: d.moTa || "" }),
-      d.lienKet ? el("p", { class: "d-lk", html: "📖 Đọc thêm: " + d.lienKet }) : null
+      d.lienKet ? el("p", { class: "d-lk", html: "📖 Đọc thêm: " + d.lienKet }) : null,
+      baiHocCua(d.id)
     ]));
     var host = el("div", { class: "d-body" });
     main.appendChild(host);
@@ -2254,6 +2279,21 @@
       if (window.console) console.error(e);
     }
     window.scrollTo(0, 0);
+  }
+
+  /* Bai giang dung lab nay (cau-hinh.js: baiHoc = {id lab: [{ten, url}]}).
+     Lien ket CUNG trang web, do cau hinh viet — van loc: chi duong dan tuong doi
+     hoac http(s), khong javascript:. */
+  function baiHocCua(id) {
+    var ds = (ch("baiHoc", {}) || {})[id] || [];
+    ds = ds.filter(function (b) { return b && b.ten && /^(\.{0,2}\/|https?:\/\/)/.test(String(b.url || "")); });
+    if (!ds.length) return null;
+    var p = el("p", { class: "d-bai" }, [el("span", { text: "🎓 Học lý thuyết: " })]);
+    ds.forEach(function (b, i) {
+      if (i) p.appendChild(document.createTextNode(" · "));
+      p.appendChild(el("a", { href: b.url, text: b.ten, target: "_blank", rel: "noopener" }));
+    });
+    return p;
   }
 
   function trangChu() {
@@ -2333,8 +2373,10 @@
 
   window.addEventListener("hashchange", dinhTuyen);
   window.addEventListener("DOMContentLoaded", function () {
+    if (NHUNG) document.documentElement.classList.add("nhung");
     try {
-      var t = localStorage.getItem(KHOA_LUU);
+      /* Khung nhung theo giao dien cua trang bai (?theme=), KHONG ghi de lua chon da luu. */
+      var t = THEME_QS || localStorage.getItem(KHOA_LUU);
       if (t) document.documentElement.setAttribute("data-theme", t);
     } catch (e) {}
     var bt = $("#btnTheme");

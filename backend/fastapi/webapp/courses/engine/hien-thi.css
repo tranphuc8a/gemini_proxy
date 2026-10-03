@@ -159,5 +159,12 @@ h2:hover .anch,h3:hover .anch{opacity:1}
   overflow-x:auto;text-align:center;
 }
 .prose .mermaid svg{max-width:100%;height:auto}
+/* lab trực quan nhúng (```lab id?tham-so```) */
+.prose figure.lab-nhung{margin:24px 0;border:1px solid var(--bd);border-radius:var(--rad);overflow:hidden;background:var(--surf)}
+.prose figure.lab-nhung iframe{display:block;width:100%;height:560px;border:0;background:var(--surf)}
+.prose figure.lab-nhung figcaption{padding:8px 14px;font-size:13px;color:var(--tx3);border-top:1px solid var(--bd)}
+.prose .lab-cho{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:160px;border:0;
+  background:var(--surf2);color:var(--tx2);font:inherit;font-size:15px;cursor:pointer}
+.prose .lab-cho:hover{color:var(--ac)}
 .prose .mermaid:not([data-da-ve]){font-family:var(--fm);font-size:12px;
   white-space:pre;text-align:left;color:var(--tx3)}

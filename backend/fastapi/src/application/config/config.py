@@ -136,7 +136,30 @@ class Settings(BaseSettings): # type: ignore
     COURSE_LOGIN_FAILURES_GLOBAL: int = 50
     COURSE_LOGIN_WINDOW_SECONDS: int = 300
 
-    
+    # AI features (/ai/*: tutor, flashcards, course drafting, OPIc scoring, NL→SQL…)
+    # and the chat (/gemini/*) spend the same Gemini quota (GEMINI_URL + key).
+    # A kill switch: False stops every Gemini call, the chat included.
+    AI_ENABLED: bool = True
+    # Who may use the AI features (the chat keeps its own, public, access):
+    #   "admin"  — a course administrator only (COURSE_ADMIN_KEY session); the default,
+    #   "code"   — anyone who enters AI_ACCESS_CODE (exchanged for a token), and admins,
+    #   "public" — anyone; the rate limits and the daily budget below still apply.
+    AI_ACCESS: str = "admin"
+    AI_ACCESS_CODE: str = ""
+    AI_SESSION_DAYS: int = 7
+    # The model the AI features ask for (it replaces the model segment of GEMINI_URL).
+    AI_MODEL: str = "gemini-2.5-flash"
+    AI_TIMEOUT_SECONDS: int = 90
+    # Requests per client address (administrators are exempt)…
+    AI_RATE_PER_MINUTE: int = 12
+    AI_RATE_PER_DAY: int = 200
+    # …and for the whole deployment per UTC day, counted in the database so every
+    # serverless instance shares it. Once either is spent every Gemini call answers
+    # 429 until midnight UTC.
+    AI_DAILY_REQUESTS: int = 500
+    AI_DAILY_TOKENS: int = 3_000_000
+
+
     # Testing
     TESTING: bool = False
 

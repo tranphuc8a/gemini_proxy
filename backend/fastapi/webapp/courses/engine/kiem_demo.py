@@ -24,11 +24,14 @@ Hai tang kiem tra:
      - moi <script src> deu ton tai; moi assets/*.js deu duoc nap
      - cu phap JS (qua `node --check`, neu may co Node)
      - moi lab khai bao du id/nhom/ten/dung, khong trung id
-     - ban sao engine trong assets/ con khop voi courses/engine/
+     - ban sao engine (vis-core.js…, pwa.js, sw.js o goc) khop courses/engine/;
+       trang trong nhom "pwa": manifest + bieu tuong (engine/tao_pwa.py)
 
   TANG 2 — mo that bang trinh duyet (chi khi da cai playwright)
      - mo tung lab, bat loi console va loi khi ve
      - kiem tra lab co ve ra gi khong (khung .d-body khong rong)
+     - doc offline (trang trong nhom "pwa"): worker dieu khien trang, tat mang
+       tai lai van mo
 
      pip install playwright && python -m playwright install chromium
      python check.py        # tu dung may chu tinh, khong phai mo cua so khac
@@ -320,18 +323,37 @@ def kiem_ban_sao_engine(thu_muc, B):
     if trang in ch.get("chua_dong_bo", []):
         B.nhac("trang nay CO Y chua dong bo engine v2", "xem engine/dong-bo.json")
         return
-    lech = []
-    for ten in ch.get("tep", []):
-        ra = os.path.join(thu_muc, "assets", ten)
-        if not os.path.exists(ra):
-            lech.append(ten + " (thieu)")
-            continue
-        if doc(ra) != sync.noi_dung_dich(ten):
-            lech.append(ten)
-    if lech:
-        B.sai("ban sao engine lech nguon", ", ".join(lech) + " — chay `python engine/sync.py`")
+    import kiem_pwa
+    for dat, msg in kiem_pwa.tinh(thu_muc):
+        if dat:
+            B.duoc(msg)
+        else:
+            B.sai(msg)
+
+
+def kiem_danh_sach(thu_muc, ds, B, ghi=False):
+    """danh-sach.json: chi muc lab cho o "tim moi thu" cua portal (Ctrl+K), sinh tu chinh
+    cac khai bao demo({...}). Trang chua co tep nay thi khong vao chi muc; --ghi-danh-sach
+    ghi (lai) tep."""
+    p = os.path.join(thu_muc, "danh-sach.json")
+    muon = [{"id": d["id"], "ten": d["ten"], "nhom": d["nhom"]} for d in ds]
+    if ghi:
+        with io.open(p, "w", encoding="utf-8") as f:
+            f.write(json.dumps(muon, ensure_ascii=False, indent=1) + "\n")
+        B.duoc("ghi danh-sach.json: %d lab" % len(muon))
+        return
+    if not os.path.exists(p):
+        return
+    try:
+        with io.open(p, encoding="utf-8") as f:
+            co = json.load(f)
+    except ValueError as e:
+        B.sai("danh-sach.json khong doc duoc", str(e))
+        return
+    if co != muon:
+        B.sai("danh-sach.json lech cac lab", "chay `python check.py --tinh --ghi-danh-sach`")
     else:
-        B.duoc("ban sao engine khop courses/engine/")
+        B.duoc("danh-sach.json khop %d lab (o tim moi thu cua portal)" % len(muon))
 
 
 def kiem_cau_hinh(thu_muc, B):
@@ -409,14 +431,16 @@ def kiem_trinh_duyet(thu_muc, cong, ds, B, loc_nhom=None):
     print("")
     print("  %sMo %d lab bang Chromium tai %s%s" % (MO, len(can), goc, HET))
 
+    import tao_pwa
+    co_pwa = os.path.basename(os.path.normpath(thu_muc)) in tao_pwa.cac_trang()
     try:
-        _kiem_qua_trinh_duyet(sync_playwright, goc, can, B)
+        _kiem_qua_trinh_duyet(sync_playwright, goc, can, B, co_pwa)
     finally:
         sv.shutdown()
         sv.server_close()
 
 
-def _kiem_qua_trinh_duyet(sync_playwright, goc, can, B):
+def _kiem_qua_trinh_duyet(sync_playwright, goc, can, B, co_pwa=False):
     with sync_playwright() as pw:
         tb = pw.chromium.launch()
         trang = tb.new_page(viewport={"width": 1440, "height": 900})
@@ -437,7 +461,52 @@ def _kiem_qua_trinh_duyet(sync_playwright, goc, can, B):
                 B.sai("lab '%s' loi khi chay" % d["id"], nhat_ky[0][:220])
             else:
                 B.duoc("lab '%s' chay sach" % d["id"])
+        if can:
+            _kiem_nhung(trang, goc, can, B)
+        if can and co_pwa:
+            _kiem_offline(tb, goc + "#/" + can[0]["id"], B)
         tb.close()
+
+
+def _kiem_offline(tb, url, B):
+    """Doc offline + cai ung dung (engine/kiem_pwa.py) trong context moi."""
+    import kiem_pwa
+    ctx = tb.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        for dat, msg in kiem_pwa.trinh_duyet(ctx, ctx.new_page(), url, ".d-head h1"):
+            if dat:
+                B.duoc(msg)
+            else:
+                B.sai(msg)
+    finally:
+        ctx.close()
+
+
+def _kiem_nhung(trang, goc, can, B):
+    """Che do nhung trong bai giang (?nhung=1) va lien ket 'Hoc ly thuyet' (cau-hinh baiHoc)."""
+    trang.goto(goc + "?nhung=1&theme=dark#/" + can[0]["id"], wait_until="networkidle", timeout=15000)
+    kq = trang.evaluate("""() => ({
+        nhung: document.documentElement.classList.contains('nhung'),
+        theme: document.documentElement.getAttribute('data-theme'),
+        an: ['.hdr', '.side'].every(s => !document.querySelector(s) || getComputedStyle(document.querySelector(s)).display === 'none'),
+        h1: !!document.querySelector('.d-head h1'),
+        nut: [...document.querySelectorAll('.cong-cu .cg span')].map(s => s.textContent)})""")
+    dung = kq["nhung"] and kq["theme"] == "dark" and kq["an"] and kq["h1"]
+    if dung and "Tập trung" not in kq["nut"] and "Mở trang đầy đủ" in kq["nut"]:
+        B.duoc("che do nhung (?nhung=1): an header + muc luc, theo ?theme=, co nut mo trang day du")
+    else:
+        B.sai("che do nhung (?nhung=1) sai", str(kq)[:220])
+    bai = trang.evaluate("() => (window.CAU_HINH_VIS && window.CAU_HINH_VIS.baiHoc) || {}")
+    ids = [d["id"] for d in can if d["id"] in bai]
+    if not ids:
+        return
+    trang.goto(goc + "#/" + ids[0], wait_until="networkidle", timeout=15000)
+    lk = trang.eval_on_selector_all(".d-bai a", "e => e.map(a => a.getAttribute('href'))")
+    muon = [b["url"] for b in bai[ids[0]]]
+    if lk == muon:
+        B.duoc("lab '%s': %d lien ket 'Hoc ly thuyet' toi bai giang" % (ids[0], len(lk)))
+    else:
+        B.sai("lab '%s': lien ket 'Hoc ly thuyet' khong khop cau hinh" % ids[0], "%s != %s" % (lk, muon))
 
 
 # ----------------------------------------------------------------------
@@ -462,6 +531,8 @@ def chay(thu_muc, cong=8791, argv=None):
     kiem_cu_phap(thu_muc, srcs, B)
     kiem_ban_sao_engine(thu_muc, B)
     ds = gom_lab(thu_muc, srcs, B)
+    if ds:
+        kiem_danh_sach(thu_muc, ds, B, "--ghi-danh-sach" in argv)
     kiem_engine(B)
     kiem_chay_thu(thu_muc, B)
     kiem_so(thu_muc, B)

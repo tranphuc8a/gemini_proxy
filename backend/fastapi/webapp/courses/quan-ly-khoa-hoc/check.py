@@ -346,6 +346,15 @@ def kich_ban(pw, may, tep_nho, tep_anh, chup, anh, loi):
         pr = pg.evaluate("() => ({hop: !!document.querySelector('#ePrev blockquote.cal-key'),"
                          " ma: !!document.querySelector('#ePrev .cw .hljs-keyword')})")
         (ok if pr["hop"] and pr["ma"] else sai)("xem truoc chia doi: KaTeX, hop chu y, khoi ma to mau (QA-14) %s" % pr)
+        # lab nhung: o xem truoc chi la nut "Chay" (ve lai theo tung phim), bam moi nap trang lab
+        pg.fill("#eMd", pg.input_value("#eMd") + "\n```lab\nraft?mat=0.04\nCum Raft\n```\n")
+        pg.wait_for_selector("#ePrev .lab-cho", timeout=10000)
+        co_khung = pg.eval_on_selector_all("#ePrev figure.lab-nhung iframe", "e => e.length")
+        pg.click("#ePrev .lab-cho")
+        pg.wait_for_selector("#ePrev figure.lab-nhung iframe", timeout=10000)
+        src = pg.get_attribute("#ePrev figure.lab-nhung iframe", "src")
+        (ok if co_khung == 0 and "nhung=1" in src and src.endswith("#/raft?mat=0.04") else sai)(
+            "xem truoc: khoi lab la nut Chay, bam moi nap khung mo phong (%s)" % src)
         pg.focus("#eMd")
         pg.keyboard.press("Control+s")
         pg.wait_for_function(DA_LUU)
@@ -544,6 +553,61 @@ def kich_ban(pw, may, tep_nho, tep_anh, chup, anh, loi):
         (ok if "đang được dùng" in pg.text_content(".dlg") else sai)("khoi phuc khi slug da co khoa khac: hoi slug moi")
         hop_thoai(pg)
         (ok if cho_khoa(pg, "nap-thu-khoi-phuc") else sai)("khoi phuc duoi slug moi")
+
+        # 19b. AI: moi loi goi Gemini (o day: chat) di qua mot cua, duoc ghi so; man AI hien so lieu
+        st, _ = goi(may, "POST", "/gemini/query", {"conversation_id": "c-ai", "content": "chào", "model": "gemini-2.5-flash"})
+        (ok if st == 200 and len(may.gemini.goi) == 1 else sai)(
+            "chat goi Gemini GIA cua may chu thu (khong bao gio Gemini that) — %s, %d loi goi" % (st, len(may.gemini.goi)))
+        pg.click("#btnAI")
+        pg.wait_for_selector(".bang-ai")
+        hang = pg.eval_on_selector_all(".bang-ai tbody th", "e => e.map(x => x.textContent)")
+        so_hom_nay = pg.text_content(".kv div >> nth=0")
+        (ok if pg.url.endswith("#/~ai") and "Gemini Chat *" in hang and so_hom_nay.startswith("1") else sai)(
+            "man AI: luot hom nay, bang theo tinh nang (%s, %r)" % (hang, so_hom_nay))
+        pg.reload()
+        (ok if cho(pg, "() => !!document.querySelector('.bang-ai')") and pg.url.endswith("#/~ai") else sai)(
+            "tai lai trang van o man AI")
+
+        # 19c. Soan khoa bang AI (Gemini GIA): dan y -> sua -> soan tung bai -> khoa NHAP mo ra
+        def gia_soan(body):
+            sch = (body.get("generationConfig") or {}).get("responseSchema") or {}
+            if "parts" in (sch.get("properties") or {}):
+                return json.dumps({"title": "Khoá thử AI", "subtitle": "Phụ đề", "description": "Mô tả.", "icon": "🤖",
+                                   "parts": [{"title": "Phần đầu", "lessons": [
+                                       {"title": "Bài thứ nhất", "summary": "Hiểu A", "points": ["a1", "a2"]},
+                                       {"title": "Bài thứ hai", "summary": "Hiểu B", "points": ["b1"]}]},
+                                       {"title": "Phần sau", "lessons": [
+                                           {"title": "Bài thứ ba", "summary": "Hiểu C", "points": ["c1"]}]}]},
+                                  ensure_ascii=False)
+            ten = body["contents"][0]["parts"][0]["text"].split("Viết bài «", 1)[1].split("»", 1)[0]
+            return json.dumps({"md": "## Mục tiêu\n\n- Nắm " + ten + "\n\n## Nội dung\n\nVí dụ đủ dài thành bài học."},
+                              ensure_ascii=False)
+        may.gemini.tra_loi = gia_soan
+        truoc = len(may.gemini.goi)
+        pg.click("#btnSoanAI")
+        pg.wait_for_selector("#saNguon")
+        pg.fill('#saNguon [name="topic"]', "Nhập môn thử nghiệm")
+        pg.fill('#saNguon [name="lessons"]', "3")
+        pg.click("#saLap")
+        pg.wait_for_selector(".sa-bai")
+        slug_ai = pg.input_value('[data-k="slug"]')
+        (ok if pg.locator(".sa-bai").count() == 3 and slug_ai == "khoa-thu-ai" and pg.url.endswith("#/~soan-ai") else sai)(
+            "soan bang AI: dan y 3 bai, slug goi y tu ten khoa (%s)" % slug_ai)
+        pg.reload()
+        (ok if cho(pg, "() => document.querySelectorAll('.sa-bai').length === 3") else sai)(
+            "soan bang AI: tai lai trang van con dan y (cat tren may)")
+        pg.uncheck('[data-c="1.0"]')
+        pg.click("#saSoan")
+        (ok if cho_khoa(pg, "khoa-thu-ai", 30000) else sai)("soan bang AI: soan 2 bai -> khoa nhap mo ra")
+        st_ai, kk = lay(may, "/courses/khoa-thu-ai/manifest", admin)
+        bai_ai = sorted(d["title"] for d in (kk or {}).get("docs", {}).values())
+        ai_goi = [g for g in may.gemini.goi[truoc:]]
+        (ok if st_ai == 200 and not kk["course"]["published"] and bai_ai == ["Bài thứ hai", "Bài thứ nhất"]
+         and len(ai_goi) == 3 else sai)("soan bang AI: khoa NHAP, dung 2 bai da chon, 3 loi goi AI (%s, %s, %d)" % (
+            st_ai, bai_ai, len(ai_goi)))
+        _, dd = lay(may, "/courses/khoa-thu-ai/docs/p1/bai-01.md", admin)
+        (ok if (dd or {}).get("md", "").startswith("# Bài thứ nhất\n") else sai)("soan bang AI: bai co tieu de # dau tien")
+        may.gemini.tra_loi = None
 
         # 20. an toan: markdown doc hai khong chay tren trang khoa hoc lan xem truoc
         _, cc = lay(may, SD, admin)

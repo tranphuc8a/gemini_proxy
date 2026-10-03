@@ -225,7 +225,8 @@ function vePrev() {
   var node = HienThi.render(S.doc.md || "", {
     docId: S.doc.id, docs: S.manifest.docs,
     icon: function (n) { return n === "link" ? "#" : n === "ext" ? " ↗" : ""; },
-    toast: QL.toast, assetUrl: urlTep, taiAnh: S.course.published ? null : taiAnhNhap
+    toast: QL.toast, assetUrl: urlTep, taiAnh: S.course.published ? null : taiAnhNhap,
+    labCho: true               /* xem trước vẽ lại theo từng phím: lab chỉ chạy khi bấm */
   });
   host.innerHTML = "";
   host.appendChild(node);

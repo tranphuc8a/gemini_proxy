@@ -54,9 +54,11 @@
     </div>
     <div class="side-act">
       <button type="button" class="btn sm pri" id="btnNew">＋ Khoá mới</button>
+      <button type="button" class="btn sm" id="btnSoanAI" title="AI lập dàn ý từ chủ đề / tài liệu rồi soạn từng bài thành khoá nháp">✨ Soạn bằng AI</button>
       <label class="btn sm" for="inpImport" tabindex="0">Nạp bundle JSON</label>
       <input type="file" id="inpImport" accept="application/json,.json" hidden>
       <button type="button" class="btn sm" id="btnTrash" title="Khoá và bài đã xoá (giữ 30 ngày)">🗑 Thùng rác</button>
+      <button type="button" class="btn sm" id="btnAI" title="Lượt dùng AI, token và hạn mức theo ngày">🤖 AI</button>
     </div>
     <div id="locKhoaBox" hidden><input type="search" id="locKhoa" placeholder="Lọc khoá học…" aria-label="Lọc khoá học"></div>
     <ul class="clist" id="courseList"></ul>
@@ -75,5 +77,6 @@
 <script src="assets/cay.js"></script>        <!-- cây mục lục kéo-thả -->
 <script src="assets/soan.js"></script>       <!-- trình soạn bài -->
 <script src="assets/tep.js"></script>        <!-- tệp + kiểm tra liên kết -->
+<script src="assets/soan-ai.js"></script>    <!-- soạn khoá bằng AI: dàn ý → từng bài → khoá nháp -->
 </body>
 </html>

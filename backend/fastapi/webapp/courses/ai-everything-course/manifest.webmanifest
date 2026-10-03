@@ -1,0 +1,31 @@
+{
+  "name": "Đại khoá học Trí tuệ nhân tạo",
+  "short_name": "Khoá học AI",
+  "description": "Khoá AI từ số 0 đến trình độ nghiên cứu — 15 môn, 218 bài giảng, 8 đồ án, chia 6 học kỳ. Đi từ toán nền tảng và học máy cổ điển tới học sâu, Transformer, mô hình lớn và an toàn AI. Có mục lục, tìm kiếm toàn văn, công thức KaTeX và tô màu mã nguồn.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#9d174d",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

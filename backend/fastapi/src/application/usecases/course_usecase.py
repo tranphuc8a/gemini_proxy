@@ -406,6 +406,25 @@ class CourseUseCase(CourseInputPort):
             _HITS_CACHE.popitem(last=False)
         return [hit.model_copy() for hit in hits]
 
+    async def search_all(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """Every published course at once — the portal's "find anything" box. Each
+        course is ranked by its own index (cached per revision); the hits are merged
+        by score and each carries the course it belongs to."""
+        if not course_text.terms_of(query or ""):
+            return []
+        limit = max(1, min(int(limit), 50))
+        out: List[Dict[str, Any]] = []
+        for course in await self.repo.list_courses(False):
+            try:
+                hits = await self.search(course.slug, query, limit=limit)
+            except NotFoundError:                     # unpublished or removed since the listing
+                continue
+            webapp = public_config(course.config).get("webapp")
+            out += [{**h.model_dump(), "course": course.slug, "courseTitle": course.title, "courseIcon": course.icon,
+                     "webapp": webapp} for h in hits]
+        out.sort(key=lambda h: h["score"], reverse=True)
+        return out[:limit]
+
     async def links(self, slug: str) -> Dict[str, Any]:
         """Broken internal links, and who links to whom (for "delete this lesson?")."""
         course = await self.get_course(slug, include_unpublished=True)

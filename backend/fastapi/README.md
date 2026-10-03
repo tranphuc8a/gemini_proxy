@@ -77,3 +77,32 @@ Management: the web page `webapp/courses/quan-ly-khoa-hoc/`, the CLI
 `tools/manage_courses.py` (the only way to load a bundle above Vercel's 4.5 MB
 request limit), and the `Courses` views in `/admin`. Bundles (file backups) are in
 `../course-content/`, outside the Vercel root directory.
+
+## AI features (`/ai`) and the Gemini quota
+
+The chat (`/gemini/*`) and every AI feature spend one Gemini quota
+(`GEMINI_URL` + `GEMINI_API_KEY`), so they go through one door
+(`src/application/usecases/ai_usecase.py`):
+
+| Rule | Setting |
+|---|---|
+| Kill switch — `false` stops every Gemini call, the chat included | `AI_ENABLED` |
+| Who may use the AI features: `admin` (default), `code` (anyone holding `AI_ACCESS_CODE`, exchanged for a token), `public`. The chat keeps its public access | `AI_ACCESS`, `AI_ACCESS_CODE`, `AI_SESSION_DAYS` |
+| Per client address, in-process (administrators are exempt) → 429 + `Retry-After` | `AI_RATE_PER_MINUTE`, `AI_RATE_PER_DAY` |
+| Per UTC day for the whole deployment, counted in the database (one conditional UPDATE shared by every instance) → 429 until midnight UTC | `AI_DAILY_REQUESTS`, `AI_DAILY_TOKENS` |
+| Model of the AI features (the chat picks its own) | `AI_MODEL`, `AI_TIMEOUT_SECONDS` |
+
+Requests and tokens are booked per day and feature (table `ai_usage`; chat
+tokens are estimates), and answers that depend only on their inputs are cached
+30 days (table `ai_cache`) — migration `0005`. If the database is down the
+budget and the books are skipped with a warning; the per-address limits stay.
+
+| Endpoint | Who | What |
+|---|---|---|
+| `GET /ai/status` | public | what this caller may do: `enabled`, `access`, `allowed`, `needs` (`code` / `admin`) |
+| `POST /ai/session` | public (rate limited) | `{code}` → AI token, sent back as `X-AI-Session` |
+| `GET /ai/usage?days=30` | admin | rows per day and feature, today's budget, the configuration |
+
+The course management page shows the same as **🤖 AI**. Browser checks never
+reach the real Gemini: `webapp/courses/engine/kiem_khoa_hoc.MayChuThu` points
+`GEMINI_URL` at a local stand-in (`GeminiGia`) that answers by `responseSchema`.

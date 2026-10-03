@@ -14,7 +14,8 @@ Moi trang co mot check.py mong goi vao day:
 TANG 1 — tinh
    - index.html nap dung assets/cau-hinh.js -> assets/app.js, KHONG con content.js
    - assets/content.js / content.json KHONG ton tai (noi dung nang da ra khoi trang)
-   - ban sao app.js / app.css khop nguon courses/engine/ (engine/sync.py)
+   - ban sao engine (app.js, app.css, mo-offline.js, pwa.js, sw.js o goc…) khop nguon
+     courses/engine/ (engine/sync.py); manifest.webmanifest + bieu tuong (engine/tao_pwa.py)
    - cau-hinh.js khai bao khoaHoc, va backend/course-content/<khoaHoc>.json ton tai,
      doc duoc, cay muc luc chi tro toi bai co that
    - cu phap JS (node --check) neu co Node
@@ -25,6 +26,12 @@ TANG 2 — trinh duyet that, KHONG mock
    nen window.__WEBAPP_CONFIG__.apiBase duoc chen dung nhu khi deploy (API_PREFIX
    dat la /api/v1 de thu ca truong hop co tien to). Kiem: trang chu, muc luc,
    mo bai, bai tiep, tim kiem, tai lai (ETag -> 304), va KHONG co loi console.
+   Doc offline (context moi): worker dieu khien trang, tat mang tai lai van mo; bam
+   "Luu ca khoa", tat mang, mo mot bai CHUA mo lan nao — log may chu chung minh luc
+   offline khong yeu cau nao toi duoc may chu.
+   Tro giang AI (Gemini GIA): khach khong thay khi AI chi danh cho quan tri vien;
+   quan tri vien tom tat, lam cau hoi on tap, hoi dap co nguon — bai gui toi model.
+   On tap: the AI soan vao bo the, trang #/~on-tap lat the + cham (SM-2) hen ngay sau.
    Roi cac ca bien: ?api= tro ra may chu la bi bo qua; tieu de / meta mang the
    HTML (sua qua API) hien thanh chu, khong chay; nhom rong va muc luc rong
    khong lam trang chu ket o "Dang tai muc luc".
@@ -44,9 +51,11 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.parse
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -113,20 +122,103 @@ def _cong_trong():
     return cong
 
 
+def _mau_theo_schema(s):
+    """Mot gia tri hop le theo responseSchema (kieu OpenAPI cua Gemini)."""
+    s = s or {}
+    kieu = str(s.get("type", "STRING")).upper()
+    if s.get("enum"):
+        return s["enum"][0]
+    if kieu == "OBJECT":
+        return {k: _mau_theo_schema(v) for k, v in (s.get("properties") or {}).items()}
+    if kieu == "ARRAY":
+        return [_mau_theo_schema(s.get("items")) for _ in range(max(2, int(s.get("minItems") or 0)))]
+    if kieu == "INTEGER":
+        return max(1, int(s.get("minimum") or 0))
+    if kieu == "NUMBER":
+        return float(s.get("minimum") or 1)
+    if kieu == "BOOLEAN":
+        return True
+    return "mẫu"
+
+
+class GeminiGia:
+    """Thay Google generateContent khi kiem thu: KHONG phep thu nao goi Gemini that
+    (ton quota cua nguoi dung) — `.env` cua backend co the chua khoa that.
+
+    Tra loi theo responseSchema neu co (JSON hop le), khong thi mot cau van ban
+    nhac lai cau hoi. `goi` ghi moi request; `tra_loi = fn(body) -> str` de tu tra loi.
+    """
+
+    def __init__(self):
+        self.goi = []
+        self.tra_loi = None
+        self._khoa = threading.Lock()
+        gia = self
+
+        class _Xu(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_POST(self):
+                n = int(self.headers.get("Content-Length") or 0)
+                try:
+                    body = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                except ValueError:
+                    body = {}
+                with gia._khoa:
+                    gia.goi.append({"path": self.path, "body": body})
+                text = gia._van_ban(body)
+                out = json.dumps({
+                    "candidates": [{"content": {"role": "model", "parts": [{"text": text}]}, "finishReason": "STOP"}],
+                    "usageMetadata": {"promptTokenCount": 120, "candidatesTokenCount": 30, "totalTokenCount": 150},
+                }, ensure_ascii=False).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(out)))
+                self.end_headers()
+                self.wfile.write(out)
+
+        self._srv = ThreadingHTTPServer(("127.0.0.1", 0), _Xu)
+        self.url = "http://127.0.0.1:%d/v1beta/models/gemini-2.5-flash:generateContent" % self._srv.server_address[1]
+        threading.Thread(target=self._srv.serve_forever, daemon=True).start()
+
+    def _van_ban(self, body):
+        if self.tra_loi:
+            return self.tra_loi(body)
+        schema = (body.get("generationConfig") or {}).get("responseSchema")
+        if schema:
+            return json.dumps(_mau_theo_schema(schema), ensure_ascii=False)
+        hoi = ""
+        for turn in body.get("contents") or []:
+            for part in turn.get("parts") or []:
+                if part.get("text"):
+                    hoi = part["text"]
+        return "Câu trả lời mẫu cho: " + hoi[-80:]
+
+    def dung(self):
+        self._srv.shutdown()
+        self._srv.server_close()
+
+
 class MayChuThu:
     """FastAPI that tren SQLite tam, da nap san cac bundle. Dung trong `with`.
 
         with MayChuThu([duong_dan_bundle]) as may:
             may.goc          # "http://127.0.0.1:PORT"
             may.api          # may.goc + API_PREFIX
+            may.gemini       # GeminiGia: moi loi goi AI cua may chu nay di vao day
+
+    `env` them / de bien moi truong cho may chu (vd {"AI_ACCESS": "public"}).
     """
 
-    def __init__(self, bundles, api_prefix="/api/v1"):
+    def __init__(self, bundles, api_prefix="/api/v1", env=None):
         self.bundles = list(bundles)
         self.api_prefix = api_prefix
+        self.env_them = dict(env or {})
         self.py = python_backend()
         self.proc = None
         self.tam = None
+        self.gemini = None
 
     def _env(self):
         env = dict(os.environ)
@@ -136,7 +228,14 @@ class MayChuThu:
             "API_PREFIX": self.api_prefix,
             "COURSE_ADMIN_KEY": self.khoa_admin,
             "PYTHONIOENCODING": "utf-8",
+            # Bien moi truong thang .env: Gemini gia, khoa gia, quyen AI mac dinh.
+            "GEMINI_URL": self.gemini.url,
+            "GEMINI_API_KEY": "kiem-thu",
+            "AI_ACCESS": "admin",
+            "AI_ACCESS_CODE": "",
+            "AI_ENABLED": "true",
         })
+        env.update(self.env_them)
         return env
 
     def __enter__(self):
@@ -144,6 +243,7 @@ class MayChuThu:
             raise RuntimeError("khong tim thay python co fastapi/uvicorn (backend/fastapi/.venv)")
         self.tam = tempfile.mkdtemp(prefix="kiem-khoa-hoc-")
         self.khoa_admin = secrets.token_hex(8)
+        self.gemini = GeminiGia()
         env = self._env()
         cli = os.path.join(FASTAPI, "tools", "manage_courses.py")
         for args in [["init-db"]] + [["import", b] for b in self.bundles]:
@@ -172,6 +272,14 @@ class MayChuThu:
         self.__exit__(None, None, None)
         raise RuntimeError("uvicorn khong len trong 60 giay")
 
+    def so_yeu_cau(self):
+        """So yeu cau HTTP may chu da nhan — dem dong access log cua uvicorn."""
+        try:
+            with open(os.path.join(self.tam, "uvicorn.log"), encoding="utf-8", errors="replace") as f:
+                return sum(1 for dong in f if ' HTTP/1.1" ' in dong)
+        except OSError:
+            return 0
+
     def doc_log(self):
         try:
             with open(os.path.join(self.tam, "uvicorn.log"), encoding="utf-8", errors="replace") as f:
@@ -188,6 +296,9 @@ class MayChuThu:
                 self.proc.kill()
         if getattr(self, "log", None):
             self.log.close()
+        if self.gemini is not None:
+            self.gemini.dung()
+            self.gemini = None
         if self.tam:
             shutil.rmtree(self.tam, ignore_errors=True)
         return False
@@ -220,15 +331,9 @@ def tang_1(thu_muc, B):
             B.sai("index.html tro toi tep khong co: " + s)
 
     sys.path.insert(0, HERE)
-    import sync
-    ch = sync.doc_cau_hinh()
-    tep = (ch.get("khoa_hoc") or {}).get("tep", [])
-    lech = [t for t in tep if not os.path.exists(os.path.join(thu_muc, "assets", t))
-            or open(os.path.join(thu_muc, "assets", t), encoding="utf-8", newline="").read() != sync.noi_dung_dich(t)]
-    if lech:
-        B.sai("ban sao engine lech nguon: %s — chay `python engine/sync.py`" % ", ".join(lech))
-    else:
-        B.ok("ban sao app.js / app.css khop courses/engine/")
+    import kiem_pwa
+    for dat, msg in kiem_pwa.tinh(thu_muc):
+        (B.ok if dat else B.sai)(msg)
 
     khoa = _khoa_hoc_cua(thu_muc)
     if not khoa:
@@ -262,7 +367,8 @@ def tang_1(thu_muc, B):
 
     node = shutil.which("node")
     if node:
-        for f in ("assets/hien-thi.js", "assets/cau-hinh.js", "assets/app.js"):
+        for f in ("assets/hien-thi.js", "assets/cau-hinh.js", "assets/app.js", "assets/mo-offline.js",
+                  "assets/mo-on-tap.js", "assets/mo-ai.js", "assets/ai-khach.js", "assets/pwa.js", "sw.js"):
             r = subprocess.run([node, "--check", os.path.join(thu_muc, f)], capture_output=True, text=True)
             (B.ok if r.returncode == 0 else B.sai)("cu phap " + f + ("" if r.returncode == 0 else ": " + r.stderr.strip()[-200:]))
     else:
@@ -400,6 +506,9 @@ def tang_2(thu_muc, info, B, chup):
                 pg.evaluate("() => { document.documentElement.setAttribute('data-theme','dark'); }")
                 pg.screenshot(path=os.path.join(anh, "db-trang-chu-toi.png"))
                 B.ok("anh chup trong _shots/")
+            kiem_lab_nhung(pg, bundle, B)
+            kiem_offline(br, may, url, bundle, B)            # truoc ca_bien: ca bien xoa muc luc
+            kiem_tro_giang(br, may, url, bundle, B)
             ca_bien(pg, may, info, url, order, yeu_cau, B)
             br.close()
         if loi:
@@ -409,6 +518,154 @@ def tang_2(thu_muc, info, B, chup):
             B.ok("khong co loi console / pageerror")
     finally:
         may.__exit__(None, None, None)
+
+
+def kiem_lab_nhung(pg, bundle, B):
+    """Bai co khoi ```lab <id>``` (engine/hien-thi.js): khung mo phong chay ngay trong bai,
+    trang lab o che do nhung, khung tu cao theo noi dung."""
+    bai = next((d for d in bundle["docs"].values() if "```lab" in (d.get("md") or "")), None)
+    if bai is None:
+        return
+    lab = re.search(r"```lab\s*\n\s*([a-z0-9-]+)", bai["md"]).group(1)
+    try:
+        pg.evaluate("s => { location.hash = '#/' + s; }", bai["slug"])
+        pg.wait_for_selector("figure.lab-nhung iframe", timeout=15000)
+        pg.locator("figure.lab-nhung").first.scroll_into_view_if_needed()
+        pg.frame_locator("figure.lab-nhung iframe").first.locator(".d-head h1").wait_for(timeout=20000)
+        pg.wait_for_timeout(500)
+        kq = pg.evaluate("""() => { const f = document.querySelector('figure.lab-nhung iframe');
+            const d = f.contentDocument;
+            return {src: f.getAttribute('src'), nhung: d.documentElement.classList.contains('nhung'),
+                    cao: Math.round(f.getBoundingClientRect().height),
+                    than: Math.round(d.body.getBoundingClientRect().height)}; }""")
+    except Exception as e:
+        B.sai("lab nhung trong bai '%s' khong chay: %s" % (bai["slug"], str(e).splitlines()[0]))
+        return
+    if ("nhung=1" in kq["src"] and ("#/" + lab) in kq["src"] and kq["nhung"]
+            and abs(kq["cao"] - min(kq["than"] + 4, 1600)) <= 6):
+        B.ok("lab '%s' nhung trong bai '%s': che do nhung, khung tu cao %d px" % (lab, bai["slug"], kq["cao"]))
+    else:
+        B.sai("lab nhung trong bai '%s' sai: %s" % (bai["slug"], kq))
+
+
+def kiem_offline(br, may, url, bundle, B):
+    """Doc offline (engine/sw.js + pwa.js + mo-offline.js) trong context MOI. Phan chung
+    o kiem_pwa.trinh_duyet; roi bam "Luu ca khoa", tat mang va mo bai CUOI — bai chua
+    mo lan nao trong context nay, chi co the den tu ban "Luu ca khoa" vua tai."""
+    import kiem_pwa
+    order = bundle.get("order") or list(bundle["docs"])
+    ctx = br.new_context(viewport={"width": 1280, "height": 860})
+    try:
+        pg = ctx.new_page()
+        for dat, msg in kiem_pwa.trinh_duyet(ctx, pg, url, ".hero h1", may.so_yeu_cau):
+            (B.ok if dat else B.sai)(msg)
+        pg.goto(url, wait_until="load")
+        pg.wait_for_selector("#btnLuuKhoa", timeout=15000)
+        pg.click("#btnLuuKhoa")
+        pg.wait_for_function("() => /^Đã lưu \\d+\\/\\d+ bài/.test(document.querySelector('#offlineDong').textContent)",
+                             timeout=120000)
+        dong = pg.text_content("#offlineDong")
+        so = re.match(r"Đã lưu (\d+)/(\d+) bài", dong)
+        (B.ok if so and so.group(1) == so.group(2) != "0" else B.sai)("Luu ca khoa: " + dong[:100])
+        cuoi = bundle["docs"][order[-1]]
+        truoc = may.so_yeu_cau()
+        ctx.set_offline(True)
+        try:
+            pg.reload(wait_until="load")
+            pg.wait_for_selector(".hero h1", timeout=10000)
+            pg.evaluate("h => { location.hash = h; }", "#/" + cuoi["slug"])
+            pg.wait_for_function("() => { const b = document.querySelector('#body .prose');"
+                                 " return b && b.textContent.trim().length > 30; }", timeout=10000)
+            them = may.so_yeu_cau() - truoc
+            (B.ok if them == 0 else B.sai)("mat mang: mo bai chua doc lan nao '%s' tu ban 'Luu ca khoa'%s" % (
+                cuoi["title"][:40], "" if them == 0 else " — NHUNG van co %d yeu cau toi may chu" % them))
+        except Exception as e:  # noqa: BLE001
+            B.sai("mat mang: khong mo duoc bai chua doc sau 'Luu ca khoa' (%s)" % str(e).splitlines()[0])
+        finally:
+            ctx.set_offline(False)
+    except Exception as e:  # noqa: BLE001
+        B.sai("doc offline: %s" % str(e).splitlines()[0])
+    finally:
+        ctx.close()
+
+
+def phien_quan_tri(may):
+    """Token phien quan tri (nhu trang Quan ly lay) — de mo trang voi tu cach quan tri vien."""
+    req = urllib.request.Request(may.api + "/courses/admin/verify", method="POST", data=b"{}",
+                                 headers={"X-Admin-Key": may.khoa_admin, "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode("utf-8"))["session"]
+
+
+def kiem_tro_giang(br, may, url, bundle, B):
+    """Tro giang AI (engine/mo-ai.js) tren Gemini GIA: AI mac dinh chi cho quan tri vien."""
+    order = bundle.get("order") or list(bundle["docs"])
+    bai = bundle["docs"][order[0]]
+    ctx = br.new_context(viewport={"width": 1280, "height": 860})
+    loi = []
+    try:
+        pg = ctx.new_page()
+        pg.on("pageerror", lambda e: loi.append(str(e)))
+        pg.goto(url + "#/" + bai["slug"], wait_until="load")
+        pg.wait_for_selector("#body .prose", timeout=20000)
+        pg.wait_for_timeout(800)
+        (B.ok if not pg.locator(".ai-hang").count() else B.sai)(
+            "tro giang AI: khach KHONG thay khi AI chi danh cho quan tri vien")
+
+        pg.evaluate("([k, t]) => localStorage.setItem(k, JSON.stringify(t))",
+                    ["qlkh.phien@" + may.api + ".token", phien_quan_tri(may)])
+        truoc = len(may.gemini.goi)
+        pg.reload(wait_until="load")
+        pg.wait_for_selector(".ai-hang button", timeout=20000)
+        pg.click('.ai-hang [data-viec="summary"]')
+        pg.wait_for_selector("#aiKhung .ai-muc .prose", timeout=20000)
+        gui = may.gemini.goi[truoc:]
+        hoi = re.sub(r"\s+", " ", gui[-1]["body"]["contents"][0]["parts"][0]["text"]) if gui else ""
+        dau_bai = re.sub(r"\s+", " ", re.sub(r"^#.*\n", "", bai.get("md") or "").strip())[:20]
+        (B.ok if gui and dau_bai in hoi else B.sai)(
+            "tro giang: quan tri vien thay hang viec; 'Tom tat' gui noi dung bai toi model (%d loi goi)" % len(gui))
+
+        pg.click('.ai-hang [data-viec="quiz"]')
+        pg.wait_for_selector("#aiKhung .ai-q .ai-dap-an", timeout=20000)
+        pg.locator("#aiKhung .ai-q").first.locator(".ai-dap-an").first.click()
+        kq = pg.evaluate("() => { const q = document.querySelector('#aiKhung .ai-q');"
+                         " return {n: document.querySelectorAll('#aiKhung .ai-q').length,"
+                         " cham: q.querySelectorAll('.dung, .sai').length, giai: !q.querySelector('.ai-giai').hidden}; }")
+        (B.ok if kq["n"] >= 3 and kq["cham"] >= 1 and kq["giai"] else B.sai)("tro giang: cau hoi on tap cham ngay (%s)" % kq)
+
+        pg.fill("#aiCau", "Y chinh cua bai la gi?")
+        pg.press("#aiCau", "Enter")
+        pg.wait_for_selector("#aiKhung .ai-nguon a", timeout=20000)
+        nguon = pg.eval_on_selector_all("#aiKhung .ai-nguon a", "e => e.map(a => a.getAttribute('href'))")
+        (B.ok if nguon and nguon[0] == "#/" + bai["slug"] else B.sai)("tro giang: hoi dap kem nguon trong khoa %s" % nguon)
+
+        # on tap: the AI -> bo the -> trang #/~on-tap: lat, cham 'Duoc' -> het han hom nay, hen 1 ngay
+        pg.click('.ai-hang [data-viec="cards"]')
+        pg.wait_for_selector("#aiKhung .ai-the-chan button", timeout=20000)
+        pg.click("#aiKhung .ai-the-chan button")
+        da_them = pg.text_content("#aiKhung .ai-the-chan button")
+        pg.evaluate("() => { location.hash = '#/~on-tap'; }")
+        pg.wait_for_selector("#otKhung .ot-the", timeout=10000)
+        pg.keyboard.press("Escape")
+        pg.keyboard.press("Space")
+        pg.wait_for_selector("#otCham:not([hidden])", timeout=5000)
+        pg.keyboard.press("3")
+        pg.wait_for_selector("#otKhung .ot-xong", timeout=5000)
+        the = pg.evaluate("() => Object.keys(localStorage).filter(k => k.endsWith('.the'))"
+                          ".map(k => JSON.parse(localStorage.getItem(k)))[0] || []")
+        dat = (da_them.startswith("Đã thêm") and len(the) >= 1 and the[0]["lan"] == 1 and the[0]["iv"] == 1
+               and the[0]["doc"] == order[0])
+        (B.ok if dat else B.sai)("on tap: the AI vao bo, lat (Space) + cham 'Duoc' (3) -> hen 1 ngay (%s, %s)" % (
+            da_them, [(c["front"][:20], c["iv"], c["lan"]) for c in the]))
+        pg.evaluate("() => { location.hash = '#/'; }")
+        pg.wait_for_selector("#otO", timeout=10000)
+        (B.ok if "Đã ôn hết" in pg.text_content("#otO") else B.sai)("on tap: trang chu bao da on het the den han")
+    except Exception as e:  # noqa: BLE001
+        B.sai("tro giang AI: %s" % str(e).splitlines()[0])
+    finally:
+        ctx.close()
+    if loi:
+        B.sai("tro giang AI: pageerror %s" % loi[0][:200])
 
 
 def ca_bien(pg, may, info, url, order, yeu_cau, B):

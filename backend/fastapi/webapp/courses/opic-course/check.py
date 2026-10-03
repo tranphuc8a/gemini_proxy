@@ -13,16 +13,20 @@ backend/course-content/opic.json; trang tai /courses/opic/bundle tu API.
   TANG 1 — tinh, chi can Python
      - content/ doc duoc, du truong, id khong trung, lien ket {{script:..}} co that
      - opic.json khop content/ (chua chay lai build.py thi bao)
-     - index.html nap dung logic.js -> app.js, KHONG con content.js trong trang
+     - index.html nap dung logic.js -> ai-khach.js -> app.js -> pwa.js, KHONG con content.js
+     - ban sao pwa.js / sw.js khop engine; manifest + bieu tuong (engine/tao_pwa.py)
      - cu phap JS (node --check) neu co Node
   TANG 2 — logic thuan trong Node: kiem-nhanh.js (doc opic.json qua OPICL.tuBundle)
   TANG 3 — FastAPI that tren SQLite tam (engine/kiem_khoa_hoc.MayChuThu), nap
             opic.json bang manage_courses.py, mo trang qua route /webapp/… cua
             FastAPI bang Chromium: di qua moi trang, che script, tien do, tim kiem,
-            thi thu, luyen the, va KHONG co loi console.
+            thi thu, luyen the, va KHONG co loi console. Doc offline: worker dieu
+            khien trang, tat mang tai lai van mo, khong yeu cau nao toi may chu.
+            AI nhan xet bai noi (Gemini GIA): ban ghi -> WAV 16 kHz -> /ai/opic -> the nhan xet.
 
 Tra exit code khac 0 khi co loi.
 """
+import base64
 import json
 import os
 import re
@@ -44,6 +48,7 @@ sys.path.insert(0, NGUON)
 sys.path.insert(0, os.path.join(COURSES, "engine"))
 import build  # noqa: E402  backend/course-content/opic/build.py
 import kiem_khoa_hoc  # noqa: E402  courses/engine/kiem_khoa_hoc.py
+import kiem_pwa  # noqa: E402  courses/engine/kiem_pwa.py
 
 DO, XANH, VANG, MO, HET = kiem_khoa_hoc.DO, kiem_khoa_hoc.XANH, kiem_khoa_hoc.VANG, kiem_khoa_hoc.MO, kiem_khoa_hoc.HET
 B = kiem_khoa_hoc.BaoCao()
@@ -76,10 +81,12 @@ def tang_1():
 
     html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
     srcs = [s for s in re.findall(r'<script[^>]+src="([^"]+)"', html) if not s.startswith("http")]
-    if srcs == ["assets/logic.js", "assets/app.js"]:
-        ok("index.html nap logic.js -> app.js, khong con content.js")
+    if srcs == ["assets/logic.js", "assets/ai-khach.js", "assets/app.js", "assets/pwa.js"]:
+        ok("index.html nap logic.js -> ai-khach.js -> app.js -> pwa.js, khong con content.js")
     else:
-        sai("thu tu <script> trong index.html: %s (can: logic.js, app.js)" % srcs)
+        sai("thu tu <script> trong index.html: %s (can: logic.js, ai-khach.js, app.js, pwa.js)" % srcs)
+    for dat, msg in kiem_pwa.tinh(HERE):
+        (ok if dat else sai)(msg)
     for f in ("content.js", "content.json"):
         if os.path.exists(os.path.join(HERE, "assets", f)):
             sai("assets/%s van con — noi dung phai nam trong database" % f)
@@ -93,7 +100,7 @@ def tang_1():
 
     node = shutil.which("node")
     if node:
-        for f in ("assets/logic.js", "assets/app.js", "kiem-nhanh.js"):
+        for f in ("assets/logic.js", "assets/ai-khach.js", "assets/app.js", "assets/pwa.js", "sw.js", "kiem-nhanh.js"):
             r = subprocess.run([node, "--check", os.path.join(HERE, f)], capture_output=True, text=True)
             (ok if r.returncode == 0 else sai)("cu phap %s%s" % (f, "" if r.returncode == 0 else ": " + r.stderr.strip()[-200:]))
     else:
@@ -249,6 +256,48 @@ def tang_3(chup):
                 pg.evaluate("() => { document.documentElement.setAttribute('data-theme','dark'); location.hash = '#/'; }")
                 pg.wait_for_timeout(200)
                 pg.screenshot(path=os.path.join(anh_dir, "trang-chu-toi.png"))
+
+            # AI nhan xet bai noi (Gemini GIA): ban ghi WAV 2 giay dat thang vao IndexedDB, quan tri vien
+            pg.evaluate("([k, t]) => localStorage.setItem(k, JSON.stringify(t))",
+                        ["qlkh.phien@" + may.api + ".token", kiem_khoa_hoc.phien_quan_tri(may)])
+            pg.evaluate("""() => new Promise((ok, hong) => {
+                const hz = 8000, n = hz * 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+                const chu = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+                chu(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); chu(8, 'WAVE'); chu(12, 'fmt ');
+                v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, hz, true);
+                v.setUint32(28, hz * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+                chu(36, 'data'); v.setUint32(40, n * 2, true);
+                for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(8000 * Math.sin(i / 4)), true);
+                const r = indexedDB.open('opic-ghi-am', 1);
+                r.onupgradeneeded = () => r.result.createObjectStore('ban-ghi', {keyPath: 'id', autoIncrement: true}).createIndex('qid', 'qid');
+                r.onsuccess = () => { const tx = r.result.transaction('ban-ghi', 'readwrite');
+                  tx.objectStore('ban-ghi').add({qid: 'A01', luc: Date.now(), giay: 2, blob: new Blob([buf], {type: 'audio/wav'}), kieu: 'audio/wav'});
+                  tx.oncomplete = () => { r.result.close(); ok(); }; tx.onerror = () => hong(tx.error); };
+                r.onerror = () => hong(r.error);
+            })""")
+            truoc = len(may.gemini.goi)
+            pg.reload(wait_until="load")
+            pg.evaluate("() => { location.hash = '#/script/A01'; }")
+            try:
+                pg.wait_for_selector("#dsGhi [data-ai]:not([hidden])", timeout=15000)
+                pg.click("#dsGhi [data-ai]")
+                pg.wait_for_selector("#aiOp .ai-op-diem", timeout=20000)
+                gui = may.gemini.goi[truoc:]
+                am = gui[-1]["body"]["contents"][0]["parts"][1]["inlineData"] if gui else {}
+                wav = base64.b64decode(am.get("data", ""))
+                dat = am.get("mimeType") == "audio/wav" and wav[:4] == b"RIFF" and wav[8:12] == b"WAVE" \
+                    and abs(len(wav) - (44 + 16000 * 2 * 2)) < 2000
+                (ok if dat and "Ước lượng" in pg.text_content("#aiOp") else sai)(
+                    "AI nhan xet bai noi: ban ghi -> WAV 16 kHz mono (%d byte) -> the nhan xet" % len(wav))
+            except Exception as e:  # noqa: BLE001
+                sai("AI nhan xet bai noi: %s" % str(e).splitlines()[0])
+
+            # doc offline: context moi, chua co worker
+            ctx = br.new_context(viewport={"width": 1280, "height": 860})
+            for dat, msg in kiem_pwa.trinh_duyet(ctx, ctx.new_page(), may.goc + "/webapp/courses/opic-course/?theme=light",
+                                                 ".hero", may.so_yeu_cau):
+                (ok if dat else sai)(msg)
+            ctx.close()
             br.close()
     finally:
         may.__exit__(None, None, None)

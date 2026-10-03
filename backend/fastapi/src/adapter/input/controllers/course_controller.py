@@ -51,9 +51,7 @@ from __future__ import annotations
 
 import gzip
 import hashlib
-import hmac
 import json
-import os
 import time
 from typing import Any, Dict, List, Optional
 
@@ -62,7 +60,18 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from src.adapter.factory.course_factory import get_course_usecase
-from src.application.config.config import settings
+from src.adapter.input.controllers.admin_auth import (
+    SESSION_SALT,
+    admin_disabled as _disabled,
+    admin_key as _admin_key,
+    client_address as _client_address,
+    forbidden as _forbidden,
+    int_setting as _int_setting,
+    key_matches as _key_matches,
+    optional_admin,
+    require_admin,
+    session_problem as _session_problem,
+)
 from src.application.exceptions.exceptions import AppException
 from src.application.usecases.course_usecase import (
     CourseUseCase,
@@ -77,10 +86,6 @@ from src.domain.models.course_domain import CourseBundle, CourseSectionDomain
 from src.domain.utils.course_rev import parse_if_match
 
 router = APIRouter(prefix="/courses", tags=["courses"])
-
-#: Namespaces the HMAC so a token minted here cannot be replayed against another
-#: app that happens to share the same admin key.
-SESSION_SALT = "course-admin"
 
 #: Below this, gzip costs more than it saves.
 _GZIP_MIN_BYTES = 1024
@@ -150,15 +155,8 @@ class TrashRestore(BaseModel):
 
 
 # ---------------------------------------------------------------------- auth
-
-def _admin_key() -> str:
-    """The configured key, or "" when course administration is switched off."""
-    return (os.getenv("COURSE_ADMIN_KEY") or getattr(settings, "COURSE_ADMIN_KEY", "") or "").strip()
-
-
-def _int_setting(name: str, default: int) -> int:
-    return int(os.getenv(name, getattr(settings, name, default)) or default)
-
+# Who is an administrator lives in admin_auth (the AI features share it); the
+# login itself — key for token, refresh, wrong-key limits — is the course API's.
 
 def _session_hours() -> int:
     return _int_setting("COURSE_SESSION_HOURS", 12)
@@ -166,67 +164,6 @@ def _session_hours() -> int:
 
 def _session_max_seconds() -> int:
     return _int_setting("COURSE_SESSION_MAX_DAYS", 7) * 86400
-
-
-def _key_matches(provided: Optional[str], expected: str) -> bool:
-    # Constant-time: `==` on a secret leaks how long a prefix matched.
-    return bool(provided and expected) and hmac.compare_digest(
-        provided.encode("utf-8"), expected.encode("utf-8"))
-
-
-def _forbidden(message: str, code: str) -> AppException:
-    """403 with a machine-readable `data.code` — the page reacts to the code,
-    the person reads the (Vietnamese) message."""
-    return AppException(message=message, status_code=403, code=code, payload={"code": code})
-
-
-def _disabled() -> AppException:
-    return _forbidden("Quản trị khoá học đang tắt: máy chủ chưa đặt COURSE_ADMIN_KEY", "admin_disabled")
-
-
-def _session_problem(cause: admin_session.SessionError) -> AppException:
-    if "expired" in str(cause).lower():
-        return _forbidden("Phiên quản trị đã hết hạn — nhập lại khoá quản trị", "session_expired")
-    return _forbidden("Token phiên quản trị không hợp lệ — nhập lại khoá quản trị", "session_invalid")
-
-
-def _is_admin(admin_key: Optional[str], session_token: Optional[str]) -> bool:
-    expected = _admin_key()
-    if not expected:
-        return False
-    if _key_matches(admin_key, expected):
-        return True
-    if session_token:
-        try:
-            admin_session.verify(session_token, expected, salt=SESSION_SALT)
-            return True
-        except admin_session.SessionError:
-            return False
-    return False
-
-
-def require_admin(
-    x_admin_key: Optional[str] = Header(default=None),
-    x_admin_session: Optional[str] = Header(default=None),
-) -> None:
-    if _is_admin(x_admin_key, x_admin_session):
-        return
-    if not _admin_key():
-        raise _disabled()
-    if x_admin_session:
-        try:
-            admin_session.verify(x_admin_session, _admin_key(), salt=SESSION_SALT)
-        except admin_session.SessionError as cause:
-            raise _session_problem(cause) from cause
-    raise _forbidden("Cần khoá quản trị hoặc token phiên", "admin_required")
-
-
-def optional_admin(
-    x_admin_key: Optional[str] = Header(default=None),
-    x_admin_session: Optional[str] = Header(default=None),
-) -> bool:
-    """Reads are public; an admin session additionally sees drafts."""
-    return _is_admin(x_admin_key, x_admin_session)
 
 
 #: Wrong admin keys: per client address, and for the whole instance.
@@ -238,17 +175,6 @@ _FAILURES_ALL = FailureWindow(_int_setting("COURSE_LOGIN_FAILURES_GLOBAL", 50),
 def reset_login_limits() -> None:
     _FAILURES.reset()
     _FAILURES_ALL.reset()
-
-
-def _client_address(request: Request) -> str:
-    # Behind Vercel / a proxy the socket address is the proxy's.
-    real = request.headers.get("x-real-ip")
-    if real:
-        return real.strip()
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "?"
 
 
 # ------------------------------------------------------------------ response
@@ -343,6 +269,14 @@ async def list_courses(request: Request,
                        is_admin: bool = Depends(optional_admin), uc: CourseUseCase = Depends(get_course_usecase)):
     courses = await uc.list_courses(include_unpublished=bool(include_all and is_admin))
     return _json(request, {"courses": [course_json(c) for c in courses]})
+
+
+@router.get("/search")
+async def search_all_courses(request: Request, q: str = Query("", max_length=200),
+                             limit: int = Query(20, ge=1, le=50), uc: CourseUseCase = Depends(get_course_usecase)):
+    """Every published course at once (the portal's Ctrl+K). "search" is a reserved
+    slug, so this route never hides a course."""
+    return _json(request, {"query": q, "hits": await uc.search_all(q, limit=limit)})
 
 
 @router.post("", dependencies=[Depends(require_admin)], status_code=201)

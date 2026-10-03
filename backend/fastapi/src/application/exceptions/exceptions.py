@@ -1,15 +1,19 @@
-from typing import Any
+from typing import Any, Dict, Optional
 
 
 class AppException(Exception):
-    """Base application exception with a status code and optional payload."""
+    """Base application exception with a status code and optional payload.
 
-    def __init__(self, message: str = "Application error", status_code: int = 500, code: str | None = None, payload: Any = None):
+    `headers` go out with the error response (a 429 carries Retry-After)."""
+
+    def __init__(self, message: str = "Application error", status_code: int = 500, code: str | None = None,
+                 payload: Any = None, headers: Optional[Dict[str, str]] = None):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
         self.code = code
         self.payload = payload
+        self.headers = headers
 
 
 class NotFoundError(AppException):
