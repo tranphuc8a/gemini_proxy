@@ -54,10 +54,10 @@ describe('profile', () => {
     expect(storage.getProfile()).toEqual(profile)
   })
 
-  it('never stores a password', () => {
+  it('does not persist a pasted connection URI', () => {
     storage.setProfile({ ...profile, mode: 'uri', uri: 'mongodb://root:s3cr3t@db.local:27017/' })
     const stored = storage.getProfile()
-    expect(stored?.uri).toBe('mongodb://root@db.local:27017/')
+    expect(stored?.uri).toBe('')
     expect(JSON.stringify(stored)).not.toContain('s3cr3t')
   })
 

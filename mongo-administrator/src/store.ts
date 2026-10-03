@@ -12,7 +12,7 @@ import { create } from 'zustand'
 import { ApiError, api, configureApi } from './lib/api'
 import { EjsonParseError, documentKey, idFilter, parseFilter, parsePipeline, parseRelaxed, withoutId } from './lib/ejson'
 import { describeMutation } from './lib/format'
-import { downloadBlob, pushHistory, storage, stripPassword, type RememberedProfile } from './lib/storage'
+import { downloadBlob, pushHistory, storage, type RememberedProfile } from './lib/storage'
 import type {
   CollectionInfo,
   CommandResult,
@@ -255,7 +255,7 @@ export const useStore = create<AppState>((set, get) => {
       try {
         const session = await api.connect(request)
         storage.setToken(session.token)
-        storage.setProfile({ ...remember, uri: stripPassword(remember.uri) })
+        storage.setProfile(remember)
         set({ status: 'connected', session, connectError: null })
         await get().loadDatabases()
         return true
