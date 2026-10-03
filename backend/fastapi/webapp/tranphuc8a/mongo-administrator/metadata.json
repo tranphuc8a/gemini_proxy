@@ -1,6 +1,6 @@
 {
   "title": "Mongo Administrator",
-  "description": "Bảng điều khiển quản trị MongoDB chạy trên trình duyệt, kiểu mongo-express kết hợp Compass. Kết nối bằng host/port hoặc chuỗi mongodb:// và mongodb+srv:// (hỗ trợ TLS, SRV, replica set), giữ phiên qua các lần tải lại trang mà không lưu mật khẩu trong trình duyệt. Duyệt cây database và collection, truy vấn bằng cú pháp quen thuộc với ObjectId, ISODate và regex, sửa document, quản lý index, chạy aggregation pipeline và xem trạng thái server.",
+  "description": "Bảng điều khiển quản trị MongoDB chạy trên trình duyệt, kiểu mongo-express kết hợp Compass. Kết nối bằng host/port hoặc chuỗi mongodb:// và mongodb+srv:// (hỗ trợ TLS, SRV, replica set), giữ phiên qua các lần tải lại trang mà không lưu mật khẩu trong trình duyệt. Duyệt cây database và collection, truy vấn bằng cú pháp quen thuộc với ObjectId, ISODate và regex, sửa document, quản lý index, chạy aggregation pipeline và xem trạng thái server. Mới: ✨ Hỏi AI — viết find hoặc aggregation pipeline từ câu hỏi bằng lời dựa trên các trường của collection; pipeline ghi dữ liệu ($out/$merge) hay chạy JavaScript phía server phải xác nhận.",
   "tags": [
     "mongodb",
     "nosql",
@@ -14,6 +14,7 @@
     "react",
     "typescript",
     "tools",
+    "ai",
     "tranphuc8a"
   ],
   "icon": "🍃"

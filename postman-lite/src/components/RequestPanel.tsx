@@ -245,8 +245,8 @@ export function RequestPanel({ tab, onSaveAs, onShare, onSelectFiles, files }: R
               aria-label="Test script"
             />
             <p className="hint">
-              Chạy sau mỗi response, trong Web Worker riêng (không truy cập được DOM, có timeout nên vòng lặp vô hạn
-              không treo tab). Dùng được <code>pm.test</code>, <code>pm.expect</code>, <code>pm.response</code>,{' '}
+              Chạy sau mỗi response, trong Web Worker riêng: không truy cập được DOM hay mạng (fetch, XHR, WebSocket…
+              bị gỡ khỏi worker), có timeout nên vòng lặp vô hạn không treo tab. Dùng được <code>pm.test</code>, <code>pm.expect</code>, <code>pm.response</code>,{' '}
               <code>pm.environment.get/set</code>.
             </p>
           </>

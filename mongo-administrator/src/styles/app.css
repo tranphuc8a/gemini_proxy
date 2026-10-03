@@ -946,6 +946,12 @@
   word-break: break-word;
 }
 
+.ai-notice {
+  margin: 0;
+  color: var(--success);
+  font-size: 12.5px;
+}
+
 .ai-answer {
   display: flex;
   flex-direction: column;

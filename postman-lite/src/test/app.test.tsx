@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, configure, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { RequestPanel } from '../components/RequestPanel'
@@ -10,6 +10,11 @@ import { encodeSharedRequest, toSharedRequest } from '../lib/share'
 import { kv } from '../lib/util'
 import { blankRequest, selectActiveTab, useStore } from '../store'
 import type { ResponseData, Tab } from '../types'
+
+// Whole panels in jsdom are slow on a busy machine: role queries walk the
+// accessibility tree. None of these tests is about timing, so give them room.
+const UI = { timeout: 30_000 }
+configure({ asyncUtilTimeout: 5_000 })
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -122,7 +127,7 @@ afterEach(() => {
 })
 
 // ---------------------------------------------------------------------------
-describe('opening share links at startup', () => {
+describe('opening share links at startup', UI, () => {
   it('reads ?share=…&backend=…, asks that store, and imports only when asked', async () => {
     history.replaceState(null, '', '/app/?share=tok_9&backend=mysql')
     const fetchMock = mockServer({
@@ -232,7 +237,7 @@ describe('opening share links at startup', () => {
 })
 
 // ---------------------------------------------------------------------------
-describe('pasting into the URL bar', () => {
+describe('pasting into the URL bar', UI, () => {
   it('turns a curl command into the request instead of inserting it', () => {
     mockServer()
     render(<App />)
@@ -278,7 +283,7 @@ describe('pasting into the URL bar', () => {
 })
 
 // ---------------------------------------------------------------------------
-describe('AI in the panels', () => {
+describe('AI in the panels', UI, () => {
   const explanation = {
     summary: 'Server trả về sản phẩm id 7 <b>thành công</b>.',
     details: ['Body là JSON với hai trường: id, name.'],

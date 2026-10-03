@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, configure, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -12,8 +12,10 @@ import { DEFAULT_LIMIT, useStore } from '../store'
 import type { DocumentPage } from '../types'
 
 // Whole user flows — typing included — in jsdom: far slower than the unit
-// tests, and slower still while the other files run alongside.
+// tests, and slower still while the other files run alongside. findBy*/waitFor
+// get the same allowance instead of their default single second.
 vi.setConfig({ testTimeout: 30_000 })
+configure({ asyncUtilTimeout: 10_000 })
 
 const ALLOWED: AiStatus = {
   enabled: true,
@@ -192,6 +194,11 @@ describe('in the document browser', () => {
     // The sort it set is on screen, and so is its page size.
     expect(screen.getByRole('button', { name: 'Fewer options' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /Rows/ })).toHaveValue('20')
+    // The answer made way for the results, leaving the question box ready for the next one.
+    expect(screen.queryByText(FIND.explanation)).toBeNull()
+    expect(screen.getByText('Đã điền truy vấn vào thanh tìm kiếm và chạy Find.', { selector: '.ai-notice' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Đã điền truy vấn vào thanh tìm kiếm và chạy Find.')
+    expect(screen.getByRole('textbox', { name: /Câu hỏi/ })).toHaveFocus()
   })
 
   it('sends the query on screen only when asked to revise it', async () => {
@@ -233,6 +240,25 @@ describe('in the document browser', () => {
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Vẫn chạy' }))
     await waitFor(() => expect(find).toHaveBeenCalledOnce())
   })
+
+  it('hands a pipeline over to the aggregate console without running it', async () => {
+    const user = userEvent.setup({ delay: null })
+    const aggregate = vi.spyOn(api, 'aggregate')
+    routes['/ai/mongo'] = () => json(WRITES)
+    render(<DocumentBrowser />)
+    await openPanel(user)
+    await askQuestion(user, 'tổng theo ngày, lưu vào daily')
+    await screen.findByText(WRITES.explanation)
+    expect(screen.getByText('Pipeline được mở ở tab Aggregate.')).toBeInTheDocument()
+
+    // Only "Chạy" runs it, so only "Chạy" asks first.
+    await user.click(screen.getByRole('button', { name: 'Áp dụng' }))
+
+    await waitFor(() => expect(useStore.getState().tab).toBe('aggregate'))
+    expect(useStore.getState().pipelineText).toBe(JSON.stringify(WRITES.pipeline, null, 2))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(aggregate).not.toHaveBeenCalled()
+  })
 })
 
 describe('in the aggregate console', () => {
@@ -267,6 +293,8 @@ describe('in the aggregate console', () => {
 
     await waitFor(() => expect(aggregate).toHaveBeenCalledWith('shop', 'orders', WRITES.pipeline))
     expect(useStore.getState().pipelineText).toBe(JSON.stringify(WRITES.pipeline, null, 2))
+    expect(screen.queryByRole('button', { name: 'Chạy' })).toBeNull()
+    expect(screen.getByText('Đã đưa pipeline vào console và chạy.', { selector: '.ai-notice' })).toBeInTheDocument()
   })
 
   it('applies a find answer as a pipeline, without running it', async () => {
@@ -286,6 +314,9 @@ describe('in the aggregate console', () => {
       { $limit: 20 },
     ])
     expect(aggregate).not.toHaveBeenCalled()
+    // Not run yet: the answer stays, with its confirmed "Chạy".
+    expect(screen.getByRole('button', { name: 'Chạy' })).toBeInTheDocument()
+    expect(screen.getByText('Đã đưa pipeline vào ô Pipeline ở trên.', { selector: '.ai-notice' })).toBeInTheDocument()
   })
 })
 

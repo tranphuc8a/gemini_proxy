@@ -1,15 +1,23 @@
 /**
  * Run the user's test script against a response.
  *
- * The script is arbitrary JavaScript the user typed, so it runs in a Web Worker
- * rather than on the page: a worker has no DOM, no localStorage and no access to
- * the app's state, and - the part that actually matters - an infinite loop in it
- * can be killed with `terminate()` instead of freezing the tab.
+ * The script is arbitrary JavaScript - typed by the user, or arriving inside an
+ * imported collection or a `#req=` share link - so it runs in a Web Worker rather
+ * than on the page: a worker has no DOM, no localStorage and no access to the
+ * app's state, and an infinite loop in it can be killed with `terminate()`
+ * instead of freezing the tab.
+ *
+ * A worker can still reach the network, though, and the script can read the
+ * environment through `pm.environment` - a token and a `fetch` are all it takes
+ * to send a secret away. So before any script runs, the worker locks itself down
+ * (LOCKDOWN_SOURCE): fetch, XHR, sockets, importScripts, nested workers and the
+ * rest are removed from its global and from every prototype behind it.
  *
  * The sandbox body lives in one string so the worker and the no-Worker fallback
  * cannot drift apart. The fallback exists for environments without workers
  * (jsdom under Vitest, and older embedded browsers); it is otherwise identical,
- * minus the ability to interrupt a runaway loop.
+ * minus the ability to interrupt a runaway loop - and minus the lockdown, which
+ * would take the page's own fetch away with it.
  */
 
 import type { ResponseData, TestResult } from '../types'
@@ -198,7 +206,80 @@ function __run(script, ctx) {
 }
 `
 
-const WORKER_SOURCE = `${SANDBOX_SOURCE}
+/**
+ * Every way out of the worker: to the network, or to another context that has
+ * it. A test script has no use for any of them. Beyond the network APIs proper,
+ * `FontFace` and `Notification` fetch the URLs they are given (a font source, an
+ * icon), `caches` can plant responses a service worker on this origin will serve,
+ * and `indexedDB` / `BroadcastChannel` reach the data and the pages of every app
+ * served from this origin.
+ */
+export const LOCKED_GLOBALS = [
+  'fetch',
+  'XMLHttpRequest',
+  'WebSocket',
+  'WebSocketStream',
+  'EventSource',
+  'WebTransport',
+  'importScripts',
+  'Worker',
+  'SharedWorker',
+  'caches',
+  'FontFace',
+  'fonts',
+  'Notification',
+  'indexedDB',
+  'BroadcastChannel',
+] as const
+
+/**
+ * The lockdown, as source text: defines `__lockdown(scope)` and nothing else.
+ *
+ * For each name, on the scope and on every object of its prototype chain (where
+ * browsers put some of these, e.g. WorkerGlobalScope.prototype): delete it, and
+ * if it is still there, overwrite it with a read-only `undefined`. Should a
+ * member survive both (non-configurable and read-only), an own read-only
+ * `undefined` on the scope hides it. Every step swallows errors - a frozen or
+ * exotic scope must not stop the worker from starting.
+ */
+export const LOCKDOWN_SOURCE = `
+var __LOCKED = ${JSON.stringify(LOCKED_GLOBALS)};
+
+function __lockdown(scope) {
+  if (scope === null || (typeof scope !== 'object' && typeof scope !== 'function')) return;
+
+  var chain = [];
+  var cursor = scope;
+  while (cursor && chain.length < 32 && chain.indexOf(cursor) === -1) {
+    chain.push(cursor);
+    try { cursor = Object.getPrototypeOf(cursor); } catch (e) { cursor = null; }
+  }
+
+  function owns(target, name) {
+    try { return Object.prototype.hasOwnProperty.call(target, name); } catch (e) { return true; }
+  }
+  function blank(target, name) {
+    try { Object.defineProperty(target, name, { value: undefined, writable: false, configurable: false }); } catch (e) {}
+  }
+
+  for (var i = 0; i < __LOCKED.length; i++) {
+    var name = __LOCKED[i];
+    for (var j = 0; j < chain.length; j++) {
+      try { delete chain[j][name]; } catch (e) {}
+      if (owns(chain[j], name)) blank(chain[j], name);
+    }
+    var reachable;
+    try { reachable = scope[name] !== undefined; } catch (e) { reachable = true; }
+    if (reachable) blank(scope, name);
+  }
+}
+`
+
+/** What the worker runs: the sandbox, the lockdown, and only then the script. */
+export const WORKER_SOURCE = `${SANDBOX_SOURCE}
+${LOCKDOWN_SOURCE}
+__lockdown(self);
+
 self.onmessage = function (event) {
   try {
     self.postMessage({ ok: true, outcome: __run(event.data.script, event.data.ctx) });

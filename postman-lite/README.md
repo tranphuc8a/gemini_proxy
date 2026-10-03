@@ -32,7 +32,7 @@ webapp controller phục vụ.
 |---|---|
 | `npm run dev` | Dev server cổng 5175, proxy `/proxy`, `/postman`, `/api` sang `localhost:6789` |
 | `npm run build` | Typecheck + build vào `../backend/fastapi/webapp/postman-lite-pro` |
-| `npm test` | Vitest (58 test cho tầng `lib/` và store) |
+| `npm test` | Vitest: tầng `lib/`, store và vài test render component |
 | `npm run lint` | ESLint, `--max-warnings 0` |
 | `npm run typecheck` | `tsc --noEmit` |
 
@@ -67,7 +67,10 @@ vào biến environment, để request sau dùng luôn.
 
 **Test script** — cú pháp `pm.test` / `pm.expect` / `pm.response` / `pm.environment`.
 Chạy trong **Web Worker**: không chạm được DOM hay localStorage, và vòng lặp vô hạn bị
-`terminate()` thay vì treo tab.
+`terminate()` thay vì treo tab. Trước khi script chạy, worker tự gỡ `fetch`, XHR,
+WebSocket, EventSource, `importScripts`… (`LOCKDOWN_SOURCE` trong `testRunner.ts`), nên
+script — kể cả script đến từ collection import hay link `#req=` — không gửi được biến
+environment ra ngoài.
 
 **Collection runner** — chạy tuần tự cả collection (kể cả collection con), báo cáo
 pass/fail, xuất kết quả JSON. Biến do request trước extract ra được request sau dùng.
@@ -80,7 +83,17 @@ export ngược ra Postman v2.1.
 `prepare()` với bộ gửi nên snippet luôn khớp request thật.
 
 **Workspace** — lưu collection/request/environment lên backend, mở lại từ máy khác,
-link chia sẻ chỉ-đọc, lịch sử lưu trên server.
+link chia sẻ chỉ-đọc (`?share=<token>&backend=<kho>` — mở link là hiện hộp thoại
+"Nhập vào máy này"), lịch sử lưu trên server.
+
+**Chia sẻ một request** — nút "Chia sẻ": cả request nằm trong link
+(`#req=<base64url>`), không qua server; mặc định bỏ auth và header/param trông như
+thông tin đăng nhập. Dán `curl …` vào thanh URL là nạp cả request.
+
+**AI** (khi máy chủ bật `/ai`) — "✨ Giải thích" response (tab AI) và "✨ Sinh test từ
+response" ở tab Tests: script chỉ hiện để xem lại, không tự chạy. Header nhạy cảm bị che
+trước khi gửi. Chế độ chỉ-quản-trị-viên thì khách không thấy nút nào; chế độ mã thì hiện ô
+"Mã truy cập AI".
 
 **UX** — `Ctrl+K` command palette, theme sáng/tối, diff hai response, panel kéo giãn.
 
@@ -101,8 +114,10 @@ link chia sẻ chỉ-đọc, lịch sử lưu trên server.
 | `POST /postman/workspaces` | Tạo workspace → `{id, access_key}` |
 | `GET\|PUT\|DELETE /postman/workspaces/{id}` | Đọc / lưu / xóa (header `X-Workspace-Key`) |
 | `POST /postman/workspaces/{id}/share` | Bật / thu hồi link chia sẻ |
-| `GET /postman/shared/{token}` | Đọc workspace được chia sẻ, không cần key |
+| `GET /postman/shared/{token}?backend=` | Đọc workspace được chia sẻ, không cần key |
 | `…/history` | `GET` / `POST` / `DELETE` lịch sử phía server |
+| `GET /ai/status` · `POST /ai/session` | AI có bật không, người này dùng được không; đổi mã truy cập lấy token |
+| `POST /ai/http` | `action: explain \| tests` — giải thích response / viết test `pm.*` |
 
 Cấu hình trong `backend/fastapi/.env`:
 
@@ -132,8 +147,9 @@ migration**, đúng ràng buộc trong CLAUDE.md.
 ```
 src/lib/     api · sender · curl · codegen · importers · env · extract
              testRunner · storage · tree · diff · util
+             ai (client cổng AI, hợp đồng chung) · aiHttp · share
 src/store.ts zustand: dữ liệu, tabs, runner, workspace
-src/components/  Topbar · Sidebar · RequestPanel · ResponsePanel
+src/components/  Topbar · Sidebar · RequestPanel · ResponsePanel · Ai
                  Dialogs · CommandPalette · KeyValueEditor · Modal · Toasts · Icons
 src/styles/  tokens.css (dùng chung vốn từ với sql-administrator) · app.css
 ```

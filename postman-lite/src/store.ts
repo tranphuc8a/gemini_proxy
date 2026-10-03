@@ -899,9 +899,10 @@ const CODE_REQUIRED: AiJobError = {
 /**
  * Ask the AI about a tab's current response, tracking the job by that response.
  *
- * The request is the draft with the active environment substituted - what was
- * sent - so the AI sees real URLs, not `{{BASE_URL}}`. An answer that arrives
- * after the tab moved on (a new response, a newer job, the tab closed) is dropped.
+ * The request is the tab's draft with the active environment substituted -
+ * normally exactly what was just sent - so the AI sees real URLs, not
+ * `{{BASE_URL}}`. An answer that arrives after the tab moved on (a new response,
+ * a newer job, the tab closed) is dropped.
  */
 async function runAiJob<T>(
   get: () => Store,

@@ -20,6 +20,7 @@ import json
 import os
 import struct
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -65,14 +66,44 @@ def tinh(thu_muc):
     return kq
 
 
-def trinh_duyet(ctx, pg, url, cho, dem_yeu_cau=None):
+def la_cap_nhat_sw(dong):
+    """Dong log la lan trinh duyet tu kiem ban moi cua sw.js.
+
+    Moi lan dieu huong toi trang trong pham vi, trinh duyet tu tai lai sw.js de
+    xem co ban moi (thuong tre mot chut sau khi trang tai xong). Yeu cau do do
+    chinh trinh duyet gui — che do offline gia lap cua Playwright khong chan no —
+    va khong phai trang lay noi dung tu mang; mat mang that thi no hong vo hai.
+    """
+    return '/sw.js HTTP/' in dong
+
+
+def doi_yen(dem, on_dinh=0.8, toi_da=8.0):
+    """So yeu cau may chu khi no thoi tang — moc dem cho luc offline.
+
+    Viec nen cua trang luc con mang (tai truoc bai ke, worker lam moi cache) co the
+    xong — va vao log — sau mot khoang cho co dinh, nhat la khi may dang ban; dem tu
+    moc chup qua som thi tinh nham chung la yeu cau "luc offline".
+    """
+    han = time.time() + toi_da
+    cu, luc = dem(), time.time()
+    while time.time() < han:
+        time.sleep(0.2)
+        moi = dem()
+        if moi != cu:
+            cu, luc = moi, time.time()
+        elif time.time() - luc >= on_dinh:
+            break
+    return cu
+
+
+def trinh_duyet(ctx, pg, url, cho, dem_yeu_cau=None, liet_ke=None):
     try:
-        return _trinh_duyet(ctx, pg, url, cho, dem_yeu_cau)
+        return _trinh_duyet(ctx, pg, url, cho, dem_yeu_cau, liet_ke)
     except Exception as e:  # noqa: BLE001
         return [(False, "doc offline: %s" % str(e).splitlines()[0])]
 
 
-def _trinh_duyet(ctx, pg, url, cho, dem_yeu_cau):
+def _trinh_duyet(ctx, pg, url, cho, dem_yeu_cau, liet_ke=None):
     kq = []
     pg.goto(url, wait_until="load")
     pg.wait_for_selector(cho, timeout=20000)
@@ -96,7 +127,7 @@ def _trinh_duyet(ctx, pg, url, cho, dem_yeu_cau):
     pg.reload(wait_until="load")
     pg.wait_for_selector(cho, timeout=20000)
     pg.wait_for_timeout(600)
-    truoc = dem_yeu_cau() if dem_yeu_cau else None
+    truoc = doi_yen(dem_yeu_cau) if dem_yeu_cau else None
     ctx.set_offline(True)
     try:
         pg.reload(wait_until="load")
@@ -105,9 +136,15 @@ def _trinh_duyet(ctx, pg, url, cho, dem_yeu_cau):
         nhan = pg.locator(".pwa-nhan.offline").count()
         kq.append((nhan == 1, "nhan 'Dang offline' hien khi mat mang" if nhan == 1 else "khong thay nhan 'Dang offline'"))
         if truoc is not None:
-            them = dem_yeu_cau() - truoc
+            la = ""
+            if liet_ke:
+                moi = [d for d in liet_ke(truoc) if not la_cap_nhat_sw(d)]
+                them = len(moi)
+                la = (": " + "; ".join(d.split(" - ", 1)[-1][:90] for d in moi[:3])) if moi else ""
+            else:
+                them = dem_yeu_cau() - truoc
             kq.append((them == 0, "luc offline khong yeu cau nao toi may chu" if them == 0 else
-                       "luc offline van co %d yeu cau toi may chu — trang chua that su doc tu bo nho may" % them))
+                       "luc offline van co %d yeu cau toi may chu — trang chua that su doc tu bo nho may%s" % (them, la)))
     except Exception as e:  # noqa: BLE001
         kq.append((False, "mat mang: tai lai khong mo duoc trang (%s)" % str(e).splitlines()[0]))
     finally:

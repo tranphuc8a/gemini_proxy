@@ -58,6 +58,15 @@ const readAnswer: AiSqlAnswer = {
 const fetchMock = vi.fn()
 const runSql = vi.fn<(sql?: string) => Promise<void>>(async () => {})
 
+// user-event waits a timer tick between keystrokes by default, which makes these tests slow and
+// timing-sensitive on a loaded machine; `delay: null` dispatches the same events without waiting.
+// (The direct API is used because userEvent.setup() clashes with the clipboard stub in setup.ts.)
+const user = {
+  click: (element: Element) => userEvent.click(element, { delay: null }),
+  type: (element: Element, text: string) => userEvent.type(element, text, { delay: null }),
+  keyboard: (keys: string) => userEvent.keyboard(keys, { delay: null }),
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
@@ -84,9 +93,9 @@ async function renderConsole() {
 }
 
 async function ask(question: string) {
-  await userEvent.click(screen.getByRole('button', { name: 'Hỏi AI' }))
-  await userEvent.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), question)
-  await userEvent.click(screen.getByRole('button', { name: 'Viết SQL' }))
+  await user.click(screen.getByRole('button', { name: 'Hỏi AI' }))
+  await user.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), question)
+  await user.click(screen.getByRole('button', { name: 'Viết SQL' }))
 }
 
 beforeEach(() => {
@@ -112,7 +121,9 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('Hỏi AI in the SQL console', () => {
+// Each case renders the console and walks through several interactions; under jsdom on a busy
+// machine that can pass Vitest's 5 s default, so this suite gets more room.
+describe('Hỏi AI in the SQL console', { timeout: 20_000 }, () => {
   it('shows no AI button when the server keeps AI for administrators', async () => {
     serve({ ...allowed, access: 'admin', allowed: false, needs: 'admin' })
     await renderConsole()
@@ -134,18 +145,18 @@ describe('Hỏi AI in the SQL console', () => {
     expect(JSON.parse(String(init.body))).toEqual({ database: 'shop', question: 'đánh dấu đơn 5 đã trả' })
     expect((init.headers as Record<string, string>)['X-Session-Token']).toBe('tok-123')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Chạy' }))
+    await user.click(screen.getByRole('button', { name: 'Chạy' }))
     const dialog = await screen.findByRole('alertdialog')
     expect(dialog).toHaveTextContent('root@localhost:3306 / shop')
     expect(dialog).toHaveTextContent(update)
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Huỷ' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Huỷ' }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(runSql).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Chạy' })).toHaveFocus()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Chạy' }))
-    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Chạy' }))
+    await user.click(screen.getByRole('button', { name: 'Chạy' }))
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Chạy' }))
     expect(runSql).toHaveBeenCalledWith(update)
   })
 
@@ -153,16 +164,16 @@ describe('Hỏi AI in the SQL console', () => {
     serve(allowed, () => json(readAnswer))
     await renderConsole()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hỏi AI' }))
-    await userEvent.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), '100 đơn mới nhất')
-    await userEvent.keyboard('{Control>}{Enter}{/Control}')
+    await user.click(screen.getByRole('button', { name: 'Hỏi AI' }))
+    await user.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), '100 đơn mới nhất')
+    await user.keyboard('{Control>}{Enter}{/Control}')
 
     expect(await screen.findByText('Chỉ đọc')).toBeInTheDocument()
     expect(screen.getByText('AI đã đọc cấu trúc 4 bảng — không đọc dữ liệu (danh sách bị cắt)')).toBeInTheDocument()
     expect(screen.getByText('Đã tự sửa sau khi MySQL báo lỗi')).toBeInTheDocument()
     expect(screen.getByText(/MySQL đã kiểm \(EXPLAIN\)/)).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Chạy' }))
+    await user.click(screen.getByRole('button', { name: 'Chạy' }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(runSql).toHaveBeenCalledWith(select)
   })
@@ -172,7 +183,7 @@ describe('Hỏi AI in the SQL console', () => {
     await renderConsole()
 
     await ask('100 đơn mới nhất')
-    await userEvent.click(await screen.findByRole('button', { name: 'Đưa vào editor' }))
+    await user.click(await screen.findByRole('button', { name: 'Đưa vào editor' }))
 
     const editor = screen.getByRole('textbox', { name: 'SQL editor' })
     expect(editor).toHaveValue(select)
@@ -185,10 +196,10 @@ describe('Hỏi AI in the SQL console', () => {
     useStore.setState({ sql: 'SELECT * FROM `orders`' })
     await renderConsole()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hỏi AI' }))
-    await userEvent.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), 'chỉ đơn đã trả')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Sửa từ câu SQL đang có trong editor' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Viết SQL' }))
+    await user.click(screen.getByRole('button', { name: 'Hỏi AI' }))
+    await user.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), 'chỉ đơn đã trả')
+    await user.click(screen.getByRole('checkbox', { name: 'Sửa từ câu SQL đang có trong editor' }))
+    await user.click(screen.getByRole('button', { name: 'Viết SQL' }))
     await screen.findByText('Chỉ đọc')
 
     const [, init] = sqlCalls()[0]
@@ -200,8 +211,8 @@ describe('Hỏi AI in the SQL console', () => {
     useStore.setState({ currentDatabase: null })
     await renderConsole()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hỏi AI' }))
-    await userEvent.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), 'đơn mới nhất')
+    await user.click(screen.getByRole('button', { name: 'Hỏi AI' }))
+    await user.type(screen.getByRole('textbox', { name: /Hỏi AI viết SQL/ }), 'đơn mới nhất')
 
     expect(screen.getByText('Chọn một CSDL ở thanh bên trước')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Viết SQL' })).toBeDisabled()
@@ -227,7 +238,7 @@ describe('Hỏi AI in the SQL console', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Bạn hỏi AI nhanh quá — thử lại sau 12 giây')
 
     refuse = false
-    await userEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
+    await user.click(screen.getByRole('button', { name: 'Thử lại' }))
     expect(await screen.findByText('Chỉ đọc')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -263,8 +274,8 @@ describe('Hỏi AI in the SQL console', () => {
     const codeField = await screen.findByLabelText('Mã truy cập AI')
     expect(codeField).toHaveFocus()
 
-    await userEvent.type(codeField, 'mo-khoa')
-    await userEvent.click(screen.getByRole('button', { name: 'Mở khoá' }))
+    await user.type(codeField, 'mo-khoa')
+    await user.click(screen.getByRole('button', { name: 'Mở khoá' }))
 
     expect(await screen.findByText('Chỉ đọc')).toBeInTheDocument()
     expect(sqlCalls()).toHaveLength(2)
@@ -287,18 +298,18 @@ describe('Hỏi AI in the SQL console', () => {
     })
     await renderConsole()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hỏi AI' }))
+    await user.click(screen.getByRole('button', { name: 'Hỏi AI' }))
     expect(screen.queryByRole('textbox', { name: /Hỏi AI viết SQL/ })).not.toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Mã truy cập AI'), 'mo-khoa')
-    await userEvent.click(screen.getByRole('button', { name: 'Mở khoá' }))
+    await user.type(screen.getByLabelText('Mã truy cập AI'), 'mo-khoa')
+    await user.click(screen.getByRole('button', { name: 'Mở khoá' }))
 
     // Unlocked: the question form replaces the code field and takes the focus.
     const question = await screen.findByRole('textbox', { name: /Hỏi AI viết SQL/ })
     expect(question).toHaveFocus()
     expect(screen.queryByLabelText('Mã truy cập AI')).not.toBeInTheDocument()
 
-    await userEvent.type(question, '100 đơn mới nhất')
-    await userEvent.click(screen.getByRole('button', { name: 'Viết SQL' }))
+    await user.type(question, '100 đơn mới nhất')
+    await user.click(screen.getByRole('button', { name: 'Viết SQL' }))
     expect(await screen.findByText('Chỉ đọc')).toBeInTheDocument()
     const [, init] = sqlCalls()[0]
     expect((init.headers as Record<string, string>)['X-AI-Session']).toBe('ai-tok')

@@ -295,7 +295,7 @@ def tang_3(chup):
             # doc offline: context moi, chua co worker
             ctx = br.new_context(viewport={"width": 1280, "height": 860})
             for dat, msg in kiem_pwa.trinh_duyet(ctx, ctx.new_page(), may.goc + "/webapp/courses/opic-course/?theme=light",
-                                                 ".hero", may.so_yeu_cau):
+                                                 ".hero", may.so_yeu_cau, may.yeu_cau):
                 (ok if dat else sai)(msg)
             ctx.close()
             br.close()

@@ -147,8 +147,10 @@ def _sql_answer(raw: str) -> Dict[str, str]:
     if not isinstance(sql, str):
         raise ValueError("no sql")
     sql = _FENCE_RE.sub("", sql).strip()
-    if not split_statements(sql):
-        raise ValueError("no statement")
+    count = len(split_statements(sql))
+    # Every statement of the script is classified; a longer one is the model going astray.
+    if not count or count > STATEMENTS_MAX:
+        raise ValueError("no statement, or too many")
     return {"sql": sql, "explanation": str(data.get("explanation") or "").strip()}
 
 
@@ -340,7 +342,7 @@ class AiQueryUseCase:
         """
         out: List[Dict[str, Any]] = []
         checking = True
-        for index, statement in enumerate(split_statements(sql)[:STATEMENTS_MAX]):
+        for index, statement in enumerate(split_statements(sql)):
             item: Dict[str, Any] = {"sql": statement, "readOnly": read_only(statement), "checked": None, "error": None}
             if checking and index < EXPLAINED and _explainable(statement):
                 results = await self.sql_admin.run_sql(

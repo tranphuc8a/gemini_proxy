@@ -1,6 +1,17 @@
 {
   "title": "Postman Lite Pro",
-  "description": "API client trong trình duyệt: nhiều tab, collection runner, test script, import Postman/OpenAPI, sinh code và đồng bộ workspace lên backend.",
-  "tags": ["tranphuc8a", "api", "http", "testing", "developer", "tools", "react"],
+  "description": "API client trong trình duyệt: nhiều tab, collection runner, test script, import Postman/OpenAPI, sinh code và đồng bộ workspace lên backend. Mới: AI giải thích response và sinh test pm.* (xem lại trước khi chạy, test chạy trong Worker đã khoá mạng), chia sẻ một request qua link, mở link chia sẻ workspace, dán lệnh cURL vào ô URL.",
+  "tags": [
+    "tranphuc8a",
+    "api",
+    "http",
+    "testing",
+    "developer",
+    "tools",
+    "ai",
+    "share",
+    "curl",
+    "react"
+  ],
   "icon": "🛰️"
 }

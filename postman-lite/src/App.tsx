@@ -83,10 +83,10 @@ export default function App() {
     }
 
     // The blank tab the app starts with has nothing to keep; let the link take its place.
-    const { tabs } = useStore.getState()
-    const blank = tabs.length === 1 && !tabs[0].requestId && !tabs[0].dirty && !tabs[0].draft.url && !tabs[0].response
+    const [only, ...others] = useStore.getState().tabs
+    const blank = only && !others.length && !only.requestId && !only.dirty && !only.draft.url && !only.response
     openDraft(spec)
-    if (blank) closeTab(tabs[0].id)
+    if (blank) closeTab(only.id)
 
     toast('info', `Đã mở request được chia sẻ "${spec.name}" trong tab mới (chưa lưu).`)
     // Test scripts run on every send; one from somebody else deserves a look first.

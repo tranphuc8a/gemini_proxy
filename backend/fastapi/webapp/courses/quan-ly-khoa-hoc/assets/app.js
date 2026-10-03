@@ -897,7 +897,8 @@ var TEN_AI = {
   tutor_quiz: "Trợ giảng — câu hỏi ôn tập", tutor_ask: "Trợ giảng — hỏi đáp", tutor_cards: "Trợ giảng — thẻ ôn tập",
   ask: "Hỏi đáp toàn trang", draft_outline: "Soạn khoá bằng AI — dàn ý", draft_lesson: "Soạn khoá bằng AI — bài",
   opic: "Nhận xét bài nói OPIc", sql: "SQL từ câu hỏi",
-  mongo: "Mongo từ câu hỏi", postman: "Postman AI"
+  mongo: "Mongo từ câu hỏi", http_explain: "Postman — giải thích response", http_tests: "Postman — sinh test",
+  compare: "Gemini Chat — so sánh model"
 };
 var QUYEN_AI = {
   admin: "chỉ quản trị viên", code: "ai có mã truy cập (AI_ACCESS_CODE) và quản trị viên",

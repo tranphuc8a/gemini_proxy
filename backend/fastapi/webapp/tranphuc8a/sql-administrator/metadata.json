@@ -1,6 +1,6 @@
 {
   "title": "SQL Administrator",
-  "description": "Bảng điều khiển quản trị MySQL/MariaDB chạy trên trình duyệt, tương tự phpMyAdmin hay Adminer. Đăng nhập vào bất kỳ host:port nào và giữ phiên qua các lần tải lại trang, chỉ lưu token chứ không lưu mật khẩu. Duyệt và sửa dữ liệu theo trang có sắp xếp, tìm kiếm, thêm/sửa/xoá bản ghi; xem cấu trúc bảng, chỉ mục và khoá ngoại; chạy script SQL nhiều câu lệnh với kết quả và thời gian riêng từng câu; theo dõi trạng thái server; xuất bảng ra CSV, JSON hoặc SQL dump.",
+  "description": "Bảng điều khiển quản trị MySQL/MariaDB chạy trên trình duyệt, tương tự phpMyAdmin hay Adminer. Đăng nhập vào bất kỳ host:port nào và giữ phiên qua các lần tải lại trang, chỉ lưu token chứ không lưu mật khẩu. Duyệt và sửa dữ liệu theo trang có sắp xếp, tìm kiếm, thêm/sửa/xoá bản ghi; xem cấu trúc bảng, chỉ mục và khoá ngoại; chạy script SQL nhiều câu lệnh với kết quả và thời gian riêng từng câu; theo dõi trạng thái server; xuất bảng ra CSV, JSON hoặc SQL dump. Mới: ✨ Hỏi AI — viết SQL từ câu hỏi bằng lời dựa trên cấu trúc CSDL (không đọc dữ liệu), MySQL kiểm bằng EXPLAIN trước khi hiện, câu lệnh ghi phải xác nhận mới chạy.",
   "tags": [
     "sql",
     "mysql",
@@ -14,6 +14,8 @@
     "react",
     "typescript",
     "tools",
+    "ai",
+    "text-to-sql",
     "tranphuc8a"
   ],
   "icon": "🗄️"

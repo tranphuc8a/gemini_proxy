@@ -279,11 +279,15 @@ class MayChuThu:
 
     def so_yeu_cau(self):
         """So yeu cau HTTP may chu da nhan — dem dong access log cua uvicorn."""
+        return len(self.yeu_cau())
+
+    def yeu_cau(self, tu=0):
+        """Cac dong access log (moi dong mot yeu cau), tu yeu cau thu `tu`."""
         try:
             with open(os.path.join(self.tam, "uvicorn.log"), encoding="utf-8", errors="replace") as f:
-                return sum(1 for dong in f if ' HTTP/1.1" ' in dong)
+                return [dong.strip() for dong in f if ' HTTP/1.1" ' in dong][tu:]
         except OSError:
-            return 0
+            return []
 
     def doc_log(self):
         try:
@@ -565,7 +569,7 @@ def kiem_offline(br, may, url, bundle, B):
     ctx = br.new_context(viewport={"width": 1280, "height": 860})
     try:
         pg = ctx.new_page()
-        for dat, msg in kiem_pwa.trinh_duyet(ctx, pg, url, ".hero h1", may.so_yeu_cau):
+        for dat, msg in kiem_pwa.trinh_duyet(ctx, pg, url, ".hero h1", may.so_yeu_cau, may.yeu_cau):
             (B.ok if dat else B.sai)(msg)
         pg.goto(url, wait_until="load")
         pg.wait_for_selector("#btnLuuKhoa", timeout=15000)
@@ -576,7 +580,7 @@ def kiem_offline(br, may, url, bundle, B):
         so = re.match(r"Đã lưu (\d+)/(\d+) bài", dong)
         (B.ok if so and so.group(1) == so.group(2) != "0" else B.sai)("Luu ca khoa: " + dong[:100])
         cuoi = bundle["docs"][order[-1]]
-        truoc = may.so_yeu_cau()
+        truoc = kiem_pwa.doi_yen(may.so_yeu_cau)
         ctx.set_offline(True)
         try:
             pg.reload(wait_until="load")
@@ -584,9 +588,10 @@ def kiem_offline(br, may, url, bundle, B):
             pg.evaluate("h => { location.hash = h; }", "#/" + cuoi["slug"])
             pg.wait_for_function("() => { const b = document.querySelector('#body .prose');"
                                  " return b && b.textContent.trim().length > 30; }", timeout=10000)
-            them = may.so_yeu_cau() - truoc
-            (B.ok if them == 0 else B.sai)("mat mang: mo bai chua doc lan nao '%s' tu ban 'Luu ca khoa'%s" % (
-                cuoi["title"][:40], "" if them == 0 else " — NHUNG van co %d yeu cau toi may chu" % them))
+            them = [d for d in may.yeu_cau(truoc) if not kiem_pwa.la_cap_nhat_sw(d)]
+            (B.ok if not them else B.sai)("mat mang: mo bai chua doc lan nao '%s' tu ban 'Luu ca khoa'%s" % (
+                cuoi["title"][:40], "" if not them else " — NHUNG van co %d yeu cau toi may chu: %s" % (
+                    len(them), "; ".join(d.split(" - ", 1)[-1][:90] for d in them[:3]))))
         except Exception as e:  # noqa: BLE001
             B.sai("mat mang: khong mo duoc bai chua doc sau 'Luu ca khoa' (%s)" % str(e).splitlines()[0])
         finally:
