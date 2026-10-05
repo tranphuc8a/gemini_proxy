@@ -1,0 +1,16 @@
+{
+  "name": "Quản lý chi tiêu",
+  "short_name": "Chi tiêu",
+  "description": "Sổ chi tiêu: gõ một dòng là xong, chia tiền với bạn cùng phòng, ngân sách, báo cáo, sổ tiết kiệm. Lưu trên máy hoặc đồng bộ qua máy chủ.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#2459d8",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

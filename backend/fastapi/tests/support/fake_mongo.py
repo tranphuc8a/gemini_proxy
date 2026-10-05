@@ -79,9 +79,12 @@ class _Cursor:
 
 
 class _Result:
-    def __init__(self, deleted_count: int = 0, modified_count: int = 0):
+    def __init__(self, deleted_count: int = 0, modified_count: int = 0, matched_count: int = 0):
         self.deleted_count = deleted_count
         self.modified_count = modified_count
+        # PyMongo's UpdateResult separates "the filter matched" from "a value
+        # changed"; compare-and-set callers read the former.
+        self.matched_count = matched_count
 
 
 class FakeCollection:
@@ -113,7 +116,7 @@ class FakeCollection:
         for document in self.documents.values():
             if _matches(document, query):
                 document.update(copy.deepcopy(update.get("$set", {})))
-                return _Result(modified_count=1)
+                return _Result(modified_count=1, matched_count=1)
 
         if not upsert:
             return _Result()

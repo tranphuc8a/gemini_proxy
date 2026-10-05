@@ -133,3 +133,22 @@ never trusted. Table `arena_scores` (migration `0006`), best score per name.
 | `GET /arena/problems` · `/arena/problems/{id}` | the problems (`tsp-60`, `tsp-200`, `tsp-1000`) · one with its city coordinates (cached a day) |
 | `POST /arena/problems/{id}/submit` | `{name, tour}` → `{score, improved, rank}` (the server's own measurement); 60 submissions per hour per address |
 | `GET /arena/problems/{id}/leaderboard` | `{problem, rows: [{rank, name, score, updatedAt}]}` — the top 20 |
+
+## Spending (`/spending`)
+
+`webapp/tranphuc8a/quan-ly-chi-tieu/` — a personal-spending ledger that works
+offline in the browser and can sync to a server. Every figure is computed in the
+browser; the server only keeps **one JSON document per workspace** with a
+`revision`, so the document is opaque to it. Workspaces are reached with the
+access key shown once at creation (`X-Workspace-Key` or `Authorization: Bearer`;
+only its SHA-256 is stored). Storage: `?backend=json|mysql|mongo`, default
+`SPENDING_STORAGE_BACKEND` (table / collection `spending_workspaces`, created on
+first use). `SPENDING_MAX_BYTES` (4 000 000) caps the serialised document.
+
+| Endpoint | Key | What |
+|---|---|---|
+| `GET /spending/backends` | — | `{default, backends: [{id, available, reason}]}` |
+| `POST /spending/workspaces` | — | `{name?, data?}` → `201 {id, name, access_key, revision: 1, created_at}`; `data` becomes revision 1. 400 when `data` is not an object or exceeds the limit |
+| `GET /spending/workspaces/{id}?since=N` | yes | the workspace; when `N` is still the current revision: `{unchanged: true}` and no `data`. 404 before 401 |
+| `PUT /spending/workspaces/{id}` | yes | `{revision, name?, data}` → the new view (`revision + 1`). **409** with `data.current` when `revision` is stale or a concurrent save won (atomic compare-and-set in all three stores) |
+| `DELETE /spending/workspaces/{id}` | yes | `{deleted: true}` |

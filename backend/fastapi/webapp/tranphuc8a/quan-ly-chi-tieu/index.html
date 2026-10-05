@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Quản lý chi tiêu</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%232459d8%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2722%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27sans-serif%27%3E%E2%82%AB%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2459d8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f141b" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chi tiêu">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="assets/kieu.css">
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="Điều hướng chính"></aside>
+  <div class="col">
+    <header class="top">
+      <div class="brand"><b>₫</b><span>Chi tiêu</span></div>
+      <div class="qa" id="qa-wrap">
+        <label class="sr" for="qa">Nhập nhanh một khoản</label>
+        <input type="text" id="qa" autocomplete="off" placeholder="Nhập nhanh: cơm trưa 57/2 hôm qua ⏎" aria-describedby="qa-pop">
+        <div class="qa-pop" id="qa-pop" hidden></div>
+      </div>
+      <button type="button" class="sync local" id="sync" data-act="sync-open" aria-live="polite"><i></i><span>Trên máy này</span></button>
+    </header>
+    <main id="view" tabindex="-1"></main>
+  </div>
+  <nav class="bottom" id="bottom" aria-label="Điều hướng"></nav>
+</div>
+<div id="toasts" role="status" aria-live="polite"></div>
+<noscript><p style="padding:16px">Ứng dụng cần JavaScript để chạy.</p></noscript>
+
+<script src="assets/text.js"></script>
+<script src="assets/money.js"></script>
+<script src="assets/dates.js"></script>
+<script src="assets/model.js"></script>
+<script src="assets/ledger.js"></script>
+<script src="assets/parser.js"></script>
+<script src="assets/sync.js"></script>
+<script src="assets/csv.js"></script>
+<script src="assets/charts.js"></script>
+<script src="assets/store.js"></script>
+<script src="assets/pwa.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/views.js"></script>
+<script src="assets/dialogs.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
