@@ -111,6 +111,14 @@ class Settings(BaseSettings): # type: ignore
     POSTMAN_JSON_FILE: str = "data/postman-workspaces.json"
     POSTMAN_MAX_HISTORY: int = 500
 
+    # Personal spending app (/spending/*): one JSON document per workspace.
+    # Same backends as postman; "mysql" and "mongo" are what the app offers.
+    SPENDING_STORAGE_BACKEND: str = "json"
+    SPENDING_JSON_FILE: str = "data/spending-workspaces.json"
+    # Largest document (UTF-8 bytes of its JSON) a workspace may hold. Vercel
+    # rejects request bodies over 4.5 MB, so a bigger limit could never be saved.
+    SPENDING_MAX_BYTES: int = 4_000_000
+
     # Course content (/courses/*): reading is public, writing (import, edit,
     # delete) needs this key — exchanged for a session token like the editors.
     # Empty (the default) switches every write endpoint off: a key printed in

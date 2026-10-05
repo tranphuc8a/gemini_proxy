@@ -1,0 +1,7 @@
+{
+  "title": "Quản lý chi tiêu",
+  "description": "Sổ chi tiêu thay cho ghi chú văn bản: gõ một dòng như “57/2 bún đậu hôm qua” là xong, số tiền kiểu Việt (57k, 1,5tr, 19.485.250) được hiểu và hiện đọc lại. Chi chung và chia tiền với bạn cùng phòng tự tính ai nợ ai, sinh tin nhắn quyết toán. Báo cáo tuần/tháng/năm, chi theo danh mục và theo T2–T6/T7/CN, ngân sách, giao dịch định kỳ, sổ tiết kiệm có kỳ hạn (ngày đáo hạn, lãi dự kiến, thuế). Lưu ngay trong trình duyệt hoặc đồng bộ qua máy chủ MySQL / MongoDB; hai thiết bị sửa cùng lúc không mất dữ liệu. Cài được như ứng dụng trên máy tính và điện thoại (PWA), dùng cả khi mất mạng. Responsive điện thoại và máy tính, sáng/tối, tiếng Việt, không thư viện ngoài.",
+  "category": "Ứng dụng",
+  "tags": ["tranphuc8a", "chi-tieu", "tai-chinh", "chia-tien", "tiet-kiem", "ngan-sach", "bao-cao", "offline", "pwa", "cai-dat-ung-dung", "dong-bo", "mysql", "mongodb", "responsive", "tieng-viet", "khong-thu-vien"],
+  "icon": "💸"
+}
