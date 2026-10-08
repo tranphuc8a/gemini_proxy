@@ -67,6 +67,14 @@
   text-align: center;
 }
 
+@media (pointer: coarse) {
+  .outline-item {
+    align-items: center;
+    min-height: 40px;
+    font-size: 14px;
+  }
+}
+
 .outline-empty code {
   padding: 1px 4px;
   font-family: var(--font-mono);

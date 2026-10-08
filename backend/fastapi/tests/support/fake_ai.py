@@ -52,10 +52,20 @@ class FakeStore(AiOutputPort):
 
 
 class FakeModel(AiModelOutputPort):
-    def __init__(self, answers: Optional[List[str]] = None, delay: float = 0.0):
+    def __init__(self, answers: Optional[List[str]] = None, delay: float = 0.0,
+                 models: Optional[List[str]] = None):
         self.answers = list(answers or ["một câu trả lời"])
         self.calls: List[Dict[str, Any]] = []
         self.delay = delay
+        #: What models.list answers; None = the provider cannot list (catalog falls back).
+        self.models = models
+        self.listed = 0
+
+    async def list_models(self):
+        self.listed += 1
+        if self.models is None:
+            raise RuntimeError("listing unavailable")
+        return [{"id": m, "label": m} for m in self.models]
 
     async def complete(self, *, model, contents, system=None, generation_config=None):
         self.calls.append({"model": model, "contents": contents, "system": system, "config": generation_config})

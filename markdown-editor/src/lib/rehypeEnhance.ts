@@ -1,5 +1,21 @@
 import { defaultSchema } from 'rehype-sanitize'
+import { defaultUrlTransform } from 'react-markdown'
 import { slugify } from './markdown'
+
+/** Raster and SVG images; an <img> never runs script, whatever it holds. */
+const DATA_IMAGE = /^data:image\/(png|jpe?g|gif|webp|avif|bmp|svg\+xml)[;,]/i
+
+/**
+ * react-markdown's own URL filter, plus inline images.
+ *
+ * The default drops every `data:` URL, which silently broke images pasted or
+ * dropped into the editor -- those are inserted as data URLs -- in the preview,
+ * the exports and reading mode alike. Only an <img> source is let through.
+ */
+export function markdownUrlTransform(url: string, key: string, node: Readonly<{ tagName: string }>): string {
+  if (key === 'src' && node.tagName === 'img' && DATA_IMAGE.test(url)) return url
+  return defaultUrlTransform(url)
+}
 
 /** Minimal structural view of a hast tree; avoids a hard dep on @types/hast. */
 interface HastNode {
@@ -39,12 +55,21 @@ function textOf(node: HastNode): string {
   return (node.children ?? []).map(textOf).join('')
 }
 
+export interface EnhanceOptions {
+  /**
+   * Prepended to heading ids. Reading mode renders the document a second time
+   * while the preview stays mounted underneath; a prefix keeps the ids unique.
+   */
+  idPrefix?: string
+}
+
 /**
  * Stamps every block element with the source line it came from, so the
  * preview and the editor can follow each other precisely, and gives headings
  * stable ids matching the outline panel's slugs.
  */
-export function rehypeEnhance() {
+export function rehypeEnhance(options: EnhanceOptions = {}) {
+  const prefix = options.idPrefix ?? ''
   return (tree: HastNode) => {
     const seen = new Map<string, number>()
 
@@ -59,7 +84,7 @@ export function rehypeEnhance() {
           const base = slugify(textOf(node)) || 'section'
           const count = seen.get(base) ?? 0
           seen.set(base, count + 1)
-          const id = count === 0 ? base : `${base}-${count}`
+          const id = prefix + (count === 0 ? base : `${base}-${count}`)
           node.properties = { ...node.properties, id }
           node.children = [
             {

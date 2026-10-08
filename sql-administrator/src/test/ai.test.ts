@@ -124,6 +124,14 @@ describe('identity headers', () => {
     expect(window.localStorage.getItem(aiKey())).toBeNull()
   })
 
+  it('sends the model picked on another page of this server, and ignores a malformed one', () => {
+    window.localStorage.setItem(`ai.model@${window.location.origin}/api/v1`, JSON.stringify('gemini-3.8-flash'))
+    window.__WEBAPP_CONFIG__ = { apiBase: '/api/v1' }
+    expect(aiIdentityHeaders()).toEqual({ 'X-AI-Model': 'gemini-3.8-flash' })
+    window.localStorage.setItem(`ai.model@${window.location.origin}/api/v1`, JSON.stringify('Not A Model!'))
+    expect(aiIdentityHeaders()).toEqual({})
+  })
+
   it('sends both identities together', () => {
     window.localStorage.setItem(adminKey(), JSON.stringify('adm-1'))
     window.localStorage.setItem(aiKey(), JSON.stringify({ token: 'ai-1', het: nowSeconds() + 60 }))

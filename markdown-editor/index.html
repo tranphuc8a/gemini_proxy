@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- interactive-widget: the on-screen keyboard shrinks the layout (and so
+         100dvh) instead of covering the editor's bottom half. viewport-fit
+         lets the safe-area insets reach the notch and home-indicator padding. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <title>Markdown Editor</title>
   </head>
   <body>

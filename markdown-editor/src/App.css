@@ -1,13 +1,25 @@
 .app {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  /* Without an explicit column the grid sized itself to the header's widest
+     content, and a phone scrolled sideways. minmax(0, …) lets it shrink. */
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
+  /* The dynamic viewport follows the mobile toolbars and, with
+     interactive-widget=resizes-content, the on-screen keyboard. */
+  height: 100dvh;
   background-color: var(--bg);
   color: var(--text);
 }
 
 .app.is-fullscreen {
   grid-template-rows: 1fr auto;
+}
+
+/* Reading mode covers the app; hidden this way it keeps its layout, so every
+   scroll position survives the round trip, and nothing in it takes focus. */
+.app.is-covered {
+  visibility: hidden;
 }
 
 .app-body {
@@ -121,6 +133,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+@media (pointer: coarse) {
+  .pane-header {
+    height: 44px;
+  }
+}
+
 /* --------------------------------------------------------------------------
    Buttons shared across the chrome
    -------------------------------------------------------------------------- */
@@ -184,6 +202,17 @@
 
 .btn svg {
   flex-shrink: 0;
+}
+
+/* Touch: buttons grow to a 40px target wherever they appear. */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 40px;
+  }
+
+  .btn-icon {
+    min-width: 40px;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -257,8 +286,9 @@
     flex-direction: column;
   }
 
+  /* The divider drags vertically here, so the ratio applies to the height. */
   .panes.view-split .editor-pane {
-    flex: 0 0 50%;
+    flex: 0 0 var(--editor-width, 50%);
   }
 
   .pane-divider {
@@ -277,4 +307,85 @@
   .sidebar-resizer {
     display: none;
   }
+}
+
+/* A finger needs a wider grip than a mouse pointer. */
+@media (pointer: coarse) {
+  .pane-divider::after {
+    inset: 0 -10px;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 900px) {
+  .pane-divider::after {
+    inset: -10px 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Phone: one pane at a time in the split view
+   -------------------------------------------------------------------------- */
+
+.pane-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+  background-color: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.pane-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 1;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  transition: background-color 120ms var(--ease), color 120ms var(--ease);
+}
+
+.pane-switch-btn:hover {
+  color: var(--text);
+  background-color: var(--bg-hover);
+}
+
+.pane-switch-btn.is-active {
+  color: var(--accent-text);
+  background-color: var(--accent-soft);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* Both panes stay mounted and laid out, one exactly over the other. The
+   hidden one keeps its scroll position and still follows scroll sync, so the
+   switch lands on the same passage. */
+.panes.is-single {
+  position: relative;
+  flex-direction: row;
+}
+
+.panes.is-single > .editor-pane,
+.panes.is-single > .preview-pane {
+  position: absolute;
+  inset: 0;
+}
+
+.panes.is-single[data-active-pane='editor'] > .preview-pane,
+.panes.is-single[data-active-pane='preview'] > .editor-pane {
+  visibility: hidden;
+}
+
+/* The switch already names the pane. */
+.panes.is-single .pane-header {
+  display: none;
+}
+
+/* Read-only visitors cannot use the formatting bar; on a phone it is just
+   one row less of document. */
+.app[data-layout='phone'] .editor-pane.is-readonly .format-toolbar {
+  display: none;
 }

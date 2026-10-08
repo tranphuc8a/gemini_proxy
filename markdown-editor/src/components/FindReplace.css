@@ -82,6 +82,40 @@
   text-align: right;
 }
 
+@media (pointer: coarse) {
+  .find-field {
+    height: 44px;
+    padding-right: 2px;
+  }
+
+  .find-flag {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+}
+
+/* A phone has no room for field, count and buttons on one line. */
+@media (max-width: 767.98px) {
+  .find-row {
+    flex-wrap: wrap;
+  }
+
+  .find-field {
+    flex: 1 1 100%;
+  }
+
+  .find-count {
+    min-width: 0;
+    margin-right: auto;
+    text-align: left;
+  }
+
+  .find-row .btn-outline {
+    flex: 1;
+  }
+}
+
 .rotate-up {
   transform: rotate(-90deg);
 }

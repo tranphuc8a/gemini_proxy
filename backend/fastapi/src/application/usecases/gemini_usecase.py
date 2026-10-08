@@ -14,15 +14,25 @@ from src.application.ports.output.message_output_port import MessageOutputPort
 from src.domain.vo.message_request import MessageRequest
 from src.domain.vo.stream_event import StreamEvent
 from src.application.ports.input.gemini_input_port import GeminiInputPort
-from src.domain.utils.validators import validate_message_content, validate_model_name
+from src.domain.utils.validators import validate_message_content
 from src.domain.utils.utils import generate_unique_id, get_current_timestamp
 from src.application.config.config import settings
 from src.domain.models.conversation_domain import ConversationDomain
 from src.domain.models.message_domain import MessageDomain
-from src.domain.enums.enums import EModel, ERole
+from src.domain.enums.enums import ERole
 
 logger = logging.getLogger(__name__)
 
+
+
+def _model_name(model_hint) -> str:
+    """The model for a chat turn: the one asked for, else the deployment's AI_MODEL.
+
+    It used to run the hint (or, with none, GEMINI_URL itself) through an enum that
+    turned every name it did not know into 2.5 Flash — newer models were never used.
+    """
+    name = str(getattr(model_hint, "value", model_hint) or "").strip()
+    return name or settings.AI_MODEL
 
 class GeminiUseCase(GeminiInputPort):
     """Use case coordinating Gemini calls, persistence and conversation updates.
@@ -122,12 +132,8 @@ class GeminiUseCase(GeminiInputPort):
         # persist user message (best-effort)
         await self._persist_user_message(user_msg)
 
-        # determine model
-        try:
-            model = validate_model_name(model_hint or settings.GEMINI_URL or EModel.GEMINI_2_5_PRO)
-            model_name = model.value if isinstance(model, EModel) else str(model)
-        except Exception:
-            model_name = str(model_hint or EModel.GEMINI_2_5_PRO)
+        # The controller has vetted the model against the deployment's catalog (AiUseCase.resolve_model).
+        model_name = _model_name(model_hint)
 
         # build short history
         history: List[MessageDomain] = []
@@ -168,11 +174,7 @@ class GeminiUseCase(GeminiInputPort):
         user_msg.content = validate_message_content(user_msg.content)
         saved_user = await self._persist_user_message(user_msg)
 
-        try:
-            model = validate_model_name(model_hint or settings.GEMINI_URL or EModel.GEMINI_2_5_PRO)
-            model_name = model.value if isinstance(model, EModel) else str(model)
-        except Exception:
-            model_name = str(model_hint or EModel.GEMINI_2_5_PRO)
+        model_name = _model_name(model_hint)
 
         history: List[MessageDomain] = []
         if user_msg.conversation_id:

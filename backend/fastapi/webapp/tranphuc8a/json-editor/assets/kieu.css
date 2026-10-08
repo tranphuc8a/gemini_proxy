@@ -18,6 +18,21 @@
   --ba:      #d29922;
   --tim:     #bc8cff;
   --xanh:    #39c5bb;
+
+  /* Mau cu phap (o Soan va trong Cay). Ti le tuong phan voi nen --bg
+     #0e1116, deu >= 4.5:1 (WCAG AA): khoa 7.2 · chuoi 7.4 · so 7.5 ·
+     bool 7.5 · null 6.2 · dau 5.6 · mo 5.4 · loi 7.5 */
+  --m-khoa:  #4fa3ff;
+  --m-chuoi: #3fb950;
+  --m-so:    #f0883e;
+  --m-bool:  #bc8cff;
+  --m-null:  #8b949e;
+  --m-dau:   #848d97;
+  --m-mo:    #7d8b9a;
+  --m-loi:   #ff7b72;
+  --m-loi-nen: rgba(248, 81, 73, .22);
+  --m-chon:  rgba(79, 163, 255, .34);
+  color-scheme: dark;
 }
 :root[data-sang="1"] {
   --bg:      #f6f8fa;
@@ -36,6 +51,20 @@
   --ba:      #9a6700;
   --tim:     #8250df;
   --xanh:    #137d75;
+
+  /* Voi nen --bg #f6f8fa: khoa 4.9 · chuoi 4.8 · so 4.7 · bool 4.7 ·
+     null 6.0 · dau 4.9 · mo 5.7 · loi 5.0 (deu >= 4.5:1) */
+  --m-khoa:  #0969da;
+  --m-chuoi: #1a7f37;
+  --m-so:    #bc4c00;
+  --m-bool:  #8250df;
+  --m-null:  #57606a;
+  --m-dau:   #656d76;
+  --m-mo:    #59636e;
+  --m-loi:   #cf222e;
+  --m-loi-nen: rgba(207, 34, 46, .14);
+  --m-chon:  rgba(9, 105, 218, .22);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -83,6 +112,10 @@ body {
 .nut:hover { background: var(--surf2); color: var(--tx); border-color: var(--tx3); }
 .nut:active { transform: translateY(1px); }
 .nut.nho { padding: 6px 9px; font-size: 12px; }
+.nut:disabled, .nut:disabled:hover {
+  opacity: .45; cursor: default; transform: none;
+  background: var(--surf); color: var(--tx2); border-color: var(--bd);
+}
 
 /* ---------------------------------------------------------- tab */
 .tab {
@@ -134,6 +167,13 @@ main { flex: 1; min-height: 0; display: flex; }
   border-radius: 4px; padding: 1px 5px; color: var(--ac);
   font: 12px ui-monospace, monospace;
 }
+.mach kbd {
+  display: inline-block; min-width: 1.5em; text-align: center;
+  font: 11px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+  color: var(--tx2); background: var(--surf);
+  border: 1px solid var(--bd); border-bottom-width: 2px; border-radius: 4px;
+  padding: 0 4px; margin: 0 1px;
+}
 
 /* ---------------------------------------------------------- soạn */
 .soan-khung { flex: 1; min-height: 0; display: flex; background: var(--bg); }
@@ -148,26 +188,99 @@ main { flex: 1; min-height: 0; display: flex; }
   user-select: none;
 }
 .so-dong div.loi { color: var(--loi); font-weight: 700; }
-#nhap {
-  flex: 1; min-width: 0;
+
+/* Textarea va lop to mau nam CHONG len nhau va phai trung khit tung ky
+   tu: moi thuoc tinh anh huong toi bo cuc deu khai bao CHUNG o day, dung
+   phu thuoc vao mac dinh cua trinh duyet cho textarea. Be rong / cao cua
+   lop mau do JS dat bang clientWidth / clientHeight cua textarea (tuc da
+   tru thanh cuon). */
+.vung-soan { position: relative; flex: 1; min-width: 0; display: flex; }
+#nhap, .lop-mau {
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
   padding: 12px 16px;
   font: 13px/1.6 ui-monospace, "Cascadia Code", Consolas, monospace;
-  color: var(--tx);
-  background: var(--bg);
-  border: none;
-  resize: none;
+  font-variant-ligatures: none;
+  font-kerning: none;
+  font-feature-settings: normal;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-indent: 0;
+  text-align: left;
+  text-transform: none;
+  -moz-tab-size: 2;
   tab-size: 2;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-break: auto;
+  hyphens: manual;
+}
+#nhap {
+  flex: 1; min-width: 0;
+  position: relative; z-index: 1;
+  color: var(--tx);
+  background: transparent;
+  resize: none;
 }
 #nhap:focus { outline: none; }
+#nhap::placeholder { color: var(--tx3); opacity: 1; }
+.lop-mau {
+  display: none;
+  position: absolute; top: 0; left: 0; z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--tx);
+  background: transparent;
+}
+.vung-soan.co-mau .lop-mau { display: block; }
+/* moi dong mot khoi (gom trong khoi 64 dong): xuong dong la do khoi,
+   khong co "\n" trong lop mau */
+.lop-mau > .k, .lop-mau .h { display: block; }
+.vung-soan.co-mau #nhap { color: transparent; caret-color: var(--tx); }
+/* Chu chon van doc duoc: nen chon trong mo, chu mau o lop duoi hien qua. */
+.vung-soan.co-mau #nhap::selection { color: transparent; background: var(--m-chon); }
+
+/* Token. Dam / nghieng khong doi be rong ky tu cua font monospace, nen
+   khong lech voi con tro cua textarea. */
+.m-k { color: var(--m-khoa); font-weight: 700; }
+.m-s { color: var(--m-chuoi); }
+.m-n { color: var(--m-so); }
+.m-b { color: var(--m-bool); font-weight: 700; }
+.m-z { color: var(--m-null); font-style: italic; }
+.m-p { color: var(--m-dau); }
+.m-loi {
+  color: var(--m-loi);
+  background: var(--m-loi-nen);
+  border-radius: 2px;
+  text-decoration: underline wavy var(--m-loi);
+  text-decoration-skip-ink: none;
+}
 
 /* ---------------------------------------------------------- cây */
 .cay {
   flex: 1; min-height: 0; overflow: auto;
-  padding: 12px 16px;
+  padding: 12px 16px 40px;
   font: 13px/1.65 ui-monospace, "Cascadia Code", Consolas, monospace;
 }
 .n { padding-left: 17px; position: relative; }
-.n > .dong { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.n:focus { outline: none; }
+.n > .dong {
+  --nen-dong: var(--bg);
+  position: relative;
+  /* Khong xuong hang: chuoi dai thi tu xuong dong BEN TRONG o gia tri,
+     canh ten khoa, thay vi ca gia tri rot xuong mot hang rieng. O sua thi
+     duoc xuong hang (man hinh hep). */
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: nowrap;
+  min-height: 21px;
+  padding: 0 4px; margin-left: -4px;
+  border-radius: 4px;
+}
+.n > .dong:hover { --nen-dong: var(--surf); background: var(--surf); }
+.n:focus > .dong { --nen-dong: var(--surf2); background: var(--surf2); }
+.n:focus-visible > .dong { outline: 2px solid var(--ac); outline-offset: -1px; }
 .mo-dong {
   position: absolute; left: 0; top: 2px;
   width: 14px; height: 14px; line-height: 12px; text-align: center;
@@ -181,15 +294,110 @@ main { flex: 1; min-height: 0; display: flex; }
 }
 .mo-dong:hover { color: var(--ac); border-color: var(--ac); }
 .n.dong-lai > .con { display: none; }
-.khoa   { color: var(--ac); }
-.dau-2cham { color: var(--tx3); }
-.gt-chuoi { color: var(--ok); }
-.gt-so    { color: var(--ba); }
-.gt-bool  { color: var(--tim); }
-.gt-null  { color: var(--tx3); font-style: italic; }
-.kieu     { color: var(--tx3); font-size: 11px; }
-.dem      { color: var(--tx3); font-size: 11px; }
+.khoa   { color: var(--m-khoa); }
+.dau-2cham { color: var(--m-dau); }
+.gt-chuoi { color: var(--m-chuoi); }
+.gt-so    { color: var(--m-so); }
+.gt-bool  { color: var(--m-bool); }
+.gt-null  { color: var(--m-null); font-style: italic; }
+.kieu     { color: var(--m-mo); font-size: 11px; }
+.dem      { color: var(--m-mo); font-size: 11px; }
 .con { border-left: 1px dotted var(--bd); margin-left: 6px; }
+
+.n > .dong.dang-sua { flex-wrap: wrap; }
+/* Ten khoa giu nguyen be rong (khoa qua dai thi moi xuong dong, toi da
+   60% hang); gia tri moi la phan co lai va xuong dong. */
+.n > .dong > .khoa { flex: 0 0 auto; max-width: 60%; overflow-wrap: anywhere; }
+.n > .dong > .gt { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.n > .dong > .dau-2cham, .n > .dong > .kieu, .n > .dong > .dem { flex: none; }
+
+/* Cho bam duoc de sua: gach chan cham khi re chuot. */
+.gt, .khoa[data-hd] { cursor: text; overflow-wrap: anywhere; }
+.gt:hover, .khoa[data-hd]:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+.kieu[data-hd], .ngoac, .dem, .xem-truoc { cursor: pointer; }
+
+/* Xem truoc cua nhanh dang GAP — mo, nghieng, chu nho de khong bao gio
+   bi tuong la du lieu; mo nhanh ra thi an di. */
+.xem-truoc {
+  color: var(--m-mo); font-style: italic; font-size: 12px;
+  flex: 0 1 auto; min-width: 0; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.n:not(.dong-lai) > .dong > .xem-truoc { display: none; }
+
+/* Nut thao tac cua tung dong: hien khi re chuot / dang chon, NAM DE len
+   cuoi dong (absolute) de khong lam dong xo lech khi hien ra. */
+.thao-tac {
+  position: absolute; top: 0; right: 0;
+  display: none; align-items: center; gap: 3px;
+  height: 21px;
+  padding: 0 3px 0 18px;
+  background: linear-gradient(90deg, transparent, var(--nen-dong) 16px);
+  border-radius: 0 4px 4px 0;
+}
+.n > .dong:hover > .thao-tac,
+.n:focus > .dong > .thao-tac,
+.n > .dong:focus-within > .thao-tac { display: inline-flex; }
+.n > .dong.dang-sua > .thao-tac { display: none; }
+.nut-tt {
+  font: 12px/1 system-ui, "Segoe UI", sans-serif;
+  min-width: 22px; height: 19px; padding: 0 5px;
+  color: var(--tx2); background: var(--surf);
+  border: 1px solid var(--bd); border-radius: 4px;
+  cursor: pointer;
+}
+.nut-tt:hover { color: var(--ac); border-color: var(--ac); background: var(--surf2); }
+.nut-tt.nut-xoa:hover { color: var(--loi); border-color: var(--loi); }
+.nut-tt:disabled, .nut-tt:disabled:hover {
+  opacity: .4; cursor: default;
+  color: var(--tx3); border-color: var(--bd); background: var(--surf);
+}
+.nut-tt:focus-visible, .nut-sua:focus-visible, .chon-kieu:focus-visible {
+  outline: 2px solid var(--ac); outline-offset: 1px;
+}
+
+/* O sua tai cho */
+.o-sua {
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px;
+  flex: 1 1 18em; min-width: 0; max-width: 100%;
+  padding: 2px 0;
+}
+.o-sua.o-sua-khoa { flex: 0 1 22em; }
+.o-truong { display: flex; align-items: center; flex: 1 1 10em; min-width: 0; }
+.o-nhap {
+  flex: 1 1 auto; min-width: 0; width: 100%;
+  font: 13px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace;
+  color: var(--tx); background: var(--bg2);
+  border: 1px solid var(--ac); border-radius: 5px;
+  padding: 2px 7px;
+  outline: none;
+}
+.o-nhap:focus { box-shadow: 0 0 0 2px var(--acbg); }
+textarea.o-nhap { resize: vertical; min-height: 3.4em; }
+select.o-nhap { width: auto; flex: 0 0 auto; }
+.o-nhap[aria-invalid="true"] { border-color: var(--loi); box-shadow: 0 0 0 2px var(--m-loi-nen); }
+.chon-kieu {
+  font: 12px/1.3 system-ui, "Segoe UI", sans-serif;
+  height: 24px; padding: 0 4px;
+  color: var(--tx2); background: var(--surf);
+  border: 1px solid var(--bd); border-radius: 5px;
+}
+.nut-sua {
+  font: 13px/1 system-ui, "Segoe UI", sans-serif;
+  width: 26px; height: 24px; padding: 0;
+  color: var(--tx2); background: var(--surf);
+  border: 1px solid var(--bd); border-radius: 5px;
+  cursor: pointer;
+}
+.nut-sua.nut-luu { color: var(--ok); }
+.nut-sua.nut-luu:hover { border-color: var(--ok); background: var(--surf2); }
+.nut-sua.nut-huy:hover { color: var(--loi); border-color: var(--loi); background: var(--surf2); }
+.ghi-chu-sua { font-size: 12px; color: var(--m-mo); font-style: italic; padding: 0 2px; }
+.loi-sua { flex-basis: 100%; font: 12px/1.4 system-ui, "Segoe UI", sans-serif; color: var(--loi); }
+.loi-sua:empty { display: none; }
+
+.bao-cay { font-size: 12px; color: var(--ac); }
+.mach-cay { line-height: 1.9; }
 
 /* ---------------------------------------------------------- kết quả */
 .ket {
@@ -241,4 +449,5 @@ main { flex: 1; min-height: 0; display: flex; }
   .dau h1 { font-size: 15px; }
   .hieu .phu { display: none; }
   .so-dong { width: 40px; }
+  .mach-phim { display: none; }
 }

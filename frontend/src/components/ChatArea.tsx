@@ -32,9 +32,10 @@ import { useAppStore } from '../store/appStore';
 import { conversationService } from '../services/conversationService';
 import { geminiService } from '../services/geminiService';
 import { describeApiError } from '../services/apiClient';
-import { canOffer } from '../services/aiService';
+import { aiService, canOffer } from '../services/aiService';
 import { useAiStatus } from '../hooks/useAiStatus';
-import { EModel, ERole, type ChatMessage } from '../types';
+import { useAiModels } from '../hooks/useAiModels';
+import { ERole, type ChatMessage } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { EmptyState } from './EmptyState';
 import { CompareModelsModal } from './CompareModelsModal';
@@ -171,7 +172,20 @@ export const ChatArea: React.FC = () => {
   const { t } = useTranslation();
   const language = useAppStore((state) => state.language);
   const [inputValue, setInputValue] = useState('');
-  const [selectedModel, setSelectedModel] = useState<EModel>(EModel.GEMINI_2_5_FLASH);
+  // The pick is remembered for every page of this server (course tutor, Markdown, …): see aiService.
+  const [pickedModel, setPickedModel] = useState(() => aiService.chosenModel());
+  const { options: modelOptions, defaultModel } = useAiModels();
+  const usableModels = modelOptions.filter((option) => !option.disabled).map((option) => option.value);
+  const selectedModel =
+    pickedModel && usableModels.includes(pickedModel)
+      ? pickedModel
+      : usableModels.includes(defaultModel)
+        ? defaultModel
+        : usableModels[0] ?? defaultModel;
+  const pickModel = (model: string) => {
+    setPickedModel(model);
+    aiService.chooseModel(model);
+  };
   const [isSending, setIsSending] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
@@ -651,13 +665,11 @@ export const ChatArea: React.FC = () => {
         <Space wrap>
           <Select
             value={selectedModel}
-            onChange={setSelectedModel}
+            onChange={pickModel}
             aria-label={t('chat.selectModel')}
             className="chat-model-select"
-            options={Object.values(EModel).map((model) => ({
-              label: t(`models.${model}`),
-              value: model,
-            }))}
+            popupMatchSelectWidth={false}
+            options={modelOptions}
           />
           {/* Goes through the AI gateway, unlike the chat itself: offered only
               when the gateway would let this visitor in (or just wants a code). */}

@@ -1,12 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import remarkMath from 'remark-math'
-import rehypeKatex from 'rehype-katex'
-import rehypeRaw from 'rehype-raw'
-import rehypeSanitize from 'rehype-sanitize'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { resolveTheme, useEditorStore } from '../store'
-import { rehypeEnhance, sanitizeSchema } from '../lib/rehypeEnhance'
 import { toggleTaskAtIndex } from '../lib/editorCommands'
 import {
   collectPreviewAnchors,
@@ -19,11 +12,8 @@ import {
   onScrollSync,
   type LineAnchor
 } from '../lib/paneSync'
-import MermaidDiagram from './MermaidDiagram'
-import CodeBlock from './CodeBlock'
+import MarkdownView from './MarkdownView'
 import './Preview.css'
-// Without this stylesheet KaTeX output renders as unstyled spans.
-import 'katex/dist/katex.min.css'
 
 /** Keeps typing responsive: re-parsing on every keystroke stutters on long files. */
 const RENDER_DEBOUNCE_MS = 120
@@ -115,45 +105,6 @@ function Preview() {
     [content, isAdmin, setContent]
   )
 
-  const components = useMemo(
-    () => ({
-      a: ({ node, ...props }: any) => {
-        void node
-        const href = String(props.href ?? '')
-        // In-document anchors must scroll the preview, not open a new tab.
-        return href.startsWith('#') ? <a {...props} /> : <a {...props} target="_blank" rel="noopener noreferrer" />
-      },
-      img: ({ node, ...props }: any) => {
-        void node
-        return <img {...props} loading="lazy" decoding="async" />
-      },
-      input: ({ node, ...props }: any) => {
-        void node
-        return <input {...props} readOnly={false} onChange={() => undefined} disabled={false} />
-      },
-      code: ({ node, className, children, ...props }: any) => {
-        void node
-        const match = /language-([\w-]+)/.exec(className ?? '')
-        const language = match?.[1] ?? ''
-        const source = String(children).replace(/\n$/, '')
-
-        if (!language) {
-          return (
-            <code className={className} {...props}>
-              {children}
-            </code>
-          )
-        }
-        if (language === 'mermaid') return <MermaidDiagram source={source} theme={theme} />
-        return <CodeBlock language={language} source={source} theme={theme} />
-      },
-      // The highlighter brings its own wrapper, so the default <pre> would
-      // nest a second scroll container around it.
-      pre: ({ children }: any) => <>{children}</>
-    }),
-    [theme]
-  )
-
   return (
     <section className="preview-pane" aria-label="Rendered preview">
       <div className="pane-header">
@@ -163,19 +114,8 @@ function Preview() {
 
       <div ref={scrollRef} className="preview-scroll" onScroll={onScroll} onDoubleClick={onDoubleClick} onClick={onClick}>
         <article ref={articleRef} className="markdown-body">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[
-              rehypeRaw,
-              rehypeEnhance,
-              [rehypeSanitize, sanitizeSchema],
-              rehypeKatex
-            ]}
-            components={components}
-          >
-            {debounced}
-          </ReactMarkdown>
-          {!debounced.trim() && <p className="preview-empty">Nothing to preview yet — start writing on the left.</p>}
+          <MarkdownView source={debounced} theme={theme} />
+          {!debounced.trim() && <p className="preview-empty">Nothing to preview yet — start writing in the editor.</p>}
         </article>
       </div>
     </section>

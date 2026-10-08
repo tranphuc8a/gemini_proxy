@@ -27,8 +27,20 @@
 
 .palette-results {
   max-height: min(60vh, 440px);
+  max-height: min(60dvh, 440px);
   overflow-y: auto;
   padding: 6px;
+}
+
+@media (pointer: coarse) {
+  .palette-item {
+    min-height: 44px;
+  }
+
+  .palette-input kbd,
+  .palette-item kbd {
+    display: none;
+  }
 }
 
 .palette-group {

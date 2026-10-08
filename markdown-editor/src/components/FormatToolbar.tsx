@@ -119,35 +119,77 @@ function ToolbarButton({ label, shortcut, disabled, onClick, children }: Toolbar
   )
 }
 
+/** Matches `.toolbar-popover`'s min-width; used to keep it on screen. */
+const POPOVER_WIDTH = 180
+const VIEWPORT_MARGIN = 8
+
 function HeadingMenu({ disabled, onPick }: { disabled: boolean; onPick: (level: number) => void }) {
-  const [open, setOpen] = useState(false)
+  // Where the popover sits, in viewport coordinates; null while closed.
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null)
+  const open = anchor !== null
   const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  /**
+   * The toolbar scrolls sideways, and `overflow-x: auto` clips vertically too,
+   * so an absolutely positioned popover was cut off at the toolbar's bottom
+   * edge. Fixed positioning measured from the trigger escapes that clip.
+   */
+  const toggle = () => {
+    if (open) {
+      setAnchor(null)
+      return
+    }
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - POPOVER_WIDTH - VIEWPORT_MARGIN)
+    setAnchor({ top: rect.bottom + 4, left: Math.min(Math.max(VIEWPORT_MARGIN, rect.left), maxLeft) })
+  }
 
   useEffect(() => {
     if (!open) return
     const close = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false)
+      if (!ref.current?.contains(event.target as Node)) setAnchor(null)
     }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.stopPropagation()
+      setAnchor(null)
+      triggerRef.current?.focus()
+    }
+    // A fixed popover would float away from its trigger, so anything that
+    // moves the trigger closes it instead.
+    const dismiss = () => setAnchor(null)
     document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
+    document.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('resize', dismiss)
+    window.addEventListener('scroll', dismiss, true)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('resize', dismiss)
+      window.removeEventListener('scroll', dismiss, true)
+    }
   }, [open])
 
   return (
     <div className="toolbar-menu" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         className={`toolbar-btn${open ? ' is-active' : ''}`}
         onMouseDown={(event) => event.preventDefault()}
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         disabled={disabled}
         title="Heading (Ctrl+1 … Ctrl+6)"
         aria-label="Heading level"
         aria-expanded={open}
+        aria-haspopup="menu"
       >
         <IconHeading />
       </button>
-      {open && (
-        <div className="toolbar-popover" role="menu">
+      {anchor && (
+        <div className="toolbar-popover" role="menu" style={{ top: anchor.top, left: anchor.left }}>
           {[1, 2, 3, 4, 5, 6].map((level) => (
             <button
               key={level}
@@ -156,7 +198,7 @@ function HeadingMenu({ disabled, onPick }: { disabled: boolean; onPick: (level: 
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
                 onPick(level)
-                setOpen(false)
+                setAnchor(null)
               }}
               style={{ fontSize: `${17 - level}px` }}
             >

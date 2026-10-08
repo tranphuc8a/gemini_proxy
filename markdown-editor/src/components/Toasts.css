@@ -65,3 +65,19 @@
   color: var(--text);
   background-color: var(--bg-hover);
 }
+
+@media (pointer: coarse) {
+  .toast-close {
+    width: 40px;
+    height: 40px;
+    margin: -8px -6px -8px 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .toast-stack {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+}

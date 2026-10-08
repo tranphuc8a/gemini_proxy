@@ -17,8 +17,9 @@ import pytest
 
 os.environ.setdefault("TESTING", "1")
 
+from src.adapter.output.gemini.service.gemini_ai_model import GeminiAiModel
 from src.adapter.output.mysql.db.base import Base, get_async_engine, get_async_session
-from src.application.usecases import ai_usecase, arena_usecase
+from src.application.usecases import ai_models, ai_usecase, arena_usecase
 
 
 @pytest.fixture(autouse=True)
@@ -30,6 +31,23 @@ def _fresh_ai_limits():
     yield
     ai_usecase.reset_limits()
     arena_usecase.reset_limits()
+
+
+@pytest.fixture(autouse=True)
+def _no_live_model_listing(monkeypatch):
+    """The model catalog never reaches Google from a test.
+
+    A local .env may hold a real GEMINI_API_KEY, and picking any model other than
+    AI_MODEL consults the catalog; the real adapter's listing therefore answers
+    "unavailable" (the catalog falls back to its built-in list), and every test
+    starts with an empty catalog cache. A test that needs a listing uses FakeModel.
+    """
+    async def _unavailable(self):
+        raise RuntimeError("models.list is not called from tests")
+    monkeypatch.setattr(GeminiAiModel, "list_models", _unavailable)
+    ai_models.reset_catalog()
+    yield
+    ai_models.reset_catalog()
 
 
 def arun(coro):

@@ -84,7 +84,8 @@ function ve() {
     nutCC("dam", "<b>B</b>", "Đậm (Ctrl+B)") + nutCC("nghieng", "<i>I</i>", "Nghiêng (Ctrl+I)") + nutCC("h2", "H2", "Tiêu đề mục") +
     nutCC("h3", "H3", "Tiêu đề mục con") + '<span class="vach"></span>' + nutCC("lienKet", "🔗", "Liên kết tới bài khác") +
     nutCC("anh", "🖼", "Chèn ảnh (tải lên khoá)") + nutCC("ma", "&lt;/&gt;", "Khối mã") + nutCC("cong", "∑", "Công thức") +
-    nutCC("hop", "📌", "Hộp chú ý") + nutCC("bang", "▦", "Bảng") +
+    nutCC("hop", "📌", "Hộp chú ý") + nutCC("bang", "▦", "Bảng") + '<span class="vach"></span>' +
+    nutCC("ai", "✨ AI", "Trợ lý AI cho đoạn đang chọn: viết lại, mở rộng, rút gọn, dịch, soạn câu hỏi / bài tập") +
     '<span class="sp"></span><span class="seg" role="group" aria-label="Chế độ xem">' +
     ["soan", "chia", "xem"].map(function (m) {
       return '<button type="button" class="btn xs' + (cheDo === m ? " on" : "") + '" data-che-do="' + m + '"' + (m === "xem" ? ' id="eXem"' : "") +
@@ -275,6 +276,69 @@ function congCu(id) {
   else if (id === "bang") chen("\n| Cột 1 | Cột 2 |\n|---|---|\n| ", " | |\n", "ô");
   else if (id === "anh") $("#eTep").click();
   else if (id === "lienKet") chonBaiLienKet();
+  else if (id === "ai") troLyAi();
+}
+
+/* ---------- ✨ trợ lý AI trên đoạn đang chọn (POST /ai/draft/assist — quản trị viên) ----------
+   Kết quả luôn hiện để xem trước (dựng bằng chính bộ dựng bài), chỉ vào ô soạn khi bấm. */
+var VIEC_AI = [["rewrite", "Viết lại cho rõ ràng hơn"], ["expand", "Mở rộng — thêm giải thích, ví dụ"], ["shorten", "Rút gọn còn khoảng một nửa"],
+  ["simplify", "Viết lại cho người mới"], ["translate_en", "Dịch sang tiếng Anh"], ["translate_vi", "Dịch sang tiếng Việt"],
+  ["quiz", "Soạn câu hỏi tự kiểm tra"], ["exercise_py", "Soạn bài tập Python tự chấm"], ["exercise_js", "Soạn bài tập JavaScript tự chấm"]];
+function troLyAi() {
+  var ta = $("#eMd"), a = ta.selectionStart, b = ta.selectionEnd, chon = ta.value.slice(a, b);
+  if (chon.trim().length < 20) { QL.toast("Bôi đen một đoạn (ít nhất vài câu) trong ô soạn để nhờ AI", true); ta.focus(); return; }
+  QL.hoi({
+    tieuDe: "✨ Trợ lý AI — đoạn đã chọn",
+    moTa: "<p class=\"muted small\">" + chon.length + " ký tự đã chọn. Kết quả hiện để bạn xem trước — chỉ vào bài khi bạn bấm.</p>",
+    truong: [
+      { ten: "action", nhan: "Việc", kieu: "select", luaChon: VIEC_AI, giaTri: QL.LS.get("aiViec", "rewrite") },
+      { ten: "level", nhan: "Người học", kieu: "select", luaChon: [["co-ban", "Mới bắt đầu"], ["trung-cap", "Đã có nền tảng"], ["nang-cao", "Nâng cao"]],
+        giaTri: QL.LS.get("aiTrinhDo", "co-ban") },
+      { ten: "notes", nhan: "Yêu cầu thêm (tuỳ chọn)", kieu: "textarea", dong: 2 }
+    ],
+    nut: "Gửi cho AI"
+  }).then(function (v) {
+    if (!v) return null;
+    QL.LS.set("aiViec", v.action); QL.LS.set("aiTrinhDo", v.level);
+    QL.toast("AI đang làm việc với đoạn đã chọn…");
+    return QL.api("POST", "/ai/draft/assist", {
+      action: v.action, selection: chon, course_title: (S.course || {}).title || "", lesson_title: (S.doc || {}).title || "",
+      level: v.level, notes: v.notes || ""
+    }).then(function (r) { return xemKetQuaAi(r, a, b, chon, v.action); });
+  }).catch(QL.baoLoi);
+}
+function xemKetQuaAi(r, a, b, chon, viec) {
+  var them = viec === "quiz" || viec.indexOf("exercise") === 0;
+  var ten = (VIEC_AI.filter(function (x) { return x[0] === viec; })[0] || [viec, viec])[1];
+  var p = QL.hoi({
+    tieuDe: "✨ " + ten, rong: true,
+    moTa: (r.note ? '<p class="muted small">' + esc(r.note) + "</p>" : "") + '<div class="ai-xem" id="aiXem"></div>' +
+      '<details class="ai-md"><summary>Markdown</summary><pre class="mono" id="aiMd"></pre></details>',
+    lua: (them ? [] : [{ nhan: "Chèn sau đoạn chọn", giaTri: "chen" }]).concat([{ nhan: "Chép markdown", giaTri: "chep" }]),
+    nut: them ? "Chèn sau đoạn chọn" : "Thay đoạn đã chọn", huy: "Đóng"
+  });
+  var xem = document.getElementById("aiXem");
+  if (xem && window.HienThi && S.doc) {
+    xem.appendChild(HienThi.render(r.markdown || "", { docId: S.doc.id, docs: (S.manifest || {}).docs || {}, toast: QL.toast, assetUrl: urlTep, labCho: true }));
+    HienThi.veMermaid(xem);
+  }
+  var md = document.getElementById("aiMd");
+  if (md) md.textContent = r.markdown || "";
+  return p.then(function (kq) {
+    if (!kq) return;
+    if (kq.chon === "chep") {
+      (navigator.clipboard ? navigator.clipboard.writeText(r.markdown) : Promise.reject()).then(function () { QL.toast("Đã chép markdown"); },
+        function () { QL.toast("Không chép được — mở mục Markdown để chép tay", true); });
+      return;
+    }
+    var ta = $("#eMd");
+    if (!ta) return;
+    if (ta.value.slice(a, b) !== chon) { a = b = ta.selectionEnd; QL.toast("Ô soạn đã đổi từ lúc gửi — chèn vào chỗ con trỏ"); }
+    if (them || kq.chon === "chen") ta.setRangeText("\n\n" + r.markdown + "\n", b, b, "end");
+    else ta.setRangeText(r.markdown, a, b, "select");
+    ta.focus();
+    ta.dispatchEvent(new Event("input"));
+  });
 }
 function duongTuongDoi(tu, den) {
   var a = tu.split("/"); a.pop();

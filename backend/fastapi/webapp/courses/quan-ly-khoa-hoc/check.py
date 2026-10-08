@@ -609,6 +609,33 @@ def kich_ban(pw, may, tep_nho, tep_anh, chup, anh, loi):
         (ok if (dd or {}).get("md", "").startswith("# Bài thứ nhất\n") else sai)("soan bang AI: bai co tieu de # dau tien")
         may.gemini.tra_loi = None
 
+        # 19d. Chon model o man AI (GET /ai/models) + tro ly AI tren doan chon trong o soan (POST /ai/draft/assist)
+        pg.click("#btnAI")
+        pg.wait_for_selector('#aiModels input[name="aiModel"][value="gemini-3.8-flash"]', timeout=15000)
+        pg.check('#aiModels input[name="aiModel"][value="gemini-3.8-flash"]')
+        (ok if pg.text_content("#aiDangDung") == "gemini-3.8-flash" else sai)("man AI: bang model, chon model cho chinh minh")
+        may.gemini.tra_loi = lambda body: json.dumps({"md": "Đoạn đã được AI viết lại cho rõ ràng hơn.", "note": "Gọn câu."},
+                                                     ensure_ascii=False)
+        truoc = len(may.gemini.goi)
+        pg.goto(QL + "#/khoa-thu-ai/tree/p1/bai-01.md")
+        pg.wait_for_selector("#eMd", timeout=15000)
+        pg.evaluate("() => { const t = document.querySelector('#eMd'); t.focus(); t.setSelectionRange(0, 60); }")
+        pg.click('[data-cc="ai"]')
+        pg.wait_for_selector('.dlg [data-ten="action"]', timeout=5000)
+        pg.select_option('.dlg [data-ten="action"]', "rewrite")
+        pg.click('.dlg button[type="submit"]')
+        pg.wait_for_selector("#aiXem .prose", timeout=20000)
+        pg.click('.dlg button[type="submit"]')
+        moi = pg.input_value("#eMd")
+        gui = may.gemini.goi[truoc:]
+        (ok if moi.startswith("Đoạn đã được AI viết lại") and gui and "/models/gemini-3.8-flash:" in gui[-1]["path"] else sai)(
+            "tro ly AI trong o soan: xem truoc roi thay doan chon; model da chon duoc dung (%r, %s)" % (
+                moi[:40], gui[-1]["path"] if gui else "khong goi"))
+        pg.click("#eLuu")                                # luu lai de buoc sau mo bai khac khong bi hoi "bo thay doi?"
+        pg.wait_for_function(DA_LUU)
+        pg.evaluate("() => { Object.keys(localStorage).filter(k => k.indexOf('ai.model@') === 0).forEach(k => localStorage.removeItem(k)); }")
+        may.gemini.tra_loi = None
+
         # 20. an toan: markdown doc hai khong chay tren trang khoa hoc lan xem truoc
         _, cc = lay(may, SD, admin)
         nhom = cc["nav"][0]["groups"][0]

@@ -84,6 +84,12 @@
   border-color: var(--danger);
 }
 
+/* The highlighter wraps code in a <div>, not a <pre>, so the inline-code
+   padding from `.markdown-body code` applied and pushed the first line in. */
+.markdown-body .code-block code {
+  padding: 0;
+}
+
 .code-block pre,
 .code-block div[class*='language-'] {
   margin: 0 !important;
@@ -159,5 +165,20 @@
 @media (max-width: 640px) {
   .preview-scroll {
     padding: 20px 16px 40px;
+  }
+}
+
+/* The copy button only appeared on hover, which touch screens do not have. */
+@media (hover: none) {
+  .code-copy {
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse) {
+  .code-copy {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 13px;
   }
 }

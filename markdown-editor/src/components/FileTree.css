@@ -148,3 +148,41 @@
   color: #fff;
   background-color: var(--danger);
 }
+
+/* Without hover the row actions would be unreachable, so they always show. */
+@media (hover: none) {
+  .tree-actions {
+    display: flex;
+  }
+}
+
+@media (pointer: coarse) {
+  .tree-row {
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .tree-action {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius);
+  }
+
+  .tree-rename {
+    height: 32px;
+  }
+
+  /* A 40px hit box drawn over the 16px chevron; the negative margins keep
+     the row laid out exactly as before. */
+  .tree-twisty {
+    position: relative;
+    z-index: 1;
+    width: 40px;
+    height: 40px;
+    margin: 0 -12px;
+  }
+
+  .tree-empty {
+    padding: 6px 0;
+  }
+}

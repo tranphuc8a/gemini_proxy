@@ -1,6 +1,6 @@
 {
   "title": "JSON Editor",
-  "description": "Trình soạn thảo JSON chạy hoàn toàn trong trình duyệt, không cần cài gì và không gửi dữ liệu đi đâu. Báo lỗi cú pháp theo đúng dòng và cột thay vì chỉ nói vị trí ký tự. Có năm chế độ: soạn với số dòng và tô dòng lỗi, duyệt cây gấp mở từng nhánh, truy vấn theo đường dẫn kiểu JSONPath ($.a.b, [*], ..khoá), so sánh hai JSON theo cây nên đổi thứ tự khoá không bị tính là khác, và thống kê số nút, độ sâu, kích thước sau khi nén. Kèm định dạng, nén, sắp khoá theo bảng chữ cái, gỡ một lớp chuỗi cho JSON bị đóng gói, mở và tải tệp, giao diện sáng tối.",
+  "description": "Trình soạn thảo JSON chạy hoàn toàn trong trình duyệt, không cần cài gì và không gửi dữ liệu đi đâu. Báo lỗi cú pháp theo đúng dòng và cột thay vì chỉ nói vị trí ký tự. Có năm chế độ: soạn với tô màu cú pháp (khoá, chuỗi, số, true/false, null, dấu câu — sáng tối đều đủ tương phản), số dòng và đánh dấu đúng ký tự lỗi; cây sửa được trực tiếp — sửa giá trị, đổi kiểu, đổi tên khoá, thêm, xoá, đổi chỗ phần tử mảng, có hoàn tác / làm lại và dùng được hoàn toàn bằng bàn phím, nhánh đang gấp hiện xem trước ngắn (ví dụ name: \"Phúc\") để phân biệt các phần tử, trạng thái gấp mở giữ nguyên sau mỗi lần sửa; truy vấn theo đường dẫn kiểu JSONPath ($.a.b, [*], ..khoá); so sánh hai JSON theo cây nên đổi thứ tự khoá không bị tính là khác; và thống kê số nút, độ sâu, kích thước sau khi nén. Kèm định dạng, nén, sắp khoá theo bảng chữ cái, gỡ một lớp chuỗi cho JSON bị đóng gói, mở và tải tệp, giao diện sáng tối theo hệ điều hành.",
   "category": "Công cụ",
   "tags": [
     "json",
@@ -12,6 +12,11 @@
     "so-sanh",
     "diff",
     "cay",
+    "sua-tren-cay",
+    "hoan-tac",
+    "xem-truoc",
+    "to-mau-cu-phap",
+    "syntax-highlight",
     "validator",
     "offline",
     "khong-thu-vien",

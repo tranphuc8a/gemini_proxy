@@ -13,10 +13,8 @@ from typing import Any, Dict
 
 from src.application.exceptions.exceptions import BadGatewayError, BadRequestError
 from src.application.usecases.ai_usecase import AiUseCase, generation_config, text_turn
-from src.domain.enums.enums import EModel
 from src.domain.models.ai_domain import AiCaller
 
-MODELS = tuple(m.value for m in EModel)
 PROMPT_CHARS = 8000
 #: Generous: on 2.5 Pro the thinking tokens count against it.
 MAX_TOKENS = 8192
@@ -30,8 +28,7 @@ class AiChatUseCase:
         prompt = (prompt or "").strip()[:PROMPT_CHARS]
         if not prompt:
             raise BadRequestError("Hãy nhập câu hỏi")
-        if model not in MODELS:
-            raise BadRequestError(f"Không có model {model!r} — chọn một trong: {', '.join(MODELS)}")
+        # Which models exist is the deployment's catalog (GET /ai/models); `ask` vets the name.
         started = time.monotonic()
         text, completion = await self.ai.ask(
             caller, "compare", contents=[text_turn(prompt)],

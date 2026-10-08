@@ -22,6 +22,22 @@ const ALLOWED: AiStatus = {
 };
 const NEEDS_CODE: AiStatus = { ...ALLOWED, access: 'code', allowed: false, needs: 'code' };
 
+/** GET /ai/models as the server answers it: its default first, newest after. */
+const model = (id: string, label: string, extra: Record<string, unknown> = {}) => ({
+  id, label, tier: 'flash', preview: false, alias: false, adminOnly: false, default: false, allowed: true, ...extra,
+});
+const MODELS = {
+  default: 'gemini-2.5-flash',
+  source: 'api',
+  admin: false,
+  models: [
+    model('gemini-2.5-flash', 'Gemini 2.5 Flash', { default: true }),
+    model('gemini-2.5-pro', 'Gemini 2.5 Pro', { tier: 'pro' }),
+    model('gemini-3.8-flash', 'Gemini 3.8 Flash'),
+    model('gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview', { tier: 'pro', preview: true, adminOnly: true, allowed: false }),
+  ],
+};
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -50,6 +66,7 @@ const stubGateway = ({
       return new Promise<Response>((resolve) => held.push(() => resolve(chat(model))));
     }
     if (url.endsWith('/ai/status')) return Promise.resolve(json(status));
+    if (url.endsWith('/ai/models')) return Promise.resolve(json(MODELS));
     return Promise.reject(new Error(`unexpected request to ${url}`));
   });
   vi.stubGlobal('fetch', spy);
@@ -119,21 +136,21 @@ describe('CompareModelsModal', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('textbox', { name: /câu hỏi|prompt/i })).toHaveValue('Explain closures');
 
-    await pickModel(user, dialog, /model thứ hai|second model/i, 'Gemini 2.0 Flash');
+    await pickModel(user, dialog, /model thứ hai|second model/i, 'Gemini 3.8 Flash');
     await user.click(runButton(dialog));
 
     // Both requests are out before either has answered: side by side, not one after the other.
     await waitFor(() => expect(gateway.chatBodies()).toHaveLength(2));
     expect(gateway.chatBodies()).toEqual([
       { prompt: 'Explain closures', model: 'gemini-2.5-flash' },
-      { prompt: 'Explain closures', model: 'gemini-2.0-flash' },
+      { prompt: 'Explain closures', model: 'gemini-3.8-flash' },
     ]);
     expect(within(dialog).getAllByRole('status')).toHaveLength(2);
 
     await gateway.release();
 
     expect(await within(dialog).findByText('Answer from gemini-2.5-flash')).toBeInTheDocument();
-    expect(within(dialog).getByText('Answer from gemini-2.0-flash')).toBeInTheDocument();
+    expect(within(dialog).getByText('Answer from gemini-3.8-flash')).toBeInTheDocument();
     expect(within(dialog).getByText(/^800 ms · 42 tokens?$/)).toBeInTheDocument();
     expect(within(dialog).getByText(/^2300 ms · 120 tokens?$/)).toBeInTheDocument();
   });
@@ -164,6 +181,25 @@ describe('CompareModelsModal', () => {
     expect(within(dialog).getByText('Answer from gemini-2.5-flash')).toBeInTheDocument();
   });
 
+  it("offers the server's models, with an administrator's model shown but not pickable", async () => {
+    stubGateway();
+    const user = userEvent.setup();
+    render(<Harness status={ALLOWED} />);
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox', { name: /model thứ hai|second model/i }));
+    const option = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(
+        '.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option[title^="Gemini 3.1 Pro Preview"]'
+      );
+      if (!element) throw new Error('the Pro preview model is not listed');
+      return element;
+    });
+    expect(option.getAttribute('title')).toMatch(/xem trước|preview/i);
+    expect(option.getAttribute('title')).toMatch(/quản trị|admin/i);
+    expect(option).toHaveClass('ant-select-item-option-disabled');
+  });
+
   it('will not compare with an empty prompt, or a model with itself', async () => {
     const gateway = stubGateway();
     const user = userEvent.setup();
@@ -187,6 +223,7 @@ describe('CompareModelsModal', () => {
       const url = String(input);
       if (url.endsWith('/ai/session')) return json({ ok: true, session: 'ai-token', expiresAt });
       if (url.endsWith('/ai/status')) return json(ALLOWED);
+      if (url.endsWith('/ai/models')) return json(MODELS);
       throw new Error(`unexpected request to ${url}`);
     });
     vi.stubGlobal('fetch', spy);
@@ -201,8 +238,8 @@ describe('CompareModelsModal', () => {
     await user.click(within(dialog).getByRole('button', { name: /mở kho|unlock/i }));
 
     await waitFor(() => expect(onStatusChange).toHaveBeenCalledWith(ALLOWED));
-    expect(String(spy.mock.calls[0][0])).toMatch(/\/ai\/session$/);
-    expect(JSON.parse(String(spy.mock.calls[0][1]?.body))).toEqual({ code: 'open-sesame' });
+    const session = spy.mock.calls.find(([input]) => /\/ai\/session$/.test(String(input)));
+    expect(JSON.parse(String(session?.[1]?.body))).toEqual({ code: 'open-sesame' });
     expect(JSON.parse(localStorage.getItem(aiSessionKey(aiRoot(BASE_URL))) ?? 'null')).toEqual({
       token: 'ai-token',
       het: expiresAt,

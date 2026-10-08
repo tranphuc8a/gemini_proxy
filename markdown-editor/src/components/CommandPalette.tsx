@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEditorStore } from '../store'
+import { useReadingStore } from '../readingStore'
 import { flatten, getPath } from '../lib/tree'
 import { extractHeadings } from '../lib/markdown'
 import { emitJump } from '../lib/paneSync'
@@ -16,6 +17,12 @@ interface Command {
   shortcut?: string
   icon?: React.ReactNode
   run: () => void
+}
+
+/** Read at run time: the command list is memoised and would hold a stale size. */
+function stepEditorFont(delta: number) {
+  const { fontSize, setFontSize } = useEditorStore.getState()
+  setFontSize(fontSize + delta)
 }
 
 interface CommandPaletteProps {
@@ -42,6 +49,14 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
       { id: 'view-editor', label: 'View: Editor only', group: 'Commands', shortcut: 'Ctrl+\\', run: () => state.setViewMode('editor') },
       { id: 'view-split', label: 'View: Editor and preview', group: 'Commands', shortcut: 'Ctrl+\\', run: () => state.setViewMode('split') },
       { id: 'view-preview', label: 'View: Preview only', group: 'Commands', shortcut: 'Ctrl+\\', run: () => state.setViewMode('preview') },
+      {
+        id: 'reading',
+        label: 'View: Reading mode',
+        group: 'Commands',
+        hint: 'distraction-free, read-only',
+        shortcut: 'Ctrl+Alt+V',
+        run: () => useReadingStore.getState().openReading()
+      },
       { id: 'theme', label: 'Toggle dark mode', group: 'Commands', run: state.toggleTheme },
       { id: 'theme-system', label: 'Theme: follow the system', group: 'Commands', run: () => state.setTheme('system') },
       { id: 'sidebar', label: 'Toggle sidebar', group: 'Commands', shortcut: 'Ctrl+Shift+B', run: state.toggleSidebar },
@@ -51,6 +66,8 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
       { id: 'sync', label: 'Toggle scroll sync', group: 'Commands', run: state.toggleScrollSync },
       { id: 'numbers', label: 'Toggle line numbers', group: 'Commands', run: state.toggleLineNumbers },
       { id: 'wrap', label: 'Toggle word wrap', group: 'Commands', run: state.toggleWordWrap },
+      { id: 'font-larger', label: 'Editor: Larger text', group: 'Commands', run: () => stepEditorFont(1) },
+      { id: 'font-smaller', label: 'Editor: Smaller text', group: 'Commands', run: () => stepEditorFont(-1) },
       { id: 'save', label: 'Save now', group: 'Commands', shortcut: 'Ctrl+S', run: state.flushPersist },
       { id: 'export-md', label: 'Export as Markdown', group: 'Commands', run: () => exportMarkdown(fileName, content) },
       { id: 'print', label: 'Print or save as PDF', group: 'Commands', shortcut: 'Ctrl+P', run: () => window.print() },

@@ -139,7 +139,10 @@
         (coHighlight ? "" : " · trình duyệt này chưa vẽ được đoạn tô sáng trong bài (vẫn lưu ở đây)") + "</p>" +
       (cac.length ? '<div class="st-cong-cu"><button type="button" class="btn btn-s" data-st="tai">Tải .md</button>' +
         '<button type="button" class="btn btn-s" data-st="chep">Chép markdown</button>' +
-        '<button type="button" class="btn btn-s" data-st="mo">Mở trong Markdown Editor</button></div>' : "") +
+        '<button type="button" class="btn btn-s" data-st="mo">Mở trong Markdown Editor</button></div>' +
+        '<div class="st-ai" id="stAi" hidden><div class="st-cong-cu"><button type="button" class="btn btn-s" data-st="ai-tom">✨ Tóm tắt để ôn</button>' +
+        '<button type="button" class="btn btn-s" data-st="ai-the">✨ Sinh thẻ ôn tập</button></div>' +
+        '<div class="st-ai-kq" id="stAiKq" aria-live="polite"></div></div>' : "") +
       (cac.length ? cac.map(function (b) {
         return '<section class="st-bai"><h2>' + (b.bai ? '<a href="#/' + K.esc(b.bai.slug) + '">' + K.esc(b.bai.title) + "</a>" :
           K.esc(b.id)) + "</h2>" + b.to.map(function (h) {
@@ -160,11 +163,16 @@
         luu(ds().map(function (h) { if (h.id === id) h.ghi = e.target.value.trim(); return h; }));
       }, 300);
     };
+    if (K.ai && cac.length) K.ai.trangThai().then(function (s) {
+      var hop = main.querySelector("#stAi");
+      if (hop && K.ai.dungDuoc(s)) hop.hidden = false;
+    }, function () { /* offline: không có việc AI */ });
     main.onclick = function (e) {
       var x = e.target.closest("[data-xoa]"), b = e.target.closest("[data-st]");
       if (x) { luu(ds().filter(function (h) { return h.id !== x.getAttribute("data-xoa"); })); veTrang(main); return; }
       if (!b) return;
       var md = sangMarkdown(), viec = b.getAttribute("data-st");
+      if (viec === "ai-tom" || viec === "ai-the") { hoiAi(main, viec === "ai-tom" ? "summary" : "cards", b); return; }
       if (viec === "tai") {
         var a = document.createElement("a");
         a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown;charset=utf-8" }));
@@ -187,5 +195,54 @@
     };
     window.scrollTo(0, 0);
   }
+  /* ---------------- ✨ ôn từ sổ tay (POST /ai/notes) ---------------- */
+  function ghiChuGui() {
+    var out = [];
+    nhom().forEach(function (b) {
+      var ten = b.bai ? b.bai.title : b.id;
+      b.to.forEach(function (h) { out.push({ doc: b.id, title: ten, text: h.chu + (h.ghi ? "\nChú thích: " + h.ghi : "") }); });
+      if (b.ghi) out.push({ doc: b.id, title: ten, text: "Ghi chú của bài: " + b.ghi });
+    });
+    return out.slice(0, 200);
+  }
+  function hoiAi(main, viec, nut) {
+    var kq = main.querySelector("#stAiKq");
+    if (!kq) return;
+    nut.disabled = true;
+    kq.innerHTML = '<p class="ai-cho">' + (viec === "summary" ? "Đang soạn bản ôn tập…" : "Đang soạn thẻ ôn tập…") + "</p>";
+    K.ai.goi("notes", { course: K.khoa, action: viec, notes: ghiChuGui() }).then(function (r) {
+      nut.disabled = false;
+      kq.innerHTML = "";
+      if (viec === "summary") {
+        kq.appendChild(K.render(K.ai.boChay(r.answer || ""), ""));
+        return;
+      }
+      var the = r.cards || [], ol = document.createElement("ol");
+      ol.className = "ai-the";
+      the.forEach(function (c) {
+        var li = document.createElement("li"), truoc = K.render(c.front, c.doc || ""), sau = K.render(c.back, c.doc || "");
+        truoc.classList.add("ai-the-truoc");
+        li.appendChild(truoc); li.appendChild(sau);
+        ol.appendChild(li);
+      });
+      kq.appendChild(ol);
+      if (!K.onTap || !the.length) return;
+      var chan = document.createElement("div");
+      chan.className = "ai-the-chan";
+      chan.innerHTML = '<button type="button" class="btn btn-s">Thêm ' + the.length + ' thẻ vào bộ ôn tập</button><a href="#/~on-tap">Mở trang Ôn tập</a>';
+      chan.querySelector("button").addEventListener("click", function (e) {
+        var theoBai = {}, them = 0;
+        the.forEach(function (c) { (theoBai[c.doc || ""] = theoBai[c.doc || ""] || []).push(c); });
+        Object.keys(theoBai).forEach(function (id) { them += K.onTap.them(id, theoBai[id]); });
+        e.target.disabled = true;
+        e.target.textContent = them ? "Đã thêm " + them + " thẻ" : "Các thẻ này đã có trong bộ ôn tập";
+      });
+      kq.appendChild(chan);
+    }, function (e) {
+      nut.disabled = false;
+      K.ai.hienLoi(kq, e, function () { hoiAi(main, viec, nut); });
+    });
+  }
+
   K.dangKyTrang("so-tay", veTrang);
 })();

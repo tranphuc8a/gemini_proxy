@@ -140,6 +140,38 @@ class GeminiClient:
         # If method not present, assume caller already set a streaming-capable URL
         return base_url
 
+    def _models_url(self) -> str:
+        """`.../v1beta/models` from `.../v1beta/models/<model>:generateContent` (empty when the URL has no /models/)."""
+        parsed = urlparse(self.url or "")
+        idx = (parsed.path or "").find("/models/")
+        if idx == -1:
+            return ""
+        return urlunparse((parsed.scheme, parsed.netloc, parsed.path[:idx] + "/models", "", "", ""))
+
+    async def list_models(self) -> list:
+        """Gemini `models.list`: every page, as the raw model resources."""
+        url = self._models_url()
+        if not url:
+            raise GeminiClientError("GEMINI_URL has no /models/ segment to list models from")
+        out, token = [], None
+        for _ in range(10):                      # a few pages at most; guards against a looping token
+            params = {"pageSize": 1000}
+            if token:
+                params["pageToken"] = token
+            try:
+                resp = await self.client.get(url, params=params, headers=self.headers)
+                resp.raise_for_status()
+            except RequestError as exc:
+                raise GeminiClientError(f"Request error while listing Gemini models: {exc}") from exc
+            except HTTPStatusError as exc:
+                raise GeminiClientError(f"Gemini API returned HTTP {exc.response.status_code} for models.list") from exc
+            data = resp.json() or {}
+            out.extend(data.get("models") or [])
+            token = data.get("nextPageToken")
+            if not token:
+                break
+        return out
+
     async def generate(self, 
                        prompt: Any, 
                        model: Optional[str] = None, 

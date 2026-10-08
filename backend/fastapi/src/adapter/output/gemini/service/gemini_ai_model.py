@@ -52,9 +52,33 @@ class GeminiAiModel(AiModelOutputPort):
         # opened it, and requests (and tests) do not share a loop.
         client = GeminiClient()
         try:
-            raw = await client.generate(contents, model=model, extra=extra)
+            try:
+                raw = await client.generate(contents, model=model, extra=extra)
+            except GeminiClientError as exc:
+                # A model that refuses this thinking switch answers HTTP 400; ask once more without it
+                # rather than failing the feature (families differ — see ai_models.thinking_config).
+                thinking = (generation_config or {}).get("thinkingConfig")
+                if not thinking or "HTTP 400" not in str(exc):
+                    raise
+                retry = dict(extra, generationConfig={k: v for k, v in generation_config.items() if k != "thinkingConfig"})
+                raw = await client.generate(contents, model=model, extra=retry)
         except GeminiClientError as exc:
             raise BadGatewayError(f"Lỗi khi gọi AI: {exc}") from exc
         finally:
             await client.stop()
         return parse_completion(raw)
+
+    async def list_models(self) -> List[Dict[str, Any]]:
+        client = GeminiClient()
+        try:
+            raw = await client.list_models()
+        finally:
+            await client.stop()
+        out = []
+        for m in raw:
+            if "generateContent" not in (m.get("supportedGenerationMethods") or []):
+                continue
+            mid = str(m.get("name") or "").split("/", 1)[-1]
+            if mid:
+                out.append({"id": mid, "label": str(m.get("displayName") or mid)})
+        return out

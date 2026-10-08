@@ -8,9 +8,11 @@
         ask       a question, answered from the lesson and the course's related
                   lessons (the course search), citing the ones it used
 
-    answer(caller, question=)
+    answer(caller, question=, course=)
         a question about anything in the published courses, answered from the
-        best lessons of every course (the global search), with citations
+        best lessons of every course (the global search), with citations — or,
+        with `course`, from that one course only (its own search; an unpublished
+        course is an administrator's only, as everywhere)
 
 Every call goes through `AiUseCase.ask` (access, per-address limits, daily
 budget, cache) and reads the lesson the way the reader does: an unpublished
@@ -26,7 +28,7 @@ from typing import Any, Dict, List
 
 from src.application.exceptions.exceptions import BadRequestError, NotFoundError
 from src.application.usecases.ai_usecase import AiUseCase, cache_key, generation_config, parse_json, text_turn
-from src.application.usecases.course_usecase import CourseUseCase
+from src.application.usecases.course_usecase import CourseUseCase, public_config
 from src.domain.models.ai_domain import AiCaller
 from src.domain.models.course_domain import CourseDocDomain
 
@@ -219,15 +221,23 @@ class AiCourseUseCase:
         out["sources"] = [_cite(sources[i - 1]) for i in used]
         return out
 
-    async def answer(self, caller: AiCaller, *, question: str) -> Dict[str, Any]:
+    async def answer(self, caller: AiCaller, *, question: str, course: str = "") -> Dict[str, Any]:
         question = " ".join((question or "").split())[:1000]
         if not question:
             raise BadRequestError("Hãy nhập câu hỏi")
         AiUseCase.check_access(caller)
         sources = []
-        for hit in await self.courses.search_all(question, limit=ASK_SOURCES):
+        hidden = caller.admin
+        if course:
+            info = await self.courses.get_course(course, include_unpublished=hidden)
+            own = {"course": info.slug, "courseTitle": info.title, "webapp": public_config(info.config).get("webapp")}
+            hits = [{**h.model_dump(), **own} for h in
+                    await self.courses.search(course, question, limit=ASK_SOURCES, include_unpublished=hidden)]
+        else:
+            hits = await self.courses.search_all(question, limit=ASK_SOURCES)
+        for hit in hits:
             try:
-                sources.append((hit, await self.courses.get_doc(hit["course"], hit["id"])))
+                sources.append((hit, await self.courses.get_doc(hit["course"], hit["id"], include_unpublished=hidden)))
             except NotFoundError:
                 continue
         if not sources:                               # nothing in the courses: say so, spend nothing
@@ -243,6 +253,7 @@ class AiCourseUseCase:
         result, completion = await self.ai.ask(
             caller, "ask", contents=[text_turn("\n\n".join(parts))], system=SYSTEM_ALL,
             config=generation_config(schema=TEXT_SCHEMA, temperature=0.4, max_tokens=2048),
+            # The prompt is the question + these exact lessons, so the key needs no `course`: old keys stay valid.
             cache=cache_key("ask", question.lower(), [[h["course"], d.id, _rev(d)] for h, d in sources]),
             parse=_text)
         used = [i for i in dict.fromkeys(result["sources"]) if 1 <= i <= len(sources)]

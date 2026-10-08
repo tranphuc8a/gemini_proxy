@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from typing import AsyncIterator
 from src.application.ports.input.gemini_input_port import GeminiInputPort
@@ -7,7 +7,7 @@ from src.domain.vo.message_request import MessageRequest
 from src.domain.vo.stream_event import StreamEvent
 from src.adapter.factory.ai_factory import get_ai_usecase
 from src.adapter.factory.service_factory import ServiceFactory
-from src.adapter.input.controllers.admin_auth import client_address
+from src.adapter.input.controllers.ai_controller import ai_caller
 from src.application.usecases.ai_usecase import AiUseCase
 from src.domain.models.ai_domain import AiCaller, AiCompletion
 from src.adapter.input.controllers.response_utils import success_response
@@ -49,13 +49,14 @@ def _sse_frame(event: StreamEvent) -> bytes:
 
 @router.post("/query", response_model=str)
 async def query(
-    request: Request,
     message_request: MessageRequest = Depends(MessageRequest.as_body),
     gemini_service: GeminiInputPort = Depends(ServiceFactory.get_gemini_input_port),
     ai: AiUseCase = Depends(get_ai_usecase),
+    caller: AiCaller = Depends(ai_caller),
 ):
     """Synchronous (non-streaming) Gemini query returning the full assistant text."""
-    await ai.admit(AiCaller(ip=client_address(request)), FEATURE)
+    message_request.model = await ai.resolve_model(caller, message_request.model or caller.model)
+    await ai.admit(caller, FEATURE)
     resp = await gemini_service.query(message_request)
     await ai.account(FEATURE, _estimated(message_request.content, resp))
     return success_response(data=resp, message="ok", status_code=200)
@@ -63,10 +64,10 @@ async def query(
 
 @router.post("/stream")
 async def query_stream(
-    request: Request,
     message_request: MessageRequest = Depends(MessageRequest.as_body),
     gemini_service: GeminiInputPort = Depends(ServiceFactory.get_gemini_input_port),
     ai: AiUseCase = Depends(get_ai_usecase),
+    caller: AiCaller = Depends(ai_caller),
 ):
     """Streaming endpoint: Server-Sent Events carrying the answer as it arrives.
 
@@ -76,9 +77,10 @@ async def query_stream(
     `error`.
 
     Admission (rate limits, daily budget) is decided BEFORE the stream starts,
-    so a refusal is still a plain HTTP 429/503.
+    so a refusal is still a plain HTTP 429/503 — and so is a model this caller may not use (400/403).
     """
-    await ai.admit(AiCaller(ip=client_address(request)), FEATURE)
+    message_request.model = await ai.resolve_model(caller, message_request.model or caller.model)
+    await ai.admit(caller, FEATURE)
 
     async def generator() -> AsyncIterator[bytes]:
         answer = []
