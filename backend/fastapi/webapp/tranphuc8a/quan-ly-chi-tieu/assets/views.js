@@ -202,7 +202,7 @@
 
   function transactions(c) {
     var ui = c.ui, per = D.period(ui.txPeriod.kind, ui.txPeriod.anchor), n = filterCount(ui.filters);
-    return '<div class="view-head"><h2>Giao dịch</h2><button type="button" class="btn primary no-print" data-act="tx-new">＋ Thêm</button></div>' + banners(c) +
+    return '<div class="view-head"><h2>Giao dịch</h2><div class="row wrap no-print"><button type="button" class="btn" data-act="import-ai">✨ Nhập bằng AI</button><button type="button" class="btn primary" data-act="tx-new">＋ Thêm</button></div></div>' + banners(c) +
       '<div class="stack">' + periodBar(ui.txPeriod.kind, per, "txPeriod") +
       '<div class="row"><label class="sr" for="tx-q">Tìm giao dịch</label><input type="search" id="tx-q" data-on="search" placeholder="Tìm: ghi chú, danh mục, tài khoản, người, số tiền…" value="' + esc(ui.filters.q || "") + '" autocomplete="off">' +
       '<button type="button" class="btn" data-act="filter-toggle" aria-expanded="' + !!ui.showFilters + '">Lọc' + (n ? " (" + n + ")" : "") + "</button></div>" +
@@ -263,19 +263,44 @@
   }
 
   /* ----------------------------------------------------------- 4. Chia tiền */
+  /** Thẻ một nhóm: số dư của tôi với cả nhóm (chỉ khoản của nhóm) và với từng người trong nhóm. */
+  function groupCard(c, g) {
+    var doc = c.doc, gb = L.personBalances(doc, g.id), tot = 0, n = 0;
+    Object.keys(gb).forEach(function (id) { tot += gb[id]; });
+    doc.transactions.forEach(function (t) { if (t.groupId === g.id) n++; });
+    var s = L.settlementOf(tot), isDef = doc.settings.defaultGroupId === g.id;
+    var names = L.groupMembers(doc, g).map(function (id) { return id === c.me ? "Bạn" : personName(c, id); });
+    var pairs = Object.keys(gb).filter(function (id) { return gb[id]; }).map(function (id) {
+      var x = L.settlementOf(gb[id]);
+      return x.direction === "receive" ? esc(personName(c, id)) + " nợ bạn " + fmt(x.amount) : "bạn nợ " + esc(personName(c, id)) + " " + fmt(x.amount);
+    });
+    var text = s.direction === "receive" ? "Nhóm nợ bạn" : s.direction === "pay" ? "Bạn nợ nhóm" : "Bạn đã hoà với nhóm";
+    return '<div class="card"><div class="row between wrap"><div><h3>👥 ' + esc(g.name) + (isDef ? ' <span class="badge acc">mặc định chia</span>' : "") + "</h3>" +
+      '<p class="muted small">' + esc(names.join(", ")) + " · " + n + " khoản</p></div>" +
+      '<div class="right"><div class="small muted">' + text + '</div><div class="val num ' + (s.direction === "receive" ? "thu" : s.direction === "pay" ? "chi" : "") + '" style="font-size:22px;font-weight:700">' + fmt(s.amount) + "</div></div></div>" +
+      (pairs.length ? '<p class="small muted mt-s">' + pairs.join(" · ") + "</p>" : "") +
+      '<div class="row wrap mt-s"><button type="button" class="btn primary" data-act="group-settle" data-id="' + esc(g.id) + '">Quyết toán</button><button type="button" class="btn" data-act="group-detail" data-id="' + esc(g.id) + '">Các khoản chung</button>' +
+      '<button type="button" class="btn ghost" data-act="group-edit" data-id="' + esc(g.id) + '">Sửa</button></div></div>';
+  }
+
   function sharing(c) {
     var doc = c.doc, pb = L.personBalances(doc), others = doc.people.filter(function (p) { return p.id !== c.me; });
+    var groups = (doc.groups || []).filter(function (g) { return !g.archived; }), archived = (doc.groups || []).filter(function (g) { return g.archived; });
     var cards = others.map(function (p) {
       var s = L.settlementOf(pb[p.id] || 0), shared = L.sharedWith(doc, p.id).items.length;
       var text = s.direction === "receive" ? esc(p.name) + " nợ bạn" : s.direction === "pay" ? "Bạn nợ " + esc(p.name) : "Đã hoà với " + esc(p.name);
       var isDefault = (doc.settings.defaultPartnerIds || []).indexOf(p.id) !== -1;
-      return '<div class="card"><div class="row between wrap"><div><h3>' + esc(p.name) + (p.archived ? ' <span class="badge">đã lưu trữ</span>' : "") + (isDefault ? ' <span class="badge acc">mặc định chia</span>' : "") + '</h3><p class="muted small">' + shared + ' khoản liên quan</p></div>' +
+      var inGroups = L.groupsOfPerson(doc, p.id).map(function (g) { return ' <span class="badge">👥 ' + esc(g.name) + "</span>"; }).join("");
+      return '<div class="card"><div class="row between wrap"><div><h3>' + esc(p.name) + (p.archived ? ' <span class="badge">đã lưu trữ</span>' : "") + (isDefault ? ' <span class="badge acc">mặc định chia</span>' : "") + inGroups + '</h3><p class="muted small">' + shared + ' khoản liên quan</p></div>' +
         '<div class="right"><div class="small muted">' + text + '</div><div class="val num ' + (s.direction === "receive" ? "thu" : s.direction === "pay" ? "chi" : "") + '" style="font-size:22px;font-weight:700">' + fmt(s.amount) + "</div></div></div>" +
         '<div class="row wrap mt-s"><button type="button" class="btn primary" data-act="settle" data-id="' + esc(p.id) + '">Quyết toán</button><button type="button" class="btn" data-act="person-detail" data-id="' + esc(p.id) + '">Các khoản chung</button>' +
         '<button type="button" class="btn ghost" data-act="person-edit" data-id="' + esc(p.id) + '">Sửa</button></div></div>';
     }).join("");
-    return '<div class="view-head"><h2>Chia tiền</h2><button type="button" class="btn primary" data-act="person-new">＋ Thêm người</button></div>' + banners(c) +
-      (others.length ? '<div class="grid g2">' + cards + "</div>" : '<div class="card">' + empty("🤝", "Chưa có ai để chia tiền", "Thêm bạn cùng phòng hoặc người thân, rồi đánh dấu “Chi chung” khi nhập khoản chi — app sẽ tự tính ai nợ ai, thay cho phép tính tay cuối tuần.", '<button type="button" class="btn primary" data-act="person-new">＋ Thêm người</button>') + "</div>") +
+    var groupHtml = groups.length ? '<h3>Nhóm</h3><div class="grid g2 mt-s">' + groups.map(function (g) { return groupCard(c, g); }).join("") + "</div>"
+      : (others.length ? '<div class="card"><div class="row between wrap"><div><h3>Đi chung nhiều người?</h3><p class="muted small">Tạo nhóm (phòng trọ, chuyến đi…) để chia một khoản cho cả nhóm, xem mỗi người đã trả bao nhiêu và quyết toán cả nhóm một lần.</p></div><button type="button" class="btn" data-act="group-new">＋ Tạo nhóm</button></div></div>' : "");
+    if (archived.length) groupHtml += '<p class="small muted mt-s">Nhóm đã lưu trữ: ' + archived.map(function (g) { return '<button type="button" class="btn sm ghost" data-act="group-edit" data-id="' + esc(g.id) + '">' + esc(g.name) + "</button>"; }).join(" ") + "</p>";
+    return '<div class="view-head"><h2>Chia tiền</h2><div class="row wrap"><button type="button" class="btn" data-act="group-new">＋ Nhóm</button><button type="button" class="btn primary" data-act="person-new">＋ Thêm người</button></div></div>' + banners(c) + groupHtml +
+      (others.length ? (groupHtml ? '<h3 class="mt">Từng người</h3>' : "") + '<div class="grid g2' + (groupHtml ? " mt-s" : "") + '">' + cards + "</div>" : '<div class="card">' + empty("🤝", "Chưa có ai để chia tiền", "Thêm bạn cùng phòng hoặc người thân, rồi đánh dấu “Chi chung” khi nhập khoản chi — app sẽ tự tính ai nợ ai, thay cho phép tính tay cuối tuần.", '<button type="button" class="btn primary" data-act="person-new">＋ Thêm người</button>') + "</div>") +
       '<div class="card mt"><div class="row between wrap"><div><h3>Máy tính chia hoá đơn trọ</h3><p class="muted small">Điện theo chỉ số công tơ + nước, tạm trú, tiền phòng… rồi chia đều.</p></div><button type="button" class="btn" data-act="bill">Mở máy tính</button></div></div>';
   }
 
@@ -375,7 +400,7 @@
       modeCard("mongo", "🍃 Máy chủ · MongoDB", "Như trên nhưng lưu trong MongoDB. Có thể sao chép sổ hiện tại sang kho này bằng “Tạo không gian mới”.", srvBtn("mongo", "MongoDB")) + "</div>" +
       QL.ui.field("Địa chỉ máy chủ (chỉ cần khi mở file trực tiếp)", '<input type="url" id="api-base" data-on="apibase" value="' + esc(c.apiBase) + '" placeholder="vd http://localhost:6789/api/v1 — để trống nếu mở từ chính máy chủ">', "Khoá truy cập được lưu trong trình duyệt này để tự đồng bộ. Đừng dùng chế độ máy chủ trên máy lạ.") + "</section>" + installSection(c.pwa) +
       '<section class="stack mt"><h3>Dữ liệu</h3><div class="row wrap">' +
-      '<button type="button" class="btn" data-act="backup-json">⬇ Sao lưu JSON</button><button type="button" class="btn" data-act="restore-json">⬆ Khôi phục JSON</button><button type="button" class="btn" data-act="export-csv">⬇ Xuất CSV</button><button type="button" class="btn" data-act="import-csv">⬆ Nhập CSV</button><button type="button" class="btn" data-act="import-text">📋 Dán từ ghi chú</button>' +
+      '<button type="button" class="btn" data-act="backup-json">⬇ Sao lưu JSON</button><button type="button" class="btn" data-act="restore-json">⬆ Khôi phục JSON</button><button type="button" class="btn" data-act="export-csv">⬇ Xuất CSV</button><button type="button" class="btn" data-act="import-csv">⬆ Nhập CSV</button><button type="button" class="btn" data-act="import-text">📋 Nhập từ văn bản / ✨ AI</button>' +
       (c.canUndoReplace ? '<button type="button" class="btn" data-act="undo-replace">↩ Hoàn tác lần thay thế gần nhất</button>' : "") + '<button type="button" class="btn" data-act="sample">Dữ liệu mẫu</button><button type="button" class="btn danger" data-act="wipe">Xoá toàn bộ dữ liệu</button></div></section>' +
       '<section class="stack mt"><h3>Giao diện & nhập liệu</h3><div class="grid g2"><div>' + QL.ui.field("Chủ đề", seg("theme", [{ id: "system", label: "Theo máy" }, { id: "light", label: "Sáng" }, { id: "dark", label: "Tối" }], doc.settings.theme)) + "</div>" +
       '<label class="chk"><input type="checkbox" data-on="smallk"' + (doc.settings.smallAsThousand ? " checked" : "") + "> Số nhỏ hơn 1.000 hiểu là nghìn (gõ 57 = 57.000 ₫)</label>" +

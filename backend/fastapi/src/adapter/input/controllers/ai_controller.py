@@ -12,6 +12,7 @@
     POST /ai/mongo      a question → find / aggregate for one collection, flagged      [Mongo admin session]
     POST /ai/http       explain a response, or write `pm.*` tests for it (Postman Lite)
     POST /ai/chat       one stateless answer from a chosen model (the chat's "compare")
+    POST /ai/spending   free text → proposed transactions for the spending book (nothing is saved)
 
 A caller is identified by the headers the course pages already send:
 `X-Admin-Session` / `X-Admin-Key` (course administrator) and `X-AI-Session`
@@ -23,6 +24,7 @@ Answers are bare JSON like the course API; errors use the common envelope with
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Annotated, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, Query, Request
@@ -31,7 +33,7 @@ from pydantic import BaseModel, Field
 
 from src.adapter.factory.ai_factory import (get_ai_chat_usecase, get_ai_course_usecase, get_ai_draft_usecase,
                                             get_ai_http_usecase, get_ai_query_usecase, get_ai_speaking_usecase,
-                                            get_ai_usecase)
+                                            get_ai_spending_usecase, get_ai_usecase)
 from src.adapter.input.controllers.admin_auth import client_address, is_admin, require_admin
 from src.application.usecases import ai_usecase
 from src.application.usecases.ai_chat_usecase import PROMPT_CHARS, AiChatUseCase
@@ -40,6 +42,7 @@ from src.application.usecases.ai_draft_usecase import AiDraftUseCase
 from src.application.usecases.ai_http_usecase import AiHttpUseCase
 from src.application.usecases.ai_query_usecase import CURRENT_CHARS, QUESTION_CHARS, AiQueryUseCase
 from src.application.usecases.ai_speaking_usecase import AiSpeakingUseCase
+from src.application.usecases.ai_spending_usecase import TEXT_CHARS as SPENDING_TEXT_CHARS, AiSpendingUseCase
 from src.application.usecases.ai_usecase import AiUseCase
 from src.domain.models.ai_domain import AiCaller
 
@@ -167,6 +170,33 @@ class ChatCompare(BaseModel):
     model: str = Field(..., min_length=1, max_length=60)
 
 
+RefId = Annotated[str, Field(min_length=1, max_length=64)]
+
+
+class SpendingRef(BaseModel):
+    id: RefId
+    name: str = Field(..., min_length=1, max_length=80)
+
+
+class SpendingCategory(SpendingRef):
+    kind: Literal["expense", "income"]
+
+
+class SpendingGroup(SpendingRef):
+    memberIds: List[RefId] = Field(default_factory=list, max_length=40)
+
+
+class SpendingAsk(BaseModel):
+    """The text, and the names the answer may refer to (the page's own lists, no amounts)."""
+    text: str = Field(..., min_length=1, max_length=SPENDING_TEXT_CHARS)
+    today: dt.date
+    me: RefId
+    categories: List[SpendingCategory] = Field(default_factory=list, max_length=120)
+    accounts: List[SpendingRef] = Field(default_factory=list, max_length=60)
+    people: List[SpendingRef] = Field(default_factory=list, max_length=200)
+    groups: List[SpendingGroup] = Field(default_factory=list, max_length=50)
+
+
 @router.get("/status")
 async def ai_status(caller: AiCaller = Depends(ai_caller)):
     return JSONResponse(AiUseCase.status(caller), headers={"Cache-Control": "no-store"})
@@ -241,6 +271,17 @@ async def ai_chat(body: ChatCompare, caller: AiCaller = Depends(ai_caller),
                   uc: AiChatUseCase = Depends(get_ai_chat_usecase)):
     return JSONResponse(await uc.compare(caller, prompt=body.prompt, model=body.model),
                         headers={"Cache-Control": "no-store"})
+
+
+@router.post("/spending")
+async def ai_spending(body: SpendingAsk, caller: AiCaller = Depends(ai_caller),
+                      uc: AiSpendingUseCase = Depends(get_ai_spending_usecase)):
+    out = await uc.parse(caller, text=body.text, today=body.today, me=body.me,
+                         categories=[c.model_dump() for c in body.categories],
+                         accounts=[a.model_dump() for a in body.accounts],
+                         people=[p.model_dump() for p in body.people],
+                         groups=[g.model_dump() for g in body.groups])
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/usage", dependencies=[Depends(require_admin)])

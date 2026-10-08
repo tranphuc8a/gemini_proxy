@@ -717,7 +717,7 @@ nhom("csv · xuất và nhập");
   kiem("xuất · chống CSV injection (= + - @ đầu ô)", csv.indexOf("'=HYPERLINK") !== -1 && !/,=HYPERLINK/.test(csv));
   kiem("xuất · sắp xếp theo ngày", csv.indexOf("2026-10-01") < csv.indexOf("2026-10-02") && csv.indexOf("2026-10-02") < csv.indexOf("2026-10-03"));
   const table = C.parseCsv(csv);
-  kiem("parseCsv · số dòng/cột khớp (nháy, xuống dòng trong ô)", table.length === 6 && table.every((r) => r.length === 10), table.map((r) => r.length).join());
+  kiem("parseCsv · số dòng/cột khớp (nháy, xuống dòng trong ô)", table.length === 6 && table.every((r) => r.length === C.HEADERS.length) && C.HEADERS.length === 11, table.map((r) => r.length).join());
   kiem("parseCsv · khôi phục đúng ô nhiều dòng", table.some((r) => r[6] === 'Bún chả, "tào phở"\nlần 2'));
   kiem("parseCsv · dấu ; (Excel tiếng Việt)", C.parseCsv("a;b;c\n1;2;3").length === 2 && C.parseCsv("a;b;c\n1;2;3")[1][2] === "3");
   kiem("parseCsv · CRLF và dòng cuối không xuống dòng", C.parseCsv("a,b\r\n1,2").length === 2);
@@ -1077,6 +1077,218 @@ nhom("model · dữ liệu mẫu");
   const mixedGone = Mo.removeSample(mixed, NOW);
   kiem("removeSample · KHÔNG đụng dữ liệu thật", mixedGone.transactions.length === 1 && mixedGone.transactions[0].note === "của tôi");
   kiem("removeSample · sau khi gộp với thiết bị khác vẫn không sống lại", QL.sync.merge(mixedGone, mixed, "2026-10-06T00:00:00.000Z").transactions.length === 1);
+}
+
+/* ====================== nhóm người ====================== */
+nhom("nhóm · model (bộ sưu tập groups, tx.groupId)");
+/** Sổ có nhóm "Phòng trọ" = tôi + Phúc (p_x) + Lan (p_l), là nhóm mặc định. */
+function soNhom() {
+  let d = soMau();
+  d = Mo.upsert(d, "people", { id: "p_l", name: "Lan", archived: false }, NOW);
+  d = Mo.upsert(d, "groups", { id: "g_tro", name: "Phòng trọ", memberIds: ["p_x", "p_l"], archived: false, order: 0 }, NOW);
+  return Mo.setSettings(d, { defaultGroupId: "g_tro" }, NOW);
+}
+{
+  const e = Mo.emptyDoc(NOW);
+  kiem("emptyDoc · có groups rỗng, bia mộ nhóm, defaultGroupId null", Array.isArray(e.groups) && e.groups.length === 0 && typeof e.tombstones.groups === "object" && e.settings.defaultGroupId === null);
+  const raw = JSON.parse(JSON.stringify(soNhom()));
+  raw.groups.push({ id: "g_x", name: "", memberIds: ["p_x", "p_x", "p_me", "p_ma", 7], archived: "có" });
+  raw.transactions.push(
+    { id: "n1", type: "expense", date: "2026-10-01", amount: 300, categoryId: "c_food", accountId: "a_cash", groupId: "g_tro", split: { paidBy: "p_me", shares: { p_me: 100, p_x: 100, p_l: 100 } } },
+    { id: "n2", type: "expense", date: "2026-10-01", amount: 300, categoryId: "c_food", accountId: "a_cash", groupId: "g_tro" },
+    { id: "n3", type: "settle", date: "2026-10-01", amount: 50, personId: "p_x", direction: "in", accountId: "a_cash", groupId: "g_tro" },
+    { id: "n4", type: "income", date: "2026-10-01", amount: 50, categoryId: "c_salary", accountId: "a_cash", groupId: "g_tro" });
+  const n = Mo.normalize(raw, NOW).doc, g = n.groups.find((x) => x.id === "g_x");
+  kiem("normalize · thành viên: bỏ trùng, bỏ 'tôi', bỏ người không tồn tại; tên mặc định; archived sai kiểu → false",
+    bang(g.memberIds, ["p_x"]) && g.name === "Nhóm" && g.archived === false, JSON.stringify(g));
+  const by = Object.fromEntries(n.transactions.map((t) => [t.id, t]));
+  kiem("normalize · groupId giữ ở khoản chi CHUNG và thanh toán, bỏ ở khoản chi riêng và khoản thu",
+    by.n1.groupId === "g_tro" && by.n3.groupId === "g_tro" && by.n2.groupId === undefined && by.n4.groupId === undefined);
+  kiem("normalize · giữ nhóm mặc định", n.settings.defaultGroupId === "g_tro");
+
+  const d = soNhom(), base = { id: "v1", type: "expense", date: "2026-10-01", amount: 300, categoryId: "c_food", accountId: "a_cash", tags: [], note: "" };
+  const split = { paidBy: "p_me", shares: { p_me: 100, p_x: 100, p_l: 100 } };
+  kiem("validateTx · khoản chi chung thuộc nhóm hợp lệ", Mo.validateTx(Object.assign({}, base, { split, groupId: "g_tro" }), d).length === 0);
+  kiem("validateTx · nhóm không tồn tại → lỗi", Mo.validateTx(Object.assign({}, base, { split, groupId: "g_khong" }), d).some((x) => /Nhóm không tồn tại/.test(x)));
+  kiem("validateTx · khoản chi RIÊNG gắn nhóm → lỗi", Mo.validateTx(Object.assign({}, base, { groupId: "g_tro" }), d).some((x) => /chi chung/.test(x)));
+  kiem("validateTx · thanh toán nợ gắn nhóm hợp lệ", Mo.validateTx({ id: "v2", type: "settle", date: "2026-10-01", amount: 50, personId: "p_x", direction: "in", accountId: "a_cash", groupId: "g_tro" }, d).length === 0);
+
+  const gone = Mo.removePerson(Mo.setSettings(d, { defaultPartnerIds: ["p_l"] }, NOW), "p_l", "2026-10-06T00:00:00.000Z");
+  kiem("removePerson · xoá người, gỡ khỏi nhóm, gỡ khỏi người mặc định, để bia mộ",
+    !gone.people.some((p) => p.id === "p_l") && bang(gone.groups[0].memberIds, ["p_x"]) && !gone.settings.defaultPartnerIds.includes("p_l") && !!gone.tombstones.people.p_l);
+  kiem("removePerson · không sửa tài liệu cũ", d.groups[0].memberIds.length === 2 && d.people.some((p) => p.id === "p_l"));
+
+  const A1 = Mo.upsert(d, "groups", Object.assign({}, d.groups[0], { name: "Trọ 302" }), "2026-10-07T00:00:00.000Z");
+  const B1 = Mo.upsert(d, "groups", { id: "g_dl", name: "Đà Lạt", memberIds: ["p_x"], archived: false }, "2026-10-06T00:00:00.000Z");
+  const m = QL.sync.merge(A1, B1, "2026-10-08T00:00:00.000Z");
+  kiem("sync.merge · gộp nhóm theo bản ghi (sửa tên ở máy A + thêm nhóm ở máy B → có cả hai)",
+    m.groups.length === 2 && m.groups.find((x) => x.id === "g_tro").name === "Trọ 302" && m.groups.some((x) => x.id === "g_dl"));
+  const del = QL.sync.merge(Mo.remove(B1, "groups", "g_dl", "2026-10-09T00:00:00.000Z"), B1, "2026-10-10T00:00:00.000Z");
+  kiem("sync.merge · xoá nhóm ở một máy không sống lại sau khi gộp", !del.groups.some((x) => x.id === "g_dl"));
+  kiem("removeSample · nhóm mặc định là nhóm mẫu thì gỡ", Mo.removeSample(Mo.setSettings(d, { defaultGroupId: "s_g" }, NOW), NOW).settings.defaultGroupId === null);
+}
+
+nhom("nhóm · số dư, sổ khoản chung, đối chiếu và cách chuyển tiền");
+{
+  // Tôi trả 300k (chia 3), Phúc trả 600k (chia 3), và một khoản NGOÀI nhóm với Phúc 100k tôi trả chia đôi.
+  let d = soNhom();
+  const ba = (ids, a) => Object.fromEntries(ids.map((id, i) => [id, QL.money.allocate(a, ids.map(() => 1))[i]]));
+  const ids3 = ["p_me", "p_x", "p_l"];
+  d = Mo.upsert(d, "transactions", { id: "g1", type: "expense", date: "2026-09-20", amount: 300000, categoryId: "c_food", accountId: "a_cash", note: "Cơm nhà", tags: [], groupId: "g_tro", split: { paidBy: "p_me", shares: ba(ids3, 300000) } }, NOW);
+  d = Mo.upsert(d, "transactions", { id: "g2", type: "expense", date: "2026-10-02", amount: 600000, categoryId: "c_housing", accountId: null, note: "Tiền điện", tags: [], groupId: "g_tro", split: { paidBy: "p_x", shares: ba(ids3, 600000) } }, NOW);
+  d = Mo.upsert(d, "transactions", { id: "g3", type: "expense", date: "2026-10-03", amount: 100000, categoryId: "c_food", accountId: "a_cash", note: "Bún chả", tags: [], split: { paidBy: "p_me", shares: { p_me: 50000, p_x: 50000 } } }, NOW);
+  kiem("dữ liệu kiểm · mọi khoản hợp lệ", d.transactions.every((t) => Mo.validateTx(t, d).length === 0), d.transactions.map((t) => Mo.validateTx(t, d)).join("|"));
+
+  const gb = L.personBalances(d, "g_tro"), all = L.personBalances(d);
+  kiem("personBalances(nhóm) · chỉ tính khoản của nhóm: Phúc −100.000 (tôi nợ), Lan +100.000", gb.p_x === -100000 && gb.p_l === 100000, JSON.stringify(gb));
+  kiem("personBalances() · tổng mọi khoản vẫn như cũ: Phúc −50.000, Lan +100.000", all.p_x === -50000 && all.p_l === 100000, JSON.stringify(all));
+  kiem("groupMembers · tôi trước, rồi thành viên", bang(L.groupMembers(d, "g_tro"), ["p_me", "p_x", "p_l"]));
+
+  const st = L.groupStatement(d, "g_tro", QL.dates.period("all", "2026-10-05"));
+  const r = Object.fromEntries(st.members.map((x) => [x.id, x]));
+  kiem("groupStatement · đã trả / phần / chênh lệch từng người (tôi 0, Phúc +300k, Lan −300k), tổng chi 900k",
+    r.p_me.net === 0 && r.p_x.net === 300000 && r.p_l.net === -300000 && st.spend === 900000 && st.count === 2, JSON.stringify(st.members));
+  kiem("groupStatement · Σ chênh lệch = 0", st.members.reduce((a, x) => a + x.net, 0) === 0);
+  const tr = st.transfers.map((t) => t.from + ">" + t.to + ":" + t.amount);
+  kiem("groupStatement · cách chuyển: phần của tôi khớp sổ từng cặp (tôi→Phúc 100k, Lan→tôi 100k), còn lại Lan→Phúc 200k",
+    bang(tr, ["p_me>p_x:100000", "p_l>p_me:100000", "p_l>p_x:200000"]), tr.join(", "));
+  const paid = {};
+  st.members.forEach((x) => { paid[x.id] = x.net; });
+  st.transfers.forEach((t) => { paid[t.from] += t.amount; paid[t.to] -= t.amount; });
+  kiem("groupStatement · làm theo cách chuyển thì mọi người về 0", Object.values(paid).every((v) => v === 0), JSON.stringify(paid));
+
+  // Ghi nhận phần của tôi vào nhóm → số dư của tôi trong nhóm về 0, chỉ còn Lan→Phúc.
+  let s2 = Mo.upsert(d, "transactions", { id: "g4", type: "settle", date: "2026-10-04", amount: 100000, personId: "p_l", direction: "in", accountId: "a_cash", groupId: "g_tro", note: "", tags: [] }, NOW);
+  s2 = Mo.upsert(s2, "transactions", { id: "g5", type: "settle", date: "2026-10-04", amount: 100000, personId: "p_x", direction: "out", accountId: "a_cash", groupId: "g_tro", note: "", tags: [] }, NOW);
+  const gb2 = L.personBalances(s2, "g_tro"), st2 = L.groupStatement(s2, "g_tro", QL.dates.period("all", "2026-10-05"));
+  kiem("sau khi ghi thanh toán vào nhóm · tôi hết nợ trong nhóm, chỉ còn Lan→Phúc 200k",
+    gb2.p_x === 0 && gb2.p_l === 0 && bang(st2.transfers.map((t) => t.from + ">" + t.to + ":" + t.amount), ["p_l>p_x:200000"]), JSON.stringify(st2.transfers));
+  kiem("thanh toán ghi vào nhóm · vẫn tính vào số dư tổng với người đó", L.personBalances(s2).p_x === 50000 && L.personBalances(s2).p_l === 0, JSON.stringify(L.personBalances(s2)));
+
+  /* sổ khoản chung + lọc */
+  const G = (f) => L.sharedLedger(s2, { groupId: "g_tro" }, f);
+  kiem("sharedLedger(nhóm) · mọi khoản của nhóm, mới → cũ (kể cả khoản tôi không trả), không lẫn khoản ngoài nhóm", bang(G().items.map((x) => x.tx.id), ["g4", "g5", "g2", "g1"]), G().items.map((x) => x.tx.id).join(","));
+  kiem("sharedLedger · lọc theo tháng 10", bang(G({ from: "2026-10-01", to: "2026-10-31" }).items.map((x) => x.tx.id).sort(), ["g2", "g4", "g5"]));
+  kiem("sharedLedger · lọc chỉ thanh toán / chỉ khoản chi", G({ kind: "settle" }).count === 2 && G({ kind: "expense" }).count === 2);
+  kiem("sharedLedger · lọc theo thành viên Lan (tham gia, trả, hay thanh toán)", bang(G({ memberId: "p_l" }).items.map((x) => x.tx.id).sort(), ["g1", "g2", "g4"]));
+  kiem("sharedLedger · lọc ai trả: tôi / người khác", bang(G({ payer: "me" }).items.map((x) => x.tx.id).sort(), ["g1", "g5"]) && bang(G({ payer: "other" }).items.map((x) => x.tx.id).sort(), ["g2", "g4"]));
+  kiem("sharedLedger · tìm theo ghi chú (không dấu, đầu từ)", bang(G({ q: "dien" }).items.map((x) => x.tx.id), ["g2"]));
+  kiem("sharedLedger · tổng trong bộ lọc: chi 900k, phần tôi 300k, tôi trả 300k", G({ kind: "expense" }).spend === 900000 && G({ kind: "expense" }).mine === 300000 && G({ kind: "expense" }).paidByMe === 300000);
+  const P = (f) => L.sharedLedger(s2, { personId: "p_x" }, f);
+  kiem("sharedLedger(người) · chênh lệch = số dư tổng với người đó", P().net === L.personBalances(s2).p_x && P().count === 4);
+  kiem("sharedLedger(người) · lọc 'không thuộc nhóm' / theo nhóm", bang(P({ groupId: "none" }).items.map((x) => x.tx.id), ["g3"]) && P({ groupId: "g_tro" }).count === 3);
+
+  /* settleUp: thuộc tính trên dữ liệu ngẫu nhiên */
+  const R = rng(42);
+  let okAll = true, worst = "";
+  for (let k = 0; k < 300; k++) {
+    const n = 2 + Math.floor(R() * 7), nets = Array.from({ length: n - 1 }, () => Math.round((R() - 0.5) * 2e6));
+    nets.push(-nets.reduce((a, b) => a + b, 0));
+    const rows = nets.map((v, i) => ({ id: "x" + i, net: v })), t = L.settleUp(rows), left = Object.fromEntries(rows.map((x) => [x.id, x.net]));
+    t.forEach((x) => { left[x.from] += x.amount; left[x.to] -= x.amount; });
+    if (!(Object.values(left).every((v) => v === 0) && t.length <= n - 1 && t.every((x) => Number.isInteger(x.amount) && x.amount > 0 && x.from !== x.to))) { okAll = false; worst = JSON.stringify(nets); break; }
+  }
+  kiem("settleUp · 300 bộ số ngẫu nhiên: ai cũng về 0, ≤ n−1 lần chuyển, số nguyên dương", okAll, worst);
+
+  const msg = L.groupSettlementMessage(d, "g_tro", QL.dates.period("month", "2026-10-05"));
+  kiem("groupSettlementMessage · có tên nhóm, kỳ, khoản trong kỳ, cách chuyển (khoản tháng 9 không vào)",
+    msg.startsWith("Quyết toán nhóm Phòng trọ — Tháng 10/2026") && msg.includes("Tiền điện: Phúc trả 600.000") && !msg.includes("Cơm nhà") && msg.includes("Chuyển tiền:"), msg);
+  kiem("quickTemplates · nhớ nhóm của khoản chung", L.quickTemplates(Mo.upsert(d, "transactions", Object.assign({}, d.transactions[0], { id: "g1b" }), NOW), 3)[0].split.groupId === "g_tro");
+}
+
+nhom("nhóm · nhập nhanh");
+{
+  const d = soNhom(), ctx = { today: "2026-10-05", doc: d }, Q = (s) => QL.parser.parseQuick(s, ctx);
+  kiem("partners · thành viên nhóm mặc định đứng đầu", bang(QL.parser.partners(d).map((p) => p.id), ["p_x", "p_l"]));
+  const a = Q("cơm 300k nhóm phòng trọ");
+  kiem("'nhóm phòng trọ' · chia cho cả nhóm, gắn nhóm, ghi chú sạch",
+    a.split && bang(a.split.participantIds, ["p_me", "p_x", "p_l"]) && a.split.groupId === "g_tro" && a.note === "cơm" && a.amount === 300000, JSON.stringify(a));
+  const b = Q("@Phòng trọ tiền điện 900k Phúc trả");
+  kiem("'@Phòng trọ … Phúc trả' · người trả là Phúc, chia 3", b.split && b.split.payerId === "p_x" && b.split.n === 3 && b.split.groupId === "g_tro" && b.note === "tiền điện", JSON.stringify(b));
+  const c = Q("57/3 bún đậu");
+  kiem("'57/3' · lấy nhóm mặc định, gắn nhóm", c.split && bang(c.split.participantIds, ["p_me", "p_x", "p_l"]) && c.split.groupId === "g_tro");
+  const e = Q("57/2 bún đậu");
+  kiem("'57/2' · tôi + người đầu nhóm mặc định, vẫn thuộc nhóm (mọi người đều ở nhóm)", e.split && bang(e.split.participantIds, ["p_me", "p_x"]) && e.split.groupId === "g_tro");
+  const tx = QL.parser.toTx(a, d);
+  kiem("toTx · mang groupId và hợp lệ", tx.groupId === "g_tro" && Mo.validateTx(Object.assign({ id: "q1" }, tx), d).length === 0, JSON.stringify(Mo.validateTx(Object.assign({ id: "q1" }, tx), d)));
+  const f = Q("cơm 300k/2 nhóm phòng trọ");
+  kiem("nhóm + '/2' khác số người · cảnh báo, chia theo nhóm", f.split.n === 3 && f.warnings.some((w) => /có 3 người/.test(w)));
+  const lone = Mo.upsert(d, "groups", { id: "g_1", name: "Một mình", memberIds: [], archived: false }, NOW);
+  const g = QL.parser.parseQuick("cơm 50k nhóm một mình", { today: "2026-10-05", doc: lone });
+  kiem("nhóm chưa có thành viên · cảnh báo, không chia", !g.split && g.warnings.some((w) => /chưa có thành viên/.test(w)));
+  const arch = Mo.upsert(d, "groups", Object.assign({}, d.groups[0], { archived: true }), NOW);
+  const h = QL.parser.parseQuick("cơm 300k nhóm phòng trọ", { today: "2026-10-05", doc: arch });
+  kiem("nhóm đã lưu trữ · không nhận, không gắn nhóm mặc định", !(h.split && h.split.groupId));
+  const noDef = Mo.setSettings(d, { defaultGroupId: null }, NOW);
+  kiem("không có nhóm mặc định · '57/2' như cũ, không gắn nhóm", !QL.parser.parseQuick("57/2 bún", { today: "2026-10-05", doc: noDef }).split.groupId);
+}
+
+nhom("nhóm · CSV (cột nhom)");
+{
+  let d = soNhom();
+  const sh = { p_me: 100000, p_x: 100000, p_l: 100000 };
+  d = Mo.upsert(d, "transactions", { id: "c1", type: "expense", date: "2026-10-01", amount: 300000, categoryId: "c_food", accountId: "a_cash", note: "Lẩu", tags: [], groupId: "g_tro", split: { paidBy: "p_me", shares: sh } }, NOW);
+  d = Mo.upsert(d, "transactions", { id: "c2", type: "settle", date: "2026-10-02", amount: 100000, personId: "p_l", direction: "in", accountId: "a_cash", note: "", tags: [], groupId: "g_tro" }, NOW);
+  d = Mo.upsert(d, "transactions", { id: "c3", type: "expense", date: "2026-10-03", amount: 20000, categoryId: "c_food", accountId: "a_cash", note: "Trà đá", tags: [] }, NOW);
+  const csv = QL.csv.toCsv(d), lines = csv.replace(/^﻿/, "").trim().split(/\r\n/);
+  kiem("xuất · thêm cột nhom ở cuối, ghi tên nhóm cho khoản chung và thanh toán của nhóm", lines[0].endsWith(",chia,nhom") && lines[1].endsWith(",Phòng trọ") && lines[2].endsWith(",Phòng trọ") && lines[3].endsWith(","), lines.join(" | "));
+  const fresh = Mo.emptyDoc(NOW), res = QL.csv.fromCsv(csv, fresh, "2026-10-05");
+  kiem("nhập vào sổ trống · hẹn tạo nhóm Phòng trọ", res.create.groups.length === 1 && res.create.groups[0].name === "Phòng trọ");
+  const after = QL.csv.applyImport(fresh, res, {}, NOW).doc, g = after.groups[0];
+  const names = g.memberIds.map((id) => after.people.find((p) => p.id === id).name).sort();
+  kiem("nhập · nhóm mới có đúng thành viên (mọi người trong các dòng của nhóm, trừ tôi)", after.groups.length === 1 && bang(names, ["Lan", "Phúc"]), JSON.stringify(names));
+  kiem("nhập · khoản chung và thanh toán gắn vào nhóm mới, khoản riêng không", after.transactions.filter((t) => t.groupId === g.id).length === 2 && after.transactions.every((t) => Mo.validateTx(t, after).length === 0));
+  const again = QL.csv.fromCsv(csv, d, "2026-10-05");
+  kiem("nhập vào sổ đã có nhóm cùng tên · dùng nhóm cũ, không tạo thêm", again.create.groups.length === 0 && again.rows.filter((r) => r.tx && r.tx.groupId === "g_tro").length === 2);
+}
+
+nhom("AI · đề xuất của máy chủ → dòng xem trước (parser.fromAi)");
+{
+  const d = soNhom(), P = QL.parser;
+  const t = (o) => Object.assign({ type: "expense", date: "2026-10-08", amount: 57000, note: "Cơm trưa", categoryId: null, accountId: null,
+    paidBy: { id: "p_me" }, participants: [], splitCount: 0, groupId: null, shares: [], source: "cơm 57k", confidence: 0.9, warnings: [] }, o);
+  const res = {
+    transactions: [
+      t({}),                                                                                            // 0 chi riêng, danh mục tự đoán
+      t({ participants: [{ id: "p_me" }, { id: "p_x" }] }),                                               // 1 chia đôi với Phúc
+      t({ amount: 600000, note: "Lẩu", paidBy: { id: "p_l" }, groupId: "g_tro" }),                         // 2 Lan trả, cả nhóm
+      t({ amount: 90000, note: "Cà phê", paidBy: { name: "Nam" }, participants: [{ id: "p_me" }, { name: "nam" }, { name: "Nam" }] }), // 3 người mới (một lần)
+      t({ amount: 57000, shares: [{ id: "p_me", amount: 20000 }, { id: "p_x", amount: 37000 }], participants: [{ id: "p_me" }, { id: "p_x" }] }), // 4 chia theo số
+      t({ amount: 90000, splitCount: 3 }),                                                               // 5 "chia 3": nhóm mặc định
+      t({ type: "income", amount: 14900000, note: "Lương", categoryId: "c_salary", accountId: "a_bank" }), // 6 thu
+      t({ categoryId: "c_salary" }),                                                                     // 7 danh mục sai loại → tự đoán lại
+      t({ participants: [{ id: "p_ma" }, { id: "p_x" }] }),                                              // 8 id không có trong sổ (đã xoá) → bỏ người đó
+    ],
+    ignored: [{ text: "Tổng: 500k", reason: "Dòng tổng" }]
+  };
+  const out = P.fromAi(res, d, "2026-10-08"), r = out.rows;
+  kiem("fromAi · mọi đề xuất ra một dòng, dòng bỏ qua ở cuối", r.length === 10 && r[9].status === "skip" && r[9].reason === "Dòng tổng");
+  kiem("fromAi · mọi dòng 'ok' đều qua validateTx (trên sổ đã thêm người hẹn tạo)", r.filter((x) => x.status === "ok").length === 9, r.filter((x) => x.status !== "ok").map((x) => x.n + ":" + x.reason).join("; "));
+  kiem("fromAi · chi riêng: danh mục tự đoán từ ghi chú, tài khoản mặc định, không chia", r[0].tx.categoryId === "c_food" && r[0].tx.accountId === "a_cash" && !r[0].tx.split);
+  kiem("fromAi · chia đôi đều, tổng khớp", bang(r[1].tx.split, { paidBy: "p_me", shares: { p_me: 28500, p_x: 28500 } }) && r[1].tx.groupId === "g_tro");
+  kiem("fromAi · nhóm không nêu tên người → cả nhóm; người khác trả thì không trừ tài khoản của tôi",
+    bang(Object.keys(r[2].tx.split.shares), ["p_me", "p_x", "p_l"]) && r[2].tx.split.paidBy === "p_l" && r[2].tx.accountId === null && r[2].tx.groupId === "g_tro");
+  kiem("fromAi · người mới chỉ hẹn tạo MỘT lần (không phân biệt hoa thường/dấu), dòng biết mình cần ai",
+    out.people.length === 1 && out.people[0].name === "Nam" && bang(r[3].needs, [out.people[0].id]) && r[3].tx.split.paidBy === out.people[0].id && !d.people.some((p) => p.name === "Nam"));
+  kiem("fromAi · khoản có người ngoài nhóm mặc định thì không gắn nhóm", r[3].tx.groupId === undefined);
+  kiem("fromAi · chia theo số tiền AI đưa", bang(r[4].tx.split.shares, { p_me: 20000, p_x: 37000 }));
+  kiem("fromAi · 'chia 3' không nêu tên → nhóm mặc định", bang(Object.keys(r[5].tx.split.shares), ["p_me", "p_x", "p_l"]) && r[5].tx.groupId === "g_tro");
+  kiem("fromAi · khoản thu giữ danh mục và tài khoản AI chọn", r[6].tx.type === "income" && r[6].tx.categoryId === "c_salary" && r[6].tx.accountId === "a_bank" && !r[6].tx.split);
+  kiem("fromAi · danh mục sai loại thì đoán lại theo ghi chú", r[7].tx.categoryId === "c_food");
+  kiem("fromAi · người không còn trong sổ bị bỏ khỏi phần chia, có cảnh báo", bang(Object.keys(r[8].tx.split.shares), ["p_x"]) && /không còn trong sổ/.test(r[8].reason), JSON.stringify(r[8]));
+  kiem("fromAi · KHÔNG đổi sổ đang có", d.transactions.length === 0 && d.people.length === 3);
+
+  const bad = P.fromAi({ transactions: [t({ amount: 0 }), t({ date: "2026-02-30" }), t({ shares: [{ id: "p_me", amount: 1 }, { id: "p_x", amount: 1 }] })] }, d, "2026-10-08").rows;
+  kiem("fromAi · số tiền 0 → 'chưa hiểu' kèm lý do của validateTx", bad[0].status === "unclear" && /Số tiền/.test(bad[0].reason));
+  kiem("fromAi · ngày hỏng → lấy hôm nay", bad[1].status === "ok" && bad[1].tx.date === "2026-10-08");
+  kiem("fromAi · phần chia lệch tổng → 'chưa hiểu'", bad[2].status === "unclear" && /Tổng các phần chia/.test(bad[2].reason));
+  kiem("fromAi · kết quả rỗng / hỏng không nổ", P.fromAi(null, d, "2026-10-08").rows.length === 0 && P.fromAi({}, d, "2026-10-08").people.length === 0);
+
+  const arch = Mo.upsert(d, "people", { id: "p_old", name: "Cũ", archived: true }, NOW);
+  const ctx = P.aiContext(Mo.upsert(arch, "accounts", { id: "a_sav", name: "Sổ", kind: "savings", openingBalance: 0, archived: false, order: 9 }, NOW));
+  kiem("aiContext · chỉ TÊN + id: không gửi tôi, người đã lưu trữ, sổ tiết kiệm; không có số dư/giao dịch",
+    !ctx.people.some((p) => p.id === "p_me" || p.id === "p_old") && !ctx.accounts.some((a) => a.id === "a_sav") && ctx.me === "p_me" &&
+    ctx.groups[0].memberIds.length === 2 && JSON.stringify(ctx).indexOf("openingBalance") === -1 && !("transactions" in ctx));
 }
 
 // @@SECTIONS-END

@@ -220,3 +220,25 @@ def test_the_dev_tool_routes_over_http(client, monkeypatch):
     r = client.post(f"{AI}/chat", json={"prompt": "chào", "model": "gemini-2.5-pro"}, headers=admin)
     assert r.status_code == 200 and r.json()["text"] == "Câu trả lời của Pro" and model.calls[-1]["model"] == "gemini-2.5-pro"
     assert client.post(f"{AI}/chat", json={"prompt": "chào", "model": "gemini-2.5-pro"}).status_code == 403
+
+
+def test_the_spending_book_route_over_http(client, monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_URL", "https://gemini.test/v1beta/models/gemini-2.5-flash:generateContent")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k")
+    answer = {"transactions": [{"type": "expense", "date": "2026-10-08", "amount": 57000, "note": "Cơm", "categoryId": "c_food",
+                                "paidBy": "me", "participants": ["me", "p_x"], "source": "cơm 57k"}]}
+    app.dependency_overrides[get_ai_usecase] = lambda: AiUseCase(FakeStore(), FakeModel([json.dumps(answer)]))
+    admin = {"X-Admin-Key": ADMIN_KEY}
+    ask = {"text": "cơm 57k chia đôi với Phúc", "today": "2026-10-08", "me": "p_me",
+           "categories": [{"id": "c_food", "name": "Ăn uống", "kind": "expense"}],
+           "accounts": [{"id": "a_cash", "name": "Tiền mặt"}], "people": [{"id": "p_x", "name": "Phúc"}],
+           "groups": [{"id": "g_tro", "name": "Phòng trọ", "memberIds": ["p_x"]}]}
+
+    assert client.post(f"{AI}/spending", json=ask).status_code == 403                       # chỉ người được dùng AI
+    r = client.post(f"{AI}/spending", json=ask, headers=admin)
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
+    t = r.json()["transactions"][0]
+    assert t["amount"] == 57000 and t["participants"] == [{"id": "p_me"}, {"id": "p_x"}] and t["categoryId"] == "c_food"
+    for bad in ({**ask, "text": ""}, {**ask, "text": "x" * 6001}, {**ask, "today": "08/10/2026"},
+                {**ask, "categories": [{"id": "c", "name": "A", "kind": "transfer"}]}, {k: v for k, v in ask.items() if k != "me"}):
+        assert client.post(f"{AI}/spending", json=bad, headers=admin).status_code == 422

@@ -54,10 +54,30 @@ Mở **Cài đặt → Cài ứng dụng** (hoặc nút “Cài đặt ứng d�
 - **iPhone/iPad** không có hộp thoại cài: Safari → Chia sẻ → *Thêm vào Màn hình chính*. Ứng dụng đó có kho dữ liệu **riêng**, tách khỏi Safari — sổ “Máy này” không tự sang; Sao lưu JSON → Khôi phục, hoặc bật đồng bộ máy chủ trước khi cài.
 - Thêm tệp mới vào `index.html` là xong, `sw.js` tự đọc `index.html` lúc cài để lưu sẵn mọi `assets/*`. Đổi *quy tắc* của `sw.js` thì tăng `PHIEN_BAN` trong đó để cache cũ bị dọn.
 
+## Nhóm người và "Các khoản chung"
+
+**Chia tiền → ＋ Nhóm**: đặt tên (vd *Phòng trọ 302*), chọn thành viên hoặc thêm người mới ngay trong hộp, tick *nhóm mặc định*. Sau đó:
+
+- Nhập tay: bấm **Chi chung** → tự chọn nhóm mặc định và mọi thành viên; bỏ tick người vắng, chọn ai trả.
+- Nhập nhanh: `lẩu 600k nhóm phòng trọ` hoặc `@Phòng trọ điện 900k Phúc trả` → chia cả nhóm; `57/3` lấy người của nhóm mặc định.
+- Thẻ nhóm cho thấy nhóm nợ bạn bao nhiêu và từng người. **Quyết toán** có bảng đã trả / phần / còn lại theo kỳ, cách chuyển tiền, tin nhắn dán vào nhóm chat, và ghi nhận phần của bạn.
+- **Các khoản chung** (của người hoặc của nhóm): lọc theo tháng, loại, ai trả, thành viên, nhóm, tìm kiếm; 50 dòng một lần + "Hiện thêm".
+
+Sổ vẫn là *sổ của bạn*: chỉ ghi được tiền giữa bạn và từng người. Tiền hai người khác chuyển cho nhau không vào sổ, nên báo cáo nhóm chính xác nhất khi chốt theo kỳ (chi tiết: `design.md` §12).
+
+## Nhập bằng AI
+
+**Giao dịch → ✨ Nhập bằng AI** (hoặc Cài đặt → *Nhập từ văn bản / ✨ AI*): dán câu văn thường như `trưa nay cơm 57k chia đôi với Phúc, tối Lan trả lẩu 600k cả phòng` → AI tách ra từng khoản, hiện để xem và bỏ chọn trước khi lưu. Người mới AI nhắc tên chỉ được tạo nếu bạn giữ khoản cần họ.
+
+- Gọi `POST /api/v1/ai/spending` của chính máy chủ (cổng AI chung: quyền `AI_ACCESS`, hạn mức theo IP và theo ngày). Cần `GEMINI_URL`, `GEMINI_API_KEY` và `AI_ENABLED=true`.
+- Mặc định `AI_ACCESS=admin`: trình duyệt phải đã đăng nhập quản trị ở trang Quản lý khoá học trên cùng máy chủ. Đặt `AI_ACCESS=code` + `AI_ACCESS_CODE` để nhập mã ngay trong hộp.
+- Gửi đi: văn bản + **tên** danh mục, tài khoản, người, nhóm. Không gửi số dư hay giao dịch cũ; máy chủ không lưu và không cache câu trả lời.
+- Không có mạng / mở bằng `file://` không có địa chỉ máy chủ → dùng nút **Phân tích** (quy tắc trên máy, từng dòng).
+
 ## Kiểm thử
 
 ```powershell
-# 1. Logic thuần + động cơ đồng bộ (430 phép kiểm, kể cả các con số trong PDF nhật ký cũ)
+# 1. Logic thuần + động cơ đồng bộ (498 phép kiểm, kể cả các con số trong PDF nhật ký cũ, nhóm, ánh xạ kết quả AI)
 node backend\fastapi\webapp\tranphuc8a\quan-ly-chi-tieu\kiem.js
 
 # 2. Backend (pytest)

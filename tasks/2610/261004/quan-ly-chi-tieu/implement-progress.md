@@ -36,3 +36,22 @@ Cập nhật cuối: 2026-10-06. Tất cả phase xong. ✅ xong · ⚠ xong nh�
 | pytest toàn bộ backend | **993 đạt** (902 cũ + 91 mới), 0 hồi quy |
 | `selftest/run.py` (tĩnh · node · pytest · API thật · Edge thật) | 160 đạt · 0 sai · 1 bỏ qua |
 | Kích thước | HTML+JS+CSS ≈ 285 KB chưa nén (giới hạn 300 KB), không thư viện ngoài |
+
+## 2026-10-08 — nhóm người, sổ khoản chung, nhập bằng AI
+
+Yêu cầu: (1) popup "Các khoản chung với …" lọc/cuộn/phân trang; (2) khoản chung nhiều người → nhóm; (3) AI tách văn bản thường thành giao dịch. Duyệt: phương án A (sổ của tôi), NFR-06 → 350 KB.
+
+1. **Model + ledger + parser (node trước).** `groups` vào `COLLECTIONS` (gộp/bia mộ chạy sẵn), `groupId`, `defaultGroupId`, `removePerson`; `sharedLedger`, `groupStatement`, `settleUp`, `groupSettlementMessage`; nhập nhanh `nhóm …`/`@…`/`57/N`. 45 phép kiểm mới, 430 cũ vẫn đạt.
+2. **UI** `chung.js`: sổ khoản chung (lọc, thanh lọc dính, 50 dòng/lần), hộp nhóm, quyết toán nhóm; ô "Nhóm" trong hộp nhập; thẻ nhóm. Chạy thử Edge qua `file://`: phát hiện danh sách cách chuyển gây hiểu nhầm (người "còn lại 0" vẫn có lệnh chuyển) → tách "với bạn (khớp sổ)" và "giữa người khác (gộp)".
+3. **CSV** cột `nhom` (phép kiểm cũ khoá cứng 10 cột → đổi theo `HEADERS.length`).
+4. **Backend AI** `ai_spending_usecase.py` + route + factory: 14 pytest (prompt có rào, không cache, id bịa bị bỏ, số tiền/ngày/phần chia, quyền trước khi gọi model, sai định dạng → 502). Heredoc làm mất `\n` trong một test → sửa bằng Edit.
+5. **Client AI** `ai.js` + `parser.fromAi`/`aiContext` + hộp "Nhập từ văn bản". Node test bắt được: AI đưa phần chia theo số mà không kèm danh sách người → client bỏ qua phần chia (đã sửa). Rà test phát hiện `ai.js` nhớ `/ai/status` mãi → đổi 30 giây + hỏi lại khi mở hộp.
+6. **Selftest** `nhom_ai.py`: 31 phép kiểm trình duyệt mới, đạt ngay lần đầu.
+
+| Bộ kiểm | Kết quả |
+|---|---|
+| `node kiem.js` | 498 đạt |
+| `kiem-tat.js` (4 app) | 676 đạt |
+| pytest toàn backend | 1007 đạt (993 + 14) |
+| `selftest/run.py` | 208 đạt · 0 sai · 1 bỏ qua (Mongo thật) |
+| Kích thước | JS 323 KB + CSS 17 KB = 340 KB (≤ 350 KB) |

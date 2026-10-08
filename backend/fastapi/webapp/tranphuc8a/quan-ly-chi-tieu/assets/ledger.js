@@ -64,13 +64,21 @@
     return t;
   }
 
-  /** Số dư từng người: dương = người đó nợ tôi; âm = tôi nợ người đó. */
-  function personBalances(doc) {
+  /**
+   * Số dư từng người: dương = người đó nợ tôi; âm = tôi nợ người đó.
+   * Có `groupId`: chỉ tính giao dịch của nhóm đó (khoản chi chung + thanh toán ghi vào nhóm).
+   */
+  function personBalances(doc, groupId) {
     var me = meOf(doc), bal = {};
-    doc.people.forEach(function (p) { if (p.id !== me) bal[p.id] = 0; });
+    if (groupId) groupMembers(doc, groupId).forEach(function (id) { if (id !== me) bal[id] = 0; });
+    else doc.people.forEach(function (p) { if (p.id !== me) bal[p.id] = 0; });
     doc.transactions.forEach(function (tx) {
+      if (groupId && tx.groupId !== groupId) return;
       var pe = effects(tx, me).people;
-      for (var pid in pe) if (pid in bal) bal[pid] += pe[pid];
+      for (var pid in pe) {
+        if (pid in bal) bal[pid] += pe[pid];
+        else if (groupId) bal[pid] = pe[pid];        // đã rời nhóm nhưng còn khoản cũ trong nhóm
+      }
     });
     return bal;
   }
@@ -192,6 +200,191 @@
     });
     items.sort(function (a, b) { return a.tx.date < b.tx.date ? -1 : (a.tx.date > b.tx.date ? 1 : 0); });
     return { items: items, net: net };
+  }
+
+  /* ------------------------------------------------------------------- nhóm */
+  function groupOf(doc, group) { return typeof group === "string" ? QL.model.find(doc.groups || [], group) : group || null; }
+
+  /** Thành viên của nhóm: tôi trước, rồi những người còn trong sổ (giữ thứ tự của nhóm). */
+  function groupMembers(doc, group) {
+    var g = groupOf(doc, group), me = meOf(doc);
+    if (!g) return [];
+    var ppl = byId(doc.people);
+    return [me].concat(g.memberIds.filter(function (id) { return ppl[id] && id !== me; }));
+  }
+
+  /** Các nhóm (chưa lưu trữ, trừ khi `withArchived`) có người này. */
+  function groupsOfPerson(doc, personId, withArchived) {
+    return (doc.groups || []).filter(function (g) { return (withArchived || !g.archived) && g.memberIds.indexOf(personId) !== -1; });
+  }
+
+  /** Ai bỏ tiền ra trong một giao dịch: người trả khoản chi chung, hoặc người chuyển tiền khi thanh toán nợ. */
+  function payerOf(tx, me) {
+    if (tx.type === "settle") return tx.direction === "in" ? tx.personId : me;
+    return tx.split ? tx.split.paidBy : me;
+  }
+  function involves(tx, personId) {
+    return tx.personId === personId || !!(tx.split && (tx.split.paidBy === personId || tx.split.shares[personId] !== undefined));
+  }
+
+  /**
+   * Sổ khoản chung theo phạm vi, có lọc — cho hộp "Các khoản chung" (người hoặc nhóm).
+   *   scope: {personId} — mọi khoản làm đổi số nợ giữa tôi và người đó
+   *          {groupId}  — mọi khoản ghi vào nhóm (kể cả khoản tôi không tham gia)
+   *   f: {from, to, kind: "expense"|"settle", payer: "me"|"other", memberId, groupId: id|"none", q}
+   * Mỗi dòng có `delta` = tác động lên "họ nợ tôi" (nhóm: cộng cả nhóm).
+   * Trả {items (mới → cũ), count, net, spend, mine, paidByMe}: tổng tính trên đúng các dòng đã lọc.
+   */
+  function sharedLedger(doc, scope, f) {
+    f = f || {};
+    var me = meOf(doc), items = [], net = 0, spend = 0, mine = 0, paidByMe = 0;
+    var ctx = { cats: byId(doc.categories), accs: byId(doc.accounts), people: byId(doc.people) };
+    var qWords = f.q ? QL.text.words(f.q) : null, sig = qWords && qWords.length ? ctxSig(ctx) : "";
+    doc.transactions.forEach(function (tx) {
+      var delta = 0, pe;
+      if (scope.groupId) {
+        if (tx.groupId !== scope.groupId) return;
+        pe = effects(tx, me).people;
+        for (var pid in pe) delta += pe[pid];
+      } else {
+        delta = effects(tx, me).people[scope.personId] || 0;
+        if (!delta) return;
+      }
+      if (f.from && tx.date < f.from) return;
+      if (f.to && tx.date > f.to) return;
+      if (f.kind && tx.type !== f.kind) return;
+      var payer = payerOf(tx, me);
+      if (f.payer === "me" && payer !== me) return;
+      if (f.payer === "other" && payer === me) return;
+      if (f.memberId && !involves(tx, f.memberId)) return;
+      if (f.groupId === "none" && tx.groupId) return;
+      if (f.groupId && f.groupId !== "none" && tx.groupId !== f.groupId) return;
+      if (qWords && qWords.length) {
+        var hw = wordsOf(tx, ctx, sig);
+        if (!qWords.every(function (w) { return hw.some(function (x) { return x.indexOf(w) === 0; }); })) return;
+      }
+      items.push({ tx: tx, delta: delta, payer: payer });
+      net += delta;
+      if (tx.type === "expense") {
+        spend += tx.amount;
+        mine += tx.split ? (tx.split.shares[me] || 0) : tx.amount;
+        if (payer === me) paidByMe += tx.amount;
+      }
+    });
+    items.sort(function (a, b) {
+      if (a.tx.date !== b.tx.date) return a.tx.date < b.tx.date ? 1 : -1;
+      var ca = a.tx.createdAt || "", cb = b.tx.createdAt || "";
+      return ca < cb ? 1 : (ca > cb ? -1 : 0);
+    });
+    return { items: items, count: items.length, net: net, spend: spend, mine: mine, paidByMe: paidByMe };
+  }
+
+  /**
+   * Cách chuyển tiền để mọi người về 0. `rows` [{id, net}] với Σ net = 0 (dương = được nhận).
+   * Tham lam: người nợ nhiều nhất trả người được nhận nhiều nhất → tối đa n−1 lần chuyển. Hoà thì theo thứ tự đầu vào.
+   */
+  function settleUp(rows) {
+    function side(sign) {
+      return rows.map(function (r, i) { return { id: r.id, left: sign * r.net, i: i }; }).filter(function (x) { return x.left > 0; });
+    }
+    var debt = side(-1), cred = side(1), out = [];
+    function order(a, b) { return b.left - a.left || a.i - b.i; }
+    while (debt.length && cred.length) {
+      debt.sort(order); cred.sort(order);
+      var d = debt[0], c = cred[0], x = Math.min(d.left, c.left);
+      out.push({ from: d.id, to: c.id, amount: x });
+      d.left -= x; c.left -= x;
+      if (!d.left) debt.shift();
+      if (!c.left) cred.shift();
+    }
+    return out;
+  }
+
+  /**
+   * Đối chiếu một nhóm trong kỳ (cách nhìn "sổ của tôi" — design §3.6):
+   *   mỗi người: paid (đã trả các khoản chung), share (phần phải chịu), sent/received (thanh toán ghi vào nhóm),
+   *   net = paid − share + sent − received (dương = nhóm nợ người đó).
+   * Cách chuyển: phần của TÔI theo đúng số nợ từng cặp trong sổ (để ghi nhận khớp sổ), phần còn lại
+   * giữa những người khác thì gộp cho ít lần chuyển nhất. Tiền hai người khác trả cho nhau không có trong sổ.
+   */
+  function groupStatement(doc, groupId, per) {
+    var me = meOf(doc), g = groupOf(doc, groupId);
+    var rows = {}, order = [];
+    function row(id) {
+      if (!rows[id]) { rows[id] = { id: id, paid: 0, share: 0, sent: 0, received: 0, net: 0 }; order.push(id); }
+      return rows[id];
+    }
+    groupMembers(doc, g).forEach(row);
+    if (!rows[me]) row(me);
+    var spend = 0, count = 0, pair = {};
+    doc.transactions.forEach(function (tx) {
+      if (!g || tx.groupId !== g.id) return;
+      if (per && (tx.date < per.from || tx.date > per.to)) return;
+      if (tx.type === "expense" && tx.split) {
+        count++; spend += tx.amount;
+        row(tx.split.paidBy).paid += tx.amount;
+        for (var p in tx.split.shares) row(p).share += tx.split.shares[p];
+      } else if (tx.type === "settle") {
+        count++;
+        row(payerOf(tx, me)).sent += tx.amount;
+        row(tx.direction === "in" ? me : tx.personId).received += tx.amount;
+      } else return;
+      var pe = effects(tx, me).people;
+      for (var pid in pe) pair[pid] = (pair[pid] || 0) + pe[pid];
+    });
+    var list = order.map(function (id) { var r = rows[id]; r.net = r.paid - r.share + r.sent - r.received; return r; });
+    var transfers = [], rest = {};
+    list.forEach(function (r) { rest[r.id] = r.net; });
+    order.forEach(function (id) {
+      var b = pair[id] || 0;
+      if (id === me || !b) return;
+      // b > 0: người đó nợ tôi b → họ chuyển cho tôi; b < 0: tôi chuyển cho họ.
+      if (b > 0) { transfers.push({ from: id, to: me, amount: b }); rest[id] += b; rest[me] -= b; }
+      else { transfers.push({ from: me, to: id, amount: -b }); rest[me] -= b; rest[id] += b; }
+    });
+    transfers = transfers.concat(settleUp(order.filter(function (id) { return id !== me; }).map(function (id) { return { id: id, net: rest[id] }; })));
+    return { group: g, members: list, spend: spend, count: count, pair: pair, transfers: transfers };
+  }
+
+  /** Tin nhắn quyết toán cho cả nhóm (dán vào nhóm chat). */
+  function groupSettlementMessage(doc, groupId, per) {
+    var M = QL.money, D = QL.dates, me = meOf(doc), st = groupStatement(doc, groupId, per);
+    if (!st.group) return "";
+    var ppl = byId(doc.people), cat = byId(doc.categories);
+    function nm(id) { return ppl[id] ? ppl[id].name : "(đã xoá)"; }
+    var lines = ["Quyết toán nhóm " + st.group.name + " — " + per.label];
+    var led = sharedLedger(doc, { groupId: st.group.id }, { from: per.from, to: per.to }).items.slice().reverse();
+    var LIMIT = 40;
+    led.slice(0, LIMIT).forEach(function (it) {
+      var tx = it.tx;
+      if (tx.type === "settle") {
+        lines.push("· " + D.dm(tx.date) + " " + nm(payerOf(tx, me)) + " đã chuyển cho " + nm(tx.direction === "in" ? me : tx.personId) + " " + M.format(tx.amount));
+      } else {
+        var what = tx.note || (cat[tx.categoryId] ? cat[tx.categoryId].name : "Khoản chung");
+        lines.push("· " + D.dm(tx.date) + " " + what + ": " + nm(tx.split.paidBy) + " trả " + M.format(tx.amount) + " (chia " + Object.keys(tx.split.shares).length + ")");
+      }
+    });
+    if (led.length > LIMIT) lines.push("· … và " + (led.length - LIMIT) + " khoản khác");
+    if (!led.length) lines.push("(Không có khoản chung nào trong kỳ)");
+    lines.push("");
+    lines.push("Tổng chi " + M.format(st.spend) + " · " + st.count + " khoản");
+    st.members.forEach(function (r) {
+      if (!r.paid && !r.share && !r.sent && !r.received) return;
+      lines.push(nm(r.id) + ": đã trả " + M.format(r.paid) + ", phần " + M.format(r.share) +
+        (r.sent || r.received ? ", đã chuyển " + M.format(r.sent) + ", đã nhận " + M.format(r.received) : "") +
+        (r.net > 0 ? " → được nhận " + M.format(r.net) : r.net < 0 ? " → cần trả " + M.format(-r.net) : " → hoà"));
+    });
+    lines.push("");
+    if (st.transfers.length) {
+      var mineT = st.transfers.filter(function (t) { return t.from === me || t.to === me; }), restT = st.transfers.filter(function (t) { return t.from !== me && t.to !== me; });
+      var line = function (t) { lines.push("→ " + nm(t.from) + " chuyển cho " + nm(t.to) + " " + M.format(t.amount)); };
+      lines.push("Chuyển tiền:");
+      if (mineT.length && restT.length) lines.push("Với " + nm(me) + ":");
+      mineT.forEach(line);
+      if (mineT.length && restT.length) lines.push("Giữa những người còn lại:");
+      restT.forEach(line);
+    } else lines.push("→ Cả nhóm đã hoà trong kỳ");
+    return lines.join("\n");
   }
 
   /** Tin nhắn quyết toán sao chép được (FR-12). */
@@ -431,7 +624,7 @@
         var t = s.tx;
         return {
           note: t.note, amount: t.amount, categoryId: t.categoryId, accountId: t.accountId, count: s.count,
-          split: t.split ? { paidBy: t.split.paidBy, ids: Object.keys(t.split.shares) } : null
+          split: t.split ? { paidBy: t.split.paidBy, ids: Object.keys(t.split.shares), groupId: t.groupId || null } : null
         };
       });
   }
@@ -439,6 +632,8 @@
   QL.ledger = {
     effects: effects, accountBalances: accountBalances, netWorth: netWorth,
     personBalances: personBalances, settlementOf: settlementOf, sharedWith: sharedWith, settlementMessage: settlementMessage,
+    groupMembers: groupMembers, groupsOfPerson: groupsOfPerson, sharedLedger: sharedLedger, settleUp: settleUp,
+    groupStatement: groupStatement, groupSettlementMessage: groupSettlementMessage, payerOf: payerOf,
     periodSummary: periodSummary, compareWithPrevious: compareWithPrevious, monthlySeries: monthlySeries, topExpenses: topExpenses,
     budgetProgress: budgetProgress, savingsInfo: savingsInfo, depositAlerts: depositAlerts,
     occurrences: occurrences, dueRecurring: dueRecurring,

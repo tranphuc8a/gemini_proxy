@@ -3,20 +3,20 @@
    CSV là để mở bằng bảng tính và nhập từ nơi khác; bản sao lưu ĐẦY ĐỦ là JSON
    (giữ tài khoản, sổ tiết kiệm, ngân sách…). Cột (tiếng Việt, mở được bằng Excel):
 
-     ngay, loai, so_tien, danh_muc, tai_khoan, tai_khoan_den, ghi_chu, the, nguoi_tra, chia
+     ngay, loai, so_tien, danh_muc, tai_khoan, tai_khoan_den, ghi_chu, the, nguoi_tra, chia, nhom
 
-   loai: chi | thu | chuyen | nhan-no | tra-no.   chia: "Tôi=28500;Phúc=28500".
+   loai: chi | thu | chuyen | nhan-no | tra-no.   chia: "Tôi=28500;Phúc=28500".   nhom: tên nhóm (khoản chung / thanh toán).
    Thuần: không DOM, không storage. */
 (function (root) {
   "use strict";
   var QL = root.QL || (root.QL = {});
 
-  var HEADERS = ["ngay", "loai", "so_tien", "danh_muc", "tai_khoan", "tai_khoan_den", "ghi_chu", "the", "nguoi_tra", "chia"];
+  var HEADERS = ["ngay", "loai", "so_tien", "danh_muc", "tai_khoan", "tai_khoan_den", "ghi_chu", "the", "nguoi_tra", "chia", "nhom"];
   var ALIAS = {
     ngay: "ngay", date: "ngay", loai: "loai", type: "loai", so_tien: "so_tien", sotien: "so_tien", tien: "so_tien", amount: "so_tien",
     danh_muc: "danh_muc", danhmuc: "danh_muc", category: "danh_muc", tai_khoan: "tai_khoan", taikhoan: "tai_khoan", account: "tai_khoan",
     tai_khoan_den: "tai_khoan_den", den: "tai_khoan_den", ghi_chu: "ghi_chu", ghichu: "ghi_chu", note: "ghi_chu",
-    the: "the", tags: "the", nguoi_tra: "nguoi_tra", nguoitra: "nguoi_tra", paid_by: "nguoi_tra", chia: "chia", split: "chia"
+    the: "the", tags: "the", nguoi_tra: "nguoi_tra", nguoitra: "nguoi_tra", paid_by: "nguoi_tra", chia: "chia", split: "chia", nhom: "nhom", group: "nhom"
   };
   var TYPE_IN = { chi: "expense", expense: "expense", thu: "income", income: "income", chuyen: "transfer", transfer: "transfer", "nhan-no": "settle_in", "tra-no": "settle_out" };
 
@@ -29,7 +29,7 @@
   }
 
   function toCsv(doc) {
-    var cats = QL.ledger.byId(doc.categories), accs = QL.ledger.byId(doc.accounts), ppl = QL.ledger.byId(doc.people);
+    var cats = QL.ledger.byId(doc.categories), accs = QL.ledger.byId(doc.accounts), ppl = QL.ledger.byId(doc.people), grps = QL.ledger.byId(doc.groups || []);
     function nm(map, id) { return id && map[id] ? map[id].name : ""; }
     var rows = [HEADERS.join(",")];
     doc.transactions.slice().sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); }).forEach(function (tx) {
@@ -37,7 +37,7 @@
       var chia = tx.split ? Object.keys(tx.split.shares).map(function (id) { return nm(ppl, id).replace(/[;=]/g, " ") + "=" + tx.split.shares[id]; }).join(";") : "";
       var tra = tx.split ? nm(ppl, tx.split.paidBy) : (tx.type === "settle" ? nm(ppl, tx.personId) : "");
       rows.push([tx.date, loai, tx.amount, nm(cats, tx.categoryId), nm(accs, tx.accountId), nm(accs, tx.toAccountId),
-        tx.note || "", (tx.tags || []).join(" "), tra, chia].map(cell).join(","));
+        tx.note || "", (tx.tags || []).join(" "), tra, chia, nm(grps, tx.groupId)].map(cell).join(","));
     });
     return "﻿" + rows.join("\r\n") + "\r\n";
   }
@@ -78,7 +78,7 @@
   function fromCsv(text, doc, today) {
     var T = QL.text, M = QL.money, D = QL.dates;
     var table = parseCsv(text);
-    var out = { rows: [], create: { categories: [], accounts: [], people: [] }, error: null };
+    var out = { rows: [], create: { categories: [], accounts: [], people: [], groups: [] }, error: null };
     if (!table.length) { out.error = "File trống"; return out; }
     var col = {};
     table[0].forEach(function (h, i) {
@@ -89,21 +89,23 @@
       out.error = "Thiếu cột bắt buộc: ngay, so_tien (dòng đầu phải là tiêu đề cột)"; return out;
     }
     var me = doc.settings.meId || "p_me";
-    var known = { categories: {}, accounts: {}, people: {} };
+    var known = { categories: {}, accounts: {}, people: {}, groups: {} };
     doc.categories.forEach(function (c) { known.categories[c.kind + "|" + T.fold(c.name)] = c.id; });
     doc.accounts.forEach(function (a) { known.accounts[T.fold(a.name)] = a.id; });
     doc.people.forEach(function (p) { known.people[T.fold(p.name)] = p.id; });
-    var pending = { categories: {}, accounts: {}, people: {} };
+    (doc.groups || []).forEach(function (g) { known.groups[T.fold(g.name)] = g.id; });
+    var pending = { categories: {}, accounts: {}, people: {}, groups: {} };
 
     function ref(kind, name, extra) {          // tra id theo tên; chưa có thì hẹn tạo
       var key = (kind === "categories" ? extra + "|" : "") + T.fold(name);
       if (known[kind][key]) return known[kind][key];
       if (!pending[kind][key]) {
-        var id = QL.model.uid(kind === "categories" ? "c" : kind === "accounts" ? "a" : "p");
+        var id = QL.model.uid({ categories: "c", accounts: "a", people: "p", groups: "g" }[kind]);
         pending[kind][key] = id;
         var item = { id: id, name: name.trim() };
         if (kind === "categories") { item.kind = extra; item.icon = "•"; item.color = "#98a2ad"; }
         if (kind === "accounts") { item.kind = "cash"; item.icon = "💵"; item.openingBalance = 0; }
+        if (kind === "groups") item.memberIds = [];               // điền ở applyImport: những người có trong các dòng của nhóm
         out.create[kind].push(item);
       }
       return pending[kind][key];
@@ -150,6 +152,8 @@
           if (tx.split.paidBy !== me) tx.accountId = null;
         }
       }
+      var gname = get(r, "nhom");
+      if (gname && (tx.split || tx.type === "settle")) tx.groupId = ref("groups", gname);
       if (row.errors.length) return;
       row.tx = tx;
       row.duplicate = QL.ledger.findDuplicate(doc, tx) !== null;
@@ -163,8 +167,21 @@
     var skipDup = !(opts && opts.skipDuplicates === false);
     var added = 0;
     result.rows.forEach(function (r) { if (r.tx && !(skipDup && r.duplicate)) { /* đánh dấu mục được dùng */ [r.tx.categoryId, r.tx.accountId, r.tx.toAccountId, r.tx.personId].forEach(function (x) { if (x) used[x] = true; }); if (r.tx.split) { used[r.tx.split.paidBy] = true; Object.keys(r.tx.split.shares).forEach(function (x) { used[x] = true; }); } } });
-    ["categories", "accounts", "people"].forEach(function (coll) {
-      result.create[coll].forEach(function (item) { if (used[item.id]) d = M.upsert(d, coll, Object.assign({ archived: false, order: d[coll].length }, item), now); });
+    // Nhóm mới: thành viên = mọi người (trừ tôi) xuất hiện trong các dòng được nhập của nhóm đó.
+    var members = {}, me = doc.settings.meId || "p_me";
+    result.rows.forEach(function (r) {
+      if (!r.tx || !r.tx.groupId || (skipDup && r.duplicate)) return;
+      used[r.tx.groupId] = true;
+      var m = members[r.tx.groupId] || (members[r.tx.groupId] = []);
+      (r.tx.split ? Object.keys(r.tx.split.shares).concat(r.tx.split.paidBy) : [r.tx.personId]).forEach(function (x) { if (x && x !== me && m.indexOf(x) === -1) m.push(x); });
+    });
+    ["categories", "accounts", "people", "groups"].forEach(function (coll) {
+      (result.create[coll] || []).forEach(function (item) {
+        if (!used[item.id]) return;
+        var rec = Object.assign({ archived: false, order: (d[coll] || []).length }, item);
+        if (coll === "groups") rec.memberIds = members[item.id] || [];
+        d = M.upsert(d, coll, rec, now);
+      });
     });
     result.rows.forEach(function (r) {
       if (!r.tx || (skipDup && r.duplicate)) return;

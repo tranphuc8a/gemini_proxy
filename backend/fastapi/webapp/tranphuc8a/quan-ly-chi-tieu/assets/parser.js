@@ -130,12 +130,34 @@
     return arr.slice(0, a) + new Array(b - a + 1).join(" ") + arr.slice(b);
   }
 
-  /** Người (không phải tôi, chưa ẩn) theo thứ tự ưu tiên chia: cài đặt rồi tới danh sách. */
+  /** Nhóm mặc định khi chia ("57/3"), nếu còn dùng được. */
+  function defaultGroup(doc) {
+    var id = doc.settings.defaultGroupId, g = id ? QL.model.find(doc.groups || [], id) : null;
+    return g && !g.archived ? g : null;
+  }
+
+  /** Thành viên của nhóm còn chọn được (tôi trước, bỏ người đã lưu trữ). */
+  function activeMembers(doc, g) {
+    var me = doc.settings.meId || "p_me";
+    return [me].concat(g.memberIds.filter(function (id) { var p = QL.model.find(doc.people, id); return p && !p.archived && id !== me; }));
+  }
+
+  /** Người (không phải tôi, chưa ẩn) theo thứ tự ưu tiên chia: nhóm mặc định, người mặc định, rồi tới danh sách. */
   function partners(doc) {
     var me = doc.settings.meId || "p_me";
     var others = doc.people.filter(function (p) { return p.id !== me && !p.archived; });
-    var pref = (doc.settings.defaultPartnerIds || []).map(function (id) { return QL.model.find(others, id); }).filter(Boolean);
+    var g = defaultGroup(doc), pref = [];
+    if (g) g.memberIds.forEach(function (id) { var p = QL.model.find(others, id); if (p) pref.push(p); });
+    (doc.settings.defaultPartnerIds || []).forEach(function (id) { var p = QL.model.find(others, id); if (p && pref.indexOf(p) === -1) pref.push(p); });
     return pref.length ? pref : others;
+  }
+
+  /** Khoản chia mà mọi người tham gia đều ở nhóm mặc định thì tính vào nhóm đó. */
+  function tagDefaultGroup(split, doc) {
+    var g = defaultGroup(doc), me = doc.settings.meId || "p_me";
+    if (g && split.participantIds.length > 1 && split.participantIds.every(function (id) { return id === me || g.memberIds.indexOf(id) !== -1; }) &&
+        (split.payerId === me || g.memberIds.indexOf(split.payerId) !== -1)) split.groupId = g.id;
+    return split;
   }
 
   /**
@@ -243,7 +265,22 @@
       warnings.push("Chưa thấy số tiền");
     }
 
-    /* 5. Ai trả: "@Phúc", "Phúc trả", hậu tố chữ cái sau /n ("57/2P"), "tôi trả". */
+    /* 5. Nhóm: "nhóm Phòng trọ" hoặc "@Phòng trọ" — chia cho mọi thành viên của nhóm. */
+    var groupHit = null;
+    (doc.groups || []).forEach(function (g) {
+      if (groupHit || g.archived) return;
+      var w = fold(g.name).replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+      if (!w) return;
+      var gm = new RegExp("(^|[^a-z0-9])((?:nhom\\s+|@)" + reEsc(w).replace(/ /g, "\\s+") + ")(?![a-z0-9])").exec(work);
+      if (gm) {
+        var s4 = gm.index + gm[1].length;
+        groupHit = g;
+        spans.push({ kind: "group", start: s4, end: s4 + gm[2].length });
+        work = blank(work, s4, s4 + gm[2].length);
+      }
+    });
+
+    /* 6. Ai trả: "@Phúc", "Phúc trả", hậu tố chữ cái sau /n ("57/2P"), "tôi trả". */
     var people = doc.people.filter(function (p) { return !p.archived; });
     people.forEach(function (p) {
       if (payerId) return;
@@ -273,19 +310,27 @@
       else warnings.push("Chưa rõ ai trả (" + amountTok.letter.toUpperCase() + ")");
     }
 
-    /* 6. Chia tiền: tìm người tham gia. */
-    if (split) {
+    /* 7. Chia tiền: tìm người tham gia. */
+    if (groupHit) {
+      var gids = activeMembers(doc, groupHit);
+      if (gids.length < 2) { warnings.push("Nhóm " + groupHit.name + " chưa có thành viên nào để chia"); split = null; }
+      else {
+        if (split && split.n !== gids.length) warnings.push("Nhóm " + groupHit.name + " có " + gids.length + " người — chia " + gids.length);
+        if (payerId && gids.indexOf(payerId) === -1) warnings.push("Người trả không thuộc nhóm " + groupHit.name);
+        split = { n: gids.length, payerId: payerId || me, participantIds: gids, groupId: groupHit.id };
+      }
+    } else if (split) {
       var list = partners(doc), ids = [me];
       list.forEach(function (p) { if (ids.length < split.n && ids.indexOf(p.id) === -1) ids.push(p.id); });
       if (payerId && ids.indexOf(payerId) === -1) { if (ids.length >= split.n) ids.pop(); ids.push(payerId); }
       if (ids.length < split.n) warnings.push("Mới có " + ids.length + " người — thêm người ở mục Chia tiền để chia " + split.n);
-      split = { n: split.n, payerId: payerId || me, participantIds: ids };
+      split = tagDefaultGroup({ n: split.n, payerId: payerId || me, participantIds: ids }, doc);
     } else if (payerId && payerId !== me) {
       // "Phúc trả" mà không nói chia: coi là chia đôi với người đó.
-      split = { n: 2, payerId: payerId, participantIds: [me, payerId] };
+      split = tagDefaultGroup({ n: 2, payerId: payerId, participantIds: [me, payerId] }, doc);
     }
 
-    /* 7. Phần còn lại là ghi chú. */
+    /* 8. Phần còn lại là ghi chú. */
     var note = "";
     for (var k = 0; k < src.length; k++) note += work.charAt(k) === " " && f.charAt(k) !== " " ? " " : src.charAt(k);
     note = note.replace(/\s+/g, " ").replace(/^[\s:;,\-–—=()]+|[\s:;,\-–—=()]+$/g, "").trim();
@@ -323,6 +368,7 @@
       ids.forEach(function (id, i) { shares[id] = parts[i]; });
       tx.split = { paidBy: p.split.payerId, shares: shares };
       if (p.split.payerId !== me) tx.accountId = null;
+      if (p.split.groupId) tx.groupId = p.split.groupId;
     }
     return tx;
   }
@@ -367,6 +413,89 @@
     return rows;
   }
 
-  QL.parser = { parseQuick: parseQuick, parseLines: parseLines, toTx: toTx, suggestCategory: suggestCategory, partners: partners };
+  /* ----------------------------------------------------------- từ AI */
+  /**
+   * Đề xuất của POST /ai/spending (máy chủ đã kiểm id) → các dòng xem trước giống parseLines, để
+   * cùng một bảng "Nhập từ văn bản" cho chọn rồi mới lưu. Không đổi `doc`.
+   * Người AI nhắc tên mà sổ chưa có → hẹn tạo (`people`); dòng nào cần họ thì `needs` liệt kê id.
+   * Mọi giao dịch đi qua validateTx như khi gõ tay (trên sổ đã thêm những người hẹn tạo).
+   * Trả {rows: [{n, line, status: ok|unclear|skip, reason, tx, needs, confidence, ai}], people: [{id, name}]}.
+   */
+  function fromAi(res, doc, today) {
+    var Mo = QL.model, me = doc.settings.meId || "p_me", rows = [], made = {}, people = [];
+    function idOf(ref) {
+      if (!ref) return null;
+      if (ref.id) return Mo.find(doc.people, ref.id) ? ref.id : null;
+      var name = String(ref.name || "").replace(/\s+/g, " ").trim().slice(0, 60), f = fold(name);
+      if (!f) return null;
+      var hit = doc.people.filter(function (x) { return fold(x.name) === f; })[0];
+      if (hit) return hit.id;
+      if (!made[f]) { made[f] = { id: Mo.uid("p"), name: name }; people.push(made[f]); }
+      return made[f].id;
+    }
+    function uniq(list) { var out = []; list.forEach(function (x) { if (x && out.indexOf(x) === -1) out.push(x); }); return out; }
+    var defAcc = Mo.find(doc.accounts, doc.settings.defaultAccountId) ? doc.settings.defaultAccountId : (doc.accounts[0] && doc.accounts[0].id);
+
+    ((res && res.transactions) || []).forEach(function (t, i) {
+      var row = { n: i + 1, line: String(t.source || t.note || ""), status: "ok", reason: "", tx: null, needs: [], confidence: typeof t.confidence === "number" ? t.confidence : null, ai: true };
+      var type = t.type === "income" ? "income" : "expense", note = String(t.note || "").trim().slice(0, 300), warns = (t.warnings || []).slice();
+      var tx = { type: type, date: QL.dates.isValid(t.date) ? t.date : today, amount: t.amount, note: note, tags: [],
+        categoryId: t.categoryId && usable(doc, t.categoryId, type) ? t.categoryId : (suggestCategory(note, type, doc) || (type === "income" ? "c_income_other" : "c_other")),
+        accountId: t.accountId && Mo.find(doc.accounts, t.accountId) ? t.accountId : defAcc, toAccountId: null };
+      if (type === "expense") {
+        var payer = idOf(t.paidBy) || me;
+        var group = t.groupId ? Mo.find(doc.groups || [], t.groupId) : null;
+        if (group && group.archived) group = null;
+        var mapped = (t.participants || []).map(idOf), ids = uniq(mapped), dropped = mapped.filter(function (x) { return !x; }).length;
+        if (dropped) warns.push("Bỏ " + dropped + " người không còn trong sổ");
+        if (!ids.length && t.shares && t.shares.length) ids = uniq(t.shares.map(idOf));
+        if (!ids.length && group) ids = activeMembers(doc, group);
+        if (!ids.length && t.splitCount >= 2) {
+          ids = [me];
+          partners(doc).forEach(function (p) { if (ids.length < t.splitCount && ids.indexOf(p.id) === -1) ids.push(p.id); });
+          if (ids.length < t.splitCount) warns.push("Mới có " + ids.length + " người để chia " + t.splitCount);
+        }
+        if (ids.length && !(ids.length === 1 && ids[0] === me && payer === me)) {
+          var shares = {};
+          if (t.shares && t.shares.length) t.shares.forEach(function (x) { var id = idOf(x); if (id) shares[id] = (shares[id] || 0) + x.amount; });
+          else { var parts = QL.money.allocate(tx.amount, ids.map(function () { return 1; })); ids.forEach(function (id, k) { shares[id] = parts[k]; }); }
+          tx.split = { paidBy: payer, shares: shares };
+          if (payer !== me) tx.accountId = null;
+          var everyone = Object.keys(shares).concat(payer);
+          var dg = defaultGroup(doc), inGroup = function (g) { return everyone.every(function (id) { return id === me || g.memberIds.indexOf(id) !== -1; }); };
+          if (group) { tx.groupId = group.id; if (!inGroup(group)) warns.push("Có người ngoài nhóm " + group.name); }
+          else if (dg && Object.keys(shares).length > 1 && inGroup(dg)) tx.groupId = dg.id;
+        }
+        row.needs = people.filter(function (x) { return tx.split && (tx.split.paidBy === x.id || tx.split.shares[x.id] !== undefined); }).map(function (x) { return x.id; });
+      }
+      row.tx = tx;
+      row.reason = warns.join("; ");
+      rows.push(row);
+    });
+    // Kiểm như giao dịch gõ tay, trên sổ đã có những người hẹn tạo.
+    var preview = people.reduce(function (x, p) { return Mo.upsert(x, "people", { id: p.id, name: p.name, archived: false }); }, doc);
+    rows.forEach(function (r) {
+      var errs = Mo.validateTx(Object.assign({ id: "ai" }, r.tx), preview);
+      if (errs.length) { r.status = "unclear"; r.reason = errs[0] + (r.reason ? "; " + r.reason : ""); r.tx = null; }
+    });
+    ((res && res.ignored) || []).forEach(function (x) { rows.push({ n: rows.length + 1, line: String(x.text || ""), status: "skip", reason: String(x.reason || "Bỏ qua"), tx: null, needs: [], ai: true }); });
+    return { rows: rows, people: people };
+  }
+
+  /** Những gì AI được biết về sổ: TÊN + id (không số dư, không giao dịch cũ) — đúng giới hạn của POST /ai/spending. */
+  function aiContext(doc) {
+    var me = doc.settings.meId || "p_me";
+    var live = function (x) { return !x.archived; };
+    return {
+      me: me,
+      categories: doc.categories.filter(live).slice(0, 120).map(function (c) { return { id: c.id, name: c.name, kind: c.kind }; }),
+      accounts: doc.accounts.filter(function (a) { return live(a) && a.kind !== "savings"; }).slice(0, 60).map(function (a) { return { id: a.id, name: a.name }; }),
+      people: doc.people.filter(function (p) { return live(p) && p.id !== me; }).slice(0, 200).map(function (p) { return { id: p.id, name: p.name }; }),
+      groups: (doc.groups || []).filter(live).slice(0, 50).map(function (g) { return { id: g.id, name: g.name, memberIds: g.memberIds.slice(0, 40) }; })
+    };
+  }
+
+  QL.parser = { parseQuick: parseQuick, parseLines: parseLines, toTx: toTx, suggestCategory: suggestCategory, partners: partners, defaultGroup: defaultGroup, activeMembers: activeMembers,
+    fromAi: fromAi, aiContext: aiContext };
   if (typeof module !== "undefined" && module.exports) module.exports = QL.parser;
 })(typeof globalThis !== "undefined" ? globalThis : this);
