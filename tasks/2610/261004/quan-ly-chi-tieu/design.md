@@ -52,6 +52,7 @@ Một tài liệu duy nhất (cũng là thứ máy chủ lưu và `Sao lưu JSON
     "smallAsThousand": true,          // "57" = 57.000
     "defaultAccountId": "a_cash",
     "defaultPartnerIds": ["p_x1"],    // gợi ý khi gõ "/2"
+    "defaultGroupId": "g_x",          // nhóm mặc định khi chia (2026-10-08, §12)
     "theme": "system",                // system | light | dark
     "lastBackupAt": null
   },
@@ -60,10 +61,12 @@ Một tài liệu duy nhất (cũng là thứ máy chủ lưu và `Sao lưu JSON
                      "deposit":{ "rate":8.6,"termMonths":12,"openedOn":"2026-09-10","taxPct":0,"closedOn":null } }],
   "categories":   [{ "id","name","kind":"expense|income","icon","color","archived":false,"order":0,"updatedAt" }],
   "people":       [{ "id","name","archived":false,"updatedAt" }],          // "p_me" luôn tồn tại
+  "groups":       [{ "id","name","memberIds":["p_x1"],"archived":false,"order":0,"updatedAt" }],  // tôi là thành viên ngầm (§12)
   "transactions": [{ "id","type":"expense|income|transfer|settle","date":"YYYY-MM-DD","amount":57000,
                      "categoryId":null,"accountId":"a_cash","toAccountId":null,"note":"","tags":[],
                      "split":{ "paidBy":"p_me","shares":{"p_me":28500,"p_x1":28500} },   // chỉ type=expense
                      "personId":null,"direction":null,                                    // chỉ type=settle: "in"|"out"
+                     "groupId":null,                                                       // chỉ khoản chi CHUNG hoặc settle (§12)
                      "recurringId":null,"createdAt","updatedAt" }],
   "budgets":      [{ "id","categoryId":null,"amount":3000000,"updatedAt" }],            // theo tháng; null = tổng chi
   "recurring":    [{ "id","name","type","amount","categoryId","accountId","note",
@@ -83,6 +86,7 @@ Một tài liệu duy nhất (cũng là thứ máy chủ lưu và `Sao lưu JSON
 5. Chi do người khác trả (`split.paidBy ≠ me`) **không** có `accountId` ảnh hưởng số dư (không đụng tiền của tôi).
 6. `date` đúng `YYYY-MM-DD` và là ngày thật; `id` duy nhất trong từng mảng; tham chiếu mồ côi (danh mục/tài khoản đã xoá) được hiển thị là "(đã xoá)" thay vì làm hỏng tính toán.
 7. Xoá = bỏ khỏi mảng + ghi `tombstones[coll][id] = now`.
+8. `groupId` chỉ có ở khoản chi **chung** (có `split`) hoặc `settle`; khi ghi phải trỏ tới nhóm có thật. `memberIds` không chứa "tôi", chỉ chứa người còn tồn tại (normalize lọc), tối đa 40.
 
 ### 3.2 Tác động của một giao dịch (`ledger.effects`)
 
@@ -304,7 +308,12 @@ assets/
   store.js            LocalStore, RemoteStore, Engine đồng bộ (tiêm storage + fetch → kiểm được)
   ui.js               tiện ích DOM: esc, h, toast, dialog, router, định dạng
   views.js            các màn hình
+  dialogs.js          hộp thoại: nhập giao dịch, người, tài khoản, quyết toán, nhập từ văn bản / AI…
+  chung.js            nhóm, sổ "Các khoản chung" (lọc + phân trang), quyết toán nhóm (§12)
+  ai.js               gọi POST /ai/spending (cùng giao thức token với courses/engine/ai-khach.js) (§12)
+  pwa.js              đăng ký service worker, nút "Cài ứng dụng"
   app.js              khởi động, state, kết nối mọi thứ
+sw.js                 service worker (gốc app); manifest.webmanifest + icon trong assets/
 ```
 
 Mọi module thuần đăng ký vào `globalThis.QL.<tên>` và `module.exports` khi chạy trong node (cùng khuôn `loi.js`). `ui.js`, `views.js`, `app.js` chỉ chạy trong trình duyệt. Mọi chuỗi người dùng đi qua `esc()` trước khi vào `innerHTML`; sự kiện dùng uỷ quyền `data-act`. Không `eval`, không `new Function`, không nạp script ngoài.
@@ -355,3 +364,43 @@ Ghi lại để người đọc sau không phải đoán. Tất cả đều là 
 | Mở bằng `file://` | cho nhập "Địa chỉ máy chủ" | thêm: khi chưa có địa chỉ, engine **không gọi API** (không request, không lỗi CORS ở console) | phát hiện bằng selftest trình duyệt |
 | Màu chủ đề sáng | — | `--text3`, `--thu` tối hơn | kiểm tĩnh bắt được hai cặp màu dưới 4,5:1 |
 | Hiện chi tiết kho khi sẵn sàng | hiện `detail` | chỉ hiện "Sẵn sàng" | `/storage/backends` trả cả tên host DB; UI này không nhắc lại |
+
+## 12. Bổ sung 2026-10-08: nhóm người, sổ "Các khoản chung", nhập bằng AI
+
+Ba yêu cầu mới: (1) popup "Các khoản chung với …" lọc/cuộn/phân trang được khi dài; (2) khoản chung nhiều hơn 2 người → **nhóm người**; (3) **AI** tách văn bản thường thành một/nhiều giao dịch. Người dùng duyệt phương án A (cách nhìn "sổ của tôi") và nâng NFR-06 lên 350 KB.
+
+### 12.1 Nhóm — cách nhìn "sổ của tôi" (phương án A)
+
+- Dữ liệu: `groups[]` (bộ sưu tập thứ 7, gộp LWW + bia mộ như mọi bộ sưu tập — `sync.merge` lặp theo `COLLECTIONS`), `tx.groupId`, `settings.defaultGroupId`. Vẫn `schema 1` (chỉ thêm).
+- **Số dư từng cặp** vẫn là nguồn sự thật: `ledger.personBalances(doc)` như cũ (mọi khoản); `personBalances(doc, groupId)` chỉ tính khoản của nhóm. Thanh toán ghi ở thẻ **người** không gắn nhóm nên không trừ vào số của nhóm (giao diện nói rõ); ghi ở **quyết toán nhóm** thì gắn `groupId`.
+- **Đối chiếu nhóm** `groupStatement(doc, g, per)`: mỗi người `paid`, `share`, `sent`, `received`, `net = paid − share + sent − received` (Σ = 0).
+- **Cách chuyển**: phần liên quan tới TÔI lấy đúng số nợ từng cặp trong sổ (để ghi nhận khớp sổ, không để lại số dư ±lẻ); phần còn lại giữa những người khác gộp tham lam cho ít lần chuyển nhất (`settleUp`, ≤ n−1 lần). Hạn chế đã chấp nhận: **tiền hai người khác chuyển cho nhau không có trong sổ**, nên báo cáo nhóm chính xác nhất khi chốt theo kỳ.
+- Nhập nhanh: `nhóm <tên>` hoặc `@<tên nhóm>` → chia cho mọi thành viên chưa lưu trữ; `57/N` lấy người của nhóm mặc định trước; khoản mà mọi người tham gia đều thuộc nhóm mặc định thì tự gắn nhóm đó.
+- Xoá người: `model.removePerson` gỡ khỏi mọi nhóm + người mặc định trong cùng một thao tác (hoàn tác một bước bằng hàm ngược).
+- CSV thêm cột cuối `nhom` (tên nhóm). Nhập vào sổ chưa có nhóm đó → tạo nhóm với thành viên = mọi người trong các dòng của nhóm.
+
+### 12.2 Sổ "Các khoản chung" (người hoặc nhóm)
+
+`ledger.sharedLedger(doc, {personId}|{groupId}, f)` — thuần, kiểm bằng node — lọc theo kỳ (`from/to`), loại (`expense`/`settle`), ai trả (`me`/`other`), thành viên, nhóm (`"none"` = không thuộc nhóm), tìm kiếm (cùng bộ tách từ + bộ nhớ đệm của `filterTx`); trả cả tổng trong bộ lọc. Giao diện (`chung.js`): thanh lọc **dính đầu** hộp thoại (`position: sticky` trong `.dlg-body` — cuộn cả hộp, không lồng hai thanh cuộn trên điện thoại), chọn tháng bằng `<select>` các tháng có dữ liệu + nút ‹ › (không dùng `input type=month` vì Firefox/Safari máy tính không có), vẽ 50 dòng/lần + "Hiện thêm" (đưa con trỏ bàn phím tới dòng mới đầu tiên).
+
+### 12.3 Nhập bằng AI — `POST /api/v1/ai/spending`
+
+| | |
+|---|---|
+| Vào | `{text ≤ 6000, today, me, categories[{id,name,kind}] ≤120, accounts[{id,name}] ≤60, people[{id,name}] ≤200, groups[{id,name,memberIds}] ≤50}` — chỉ TÊN + id (`parser.aiContext`), không số dư, không giao dịch cũ |
+| Ra | `{transactions:[{type,date,amount,note,categoryId,accountId,paidBy,participants,splitCount,groupId,shares,source,confidence,warnings}], ignored:[{text,reason}]}`; người là `{id}` (có trong sổ) hoặc `{name}` (người mới) |
+| Quyền | qua `AiUseCase.ask` (feature `spending_parse`): `AI_ACCESS`, giới hạn theo IP, ngân sách ngày, công tắc tắt |
+| Kiểm ở server | id phải nằm trong danh sách trang gửi (id bịa bị bỏ, tên trùng người có sẵn → id đó), danh mục đúng loại, số tiền nguyên dương ≤ 100 tỷ, ngày thật (sai → hôm nay + cảnh báo; tương lai → cảnh báo), phần chia theo số phải cộng đúng, ≤ 40 khoản; văn bản trong rào `<<< >>>` (chống chèn mệnh lệnh), tên một dòng |
+| Riêng tư | **không cache** (bảng cache AI dùng chung), không ghi log nội dung |
+| Client | `ai.js` (cùng khoá localStorage `ai.phien@…`/`qlkh.phien@…` với `ai-khach.js`); `parser.fromAi` biến đề xuất thành dòng xem trước, chạy `validateTx` trên sổ đã thêm người hẹn tạo; hộp "Nhập từ văn bản" cho bỏ chọn từng khoản; người mới chỉ tạo khi có dòng cần họ được chọn; lưu + hoàn tác một bước |
+
+Không nạp thẳng `courses/engine/ai-khach.js`: nó nằm ngoài phạm vi service worker (offline hỏng) và không có khi mở bằng `file://`.
+
+### 12.4 Khác biệt / quyết định trong lúc làm
+
+| Chỗ | Quyết định | Vì sao |
+|---|---|---|
+| Trạng thái `/ai/status` ở client | nhớ 30 giây, mở hộp thì hỏi lại | quyền có thể đổi ở trang khác (đăng nhập quản trị); nhớ mãi thì phải tải lại trang |
+| AI đưa phần chia theo số mà không kèm danh sách người | lấy người từ phần chia (cả server lẫn client) | node test bắt được: client từng bỏ qua phần chia |
+| Phép kiểm CSV cũ khoá cứng 10 cột | đổi sang `HEADERS.length` (11) | chủ ý thêm cột `nhom` |
+| Hộp "Dán từ ghi chú" | đổi tên "Nhập từ văn bản", thêm ✨ AI, id cũ giữ nguyên | selftest cũ vẫn chạy |

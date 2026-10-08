@@ -77,8 +77,9 @@ def run(app_dir: str, check, head) -> None:
             loop.append(f + ":eval")
     check("không có địa chỉ loopback đóng cứng, không eval/new Function", not loop, ", ".join(loop))
     css_b = len(css.encode("utf-8"))
-    check(f"kích thước tài nguyên ≤ 300 KB (JS không tính kiem.js {(total - os.path.getsize(os.path.join(app_dir, 'kiem.js'))) // 1024} KB + CSS {css_b // 1024} KB)",
-          (total - os.path.getsize(os.path.join(app_dir, "kiem.js")) + css_b) <= 300 * 1024)
+    # NFR-06: 300 KB ban đầu, nâng lên 350 KB khi thêm nhóm người + nhập bằng AI (2026-10-08).
+    check(f"kích thước tài nguyên ≤ 350 KB (JS không tính kiem.js {(total - os.path.getsize(os.path.join(app_dir, 'kiem.js'))) // 1024} KB + CSS {css_b // 1024} KB)",
+          (total - os.path.getsize(os.path.join(app_dir, "kiem.js")) + css_b) <= 350 * 1024)
     pwa(app_dir, html, check)
 
 

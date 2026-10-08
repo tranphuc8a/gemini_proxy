@@ -144,6 +144,10 @@
     "person-new": function () { DL.person(null); },
     "person-edit": function (el) { DL.person(el.dataset.id); },
     "person-detail": function (el) { DL.personDetail(el.dataset.id); },
+    "group-new": function () { DL.group(null); },
+    "group-edit": function (el) { DL.group(el.dataset.id); },
+    "group-detail": function (el) { DL.groupDetail(el.dataset.id); },
+    "group-settle": function (el) { DL.groupSettle(el.dataset.id); },
     "bill": function () { DL.bill(); },
     "account-new": function () { DL.account(null); },
     "account-edit": function (el) { DL.account(el.dataset.id); },
@@ -175,6 +179,7 @@
     "export-csv": function () { U.download("chi-tieu-" + D.today() + ".csv", QL.csv.toCsv(engine.getDoc()), "text/csv;charset=utf-8"); U.toast("Đã tải file CSV"); },
     "import-csv": function () { U.pickFile(".csv,.txt,text/csv").then(function (f) { if (f) DL.importCsv(f.text); }); },
     "import-text": function () { DL.importText(); },
+    "import-ai": function () { DL.importText({ ai: true }); },
     "undo-replace": function () { if (engine.undoReplace()) U.toast("Đã hoàn tác lần thay thế"); },
     "sample": function () {
       var doc = engine.getDoc();

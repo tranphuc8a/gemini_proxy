@@ -127,6 +127,16 @@ Từ 02/2026 đến 10/2026, người dùng ghi chi tiêu vào một ghi chú v�
 | FR-63 | M | Trạng thái trống có hướng dẫn; **dữ liệu mẫu** tuỳ chọn (xoá được); hướng dẫn lần đầu ngắn. |
 | FR-64 | S | Vùng chạm ≥ 44 × 44 px; tôn trọng `prefers-reduced-motion`; tương phản WCAG AA. |
 
+### 3.8 Bổ sung 2026-10-08: nhóm người, sổ khoản chung, nhập bằng AI
+
+| ID | Ưu tiên | Yêu cầu |
+|---|:--:|---|
+| FR-80 | M | **Nhóm người**: tạo/sửa/lưu trữ/xoá (khi chưa dùng) nhóm có tên và thành viên (tôi là thành viên ngầm); thêm người mới ngay trong hộp tạo nhóm; một nhóm mặc định khi chia. |
+| FR-81 | M | Khoản chi chung chọn được **nhóm**: tự điền mọi thành viên, bỏ được người vắng, ai trong nhóm cũng có thể là người trả. Nhập nhanh hiểu `nhóm <tên>`, `@<tên nhóm>` và `57/N` theo nhóm mặc định. |
+| FR-82 | M | **Thẻ nhóm**: số dư của tôi với cả nhóm và với từng người (chỉ khoản của nhóm); **quyết toán nhóm** theo kỳ: bảng đã trả/phần/còn lại, cách chuyển tiền, tin nhắn sao chép được, ghi nhận phần của tôi. |
+| FR-83 | M | **Các khoản chung** (với một người hoặc của một nhóm): lọc theo tháng, loại, ai trả, thành viên, nhóm; tìm kiếm; cuộn với thanh lọc luôn thấy; phân trang 50 dòng; tổng trong bộ lọc. |
+| FR-84 | S | **Nhập bằng AI**: dán văn bản thường → một/nhiều giao dịch đề xuất (ngày, số tiền, danh mục, ai trả, ai chịu, nhóm); xem trước, bỏ chọn, rồi mới lưu; người mới chỉ tạo khi cần. Chỉ gửi văn bản + tên danh mục/tài khoản/người/nhóm; không gửi số dư hay giao dịch cũ. Dùng cổng AI chung (quyền, hạn mức) của máy chủ. |
+
 ## 4. Yêu cầu phi chức năng
 
 | ID | Yêu cầu |
@@ -136,7 +146,7 @@ Từ 02/2026 đến 10/2026, người dùng ghi chi tiêu vào một ghi chú v�
 | NFR-03 **An toàn** | Mọi chuỗi người dùng được thoát HTML trước khi hiển thị (chống XSS); máy chủ giới hạn kích thước tài liệu và kiểm tra kiểu; so sánh khoá hằng thời gian. |
 | NFR-04 **Đồng thời** | Lưu có điều kiện theo `revision` **nguyên tử** ở cả ba kho (không có khe hở đọc-rồi-ghi làm mất cập nhật). |
 | NFR-05 **Hiệu năng** | Mở app < 1 s với 10.000 giao dịch trên điện thoại tầm trung; chỉ vẽ kỳ đang xem; lưu cục bộ không chặn nhập liệu (debounce); đồng bộ đẩy gộp. |
-| NFR-06 **Kích thước** | Không thư viện ngoài, không bước build; tổng tài nguyên ≤ 300 KB chưa nén. |
+| NFR-06 **Kích thước** | Không thư viện ngoài, không bước build; tổng tài nguyên ≤ 350 KB chưa nén (300 KB ban đầu; nâng lên 350 KB ngày 2026-10-08 khi thêm nhóm người và nhập bằng AI). |
 | NFR-07 **Tương thích** | Chrome/Edge/Firefox/Safari 2 bản gần nhất, iOS Safari. `file://` hoạt động ở chế độ "Máy này". |
 | NFR-08 **Khả kiểm** | Toàn bộ logic tiền/ngày/chia tiền/gộp dữ liệu là hàm thuần chạy bằng node; backend có pytest cho cả ba kho. |
 | NFR-09 **Bền dữ liệu** | Ghi localStorage có bắt lỗi; ghi JSON phía server qua tệp tạm + `os.replace`; mỗi lần khôi phục/thay thế tự lưu bản sao an toàn gần nhất để hoàn tác. |

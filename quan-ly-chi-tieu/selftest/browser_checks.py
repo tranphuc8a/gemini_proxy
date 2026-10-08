@@ -83,6 +83,9 @@ def run(srv, check, skip, head, shots=False, out=".", app_url="/", file_url=None
             if file_url:
                 file_mode(browser, file_url, check)
             installable(browser, base, check)
+            from nhom_ai import ai_flow, groups_flow
+            groups_flow(browser, base, check, shots, out)
+            ai_flow(browser, base, check, shots, out)
             two_devices(browser, srv, base, check, shots, out)
         finally:
             browser.close()

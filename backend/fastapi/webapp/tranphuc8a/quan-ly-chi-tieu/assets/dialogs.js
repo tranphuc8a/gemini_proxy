@@ -43,6 +43,33 @@
     return U.options(doc.accounts.filter(function (a) { return (o.all || (!a.archived && a.kind !== "savings")) || a.id === selected; }).map(function (a) { return { id: a.id, label: a.icon + " " + a.name }; }), selected);
   }
 
+  /** Kỳ quyết toán: tuần này/trước, tháng này/trước, tất cả — thêm đúng tháng `monthIso` (vd tháng đang lọc) nếu có. */
+  function periodChoices(today, monthIso) {
+    var list = [
+      { id: "wk", label: "Tuần này", per: D.period("week", today) },
+      { id: "pwk", label: "Tuần trước", per: D.period("week", D.addDays(today, -7)) },
+      { id: "mo", label: "Tháng này", per: D.period("month", today) },
+      { id: "pmo", label: "Tháng trước", per: D.period("month", D.addMonths(today, -1)) },
+      { id: "all", label: "Tất cả", per: D.period("all", today) }
+    ];
+    var initial = null;
+    if (monthIso) {
+      var pm = D.period("month", monthIso), same = list.filter(function (x) { return x.per.kind === "month" && x.per.from === pm.from; })[0];
+      if (same) initial = same.id;
+      else { initial = "m:" + pm.from; list.splice(4, 0, { id: initial, label: pm.label, per: pm }); }
+    }
+    return { list: list, initial: initial, of: function (id) { return (list.filter(function (x) { return x.id === id; })[0] || list[0]).per; } };
+  }
+
+  /** Thành viên nhóm còn chọn được, cộng những người đang có trong `keep` (vd khoản cũ đang sửa). */
+  function groupPeople(doc, groupId, keep) {
+    var g = QL.model.find(doc.groups || [], groupId);
+    if (!g) return [];
+    var ids = QL.parser.activeMembers(doc, g);
+    (keep || []).forEach(function (id) { if (ids.indexOf(id) === -1 && (id === doc.settings.meId || g.memberIds.indexOf(id) !== -1)) ids.push(id); });
+    return ids;
+  }
+
   /* ===================================================================
      Nhập giao dịch
      =================================================================== */
@@ -55,6 +82,8 @@
     var src = editing || init.draft || {};
     var todayIso = c.today;
     var others = doc.people.filter(function (p) { return p.id !== me && !p.archived; });
+    var defGroup = QL.parser.defaultGroup(doc);
+    var srcGroup = src.split && src.groupId && QL.model.find(doc.groups || [], src.groupId) ? src.groupId : null;
     var T = {
       type: src.type || init.type || "expense",
       amount: src.amount ? amtText(src.amount) : "",
@@ -65,7 +94,8 @@
       note: src.note || "",
       tags: (src.tags || []).join(" "),
       shared: !!src.split, paidBy: (src.split && src.split.paidBy) || me,
-      ids: src.split ? Object.keys(src.split.shares) : [me].concat(others.length ? [QL.parser.partners(doc)[0].id] : []),
+      ids: src.split ? Object.keys(src.split.shares) : (defGroup ? QL.parser.activeMembers(doc, defGroup) : [me].concat(others.length ? [QL.parser.partners(doc)[0].id] : [])),
+      groupId: src.split ? srcGroup : (defGroup ? defGroup.id : null),
       mode: "equal", exact: {}, touched: {}
     };
     if (src.split) {
@@ -145,8 +175,14 @@
       if (people.length < 2) {
         box.innerHTML = '<p class="hint">Chưa có người nào để chia. <button type="button" class="btn sm" data-addperson>Thêm người</button></p>'; return;
       }
+      var groups = (doc.groups || []).filter(function (g) { return !g.archived || g.id === T.groupId; });
+      if (T.groupId) {
+        var inGroup = groupPeople(doc, T.groupId, T.ids.concat(T.paidBy));
+        people = people.filter(function (p) { return inGroup.indexOf(p.id) !== -1; });
+      }
       var sl = shareList();
-      var html = U.field("Ai trả", '<select id="tx-payer">' + U.options(people.map(function (p) { return { id: p.id, label: p.id === me ? p.name + " (bạn)" : p.name }; }), T.paidBy) + "</select>", "", "tx-payer") +
+      var html = (groups.length ? U.field("Nhóm", '<select id="tx-group">' + U.options(groups.map(function (g) { return { id: g.id, label: g.name + (g.archived ? " (đã lưu trữ)" : "") }; }), T.groupId || "", "Không theo nhóm") + "</select>", "", "tx-group") : "") +
+        U.field("Ai trả", '<select id="tx-payer">' + U.options(people.map(function (p) { return { id: p.id, label: p.id === me ? p.name + " (bạn)" : p.name }; }), T.paidBy) + "</select>", "", "tx-payer") +
         '<div><div class="fld">Ai tham gia</div><div class="chips mt-s">' + people.map(function (p) {
           return '<label class="chip' + (T.ids.indexOf(p.id) !== -1 ? " on" : "") + '"><input type="checkbox" data-pid="' + esc(p.id) + '"' + (T.ids.indexOf(p.id) !== -1 ? " checked" : "") + ' style="width:18px;height:18px"> ' + esc(p.name) + "</label>";
         }).join("") + "</div></div>" + U.seg("splitMode", [{ id: "equal", label: "Chia đều" }, { id: "exact", label: "Theo số tiền" }], T.mode);
@@ -202,7 +238,7 @@
       if (p.categoryId && !T.touched.cat && p.type !== "transfer") T.categoryId = p.categoryId;
       if (!T.touched.note) { T.note = p.note; q("#tx-note").value = T.note; }
       if (!T.touched.shared) {
-        if (p.split) { T.shared = true; T.paidBy = p.split.payerId; T.ids = p.split.participantIds.slice(); T.mode = "equal"; }
+        if (p.split) { T.shared = true; T.paidBy = p.split.payerId; T.ids = p.split.participantIds.slice(); T.mode = "equal"; T.groupId = p.split.groupId || null; }
         else T.shared = false;
       }
       refresh();
@@ -224,6 +260,7 @@
           if (!sl.ok) return { error: sl.msg || "Phần chia chưa hợp lệ" };
           tx.split = { paidBy: T.paidBy, shares: sl.shares };
           if (T.paidBy !== me) tx.accountId = null;
+          if (T.groupId) tx.groupId = T.groupId;
         }
       }
       var errs = Mo.validateTx(tx, doc);
@@ -260,6 +297,11 @@
       var t = e.target;
       if (t.id === "tx-shared") { T.shared = t.checked; T.touched.shared = true; if (T.shared && T.ids.indexOf(me) === -1) T.ids.unshift(me); refresh(); }
       else if (t.id === "tx-payer") { T.paidBy = t.value; if (T.ids.indexOf(t.value) === -1) T.ids.push(t.value); refresh(); }
+      else if (t.id === "tx-group") {
+        T.groupId = t.value || null; T.exact = {};
+        if (T.groupId) { T.ids = groupPeople(doc, T.groupId); if (T.ids.indexOf(T.paidBy) === -1) T.paidBy = me; }
+        refresh();
+      }
       else if (t.id === "tx-acc") T.accountId = t.value;
       else if (t.id === "tx-to") T.toAccountId = t.value;
       else if (t.dataset && t.dataset.pid) {
@@ -283,12 +325,12 @@
         var x = tmpl[+b.dataset.tmpl];
         T.amount = amtText(x.amount); q("#tx-amt").value = T.amount; T.note = x.note; q("#tx-note").value = x.note; T.categoryId = x.categoryId; T.touched = { amount: true, note: true, cat: true };
         if (x.accountId) T.accountId = x.accountId;
-        if (x.split) { T.shared = true; T.paidBy = x.split.paidBy; T.ids = x.split.ids.slice(); T.mode = "equal"; T.touched.shared = true; } else { T.shared = false; T.touched.shared = true; }
+        if (x.split) { T.shared = true; T.paidBy = x.split.paidBy; T.ids = x.split.ids.slice(); T.mode = "equal"; T.touched.shared = true; T.groupId = x.split.groupId && QL.model.find(doc.groups || [], x.split.groupId) ? x.split.groupId : null; } else { T.shared = false; T.touched.shared = true; }
         refresh(); q("#tx-amt").focus();
       }
       else if (b.hasAttribute("data-save")) save(false);
       else if (b.hasAttribute("data-next")) save(true);
-      else if (b.hasAttribute("data-addperson")) { openPersonDialog(null, function (id) { doc = app.ctx().doc; c = app.ctx(); others = doc.people.filter(function (p) { return p.id !== me && !p.archived; }); T.ids = [me, id]; refresh(); }); }
+      else if (b.hasAttribute("data-addperson")) { openPersonDialog(null, function (id) { doc = app.ctx().doc; c = app.ctx(); others = doc.people.filter(function (p) { return p.id !== me && !p.archived; }); T.ids = [me, id]; T.groupId = null; refresh(); }); }
       else if (b.hasAttribute("data-del")) {
         d.close(true);
         app.apply(function (dd) { return Mo.remove(dd, "transactions", editing.id); }, "Đã xoá", function (dd) { return Mo.upsert(dd, "transactions", editing); });
@@ -330,7 +372,16 @@
         if (onDone) onDone(rec.id);
       });
     var del = d.el.querySelector("[data-del]");
-    if (del) del.addEventListener("click", function () { d.close(); app.apply(function (dd) { return Mo.remove(dd, "people", p.id); }, "Đã xoá " + p.name, function (dd) { return Mo.upsert(dd, "people", p); }); });
+    if (del) del.addEventListener("click", function () {
+      d.close();
+      var inGroups = L.groupsOfPerson(doc, p.id, true).map(function (g) { return g.id; });
+      app.apply(function (dd) { return Mo.removePerson(dd, p.id); }, "Đã xoá " + p.name, function (dd) {
+        var x = Mo.upsert(dd, "people", p);
+        inGroups.forEach(function (gid) { var g = QL.model.find(x.groups, gid); if (g && g.memberIds.indexOf(p.id) === -1) x = Mo.upsert(x, "groups", Object.assign({}, g, { memberIds: g.memberIds.concat(p.id) })); });
+        if (isDef) x = Mo.setSettings(x, { defaultPartnerIds: (x.settings.defaultPartnerIds || []).concat(p.id).slice(0, 8) });
+        return x;
+      });
+    });
   }
 
   var ICONS = ["💵", "🏦", "📱", "💳", "🪙", "🐷", "🏠", "🚗", "🎁", "🍜", "🛍️", "💊", "📚", "🎬", "👪", "✈️", "⋯", "➕"];
@@ -442,23 +493,20 @@
   /* ===================================================================
      Chia tiền: quyết toán, chi tiết, hoá đơn
      =================================================================== */
-  function openSettleDialog(personId) {
+  function openSettleDialog(personId, monthIso) {
     var app = A(), c = app.ctx(), doc = c.doc, p = QL.model.find(doc.people, personId);
     if (!p) return;
-    var choices = [{ id: "wk", label: "Tuần này" }, { id: "pwk", label: "Tuần trước" }, { id: "mo", label: "Tháng này" }, { id: "pmo", label: "Tháng trước" }, { id: "all", label: "Tất cả" }];
-    function periodOf(id) {
-      if (id === "wk") return D.period("week", c.today); if (id === "pwk") return D.period("week", D.addDays(c.today, -7));
-      if (id === "mo") return D.period("month", c.today); if (id === "pmo") return D.period("month", D.addMonths(c.today, -1)); return D.period("all", c.today);
-    }
+    var pc = periodChoices(c.today, monthIso), periodOf = pc.of;
     var bal = L.personBalances(doc)[personId] || 0, s = L.settlementOf(bal);
     var d = formDialog("Quyết toán với " + p.name,
-      U.field("Kỳ", '<select name="per">' + U.options(choices, "wk") + "</select>") +
+      U.field("Kỳ", '<select name="per">' + U.options(pc.list, pc.initial || "wk") + "</select>") +
       U.field("Tin nhắn quyết toán", '<textarea id="st-msg" readonly rows="9"></textarea>') + '<button type="button" class="btn" data-copy>Sao chép tin nhắn</button>' +
       (s.direction === "even" ? '<p class="hint ok">Hai bên đang hoà — không cần ghi thanh toán.</p>' :
         '<div class="card"><h3>' + (s.direction === "receive" ? esc(p.name) + " chuyển cho bạn" : "Bạn chuyển cho " + esc(p.name)) + '</h3>' +
         '<div class="grid g2 mt-s">' + U.field("Số tiền", '<input type="text" inputmode="decimal" name="amount" value="' + esc(amtText(s.amount)) + '">') +
         U.field(s.direction === "receive" ? "Nhận vào" : "Trả từ", '<select name="acc">' + accountOptions(doc, doc.settings.defaultAccountId) + "</select>") + "</div>" +
-        '<label class="chk"><input type="checkbox" name="record"> Ghi nhận khoản thanh toán này (làm số nợ giảm)</label></div>'),
+        '<label class="chk"><input type="checkbox" name="record"> Ghi nhận khoản thanh toán này (làm số nợ giảm)</label></div>') +
+      (L.groupsOfPerson(doc, personId).length ? '<p class="hint">Khoản ghi ở đây tính chung với ' + esc(p.name) + ', không trừ vào số của nhóm. Muốn trừ trong nhóm, hãy quyết toán ở thẻ nhóm.</p>' : ""),
       "Xong", function (fd) {
         if (fd.get("record")) {
           var amount = moneyOf(fd, "amount", doc);
@@ -472,21 +520,6 @@
     function upd() { msg.value = L.settlementMessage(doc, personId, periodOf(form.elements.per.value)); }
     form.elements.per.addEventListener("change", upd); upd();
     d.el.querySelector("[data-copy]").addEventListener("click", function () { U.copyText(msg.value).then(function (ok) { U.toast(ok ? "Đã sao chép tin nhắn" : "Không sao chép được — hãy bôi đen và sao chép tay"); }); });
-  }
-
-  function openPersonDetail(personId) {
-    var app = A(), c = app.ctx(), p = QL.model.find(c.doc.people, personId); if (!p) return;
-    var sh = L.sharedWith(c.doc, personId).items.slice().reverse();
-    var bal = L.personBalances(c.doc)[personId] || 0, s = L.settlementOf(bal);
-    U.dialog("Các khoản chung với " + p.name,
-      '<p>' + (s.direction === "even" ? "Hai bên đang hoà." : (s.direction === "receive" ? esc(p.name) + " nợ bạn " : "Bạn nợ " + esc(p.name) + " ") + "<strong class=\"num\">" + fmt(s.amount) + "</strong>") + "</p>" +
-      (sh.length ? '<div class="list">' + sh.map(function (it) {
-        return '<button type="button" class="item" data-open="' + esc(it.tx.id) + '"><span class="mid"><span class="ttl">' + esc(V.txTitle(it.tx, c)) + '</span><span class="meta">' + esc(D.dayLabel(it.tx.date)) + (it.tx.type === "settle" ? " · thanh toán" : "") + '</span></span><span class="amt num ' + (it.delta > 0 ? "thu" : "chi") + '">' + (it.delta > 0 ? "+" : "−") + fmt(Math.abs(it.delta)) + "</span></button>";
-      }).join("") + "</div>" : "<p class=\"muted\">Chưa có khoản chung nào.</p>"), '<button type="button" class="btn" data-close>Đóng</button>', { wide: true })
-      .el.addEventListener("click", function (e) {
-        var b = e.target.closest("[data-open]"); if (!b) return;
-        var tx = QL.model.find(app.ctx().doc.transactions, b.dataset.open); if (tx) { e.currentTarget.close(); app.editTx(tx); }
-      });
   }
 
   function openBillDialog() {
@@ -520,7 +553,8 @@
       var ids = [c.me].concat(partners.map(function (p) { return p.id; }));
       var parts = M.allocate(last.total, ids.map(function () { return 1; })), shares = {};
       ids.forEach(function (id, i) { shares[id] = parts[i]; });
-      openTxDialog({ draft: { type: "expense", amount: last.total, categoryId: "c_housing", note: "Hoá đơn trọ", date: c.today, accountId: doc.settings.defaultAccountId, split: ids.length > 1 ? { paidBy: c.me, shares: shares } : undefined } });
+      var dg = QL.parser.defaultGroup(doc), gid = dg && ids.length > 1 && ids.every(function (id) { return id === c.me || dg.memberIds.indexOf(id) !== -1; }) ? dg.id : undefined;
+      openTxDialog({ draft: { type: "expense", amount: last.total, categoryId: "c_housing", note: "Hoá đơn trọ", date: c.today, accountId: doc.settings.defaultAccountId, split: ids.length > 1 ? { paidBy: c.me, shares: shares } : undefined, groupId: gid } });
     });
   }
 
@@ -588,33 +622,135 @@
   /* ===================================================================
      Nhập / xuất dữ liệu
      =================================================================== */
-  function openImportTextDialog() {
-    var app = A(), c = app.ctx(), doc = c.doc;
-    var d = U.dialog("Dán từ ghi chú",
-      '<p class="muted small">Dán các dòng như <code>27/2: vé xe buýt tháng 3: 280K</code>. Dòng tiêu đề, dòng tổng, dòng gộp nhiều ngày sẽ được bỏ qua hoặc đánh dấu để bạn xử lý. Năm lấy theo hôm nay.</p>' +
-      '<textarea id="it-text" rows="8" placeholder="27/2: vé xe buýt tháng 3: 280K&#10;1/3: Mua data 4G 12 tháng: 840K&#10;2/3: Thưởng PI: 19.485.250" spellcheck="false"></textarea>' +
-      '<button type="button" class="btn" data-parse>Phân tích</button><div id="it-out"></div>',
-      '<button type="button" class="btn" data-close>Đóng</button><button type="button" class="btn primary" data-do disabled>Nhập</button>', { wide: true });
-    var rows = [];
-    d.el.querySelector("[data-parse]").addEventListener("click", function () {
-      rows = QL.parser.parseLines(d.el.querySelector("#it-text").value, { today: c.today, doc: doc });
-      var ok = rows.filter(function (r) { return r.status === "ok"; });
-      ok.forEach(function (r) { r.dup = L.findDuplicate(doc, r.tx) !== null; r.on = !r.dup; });
-      d.el.querySelector("#it-out").innerHTML = rows.length ? '<div class="scroll-x"><table class="tbl"><thead><tr><th></th><th>Dòng</th><th>Nhận diện</th></tr></thead><tbody>' + rows.map(function (r, i) {
-        var what = r.status === "ok" ? esc(D.dm(r.tx.date)) + " · " + esc(r.tx.type === "income" ? "Thu " : "Chi ") + fmt(r.tx.amount) + " · " + esc(V.catOf(c, r.tx.categoryId).name) + (r.tx.split ? " · chia" : "") + (r.dup ? ' <span class="badge warn">trùng</span>' : "") + (r.reason ? ' <span class="small muted">' + esc(r.reason) + "</span>" : "")
-          : '<span class="muted">' + (r.status === "skip" ? "Bỏ qua — " : "Chưa hiểu — ") + esc(r.reason) + "</span>";
-        return "<tr><td>" + (r.status === "ok" ? '<input type="checkbox" data-i="' + i + '"' + (r.on ? " checked" : "") + ' aria-label="Nhập dòng này">' : "") + "</td><td>" + esc(r.line) + "</td><td>" + what + "</td></tr>";
-      }).join("") + "</tbody></table></div>" : '<p class="muted">Không có dòng nào.</p>';
+  /**
+   * Nhập nhiều khoản từ văn bản. Hai cách đọc cho ra CÙNG một bảng xem trước:
+   *   Phân tích       — parser.parseLines, ngay trên máy, từng dòng kiểu "27/2: vé xe buýt: 280K";
+   *   ✨ AI           — POST /ai/spending (ai.js), đọc câu văn thường, parser.fromAi kiểm lại từng khoản.
+   * Không gì được lưu trước khi người dùng chọn và bấm Nhập; người mới AI nhắc tên chỉ được tạo lúc đó.
+   * o: {ai: true} — mở từ nút "✨ Nhập bằng AI".
+   */
+  function openImportTextDialog(o) {
+    o = o || {};
+    var app = A(), c = app.ctx(), MAX = QL.ai ? QL.ai.TEXT_CHARS : 6000;
+    var d = U.dialog("Nhập từ văn bản",
+      '<p class="muted small"><b>Phân tích</b> đọc từng dòng kiểu <code>27/2: vé xe buýt tháng 3: 280K</code> ngay trên máy, không cần mạng. ' +
+      '<b>✨ AI</b> đọc cả câu văn thường — vd <code>trưa nay cơm 57k chia đôi với Phúc, tối Lan trả lẩu 600k cả phòng</code> — rồi tách ra từng khoản.</p>' +
+      '<label class="sr" for="it-text">Văn bản</label><textarea id="it-text" rows="8" maxlength="' + MAX + '" placeholder="27/2: vé xe buýt tháng 3: 280K&#10;hôm qua cafe 45k, Phúc trả tiền điện 900k chia 3" spellcheck="false"></textarea>' +
+      '<div class="row wrap"><button type="button" class="btn" data-parse>Phân tích</button><button type="button" class="btn' + (o.ai ? " primary" : "") + '" data-ai>✨ Phân tích bằng AI</button></div>' +
+      '<div id="it-ai" class="stack gap-s"><p class="hint" id="it-ai-state" role="status" aria-live="polite"></p></div>' +
+      '<p class="hint">Với ✨ AI, văn bản này cùng TÊN danh mục, tài khoản, người và nhóm được gửi tới Gemini qua máy chủ; số dư và giao dịch cũ thì không. Mọi khoản AI tách ra đều hiện ở đây để bạn chọn trước khi lưu.</p>' +
+      '<div id="it-out" class="stack gap-s"></div>',
+      '<button type="button" class="btn" data-close>Đóng</button><button type="button" class="btn primary" data-do disabled>Nhập</button>', { wide: true, focus: "#it-text" });
+    var el = d.el, rows = [], fresh = [], busy = false;
+    var stateEl = el.querySelector("#it-ai-state"), aiBox = el.querySelector("#it-ai"), textEl = el.querySelector("#it-text");
+
+    function aiState(text, cls) { stateEl.className = "hint" + (cls ? " " + cls : ""); stateEl.textContent = text || ""; }
+    function nameOf(id) { var p = fresh.filter(function (x) { return x.id === id; })[0]; return id === c.me ? "bạn" : (p ? p.name : V.personName(c, id)); }
+    function groupName(id) { var g = QL.model.find(app.ctx().doc.groups || [], id); return g ? g.name : "(đã xoá)"; }
+
+    function rowHtml(r, i) {
+      if (r.status !== "ok") return "<tr><td></td><td>" + esc(r.line) + '</td><td><span class="muted">' + (r.status === "skip" ? "Bỏ qua — " : "Chưa hiểu — ") + esc(r.reason) + "</span></td></tr>";
+      var tx = r.tx, who = "";
+      if (tx.split) who = " · " + esc(nameOf(tx.split.paidBy)) + " trả, chia " + Object.keys(tx.split.shares).length + (tx.groupId ? " (nhóm " + esc(groupName(tx.groupId)) + ")" : "");
+      var what = esc(D.dm(tx.date)) + " · " + (tx.type === "income" ? "Thu " : "Chi ") + fmt(tx.amount) + " · " + esc(V.catOf(c, tx.categoryId).name) + (r.ai && tx.note ? " · " + esc(tx.note) : "") + who +
+        (r.dup ? ' <span class="badge warn">trùng</span>' : "") + (r.ai && r.confidence !== null && r.confidence < 0.6 ? ' <span class="badge warn">nên kiểm lại</span>' : "") +
+        (r.reason ? ' <span class="small muted">' + esc(r.reason) + "</span>" : "");
+      return '<tr><td><input type="checkbox" data-i="' + i + '"' + (r.on ? " checked" : "") + ' aria-label="Nhập dòng này"></td><td>' + esc(r.line) + "</td><td>" + what + "</td></tr>";
+    }
+    function render() {
+      var cur = app.ctx().doc;
+      rows.forEach(function (r) { if (r.status === "ok") { r.dup = L.findDuplicate(cur, r.tx) !== null; r.on = !r.dup; } });
+      el.querySelector("#it-out").innerHTML = rows.length ? '<p class="small" id="it-new"></p><div class="scroll-x"><table class="tbl"><thead><tr><th></th><th>Dòng</th><th>Nhận diện</th></tr></thead><tbody>' +
+        rows.map(rowHtml).join("") + "</tbody></table></div>" : '<p class="muted">Không có dòng nào.</p>';
       upd();
+    }
+    function chosen() { return rows.filter(function (r) { return r.on && r.status === "ok"; }); }
+    function neededPeople(list) {
+      var need = {};
+      list.forEach(function (r) { (r.needs || []).forEach(function (id) { need[id] = true; }); });
+      return fresh.filter(function (p) { return need[p.id]; });
+    }
+    function upd() {
+      var on = chosen(), b = el.querySelector("[data-do]"), nw = el.querySelector("#it-new"), add = neededPeople(on);
+      b.disabled = !on.length || busy; b.textContent = "Nhập " + on.length + " khoản";
+      if (nw) nw.innerHTML = add.length ? "Sẽ thêm người mới: <b>" + esc(add.map(function (p) { return p.name; }).join(", ")) + "</b>" : "";
+    }
+    function setBusy(on) {
+      busy = on;
+      el.querySelector("[data-ai]").disabled = on; el.querySelector("[data-parse]").disabled = on;
+      el.querySelector("#it-out").setAttribute("aria-busy", String(on));
+      upd();
+    }
+
+    /* ---- ✨ AI ---- */
+    function codeForm() {
+      if (aiBox.querySelector("form")) { aiBox.querySelector("input").focus(); return; }
+      var f = document.createElement("form");
+      f.className = "row wrap gap-s";
+      f.innerHTML = '<label class="sr" for="it-code">Mã truy cập AI</label><input type="password" id="it-code" autocomplete="off" maxlength="200" placeholder="Mã truy cập AI" style="flex:1;min-width:180px"><button type="submit" class="btn">Mở khoá</button>';
+      f.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        QL.ai.unlock(f.querySelector("input").value).then(function () { f.remove(); runAi(); }, function (err) { aiState(err.message, "err"); f.querySelector("input").select(); });
+      });
+      aiBox.appendChild(f);
+      f.querySelector("input").focus();
+    }
+    function runAi() {
+      var text = textEl.value.trim();
+      if (!text) { aiState("Hãy dán hoặc gõ văn bản trước.", "err"); textEl.focus(); return; }
+      if (busy) return;
+      setBusy(true); aiState("Đang hỏi AI…");
+      QL.ai.status().then(function (s) {
+        var why = QL.ai.blocker(s);
+        if (why === "code") { aiState("Cần mã truy cập AI của máy chủ này.", "err"); codeForm(); return null; }
+        if (why) { aiState(why, "err"); return null; }
+        var cur = app.ctx();
+        return QL.ai.parse(text, cur.doc, cur.today).then(function (res) {
+          var out = QL.parser.fromAi(res, app.ctx().doc, cur.today), n = out.rows.filter(function (r) { return r.status === "ok"; }).length;
+          rows = out.rows; fresh = out.people;
+          aiState(n ? "AI tách được " + n + " khoản — xem lại, bỏ chọn khoản sai rồi bấm Nhập." : "AI không thấy khoản thu/chi nào trong văn bản.", n ? "ok" : "");
+          render();
+        });
+      }).catch(function (err) {
+        if (err.code === "ai_code_required" || err.code === "ai_code_invalid") { aiState("Mã truy cập AI không còn dùng được — nhập lại.", "err"); codeForm(); return; }
+        aiState(err.message || "Không gọi được AI", "err");
+      }).then(function () { setBusy(false); });
+    }
+
+    el.querySelector("[data-parse]").addEventListener("click", function () {
+      var cur = app.ctx();
+      rows = QL.parser.parseLines(textEl.value, { today: cur.today, doc: cur.doc }); fresh = [];
+      render();
     });
-    function upd() { var n = rows.filter(function (r) { return r.on; }).length; var b = d.el.querySelector("[data-do]"); b.disabled = !n; b.textContent = "Nhập " + n + " khoản"; }
-    d.el.addEventListener("change", function (e) { var i = e.target.dataset && e.target.dataset.i; if (i !== undefined) { rows[+i].on = e.target.checked; upd(); } });
-    d.el.querySelector("[data-do]").addEventListener("click", function () {
-      var txs = rows.filter(function (r) { return r.on; }).map(function (r) { return Object.assign({ id: Mo.uid("t") }, r.tx); });
-      if (!txs.length) return;
-      app.apply(function (dd) { var x = dd; txs.forEach(function (t) { x = Mo.upsert(x, "transactions", t); }); return x; }, "Đã nhập " + txs.length + " khoản", function (dd) { var x = dd; txs.forEach(function (t) { x = Mo.remove(x, "transactions", t.id); }); return x; });
+    el.querySelector("[data-ai]").addEventListener("click", runAi);
+    el.addEventListener("change", function (e) { var i = e.target.dataset && e.target.dataset.i; if (i !== undefined) { rows[+i].on = e.target.checked; upd(); } });
+    el.querySelector("[data-do]").addEventListener("click", function () {
+      var list = chosen(); if (!list.length) return;
+      var people = neededPeople(list), txs = list.map(function (r) { return Object.assign({ id: Mo.uid("t") }, r.tx); });
+      // Sổ có thể đã đổi trong lúc xem (đồng bộ, hộp khác): kiểm lại trên sổ hiện tại trước khi ghi.
+      var check = people.reduce(function (x, p) { return Mo.upsert(x, "people", { id: p.id, name: p.name, archived: false }); }, app.ctx().doc);
+      for (var k = 0; k < txs.length; k++) { var errs = Mo.validateTx(txs[k], check); if (errs.length) { U.toast("Dòng “" + list[k].line.slice(0, 40) + "”: " + errs[0], { ms: 6000 }); return; } }
+      app.apply(function (dd) {
+        var x = dd;
+        people.forEach(function (p) { if (!QL.model.find(x.people, p.id)) x = Mo.upsert(x, "people", { id: p.id, name: p.name, archived: false }); });
+        txs.forEach(function (t) { x = Mo.upsert(x, "transactions", t); });
+        return x;
+      }, "Đã nhập " + txs.length + " khoản" + (people.length ? " · thêm " + people.length + " người" : ""), function (dd) {
+        var x = dd;
+        txs.forEach(function (t) { x = Mo.remove(x, "transactions", t.id); });
+        people.forEach(function (p) { x = Mo.remove(x, "people", p.id); });
+        return x;
+      });
       d.close(true);
     });
+
+    if (QL.ai && QL.ai.hasServer()) {
+      QL.ai.status(true).then(function (s) {
+        var why = QL.ai.blocker(s);
+        aiState(!why ? "✨ AI sẵn sàng." : why === "code" ? "✨ AI cần mã truy cập của máy chủ (nhập khi bấm nút)." : why, why && why !== "code" ? "err" : "");
+      }, function (err) { aiState(err.message, "err"); });
+    } else aiState("✨ AI cần máy chủ — đang mở file trực tiếp. Điền “Địa chỉ máy chủ” ở Cài đặt để dùng.");
+    return d;
   }
 
   function openCsvImportDialog(text) {
@@ -622,10 +758,10 @@
     var res = QL.csv.fromCsv(text, doc, c.today);
     if (res.error) { U.toast(res.error, { ms: 6000 }); return; }
     var ok = res.rows.filter(function (r) { return r.tx; }), bad = res.rows.filter(function (r) { return !r.tx; }), dup = ok.filter(function (r) { return r.duplicate; });
-    var newCount = res.create.categories.length + res.create.accounts.length + res.create.people.length;
+    var newCount = res.create.categories.length + res.create.accounts.length + res.create.people.length + res.create.groups.length;
     var d = U.dialog("Nhập CSV",
       '<p><strong>' + (ok.length - dup.length) + "</strong> giao dịch mới" + (dup.length ? ", <strong>" + dup.length + "</strong> trùng với dữ liệu đang có (sẽ bỏ qua)" : "") + (bad.length ? ", <strong class=\"chi\">" + bad.length + "</strong> dòng lỗi (sẽ bỏ qua)" : "") + ".</p>" +
-      (newCount ? '<p class="muted small">Sẽ tạo thêm: ' + res.create.categories.map(function (x) { return esc(x.name) + " (danh mục)"; }).concat(res.create.accounts.map(function (x) { return esc(x.name) + " (tài khoản)"; }), res.create.people.map(function (x) { return esc(x.name) + " (người)"; })).join(", ") + ".</p>" : "") +
+      (newCount ? '<p class="muted small">Sẽ tạo thêm: ' + res.create.categories.map(function (x) { return esc(x.name) + " (danh mục)"; }).concat(res.create.accounts.map(function (x) { return esc(x.name) + " (tài khoản)"; }), res.create.people.map(function (x) { return esc(x.name) + " (người)"; }), res.create.groups.map(function (x) { return esc(x.name) + " (nhóm)"; })).join(", ") + ".</p>" : "") +
       (bad.length ? '<div class="scroll-x"><table class="tbl"><tbody>' + bad.slice(0, 8).map(function (r) { return "<tr><td>Dòng " + r.n + '</td><td class="chi">' + esc(r.errors.join("; ")) + "</td></tr>"; }).join("") + "</tbody></table></div>" : ""),
       '<button type="button" class="btn" data-close>Huỷ</button><button type="button" class="btn primary" data-do' + (ok.length - dup.length ? "" : " disabled") + ">Nhập</button>");
     d.el.querySelector("[data-do]").addEventListener("click", function () {
@@ -710,7 +846,7 @@
 
   function openHelpDialog() {
     U.dialog("Trợ giúp nhanh",
-      "<h3>Nhập nhanh</h3><ul><li><code>cơm trưa 57k</code> — chi 57.000</li><li><code>57/2 bún đậu hôm qua</code> — chia đôi, hôm qua</li><li><code>57/2P</code> / <code>phúc trả cơm 57k</code> — người khác trả</li><li><code>lương 14.916.956 10/6</code> — thu</li><li><code>87k - 50k</code> — trừ voucher = 37.000</li><li>Số nhỏ hơn 1.000 hiểu là nghìn: <code>57</code> = 57.000</li></ul>" +
+      "<h3>Nhập nhanh</h3><ul><li><code>cơm trưa 57k</code> — chi 57.000</li><li><code>57/2 bún đậu hôm qua</code> — chia đôi, hôm qua</li><li><code>57/2P</code> / <code>phúc trả cơm 57k</code> — người khác trả</li><li><code>lẩu 600k nhóm phòng trọ</code> — chia cho cả nhóm (<code>57/3</code> dùng nhóm mặc định)</li><li><code>lương 14.916.956 10/6</code> — thu</li><li><code>87k - 50k</code> — trừ voucher = 37.000</li><li>Số nhỏ hơn 1.000 hiểu là nghìn: <code>57</code> = 57.000</li></ul>" +
       "<h3>Phím tắt</h3><p><kbd>N</kbd> thêm · <kbd>/</kbd> nhập nhanh · <kbd>?</kbd> trợ giúp · <kbd>G</kbd> rồi <kbd>T</kbd>/<kbd>D</kbd>/<kbd>B</kbd> chuyển màn hình</p>",
       '<button type="button" class="btn primary" data-close>Đã hiểu</button>');
   }
@@ -722,8 +858,10 @@
 
   QL.dialogs = {
     tx: openTxDialog, person: openPersonDialog, account: openAccountDialog, category: openCategoryDialog,
-    deposit: openDepositDialog, closeDeposit: openCloseDepositDialog, settle: openSettleDialog, personDetail: openPersonDetail, bill: openBillDialog,
+    deposit: openDepositDialog, closeDeposit: openCloseDepositDialog, settle: openSettleDialog, bill: openBillDialog,
     budget: openBudgetDialog, recurring: openRecurringDialog, importText: openImportTextDialog, importCsv: openCsvImportDialog, restore: openRestoreDialog,
-    connectNew: openConnectNew, connectCode: openConnectCode, showCode: showCode, sync: openSyncDialog, help: openHelpDialog, more: openMoreMenu, amtText: amtText
+    connectNew: openConnectNew, connectCode: openConnectCode, showCode: showCode, sync: openSyncDialog, help: openHelpDialog, more: openMoreMenu, amtText: amtText,
+    // dùng lại ở chung.js (nhóm, khoản chung) và ai.js
+    formDialog: formDialog, accountOptions: accountOptions, moneyOf: moneyOf, periodChoices: periodChoices, groupPeople: groupPeople
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

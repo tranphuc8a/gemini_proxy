@@ -9,11 +9,12 @@
   var QL = root.QL || (root.QL = {});
 
   var SCHEMA = 1;
-  var COLLECTIONS = ["accounts", "categories", "people", "transactions", "budgets", "recurring"];
+  var COLLECTIONS = ["accounts", "categories", "people", "groups", "transactions", "budgets", "recurring"];
   var ME = "p_me";
   var TX_TYPES = ["expense", "income", "transfer", "settle"];
   var ACCOUNT_KINDS = ["cash", "bank", "ewallet", "savings"];
   var TOMBSTONE_DAYS = 90;
+  var MAX_GROUP_MEMBERS = 40;
 
   /* ---------------------------------------------------------------- id & giờ */
   var seq = 0;
@@ -75,11 +76,12 @@
       schema: SCHEMA,
       settings: {
         updatedAt: at, meId: ME, smallAsThousand: true, defaultAccountId: "a_cash",
-        defaultPartnerIds: [], theme: "system", lastBackupAt: null
+        defaultPartnerIds: [], defaultGroupId: null, theme: "system", lastBackupAt: null
       },
       accounts: stamp(defaultAccounts()),
       categories: stamp(defaultCategories()),
       people: [{ id: ME, name: "Tôi", archived: false, updatedAt: at }],
+      groups: [],
       transactions: [],
       budgets: [],
       recurring: [],
@@ -143,6 +145,12 @@
         if (doc && !find(doc.people, tx.split.paidBy)) err.push("Người trả không tồn tại");
       }
     }
+    // Nhóm chỉ gắn vào khoản chi CHUNG hoặc khoản thanh toán nợ (để số của nhóm tính được).
+    if (tx.groupId != null) {
+      if (typeof tx.groupId !== "string" || !tx.groupId) err.push("Nhóm không hợp lệ");
+      else if (!((tx.type === "expense" && tx.split) || tx.type === "settle")) err.push("Chỉ khoản chi chung hoặc thanh toán nợ mới thuộc nhóm được");
+      else if (doc && !find(doc.groups || [], tx.groupId)) err.push("Nhóm không tồn tại");
+    }
     return err;
   }
 
@@ -170,6 +178,7 @@
       smallAsThousand: bool(s.smallAsThousand, true),
       defaultAccountId: str(s.defaultAccountId, 64) || "a_cash",
       defaultPartnerIds: Array.isArray(s.defaultPartnerIds) ? s.defaultPartnerIds.filter(function (x) { return typeof x === "string"; }).slice(0, 8) : [],
+      defaultGroupId: str(s.defaultGroupId, 64) || null,
       theme: ["system", "light", "dark"].indexOf(s.theme) !== -1 ? s.theme : "system",
       lastBackupAt: typeof s.lastBackupAt === "string" ? s.lastBackupAt : null
     };
@@ -221,6 +230,17 @@
       doc.people.unshift({ name: "Tôi", archived: false, id: doc.settings.meId, updatedAt: at });
       fixes.push("Thiếu mục 'Tôi' — đã thêm lại");
     }
+    var known = {};
+    doc.people.forEach(function (p) { known[p.id] = true; });
+    // Tôi luôn là thành viên ngầm của mọi nhóm, nên không nằm trong memberIds.
+    doc.groups = clean("groups", function (r) {
+      var seen = {};
+      var members = (Array.isArray(r.memberIds) ? r.memberIds : []).filter(function (id) {
+        if (typeof id !== "string" || !known[id] || id === doc.settings.meId || seen[id]) return false;
+        seen[id] = true; return true;
+      }).slice(0, MAX_GROUP_MEMBERS);
+      return { name: str(r.name, 60) || "Nhóm", memberIds: members, archived: bool(r.archived, false), order: isInt(r.order) ? r.order : 0 };
+    });
 
     doc.transactions = clean("transactions", function (r) {
       if (TX_TYPES.indexOf(r.type) === -1 || !isInt(r.amount) || r.amount <= 0 || !QL.dates.isValid(r.date)) return null;
@@ -247,6 +267,7 @@
         if (ok && sum === r.amount && typeof r.split.paidBy === "string") t.split = { paidBy: r.split.paidBy, shares: shares };
         else fixes.push("transactions[" + r.id + "]: bỏ phần chia (tổng không khớp)");
       }
+      if (typeof r.groupId === "string" && r.groupId && r.groupId.length <= 64 && (t.split || r.type === "settle")) t.groupId = r.groupId;
       return t;
     });
     doc.budgets = clean("budgets", function (r) {
@@ -309,6 +330,22 @@
     var one = {}; for (var k in tb[coll]) one[k] = tb[coll][k];
     one[id] = at; tb[coll] = one;
     d.tombstones = tb;
+    return d;
+  }
+
+  /** Xoá một người và gỡ họ khỏi mọi nhóm đang có họ. */
+  function removePerson(doc, id, now) {
+    var at = now || nowIso();
+    var d = remove(doc, "people", id, at);
+    (doc.groups || []).forEach(function (g) {
+      if (g.memberIds.indexOf(id) === -1) return;
+      var n = {}; for (var k in g) n[k] = g[k];
+      n.memberIds = g.memberIds.filter(function (x) { return x !== id; });
+      d = upsert(d, "groups", n, at);
+    });
+    if (d.settings.defaultPartnerIds && d.settings.defaultPartnerIds.indexOf(id) !== -1) {
+      d = setSettings(d, { defaultPartnerIds: d.settings.defaultPartnerIds.filter(function (x) { return x !== id; }) }, at);
+    }
     return d;
   }
 
@@ -458,15 +495,17 @@
       });
     });
     var defs = (d.settings.defaultPartnerIds || []).filter(function (x) { return x !== "s_p"; });
-    return setSettings(d, { defaultPartnerIds: defs }, at);
+    var patch = { defaultPartnerIds: defs };
+    if (String(d.settings.defaultGroupId || "").indexOf("s_") === 0) patch.defaultGroupId = null;
+    return setSettings(d, patch, at);
   }
 
   QL.model = {
     SCHEMA: SCHEMA, COLLECTIONS: COLLECTIONS, ME: ME, TX_TYPES: TX_TYPES, ACCOUNT_KINDS: ACCOUNT_KINDS,
-    TOMBSTONE_DAYS: TOMBSTONE_DAYS,
+    TOMBSTONE_DAYS: TOMBSTONE_DAYS, MAX_GROUP_MEMBERS: MAX_GROUP_MEMBERS,
     uid: uid, nowIso: nowIso, emptyDoc: emptyDoc, defaultCategories: defaultCategories, defaultAccounts: defaultAccounts,
     emptyTombstones: emptyTombstones, find: find, isInt: isInt,
-    validateTx: validateTx, normalize: normalize, upsert: upsert, remove: remove, setSettings: setSettings,
+    validateTx: validateTx, normalize: normalize, upsert: upsert, remove: remove, removePerson: removePerson, setSettings: setSettings,
     openDeposit: openDeposit, closeDeposit: closeDeposit, addSample: addSample, removeSample: removeSample, SAMPLE_TAG: SAMPLE_TAG, confirmRecurring: confirmRecurring, markRecurringDone: markRecurringDone
   };
   if (typeof module !== "undefined" && module.exports) module.exports = QL.model;
