@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.1.2 Chrome/138.0.7204.243 Electron/37.4.0 Safari/537.36" version="28.1.2" pages="2">
+  <diagram name="Sequence diagram" id="qWIFx8DekUM1kxAJ9_Rk">
+    <mxGraphModel dx="1722" dy="581" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="K8nAxucsHrL95LhYa65Y-1" value="" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};participant=umlActor;size=80;" vertex="1" parent="1">
+          <mxGeometry x="60" y="40" width="40" height="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-2" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="K8nAxucsHrL95LhYa65Y-1">
+          <mxGeometry x="15" y="100" width="10" height="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-3" value="Conversation&lt;br&gt;Controller" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+          <mxGeometry x="220" y="60" width="120" height="1180" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-4" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="K8nAxucsHrL95LhYa65Y-3">
+          <mxGeometry x="55" y="90" width="10" height="1090" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-5" value="Conversation&lt;br&gt;Usecase" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+          <mxGeometry x="420" y="60" width="120" height="1180" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-6" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="K8nAxucsHrL95LhYa65Y-5">
+          <mxGeometry x="55" y="110" width="10" height="1070" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-7" value="Conversation&lt;div&gt;MySQL&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;OuputPort&lt;/span&gt;&lt;/div&gt;" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+          <mxGeometry x="620" y="60" width="120" height="1180" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-8" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="K8nAxucsHrL95LhYa65Y-7">
+          <mxGeometry x="55" y="120" width="10" height="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-9" value="GET /conversations/messages/{convId}&lt;br&gt;getConversationMessages(convId, pageable)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="0.2105" y="10" width="80" relative="1" as="geometry">
+            <mxPoint x="85" y="440" as="sourcePoint" />
+            <mxPoint x="275" y="440" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-10" value="getConversationDetail(convId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="285" y="180" as="sourcePoint" />
+            <mxPoint x="475" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-11" value="Message&lt;br&gt;&lt;div&gt;MySQL&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;OuputPort&lt;/span&gt;&lt;/div&gt;" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="1">
+          <mxGeometry x="820" y="60" width="120" height="480" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-12" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" vertex="1" parent="K8nAxucsHrL95LhYa65Y-11">
+          <mxGeometry x="55" y="420" width="10" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-13" value="gettById(convId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="484" y="190" as="sourcePoint" />
+            <mxPoint x="674" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-14" value="404" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="260" as="sourcePoint" />
+            <mxPoint x="85" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-15" value="opt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry y="210" width="720" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-16" value="[conversation not existed]" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="90" y="270" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-17" value="ResourceNotFoundException" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="474" y="253.5" as="sourcePoint" />
+            <mxPoint x="284" y="253.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-18" value="null" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="675" y="240" as="sourcePoint" />
+            <mxPoint x="485" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-19" value="200, conversation with top 10&lt;br&gt;latest message" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="350" as="sourcePoint" />
+            <mxPoint x="85" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-20" value="getConversationMessages&lt;br&gt;(convId, pageable)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="286" y="470" as="sourcePoint" />
+            <mxPoint x="476" y="470" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-21" value="getListByConversation&lt;br&gt;(convId, pageable)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.6154" width="80" relative="1" as="geometry">
+            <mxPoint x="485" y="490" as="sourcePoint" />
+            <mxPoint x="875" y="490" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-22" value="200, list messages" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="520" as="sourcePoint" />
+            <mxPoint x="85" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-23" value="GET /conversations/{convId}&lt;br&gt;getConversationDetail(convId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="85" y="160" as="sourcePoint" />
+            <mxPoint x="275" y="160" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-24" value="" style="endArrow=none;dashed=1;html=1;rounded=0;dashPattern=1 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-80" y="380" as="sourcePoint" />
+            <mxPoint x="1040" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-25" value="" style="endArrow=none;dashed=1;html=1;rounded=0;dashPattern=1 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-80" y="559.5" as="sourcePoint" />
+            <mxPoint x="1040" y="559.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-26" value="GET /conversations/list&lt;br&gt;getConversationList(pageable)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="85" y="600" as="sourcePoint" />
+            <mxPoint x="275" y="600" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-27" value="getConversationList(pageable)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="286" y="620" as="sourcePoint" />
+            <mxPoint x="476" y="620" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-28" value="getAll(pageable)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="485" y="640" as="sourcePoint" />
+            <mxPoint x="675" y="640" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-29" value="200, created conversation" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="274" y="810" as="sourcePoint" />
+            <mxPoint x="84" y="810" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-30" value="" style="endArrow=none;dashed=1;html=1;rounded=0;dashPattern=1 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-80" y="710" as="sourcePoint" />
+            <mxPoint x="1040" y="710" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-31" value="POST /conversations&lt;br&gt;createConversation(conv)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="86" y="750" as="sourcePoint" />
+            <mxPoint x="276" y="750" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-32" value="createConversation(conv)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="286" y="770" as="sourcePoint" />
+            <mxPoint x="476" y="770" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-33" value="save(conv)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="486" y="790" as="sourcePoint" />
+            <mxPoint x="676" y="790" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-34" value="" style="endArrow=none;dashed=1;html=1;rounded=0;dashPattern=1 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-80" y="840" as="sourcePoint" />
+            <mxPoint x="1040" y="840" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-35" value="save(conv)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="485" y="920" as="sourcePoint" />
+            <mxPoint x="675" y="920" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-36" value="updateConversation(conv)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="285" y="900" as="sourcePoint" />
+            <mxPoint x="475" y="900" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-37" value="PATCH|PUT /conversations&lt;br&gt;updateConversation(conv)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="85" y="880" as="sourcePoint" />
+            <mxPoint x="275" y="880" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-38" value="200, updated conversation" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="274" y="940" as="sourcePoint" />
+            <mxPoint x="84" y="940" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-39" value="" style="endArrow=none;dashed=1;html=1;rounded=0;dashPattern=1 4;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="-70" y="970" as="sourcePoint" />
+            <mxPoint x="1050" y="970" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-40" value="DELETE /conversations/{convId}&lt;br&gt;deleteConversation(convId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="85" y="1020" as="sourcePoint" />
+            <mxPoint x="275" y="1020" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-41" value="deleteConversation(convId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry x="-0.0105" width="80" relative="1" as="geometry">
+            <mxPoint x="285" y="1040" as="sourcePoint" />
+            <mxPoint x="475" y="1040" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-43" value="200, delete success" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="274" y="1220" as="sourcePoint" />
+            <mxPoint x="84" y="1220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-44" value="gettById(convId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="484" y="1054" as="sourcePoint" />
+            <mxPoint x="674" y="1054" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-45" value="null" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="675" y="1104" as="sourcePoint" />
+            <mxPoint x="485" y="1104" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-46" value="ResourceNotFoundException" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="474" y="1117.5" as="sourcePoint" />
+            <mxPoint x="284" y="1117.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-47" value="404" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="275" y="1124" as="sourcePoint" />
+            <mxPoint x="85" y="1124" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-48" value="[conversation not existed]" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1134" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-49" value="opt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry y="1074" width="720" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="K8nAxucsHrL95LhYa65Y-50" value="delete(convId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="80" relative="1" as="geometry">
+            <mxPoint x="484" y="1200" as="sourcePoint" />
+            <mxPoint x="674" y="1200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="AdHy4tSj6Gn1HeMe3sCs" name="Class diagram">
+    <mxGraphModel dx="872" dy="581" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="DtGs_zlLhMaDklzzDQAr-1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ConversationController&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- conversationInputPort: ConversationInputPort&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ getConversationDetail(convId: String): ResponseEntity&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ getConversationList(page: Pageable): ResponseEntity&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ getConversationMessages(convId: String, page: Pageable):&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;ResponseEntity&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ createConversation(conv: ConversationCreatingRequest):&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;ResponseEntity&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ updateConversation(conv: ConversationUpdatingRequest):&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;ResponseEntity&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ deleteConversation(convId: String): ResponseEntity&lt;/span&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="80" y="200" width="440" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="FSGX_BO08vRfp3gkES-M-1" value="&lt;span style=&quot;font-size: 11px; text-wrap-mode: nowrap; background-color: rgb(18, 18, 18);&quot;&gt;GET /conversations/{convId}&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; text-wrap-mode: nowrap; background-color: rgb(18, 18, 18);&quot;&gt;GET /conversations/messages/{convId}&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; text-wrap-mode: nowrap; background-color: rgb(18, 18, 18);&quot;&gt;GET /conversations/list&lt;/span&gt;&lt;br style=&quot;font-size: 11px; text-wrap-mode: nowrap;&quot;&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; text-wrap-mode: nowrap; background-color: rgb(18, 18, 18);&quot;&gt;POST /conversations&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; text-wrap-mode: nowrap; background-color: rgb(18, 18, 18);&quot;&gt;PATCH|PUT /conversations&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 11px; text-wrap-mode: nowrap; background-color: rgb(18, 18, 18);&quot;&gt;DELETE /conversations/{convId}&lt;br&gt;&lt;/span&gt;&lt;/div&gt;" style="shape=card;whiteSpace=wrap;html=1;align=right;size=30;spacingRight=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="410" width="230" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="_tyPO1rODZPGcwrkuZ2U-1" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1" source="FSGX_BO08vRfp3gkES-M-1" target="DtGs_zlLhMaDklzzDQAr-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint y="440" as="sourcePoint" />
+            <mxPoint x="50" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_tyPO1rODZPGcwrkuZ2U-2" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ConversationUsecase&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- conversationOutputPort: ConversationOutputPort&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="700" y="440" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="_tyPO1rODZPGcwrkuZ2U-3" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;b&gt;&lt;span&gt;ConversationInputPort&lt;/span&gt;&lt;/b&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px 0px 0px 4px;&quot;&gt;+ getConversationDetail(convId: String): ResponseEntity&lt;/p&gt;&lt;p style=&quot;margin: 0px 0px 0px 4px;&quot;&gt;+ getConversationList(page: Pageable): ResponseEntity&lt;/p&gt;&lt;p style=&quot;margin: 0px 0px 0px 4px;&quot;&gt;+ getConversationMessages(convId: String, page: Pageable):&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;ResponseEntity&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;margin: 0px 0px 0px 4px;&quot;&gt;+ createConversation(conv: ConversationCreatingRequest):&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;ResponseEntity&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;margin: 0px 0px 0px 4px;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ updateConversation(conv: ConversationUpdatingRequest):&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;ResponseEntity&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;margin: 0px 0px 0px 4px;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ deleteConversation(convId: String): ResponseEntity&lt;/span&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="640" y="210" width="440" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="geoxPSMN9JFrMs5dybO0-1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;b&gt;&lt;span&gt;ConversationOutputPort&lt;/span&gt;&lt;/b&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin: 0px 0px 0px 4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="1160" y="440" width="230" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="geoxPSMN9JFrMs5dybO0-3" value="" style="endArrow=open;endFill=1;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="DtGs_zlLhMaDklzzDQAr-1" target="_tyPO1rODZPGcwrkuZ2U-3">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="610" y="380" as="sourcePoint" />
+            <mxPoint x="770" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="geoxPSMN9JFrMs5dybO0-5" value="" style="endArrow=open;endFill=1;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="_tyPO1rODZPGcwrkuZ2U-2" target="geoxPSMN9JFrMs5dybO0-1">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="550" y="280" as="sourcePoint" />
+            <mxPoint x="670" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="geoxPSMN9JFrMs5dybO0-6" value="" style="endArrow=block;dashed=1;endFill=0;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="_tyPO1rODZPGcwrkuZ2U-2" target="_tyPO1rODZPGcwrkuZ2U-3">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="790" y="400" as="sourcePoint" />
+            <mxPoint x="950" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

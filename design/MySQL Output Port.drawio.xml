@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.1.2 Chrome/138.0.7204.243 Electron/37.4.0 Safari/537.36" version="28.1.2">
+  <diagram name="Trang-1" id="zxDRNyiiJ27JfqNRgyAn">
+    <mxGraphModel dx="2180" dy="1453" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;b&gt;ConversationOutputPort&lt;/b&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ getById(conversationId: String): Conversation&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ getAll(&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;pageable: Pageable&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;): Page&amp;lt;Conversation&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ save(conversation: Conversation): void&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ delete(conversation: Conversation): void&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ delete(conversationId: String): void&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-2" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ConversationMySQLOutputPort&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ conversationMySQLRepository: ConversationMySQLRepository&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-3" value="" style="endArrow=block;dashed=1;endFill=0;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-2" target="1eZlkTEKDvHDRqpcG8FO-1">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="170" y="310" as="sourcePoint" />
+            <mxPoint x="330" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-4" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;b&gt;JpaRepository&amp;lt;ConversationEntity, String&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="520" y="140" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-5" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;text-align: left;&quot;&gt;&lt;b style=&quot;&quot;&gt;ConversationMySQLRepository&lt;/b&gt;&lt;/span&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="520" y="360" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-6" value="" style="endArrow=open;endFill=1;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-2" target="1eZlkTEKDvHDRqpcG8FO-5">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="400" y="470" as="sourcePoint" />
+            <mxPoint x="560" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-7" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-5" target="1eZlkTEKDvHDRqpcG8FO-4">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="430" y="300" as="sourcePoint" />
+            <mxPoint x="590" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-8" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ConversationEntity&lt;br&gt;TABLE conversations&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- id: String&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- name: String&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- createAt: LocalDateTime&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- updatedAt: LocalDateTime&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- messages: List&amp;lt;MessageEntity&amp;gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="920" y="240" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-9" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;b&gt;TableEntity&lt;/b&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ toDomain(): Object&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ fromDomain(Object domain): void&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ clone(): TableEntity&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="1120" y="40" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-10" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MessageEntity&lt;br&gt;TABLE messages&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- id: int&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- conversation: ConversationEntity&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- role: Role&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- content: String&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- created: LocalDateTime&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="240" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-11" value="" style="endArrow=block;dashed=1;endFill=0;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-8" target="1eZlkTEKDvHDRqpcG8FO-9">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="1080" y="170" as="sourcePoint" />
+            <mxPoint x="1240" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-12" value="" style="endArrow=block;dashed=1;endFill=0;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-10" target="1eZlkTEKDvHDRqpcG8FO-9">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="1200" y="200" as="sourcePoint" />
+            <mxPoint x="1298" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-13" value="Use" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-4" target="1eZlkTEKDvHDRqpcG8FO-8">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="760" y="270" as="sourcePoint" />
+            <mxPoint x="920" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-14" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;b&gt;MessageOutputPort&lt;/b&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ getById(messageId: int): Message&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ getAll(pageable: Pageable): Page&amp;lt;Message&amp;gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ save(message: Message): void&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ delete(message: Message): void&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ delete(messageId: int): void&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="2080" y="120" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-15" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MessageMySQLOutputPort&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ messageMySQLRepository: MessageMySQLRepository&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="2040" y="360" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-16" value="" style="endArrow=block;dashed=1;endFill=0;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-15" target="1eZlkTEKDvHDRqpcG8FO-14">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="1940" y="340" as="sourcePoint" />
+            <mxPoint x="2100" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-17" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;b&gt;JpaRepository&amp;lt;MessageEntity, String&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="1640" y="140" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-18" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;span&gt;&amp;lt;&amp;lt;Interface&amp;gt;&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;text-align: left;&quot;&gt;&lt;b style=&quot;&quot;&gt;MessageMySQLRepository&lt;/b&gt;&lt;/span&gt;&lt;/p&gt;&lt;hr style=&quot;border-style:solid;&quot; size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="1640" y="360" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-19" value="" style="endArrow=open;endFill=1;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-15" target="1eZlkTEKDvHDRqpcG8FO-18">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="2170" y="500" as="sourcePoint" />
+            <mxPoint x="2330" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-20" value="Extends" style="endArrow=block;endSize=16;endFill=0;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-18" target="1eZlkTEKDvHDRqpcG8FO-17">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="1550" y="300" as="sourcePoint" />
+            <mxPoint x="1710" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1eZlkTEKDvHDRqpcG8FO-21" value="Use" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;" edge="1" parent="1" source="1eZlkTEKDvHDRqpcG8FO-17" target="1eZlkTEKDvHDRqpcG8FO-10">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="1520" y="140" as="sourcePoint" />
+            <mxPoint x="978" y="283" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

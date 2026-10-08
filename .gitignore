@@ -16,7 +16,6 @@ buildNumber.properties
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
 
-design/
 .env
 
 # Python venvs and common artifacts for backend/fastapi
