@@ -186,6 +186,14 @@ h2:hover .anch,h3:hover .anch{opacity:1}
 .prose .chay-ra .loi{color:var(--ba)}
 .prose .chay-ra .cho{color:var(--tx3)}
 .prose .chay-ra.dat{background:var(--okbg,var(--surf));color:var(--ok)}
+/* Gợi ý AI khi bài tập chưa đạt (mo-ai.js đăng ký qua HienThi.dangKyGoiY) */
+.prose .chay-goi-y{padding:8px 10px 10px;border-top:1px dashed var(--bd);background:var(--surf2)}
+.prose .chay-goi-y-noi:empty{display:none}
+.prose .chay-goi-y-noi{margin:0 0 8px;font-size:14px}
+.prose .goi-y-muc{margin:0 0 8px;padding:8px 10px;border:1px solid var(--bd);border-radius:9px;background:var(--surf)}
+.prose .goi-y-muc .prose{font-size:14px}
+.prose .goi-y-h{font-size:12px;font-weight:600;color:var(--ac);margin:0 0 4px}
+.prose .chay-goi-y .cho{margin:0 0 6px;color:var(--tx3);font-size:13px}
 .prose .chay-ra.chua-dat{background:var(--babg,var(--surf))}
 .prose figure.lab-nhung{margin:24px 0;border:1px solid var(--bd);border-radius:var(--rad);overflow:hidden;background:var(--surf)}
 .prose figure.lab-nhung iframe{display:block;width:100%;height:560px;border:0;background:var(--surf)}

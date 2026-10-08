@@ -118,10 +118,19 @@ QL.thongDiep = function (j, status) {
   if (j && typeof j.detail === "string") return j.detail;
   return status === 413 ? "Dữ liệu quá lớn" : "Lỗi HTTP " + status;
 };
+/* Model Gemini đã chọn — cùng khoá localStorage với engine/ai-khach.js, nên chọn ở đây là dùng cho
+   mọi trang (khoá học, OPIc, Markdown…) của máy chủ này và ngược lại. */
+var KHOA_MODEL = "ai.model@" + PHIEN.slice("phien@".length);
+QL.model = function (id) {
+  if (id === undefined) { try { var m = JSON.parse(localStorage.getItem(KHOA_MODEL) || "null"); return typeof m === "string" ? m : ""; } catch (e) { return ""; } }
+  try { if (id) localStorage.setItem(KHOA_MODEL, JSON.stringify(id)); else localStorage.removeItem(KHOA_MODEL); } catch (e) {}
+  return id || "";
+};
 var api = QL.api = function (method, path, body, opt) {
   opt = opt || {};
   var h = { "Accept": "application/json" };
   if (S.token) h["X-Admin-Session"] = S.token;
+  if (/^\/ai\//.test(path) && QL.model()) h["X-AI-Model"] = QL.model();
   Object.keys(opt.headers || {}).forEach(function (k) { if (opt.headers[k] != null) h[k] = opt.headers[k]; });
   var init = { method: method, headers: h };
   if (body !== undefined) {
@@ -907,7 +916,9 @@ var TEN_AI = {
   ask: "Hỏi đáp toàn trang", draft_outline: "Soạn khoá bằng AI — dàn ý", draft_lesson: "Soạn khoá bằng AI — bài",
   opic: "Nhận xét bài nói OPIc", sql: "SQL từ câu hỏi",
   mongo: "Mongo từ câu hỏi", http_explain: "Postman — giải thích response", http_tests: "Postman — sinh test",
-  compare: "Gemini Chat — so sánh model"
+  compare: "Gemini Chat — so sánh model", review_grade: "Ôn tập — AI chấm câu trả lời", exercise_hint: "Bài tập code — gợi ý",
+  notes_summary: "Sổ tay — tóm tắt để ôn", notes_cards: "Sổ tay — sinh thẻ ôn tập", opic_script: "OPIc — nhận xét script viết",
+  draft_assist: "Soạn bài — trợ lý đoạn chọn", markdown_format: "Markdown — định dạng thông minh", spending_parse: "Chi tiêu — tách giao dịch"
 };
 var QUYEN_AI = {
   admin: "chỉ quản trị viên", code: "ai có mã truy cập (AI_ACCESS_CODE) và quản trị viên",
@@ -952,11 +963,13 @@ function veAI(u) {
     '<div class="card"><b>Cấu hình</b> ' + trangThai +
     '<ul class="ai-cfg"><li>Ai được dùng tính năng AI: <b>' + esc(QUYEN_AI[c.access] || c.access) + "</b>" +
     (c.access === "code" && !c.codeSet ? ' <span class="chip wa">chưa đặt AI_ACCESS_CODE</span>' : "") + "</li>" +
-    "<li>Model: <code>" + esc(c.model) + "</code></li>" +
+    "<li>Model mặc định: <code>" + esc(c.model) + "</code> · bạn đang dùng: <b id=\"aiDangDung\">" + esc(QL.model() || "mặc định") + "</b></li>" +
     "<li>Mỗi địa chỉ: " + so(c.perMinute) + " lượt / phút, " + so(c.perDay) + " lượt / ngày (quản trị viên không bị giới hạn)</li>" +
     '</ul><p class="muted small" style="margin:6px 0 0">Đổi bằng biến môi trường của backend: <code>AI_ENABLED</code>, ' +
     "<code>AI_ACCESS</code> (admin / code / public), <code>AI_ACCESS_CODE</code>, <code>AI_MODEL</code>, " +
-    "<code>AI_RATE_PER_MINUTE</code>, <code>AI_RATE_PER_DAY</code>, <code>AI_DAILY_REQUESTS</code>, <code>AI_DAILY_TOKENS</code>.</p></div>" +
+    "<code>AI_RATE_PER_MINUTE</code>, <code>AI_RATE_PER_DAY</code>, <code>AI_DAILY_REQUESTS</code>, <code>AI_DAILY_TOKENS</code>, " +
+    "<code>AI_MODELS</code> (khoá danh sách model).</p></div>" +
+    '<div class="card" id="aiModels"><b>Model Gemini</b> <span class="muted small">đang tải danh sách…</span></div>' +
     "<h2>Theo tính năng (" + esc(u.since) + " — nay)</h2>" +
     (ds.length ? '<table class="bang-ai"><thead><tr><th scope="col">Tính năng</th><th scope="col">Lượt</th>' +
       '<th scope="col">Token vào</th><th scope="col">Token ra</th></tr></thead><tbody>' + ds.map(function (k) {
@@ -971,6 +984,36 @@ function veAI(u) {
         return "<tr><th scope=\"row\">" + esc(r.day) + "</th><td>" + so(r.requests) + "</td><td>" +
           so(r.prompt_tokens + r.output_tokens) + "</td></tr>";
       }).join("") + "</tbody></table>" : "") + "</div>";
+  api("GET", "/ai/models").then(veModels, function (e) {
+    var hop = $("#aiModels");
+    if (hop) hop.innerHTML = "<b>Model Gemini</b> <span class=\"muted small\">không tải được danh sách: " + esc(e.message) + "</span>";
+  });
+}
+/* Danh sách model (GET /ai/models): chọn một model cho lời gọi AI của chính bạn trên máy chủ này. */
+var NGUON_MODEL = { api: "danh sách thật từ Gemini (models.list)", config: "khoá bằng AI_MODELS", fallback: "danh sách dự phòng — không hỏi được Gemini" };
+function veModels(m) {
+  var hop = $("#aiModels");
+  if (!hop || S.view !== "ai") return;
+  var dang = QL.model();
+  hop.innerHTML = "<b>Model Gemini</b> <span class=\"muted small\">" + esc(NGUON_MODEL[m.source] || m.source) + "</span>" +
+    '<p class="muted small" style="margin:6px 0 10px">Chọn model cho các tính năng AI bạn dùng (trang này, khoá học, OPIc, Markdown Editor…) — ' +
+    "lựa chọn cất trên máy này. Người dùng khác chọn ở khung trợ giảng; dòng Pro chỉ quản trị viên chọn được.</p>" +
+    '<table class="bang-ai"><thead><tr><th scope="col">Model</th><th scope="col">Dòng</th><th scope="col"></th></tr></thead><tbody>' +
+    '<tr><th scope="row">Mặc định của máy chủ (<code>' + esc(m.default) + "</code>)</th><td></td><td>" +
+    '<label><input type="radio" name="aiModel" value=""' + (dang ? "" : " checked") + "> dùng</label></td></tr>" +
+    (m.models || []).map(function (x) {
+      return '<tr><th scope="row">' + esc(x.label || x.id) + ' <code class="muted">' + esc(x.id) + "</code>" +
+        (x.default ? ' <span class="chip ok">mặc định</span>' : "") + (x.preview ? ' <span class="chip wa">xem trước</span>' : "") + "</th><td>" +
+        esc(x.tier) + "</td><td>" + '<label><input type="radio" name="aiModel" value="' + esc(x.id) + '"' + (dang === x.id ? " checked" : "") +
+        (x.allowed ? "" : " disabled") + "> dùng</label></td></tr>";
+    }).join("") + "</tbody></table>";
+  hop.onchange = function (e) {
+    if (e.target.name !== "aiModel") return;
+    QL.model(e.target.value);
+    var d = $("#aiDangDung");
+    if (d) d.textContent = e.target.value || "mặc định";
+    toast(e.target.value ? "Đã chọn " + e.target.value : "Dùng model mặc định của máy chủ");
+  };
 }
 $("#btnAI").addEventListener("click", moAI);
 

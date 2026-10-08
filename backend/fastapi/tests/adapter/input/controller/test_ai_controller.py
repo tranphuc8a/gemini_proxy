@@ -242,3 +242,94 @@ def test_the_spending_book_route_over_http(client, monkeypatch):
     for bad in ({**ask, "text": ""}, {**ask, "text": "x" * 6001}, {**ask, "today": "08/10/2026"},
                 {**ask, "categories": [{"id": "c", "name": "A", "kind": "transfer"}]}, {k: v for k, v in ask.items() if k != "me"}):
         assert client.post(f"{AI}/spending", json=bad, headers=admin).status_code == 422
+
+
+def test_models_route_and_the_x_ai_model_header(client, monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_URL", "https://gemini.test/v1beta/models/gemini-3.5-flash:generateContent")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k")
+    monkeypatch.setattr(settings, "AI_MODEL", "gemini-3.5-flash")
+    answer = {"transactions": []}
+    model = FakeModel([json.dumps(answer)], models=["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.8-flash-tts"])
+    app.dependency_overrides[get_ai_usecase] = lambda: AiUseCase(FakeStore(), model)
+    admin = {"X-Admin-Key": ADMIN_KEY}
+
+    r = client.get(f"{AI}/models")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
+    body = r.json()
+    assert body["default"] == "gemini-3.5-flash" and body["source"] == "api"
+    by = {m["id"]: m for m in body["models"]}
+    assert set(by) == {"gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.1-pro-preview"}          # no TTS
+    assert by["gemini-3.1-pro-preview"]["adminOnly"] and not by["gemini-3.1-pro-preview"]["allowed"]
+    assert client.get(f"{AI}/models", headers=admin).json()["models"][-1]["allowed"] is True
+    assert client.get(f"{AI}/status", headers={**admin, "X-AI-Model": "gemini-3.8-flash"}).json()["chosen"] == "gemini-3.8-flash"
+
+    ask = {"text": "cơm 57k", "today": "2026-10-08", "me": "p_me"}
+    r = client.post(f"{AI}/spending", json=ask, headers={**admin, "X-AI-Model": "gemini-3.8-flash"})
+    assert r.status_code == 200 and model.calls[-1]["model"] == "gemini-3.8-flash"
+    r = client.post(f"{AI}/spending", json=ask, headers={**admin, "X-AI-Model": "gemini-0-nope"})
+    assert r.status_code == 400 and r.json()["data"]["code"] == "ai_model_unknown"
+    assert len(model.calls) == 1
+
+
+def test_the_chat_uses_the_picked_model_and_refuses_unknown_ones(client, monkeypatch):
+    from src.application.ports.input.gemini_input_port import GeminiInputPort as Port
+    seen = []
+
+    class Recording(StubGemini):
+        async def query(self, message_request):
+            seen.append(message_request.model)
+            return "ok"
+
+    monkeypatch.setattr(settings, "AI_MODEL", "gemini-3.5-flash")
+    app.dependency_overrides[ServiceFactory.get_gemini_input_port] = lambda: Recording()
+    model = FakeModel(["x"], models=["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.1-pro-preview"])
+    app.dependency_overrides[get_ai_usecase] = lambda: AiUseCase(FakeStore(), model)
+    body = {"conversation_id": "c1", "content": "chào"}
+
+    assert client.post(f"{GEMINI}/query", json={**body, "model": "gemini-3.8-flash"}).status_code == 200
+    assert seen == ["gemini-3.8-flash"]                                   # used as asked, no fallback to 2.5
+    r = client.post(f"{GEMINI}/query", json={**body, "model": "gemini-2.0-flash"})
+    assert r.status_code == 400 and r.json()["data"]["code"] == "ai_model_unknown" and seen == ["gemini-3.8-flash"]
+    assert client.post(f"{GEMINI}/query", json={**body, "model": "gemini-3.1-pro-preview"}).status_code == 403
+    assert client.post(f"{GEMINI}/query", json={**body, "model": "gemini-3.1-pro-preview"},
+                       headers={"X-Admin-Key": ADMIN_KEY}).status_code == 200
+    assert seen[-1] == "gemini-3.1-pro-preview"
+
+
+def test_the_study_and_editing_routes_over_http(client, monkeypatch):
+    from src.adapter.factory.course_factory import get_course_usecase
+    from tests.application.test_ai_course_usecase import FakeCourses
+
+    monkeypatch.setattr(settings, "GEMINI_URL", "https://gemini.test/v1beta/models/gemini-3.5-flash:generateContent")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k")
+    monkeypatch.setattr(settings, "AI_MODEL", "gemini-3.5-flash")
+    model = FakeModel([json.dumps({"score": 5, "verdict": "dung", "feedback": "Chuẩn."}),
+                       json.dumps({"hint": "Xem dòng 2.", "lines": [2]}),
+                       json.dumps({"answer": "### Ôn\n- ý [1]"}),
+                       json.dumps({"answer": "Theo [1]", "sources": [1]}),
+                       json.dumps({"markdown": "## Tiêu đề", "changes": []}),
+                       json.dumps({"md": "Đoạn đã được viết lại.", "note": "Gọn."})])
+    app.dependency_overrides[get_ai_usecase] = lambda: AiUseCase(FakeStore(), model)
+    app.dependency_overrides[get_course_usecase] = lambda: FakeCourses()
+    admin = {"X-Admin-Key": ADMIN_KEY}
+
+    r = client.post(f"{AI}/review", json={"question": "Q?", "expected": "A", "answer": "A nè"}, headers=admin)
+    assert r.status_code == 200 and r.json()["score"] == 5 and r.headers["cache-control"] == "no-store"
+    r = client.post(f"{AI}/hint", json={"course": "k", "doc": "a.md", "lang": "py", "code": "x = 1\ny = 2", "level": 2}, headers=admin)
+    assert r.status_code == 200 and r.json()["lines"] == [2]
+    assert client.post(f"{AI}/hint", json={"course": "k", "doc": "a.md", "lang": "py", "code": "x", "level": 4}, headers=admin).status_code == 422
+    r = client.post(f"{AI}/notes", json={"course": "k", "action": "summary", "notes": [{"doc": "a.md", "text": "Ghi chú"}]}, headers=admin)
+    assert r.status_code == 200 and r.json()["answer"].startswith("### Ôn")
+    r = client.post(f"{AI}/ask", json={"q": "băm?", "course": "k"}, headers=admin)
+    assert r.status_code == 200 and r.json()["sources"][0]["course"] == "k"
+    r = client.post(f"{AI}/markdown", json={"text": "tieu de", "mode": "smart"}, headers=admin)
+    assert r.status_code == 200 and r.json()["markdown"] == "## Tiêu đề"
+    assert client.post(f"{AI}/markdown", json={"text": "x", "mode": "poem"}, headers=admin).status_code == 422
+
+    passage = {"action": "rewrite", "selection": "Một đoạn bài học đủ dài để làm việc với nó."}
+    assert client.post(f"{AI}/draft/assist", json=passage).status_code in (401, 403)          # administrators only
+    r = client.post(f"{AI}/draft/assist", json=passage, headers=admin)
+    assert r.status_code == 200 and r.json()["markdown"] == "Đoạn đã được viết lại."
+    assert client.post(f"{AI}/draft/assist", json={**passage, "action": "poem"}, headers=admin).status_code == 422
+    assert client.post(f"{AI}/review", json={"question": "Q?", "expected": "A", "answer": "x"}).status_code == 403
+

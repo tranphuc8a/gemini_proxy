@@ -32,6 +32,8 @@ function Outline() {
           style={{ paddingLeft: 10 + (heading.level - base) * 12 }}
           onClick={() => {
             setActive(heading.line)
+            // In the small-screen drawer, the drawer is in the way of the jump.
+            useEditorStore.getState().setDrawerOpen(false)
             emitJump({ line: heading.line, source: 'preview' })
             document.getElementById(heading.slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }}

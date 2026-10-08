@@ -189,6 +189,48 @@
       var b = e.target.closest("[data-q]");
       if (b) cham(+b.getAttribute("data-q"));
     });
+    if (K.ai) K.ai.trangThai().then(function (s) { if (K.ai.dungDuoc(s) && phien.hang[0] === c.id) themAiCham(khung, c); },
+                                     function () { /* không hỏi được máy chủ: ôn như cũ */ });
+  }
+
+  /* ---- ✨ tự trả lời rồi để AI chấm (POST /ai/review): gợi ý mức, người học vẫn tự chọn ---- */
+  var VERDICT = { dung: "✓ Đúng", "gan-dung": "≈ Gần đúng", sai: "✗ Chưa đúng", "bo-trong": "Chưa trả lời" };
+  function mucTuDiem(diem) { return diem >= 5 ? 5 : diem === 4 ? 4 : diem === 3 ? 3 : 1; }
+  function themAiCham(khung, c) {
+    var the = khung.querySelector(".ot-the");
+    if (!the || the.querySelector(".ot-ai")) return;
+    var hop = document.createElement("div");
+    hop.className = "ot-ai";
+    hop.innerHTML = '<label class="ot-ai-nhan" for="otTraLoi">✨ Tự trả lời trước khi lật thẻ — AI chấm giúp (tuỳ chọn)</label>' +
+      '<textarea id="otTraLoi" rows="2" maxlength="2000" placeholder="Câu trả lời của bạn…"></textarea>' +
+      '<div class="ot-ai-chan"><button type="button" class="btn btn-s" id="otAiCham">✨ Chấm</button>' +
+      '<span class="ot-ai-meo">Ctrl+Enter</span></div><div class="ot-ai-kq" id="otAiKq" aria-live="polite"></div>';
+    the.insertBefore(hop, the.querySelector(".ot-nut-hang"));
+    var o = hop.querySelector("#otTraLoi"), nut = hop.querySelector("#otAiCham"), kq = hop.querySelector("#otAiKq");
+    function chamAi() {
+      var tl = o.value.trim();
+      if (!tl) { K.toast("Viết câu trả lời trước đã"); o.focus(); return; }
+      nut.disabled = true;
+      kq.innerHTML = '<p class="ai-cho">Đang chấm…</p>';
+      K.ai.goi("review", { question: c.front, expected: c.back, answer: tl, course: K.khoa, doc: c.doc || "" }).then(function (r) {
+        nut.disabled = false;
+        kq.innerHTML = '<div class="ot-ai-diem ' + K.esc(r.verdict) + '"><b>' + (VERDICT[r.verdict] || "") + "</b> · " + (+r.score || 0) + "/5</div>" +
+          "<p>" + K.esc(r.feedback || "") + "</p>" +
+          ((r.missing || []).length ? '<p class="ot-ai-thieu">Còn thiếu: ' + r.missing.map(K.esc).join(" · ") + "</p>" : "");
+        lat();
+        var q = mucTuDiem(+r.score || 0);
+        Array.prototype.forEach.call(document.querySelectorAll("#otCham [data-q]"), function (b) {
+          var la = +b.getAttribute("data-q") === q;
+          b.classList.toggle("ot-goi-y", la);
+          if (la) b.title = "AI gợi ý mức này — bạn vẫn tự chọn";
+        });
+      }, function (e) {
+        nut.disabled = false;
+        K.ai.hienLoi(kq, e, chamAi);
+      });
+    }
+    nut.addEventListener("click", chamAi);
+    o.addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); chamAi(); } });
   }
 
   function lat() {

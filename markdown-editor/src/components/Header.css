@@ -291,6 +291,42 @@
   border-radius: 9px;
 }
 
+/* The "⋯" menu collects whatever the header has no room for, so it can run
+   long: it scrolls inside itself instead of off the bottom of the screen. */
+.menu-popover.is-more {
+  width: min(300px, calc(100vw - 16px));
+  max-height: calc(100vh - var(--header-height) - 16px);
+  max-height: calc(100dvh - var(--header-height) - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.menu-popover.is-more .menu-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.menu-row-buttons {
+  gap: 6px;
+}
+
+.menu-row-buttons .btn {
+  flex: 1;
+}
+
+.menu-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.menu-stepper-value {
+  min-width: 42px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 /* --------------------------------------------------------------------------
    Role chip
    -------------------------------------------------------------------------- */
@@ -374,5 +410,65 @@
     padding: 0;
     justify-content: center;
     font-size: 0;
+  }
+}
+
+/* Compact tier (phones, touch tablets): the essentials plus "⋯". The file
+   name is the one piece of context worth the room, so it stays. */
+.app-header[data-tier='compact'] {
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.app-header[data-tier='compact'] .header-brand .breadcrumb {
+  display: flex;
+}
+
+.app-header[data-tier='compact'] .breadcrumb-part:not(:last-child) {
+  display: none;
+}
+
+/* Touch: every header control is a 40px target. Placed last so it wins over
+   the width-based rules above at equal specificity. */
+@media (pointer: coarse) {
+  .app-header .btn {
+    height: 40px;
+  }
+
+  .app-header .btn-icon,
+  .menu > .btn {
+    min-width: 40px;
+  }
+
+  .app-header .segmented .btn {
+    height: 40px;
+  }
+
+  .role-chip {
+    min-width: 40px;
+  }
+
+  .menu-item,
+  .menu-choice {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .menu-item {
+    padding: 8px 10px;
+  }
+
+  .menu-row .btn {
+    height: 40px;
+  }
+
+  .menu-item kbd {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 1200px) {
+  .btn-search {
+    width: 40px;
   }
 }

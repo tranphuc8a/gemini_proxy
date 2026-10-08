@@ -3,6 +3,7 @@ import {
   AiError,
   adminSessionKey,
   aiRoot,
+  aiModelKey,
   aiSessionKey,
   canOffer,
   createAiClient,
@@ -254,6 +255,47 @@ describe('unlock', () => {
       status: 403,
     });
     expect(localStorage.getItem(aiSessionKey(ROOT))).toBeNull();
+  });
+});
+
+describe('models', () => {
+  const MODELS = {
+    default: 'gemini-3.5-flash',
+    source: 'api',
+    admin: false,
+    models: [{ id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash', tier: 'flash', preview: false, alias: false,
+               adminOnly: false, default: false, allowed: true }],
+  };
+
+  it('lists them once, shares the answer, and asks again on refresh', async () => {
+    const spy = mockFetch(async () => json(MODELS));
+    const client = createAiClient(BASE);
+    const [a, b] = await Promise.all([client.listModels(), client.listModels()]);
+    expect(a).toEqual(MODELS);
+    expect(b).toBe(a);
+    expect(String(spy.mock.calls[0][0])).toBe(`${BASE}/ai/models`);
+    await client.listModels(true);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses an answer without a model list, and does not keep the failure', async () => {
+    mockFetch(async () => json({ default: 'x' }));
+    const client = createAiClient(BASE);
+    await expect(client.listModels()).rejects.toMatchObject({ code: 'bad_response' });
+    mockFetch(async () => json(MODELS));
+    await expect(client.listModels()).resolves.toEqual(MODELS);
+  });
+
+  it('remembers the pick under the key every page of this server shares', () => {
+    const client = createAiClient(BASE);
+    expect(client.chosenModel()).toBe('');
+    client.chooseModel('gemini-3.8-flash');
+    expect(JSON.parse(localStorage.getItem(aiModelKey(ROOT)) ?? 'null')).toBe('gemini-3.8-flash');
+    expect(client.chosenModel()).toBe('gemini-3.8-flash');
+    client.chooseModel('');
+    expect(localStorage.getItem(aiModelKey(ROOT))).toBeNull();
+    store(aiModelKey(ROOT), 'not a model!');
+    expect(client.chosenModel()).toBe('');
   });
 });
 

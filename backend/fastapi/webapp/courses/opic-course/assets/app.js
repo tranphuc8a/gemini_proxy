@@ -754,7 +754,7 @@ function viewScript(id) {
         '<ol class="sent" id="sent"></ol>' +
         '<div class="small muted" style="padding:0 16px 12px">Bấm vào một câu để nghe riêng câu đó. Chế độ <b>Gợi ý</b> giữ 3 từ đầu, <b>Chữ cái đầu</b> chỉ còn chữ đầu mỗi từ, <b>Ẩn hết</b> chỉ còn số từ — thuộc ở mức ẩn hết mới tính là thuộc.</div>' +
       '</div>' +
-      '<div class="scard myscript" style="margin-top:14px"><div class="sh"><b>Script của tôi</b><span class="chip">tự lưu</span><span class="sp"></span><button class="btn sm" id="btnDocToi">' + icon("volume") + 'Nghe</button><button class="btn sm" id="btnChepMau" title="Chép script mẫu xuống làm nháp">' + icon("edit") + 'Lấy mẫu làm nháp</button></div>' +
+      '<div class="scard myscript" style="margin-top:14px"><div class="sh"><b>Script của tôi</b><span class="chip">tự lưu</span><span class="sp"></span><button class="btn sm" id="btnDocToi">' + icon("volume") + 'Nghe</button><button class="btn sm" id="btnChepMau" title="Chép script mẫu xuống làm nháp">' + icon("edit") + 'Lấy mẫu làm nháp</button><button class="btn sm" id="btnAiScript" hidden title="AI nhận xét script bạn viết: mức ước lượng, chỗ sửa, bản tốt hơn">✨ Nhận xét script</button></div>' +
         '<div class="tool"><textarea id="taToi" placeholder="Viết script của riêng bạn cho câu này — 5 đến 7 câu, dùng chi tiết thật của bạn (tên, nơi ở, sở thích). Viết tiếng Việt trước cũng được, rồi chuyển sang tiếng Anh.">' + esc(cuaToi[id] || "") + '</textarea>' +
         '<div class="cnt"><span><b id="cTu">0</b> từ</span><span>nói ≈ <b id="cGiay">0:00</b></span><span id="cNhan" class="muted"></span></div></div></div>' +
       '<div class="scard ai-op" id="aiOp" style="margin-top:14px" hidden></div>' +
@@ -901,6 +901,31 @@ function viewScript(id) {
   /* --- AI nhận xét bài nói: bản ghi → WAV → POST /ai/opic --- */
   var TEN_TIEU_CHI = { fluency: "Trôi chảy", grammar: "Ngữ pháp", vocabulary: "Từ vựng", pronunciation: "Phát âm",
                        task: "Đúng trọng tâm" };
+  /* Script VIẾT (POST /ai/opic/script): không có giọng nói nên không chấm trôi chảy / phát âm. */
+  var TIEU_CHI_SCRIPT = { grammar: "Ngữ pháp", vocabulary: "Từ vựng", task: "Đúng trọng tâm", coherence: "Mạch lạc" };
+  function nhanXetScript() {
+    var hop = $("#aiOp"), chu = ta.value.trim();
+    if (chu.split(/\s+/).filter(Boolean).length < 15) { toast("Viết script ít nhất vài câu (15 từ) rồi nhờ AI nhận xét"); ta.focus(); return; }
+    hop.hidden = false;
+    hop.onclick = null;
+    hop.innerHTML = '<div class="sh"><b>✨ Nhận xét script</b></div><div class="tool"><p class="small muted">AI đang đọc script của bạn…</p></div>';
+    hop.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    var tool = hop.querySelector(".tool");
+    AI.goi("opic/script", { question: q.en, questionVi: q.vi, kind: (D.dang[q.dang] || {}).ten || q.dang || "", script: chu })
+      .then(function (kq) { veNhanXet(hop, kq, { cat: false }, true); })
+      .catch(function (e) {
+        tool.innerHTML = '<p class="ai-op-loi">' + esc(e && e.message || e) + "</p>";
+        if (e && e.ma === "ai_code_required") tool.appendChild(AI.oMa(nhanXetScript, "btn sm pri"));
+      });
+  }
+  if (AI) AI.trangThai().then(function (s) {
+    var b = $("#btnAiScript");
+    if (!b || !AI.dungDuoc(s)) return;
+    b.hidden = false;
+    b.addEventListener("click", nhanXetScript);
+    var m = AI.oModel("ai-model-opic");
+    b.parentNode.insertBefore(m, b);
+  }, function () {});
   function nhanXet(recId) {
     var hop = $("#aiOp");
     hop.hidden = false;
@@ -923,19 +948,20 @@ function viewScript(id) {
       if (e && e.ma === "ai_code_required") tool.appendChild(AI.oMa(function () { nhanXet(recId); }, "btn sm pri"));
     });
   }
-  function veNhanXet(hop, kq, w) {
+  function veNhanXet(hop, kq, w, laScript) {
     function ds(xs) { return "<ul>" + xs.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>"; }
-    var diem = Object.keys(TEN_TIEU_CHI).map(function (k) {
+    var tieuChi = laScript ? TIEU_CHI_SCRIPT : TEN_TIEU_CHI;
+    var diem = Object.keys(tieuChi).map(function (k) {
       var v = Math.max(0, Math.min(5, +kq.scores[k] || 0));
-      return '<div class="ai-op-tc"><span>' + TEN_TIEU_CHI[k] + '</span><span class="ai-op-cham" aria-hidden="true">' +
+      return '<div class="ai-op-tc"><span>' + tieuChi[k] + '</span><span class="ai-op-cham" aria-hidden="true">' +
         "●●●●●".slice(0, v) + "<i>" + "●●●●●".slice(v) + "</i></span><b>" + v + "/5</b></div>";
     }).join("");
-    hop.innerHTML = '<div class="sh"><b>🤖 Nhận xét của AI</b><span class="chip ac">Ước lượng ' + esc(kq.level) + "</span>" +
+    hop.innerHTML = '<div class="sh"><b>' + (laScript ? "✨ Nhận xét script" : "🤖 Nhận xét của AI") + '</b><span class="chip ac">Ước lượng ' + esc(kq.level) + "</span>" +
       (kq.cached ? '<span class="chip">đã chấm trước đó</span>' : "") + '</div><div class="tool ai-op-than">' +
       (w.cat ? '<p class="small muted">Bản ghi dài hơn ' + AI_GIAY + " giây — AI chấm " + AI_GIAY + " giây đầu.</p>" : "") +
       (kq.summary ? "<p>" + esc(kq.summary) + "</p>" : "") +
       '<div class="ai-op-diem">' + diem + "</div>" +
-      "<h4>Lời bạn đã nói</h4><p class=\"ai-op-chep\">" + (esc(kq.transcript) || "<i>(AI không nghe rõ lời nói)</i>") + "</p>" +
+      (laScript ? "" : "<h4>Lời bạn đã nói</h4><p class=\"ai-op-chep\">" + (esc(kq.transcript) || "<i>(AI không nghe rõ lời nói)</i>") + "</p>") +
       (kq.strengths.length ? "<h4>Điểm mạnh</h4>" + ds(kq.strengths) : "") +
       (kq.fixes.length ? '<h4>Sửa cho tốt hơn</h4><ul class="ai-op-sua">' + kq.fixes.map(function (f) {
         return "<li><s>" + esc(f.said) + "</s> → <b>" + esc(f.better) + "</b>" + (f.why ? "<span>" + esc(f.why) + "</span>" : "") + "</li>";

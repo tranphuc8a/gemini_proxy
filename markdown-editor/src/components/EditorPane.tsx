@@ -437,7 +437,7 @@ function EditorPane() {
   }, [currentFileId])
 
   return (
-    <section className="editor-pane" aria-label="Markdown editor">
+    <section className={`editor-pane${readOnly ? ' is-readonly' : ''}`} aria-label="Markdown editor">
       <div className="pane-header">
         <span className="pane-title">Editor</span>
         <div className="pane-header-actions">

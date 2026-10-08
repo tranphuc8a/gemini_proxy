@@ -155,8 +155,16 @@ class Settings(BaseSettings): # type: ignore
     AI_ACCESS: str = "admin"
     AI_ACCESS_CODE: str = ""
     AI_SESSION_DAYS: int = 7
-    # The model the AI features ask for (it replaces the model segment of GEMINI_URL).
-    AI_MODEL: str = "gemini-2.5-flash"
+    # The model the AI features and the chat ask for when the caller picks none (it
+    # replaces the model segment of GEMINI_URL). Since 2026 Google limits the 2.5
+    # models to accounts that already used them; 3.5 Flash answered the live checks.
+    AI_MODEL: str = "gemini-3.5-flash"
+    # Models a caller may pick (header X-AI-Model / GET /ai/models). Empty = the
+    # live list from Gemini models.list (text models only), refreshed every
+    # AI_MODELS_TTL_SECONDS; a comma-separated list pins it. Pro models are for
+    # administrators either way.
+    AI_MODELS: str = ""
+    AI_MODELS_TTL_SECONDS: int = 21600
     AI_TIMEOUT_SECONDS: int = 90
     # Requests per client address (administrators are exempt)…
     AI_RATE_PER_MINUTE: int = 12

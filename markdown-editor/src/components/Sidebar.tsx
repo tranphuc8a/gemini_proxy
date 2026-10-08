@@ -7,10 +7,14 @@ import { IconClose, IconFile, IconFolder, IconOutline, IconPlus, IconSearch } fr
 import './Sidebar.css'
 
 interface SidebarProps {
-  width: number
+  /** Docked width in px; the drawer sizes itself. */
+  width?: number
+  /** `drawer` adds a close button and fills the off-canvas panel it sits in. */
+  variant?: 'docked' | 'drawer'
+  onClose?: () => void
 }
 
-function Sidebar({ width }: SidebarProps) {
+function Sidebar({ width, variant = 'docked', onClose }: SidebarProps) {
   const tab = useEditorStore((state) => state.sidebarTab)
   const setTab = useEditorStore((state) => state.setSidebarTab)
   const isAdmin = useEditorStore((state) => state.isAdmin)
@@ -33,26 +37,37 @@ function Sidebar({ width }: SidebarProps) {
   }
 
   return (
-    <aside className="sidebar" style={{ width }} aria-label="Sidebar">
-      <div className="sidebar-tabs" role="tablist">
-        <button
-          role="tab"
-          aria-selected={tab === 'files'}
-          className={`sidebar-tab${tab === 'files' ? ' is-active' : ''}`}
-          onClick={() => setTab('files')}
-        >
-          <IconFile size={14} />
-          Files
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab === 'outline'}
-          className={`sidebar-tab${tab === 'outline' ? ' is-active' : ''}`}
-          onClick={() => setTab('outline')}
-        >
-          <IconOutline size={14} />
-          Outline
-        </button>
+    <aside
+      className={`sidebar${variant === 'drawer' ? ' is-drawer' : ''}`}
+      style={variant === 'docked' ? { width } : undefined}
+      aria-label="Sidebar"
+    >
+      <div className="sidebar-tabs">
+        <div className="sidebar-tablist" role="tablist">
+          <button
+            role="tab"
+            aria-selected={tab === 'files'}
+            className={`sidebar-tab${tab === 'files' ? ' is-active' : ''}`}
+            onClick={() => setTab('files')}
+          >
+            <IconFile size={14} />
+            Files
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === 'outline'}
+            className={`sidebar-tab${tab === 'outline' ? ' is-active' : ''}`}
+            onClick={() => setTab('outline')}
+          >
+            <IconOutline size={14} />
+            Outline
+          </button>
+        </div>
+        {variant === 'drawer' && onClose && (
+          <button className="btn btn-icon sidebar-close" onClick={onClose} aria-label="Close sidebar" title="Close (Esc)">
+            <IconClose size={16} />
+          </button>
+        )}
       </div>
 
       {tab === 'files' ? (

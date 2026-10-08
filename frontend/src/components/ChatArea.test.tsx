@@ -28,7 +28,16 @@ vi.mock('../services/aiService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../services/aiService')>();
   return {
     ...actual,
-    aiService: { ...actual.aiService, getStatus: vi.fn(), chat: vi.fn(), unlock: vi.fn() },
+    aiService: {
+      ...actual.aiService,
+      getStatus: vi.fn(),
+      chat: vi.fn(),
+      unlock: vi.fn(),
+      listModels: vi.fn(),
+      chooseModel: vi.fn(),
+      chosenModel: vi.fn(),
+      identityHeaders: vi.fn(() => ({})),
+    },
   };
 });
 
@@ -88,6 +97,16 @@ beforeEach(() => {
   });
   vi.mocked(conversationService.get).mockResolvedValue(CONVERSATION);
   vi.mocked(aiService.getStatus).mockResolvedValue(AI_ADMIN_ONLY);
+  vi.mocked(aiService.chosenModel).mockReturnValue('');
+  vi.mocked(aiService.listModels).mockResolvedValue({
+    default: 'gemini-3.5-flash',
+    source: 'api',
+    admin: false,
+    models: [
+      { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', tier: 'flash', preview: false, alias: false, adminOnly: false, default: true, allowed: true },
+      { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash', tier: 'flash', preview: false, alias: false, adminOnly: false, default: false, allowed: true },
+    ],
+  });
   openConversation();
 });
 
@@ -127,6 +146,25 @@ describe('ChatArea', () => {
       captured.handlers?.onChunk('one.');
     });
     await waitFor(() => expect(screen.getByText('Step one.')).toBeInTheDocument());
+  });
+
+  it("asks with the server's default model, or the one picked (remembered for every page)", async () => {
+    captureStream();
+    render(<ChatArea />);
+    const user = await typeAndSend('first');
+    await waitFor(() => expect(geminiService.queryStream).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(geminiService.queryStream).mock.calls[0][0].model).toBe('gemini-3.5-flash');
+
+    await user.click(screen.getByRole('combobox', { name: /mô hình|select model/i }));
+    const option = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(
+        '.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option[title="Gemini 3.8 Flash"]'
+      );
+      if (!element) throw new Error('Gemini 3.8 Flash is not offered');
+      return element;
+    });
+    await user.click(option);
+    expect(aiService.chooseModel).toHaveBeenCalledWith('gemini-3.8-flash');
   });
 
   it('adopts the server ids once the answer completes', async () => {

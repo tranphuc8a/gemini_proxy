@@ -8,7 +8,7 @@ import {
   type AiChatAnswer,
   type AiStatus,
 } from '../services/aiService';
-import { EModel } from '../types';
+import { useAiModels, type ModelOption } from '../hooks/useAiModels';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { AiAccessCodeForm } from './AiAccessCodeForm';
 
@@ -24,7 +24,6 @@ type ColumnState =
 type Pair<T> = [T, T];
 
 const IDLE: ColumnState = { phase: 'idle' };
-const DEFAULT_MODELS: Pair<EModel> = [EModel.GEMINI_2_5_FLASH, EModel.GEMINI_2_5_PRO];
 
 interface CompareModelsModalProps {
   open: boolean;
@@ -37,7 +36,7 @@ interface CompareModelsModalProps {
   onStatusChange: (status: AiStatus | null) => void;
 }
 
-const CompareColumn: React.FC<{ model: string; state: ColumnState }> = ({ model, state }) => {
+const CompareColumn: React.FC<{ model: string; state: ColumnState; options: ModelOption[] }> = ({ model, state, options }) => {
   const { t } = useTranslation();
   const headingId = useId();
   const shownModel = state.phase === 'idle' ? model : state.model;
@@ -46,7 +45,7 @@ const CompareColumn: React.FC<{ model: string; state: ColumnState }> = ({ model,
     <section className="compare-column" aria-labelledby={headingId} aria-busy={state.phase === 'loading'}>
       <div className="compare-column-head">
         <span id={headingId} className="compare-column-title">
-          {t(`models.${shownModel}`, { defaultValue: shownModel })}
+          {options.find((option) => option.value === shownModel)?.label ?? shownModel}
         </span>
       </div>
 
@@ -91,7 +90,12 @@ export const CompareModelsModal: React.FC<CompareModelsModalProps> = ({
   const { t } = useTranslation();
   const promptId = useId();
   const [prompt, setPrompt] = useState(() => initialPrompt.slice(0, AI_PROMPT_MAX_CHARS));
-  const [models, setModels] = useState<Pair<EModel>>(DEFAULT_MODELS);
+  const { options: modelOptions, defaultModel } = useAiModels();
+  // Unpicked sides follow the server's list as it arrives: its default, then the next model.
+  const [picked, setPicked] = useState<Pair<string | null>>([null, null]);
+  const usable = modelOptions.filter((option) => !option.disabled).map((option) => option.value);
+  const firstModel = picked[0] ?? (usable.includes(defaultModel) ? defaultModel : usable[0] ?? defaultModel);
+  const models: Pair<string> = [firstModel, picked[1] ?? usable.find((model) => model !== firstModel) ?? firstModel];
   const [columns, setColumns] = useState<Pair<ColumnState>>([IDLE, IDLE]);
   /** Set when a request was refused for want of a code, before the status catches up. */
   const [codeRequired, setCodeRequired] = useState(false);
@@ -129,7 +133,7 @@ export const CompareModelsModal: React.FC<CompareModelsModalProps> = ({
     const controller = new AbortController();
     controllerRef.current = controller;
 
-    const pair: Pair<EModel> = [models[0], models[1]];
+    const pair: Pair<string> = [models[0], models[1]];
     setColumns([
       { phase: 'loading', model: pair[0] },
       { phase: 'loading', model: pair[1] },
@@ -164,11 +168,6 @@ export const CompareModelsModal: React.FC<CompareModelsModalProps> = ({
     setCodeRequired(false);
     onStatusChange(next);
   };
-
-  const modelOptions = Object.values(EModel).map((model) => ({
-    label: t(`models.${model}`),
-    value: model,
-  }));
 
   return (
     <Modal
@@ -205,7 +204,7 @@ export const CompareModelsModal: React.FC<CompareModelsModalProps> = ({
         <div className="compare-controls">
           <Select
             value={models[0]}
-            onChange={(value: EModel) => setModels(([, second]) => [value, second])}
+            onChange={(value: string) => setPicked(([, second]) => [value, second ?? models[1]])}
             options={modelOptions}
             aria-label={t('compare.modelA')}
             className="compare-model-select"
@@ -215,7 +214,7 @@ export const CompareModelsModal: React.FC<CompareModelsModalProps> = ({
           </span>
           <Select
             value={models[1]}
-            onChange={(value: EModel) => setModels(([first]) => [first, value])}
+            onChange={(value: string) => setPicked(([first]) => [first ?? models[0], value])}
             options={modelOptions}
             aria-label={t('compare.modelB')}
             className="compare-model-select"
@@ -235,8 +234,8 @@ export const CompareModelsModal: React.FC<CompareModelsModalProps> = ({
         </Typography.Paragraph>
 
         <div className="compare-columns">
-          <CompareColumn model={models[0]} state={columns[0]} />
-          <CompareColumn model={models[1]} state={columns[1]} />
+          <CompareColumn model={models[0]} state={columns[0]} options={modelOptions} />
+          <CompareColumn model={models[1]} state={columns[1]} options={modelOptions} />
         </div>
       </div>
     </Modal>

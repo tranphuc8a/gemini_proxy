@@ -1,4 +1,5 @@
 import { apiClient, BASE_URL } from './apiClient';
+import { aiService } from './aiService';
 import i18n from '../i18n';
 import type { MessageRequest, ApiResponse, StreamCompletion, StreamFailure } from '../types';
 
@@ -88,6 +89,8 @@ export const geminiService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Who is asking: the server lets an administrator pick a Pro model (and vets every pick).
+          ...aiService.identityHeaders(),
         },
         body: JSON.stringify(request),
         signal,

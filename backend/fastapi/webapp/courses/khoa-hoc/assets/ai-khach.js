@@ -19,9 +19,17 @@
                         (data.code của máy chủ, "mang" khi không tới được) và .status
      .oMa(xong, lopNut) ô nhập mã truy cập AI: POST /ai/session rồi cất token trên
                         máy; xong() khi mở khoá được
+     .model() / .datModel(id)  model Gemini người dùng chọn ("" = mặc định của máy
+                        chủ) — cất theo gốc API, DÙNG CHUNG cho mọi trang/ứng dụng
+                        của máy chủ đó; gửi kèm mọi lời gọi qua header X-AI-Model
+     .dsModel(moi)      GET /ai/models — danh sách model (mới nhất trước), mỗi model
+                        có allowed (dòng Pro chỉ cho quản trị viên)
+     .oModel(lop)       ô chọn model (<label><select>) — đổi là áp dụng ngay
    Người gọi được nhận diện bằng header: X-Admin-Session (token phiên mà trang
    Quản lý cất cho ĐÚNG gốc API này — quản trị viên) và X-AI-Session (token mã
    truy cập AI). Token không bao giờ được gửi sang một gốc API khác.
+   Model đã chọn mà máy chủ không còn (400 ai_model_unknown / 403 ai_model_admin_only):
+   bỏ lựa chọn đó và gọi lại một lần bằng model mặc định — tính năng vẫn chạy.
    ========================================================================== */
 (function () {
   "use strict";
@@ -36,8 +44,14 @@
     goc = String(goc || "").replace(/\/+$/, "");
     var du = "";
     try { du = new URL(goc || "/", location.href).href.replace(/\/+$/, ""); } catch (e) {}
-    var KHOA_QL = "qlkh.phien@" + du + ".token", KHOA_AI = "ai.phien@" + du;
-    var trangThai = null;
+    var KHOA_QL = "qlkh.phien@" + du + ".token", KHOA_AI = "ai.phien@" + du, KHOA_MODEL = "ai.model@" + du;
+    var trangThai = null, dsModel = null;
+
+    function model() { var m = docLS(KHOA_MODEL); return typeof m === "string" && /^[a-z0-9][a-z0-9.\-]{1,62}$/.test(m) ? m : ""; }
+    function datModel(id) {
+      ghiLS(KHOA_MODEL, id || null);
+      try { window.dispatchEvent(new CustomEvent("ai-model", { detail: { model: id || "" } })); } catch (e) {}
+    }
 
     function dau() {
       var h = { "Content-Type": "application/json" };
@@ -49,10 +63,11 @@
         if (!het || (het > 1e12 ? het : het * 1000) > Date.now()) h["X-AI-Session"] = ai.token;
         else ghiLS(KHOA_AI, null);
       }
+      if (model()) h["X-AI-Model"] = model();
       return h;
     }
 
-    function goi(duong, body) {
+    function goi(duong, body, daThuLai) {
       var o = { headers: dau(), credentials: "same-origin" };
       if (body !== undefined) { o.method = "POST"; o.body = JSON.stringify(body); }
       return fetch(goc + "/ai/" + duong, o).then(function (r) {
@@ -67,7 +82,42 @@
         var e = new Error(navigator.onLine === false ? "Đang offline — cần mạng để dùng AI" : "Không kết nối được máy chủ");
         e.ma = "mang";
         throw e;
+      }).catch(function (e) {
+        /* model đã chọn không còn / không được dùng: về mặc định và thử lại một lần */
+        if (!daThuLai && model() && (e.ma === "ai_model_unknown" || e.ma === "ai_model_admin_only" || e.ma === "ai_model_invalid")) {
+          datModel("");
+          return goi(duong, body, true);
+        }
+        throw e;
       });
+    }
+
+    function layDsModel(moi) {
+      if (!dsModel || moi) dsModel = goi("models").catch(function (e) { dsModel = null; throw e; });
+      return dsModel;
+    }
+
+    /* Ô chọn model: "Mặc định (…)" + các model được dùng; model chỉ cho quản trị viên hiện mờ. */
+    function oModel(lop) {
+      var nhan = document.createElement("label");
+      nhan.className = "ai-model" + (lop ? " " + lop : "");
+      nhan.innerHTML = '<span>Model</span><select aria-label="Model AI"><option value="">Mặc định</option></select>';
+      var chon = nhan.querySelector("select");
+      function ve(kq) {
+        var co = model(), ok = false, ds = (kq && kq.models) || [];
+        chon.innerHTML = '<option value="">Mặc định' + (kq && kq.default ? " (" + escHtml(kq.default) + ")" : "") + "</option>" +
+          ds.map(function (m) {
+            if (m.id === co && m.allowed) ok = true;
+            var them = (m.preview ? " · xem trước" : "") + (m.adminOnly ? " · Pro" : "") + (!m.allowed ? " — chỉ quản trị viên" : "");
+            return '<option value="' + escHtml(m.id) + '"' + (m.allowed ? "" : " disabled") + ">" + escHtml(m.label || m.id) + them + "</option>";
+          }).join("");
+        if (co && !ok) datModel("");            /* model cũ không còn trong danh sách */
+        chon.value = ok ? co : "";
+      }
+      chon.addEventListener("change", function () { datModel(chon.value); });
+      window.addEventListener("ai-model", function (e) { if (chon.value !== e.detail.model) chon.value = e.detail.model; });
+      layDsModel().then(ve, function () { nhan.hidden = true; });
+      return nhan;
     }
 
     function layTrangThai(moi) {
@@ -100,9 +150,16 @@
     }
 
     return {
-      goi: goi, trangThai: layTrangThai, oMa: oMa,
+      goi: function (duong, body) { return goi(duong, body); }, trangThai: layTrangThai, oMa: oMa,
+      model: model, datModel: datModel, dsModel: layDsModel, oModel: oModel,
       dungDuoc: function (s) { return !!(s && s.enabled && (s.allowed || s.needs === "code")); }
     };
+  }
+
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
   }
 
   window.AiKhach = { tao: tao };

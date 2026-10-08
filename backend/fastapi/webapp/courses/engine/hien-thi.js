@@ -311,6 +311,10 @@ function tomTatLoi(ngon, loi, kiem, oKiem) {
   return dong.slice(Math.min(tu, dong.length - 1)).join("\n");
 }
 
+/* Gợi ý khi bài tập chưa đạt: trang đọc (mo-ai.js) đăng ký fn(x, muc, thuLai) → Promise<Node>,
+   x = {ngon, de, kiem, ma, loi, docId}, muc 1 → 3 (hướng đi → chỗ sai → các bước). Khung xem
+   trước của trang Quản lý không đăng ký, nên không có nút. */
+var GOI_Y = null;
 var demChay = 0;
 function taoChay(text, ngon, baiTap, o) {
   ngon = /^py/.test(ngon) ? "py" : "js";
@@ -369,9 +373,10 @@ function taoChay(text, ngon, baiTap, o) {
       if (cho.parentNode) cho.remove();
       Array.prototype.forEach.call(nut, function (b) { b.disabled = false; });
       if (!ok) {
-        inRa(oNap ? "Không tải được Python: " + loi + " — cần mạng ở lần chạy đầu." :
-             oKiem ? "✗ Chưa đạt — " + tomTatLoi(ngon, loi, kiem, true) : tomTatLoi(ngon, loi, kiem, false), true);
-        if (viec === "nop") ra.classList.add("chua-dat");
+        var tomTat = oNap ? "Không tải được Python: " + loi + " — cần mạng ở lần chạy đầu." :
+             oKiem ? "✗ Chưa đạt — " + tomTatLoi(ngon, loi, kiem, true) : tomTatLoi(ngon, loi, kiem, false);
+        inRa(tomTat, true);
+        if (viec === "nop") { ra.classList.add("chua-dat"); if (!oNap) moiGoiY(tomTat); }
         return;
       }
       if (viec === "nop") {
@@ -379,14 +384,60 @@ function taoChay(text, ngon, baiTap, o) {
         ra.classList.add("dat");
         dat.hidden = false;
         ghi(".dat", "1");
+        if (goiY) goiY.hidden = true;
       } else if (!ra.textContent.trim()) {
         inRa("(chạy xong, không in gì)", false);
       }
     });
   }
+  /* ---- gợi ý AI: mỗi lần bấm lên một mức, tới mức 3 thì thôi ---- */
+  var goiY = null, mucGoiY = 0, loiCuoi = "";
+  function moiGoiY(tomTat) {
+    if (!GOI_Y || !o.docId) return;
+    loiCuoi = String(tomTat || "").slice(0, 1500);
+    if (!goiY) {
+      goiY = document.createElement("div");
+      goiY.className = "chay-goi-y";
+      goiY.innerHTML = '<div class="chay-goi-y-noi" aria-live="polite"></div>' +
+        '<button type="button" class="chay-nut goi-y-nut">✨ Gợi ý</button>';
+      goiY.querySelector(".goi-y-nut").addEventListener("click", xinGoiY);
+      hop.appendChild(goiY);
+    }
+    goiY.hidden = false;
+    nhanGoiY();
+  }
+  function nhanGoiY() {
+    var b = goiY.querySelector(".goi-y-nut");
+    b.hidden = mucGoiY >= 3;
+    b.textContent = mucGoiY ? "✨ Gợi ý thêm (mức " + (mucGoiY + 1) + "/3)" : "✨ Gợi ý (mức 1/3)";
+  }
+  function xinGoiY() {
+    var b = goiY.querySelector(".goi-y-nut"), noi = goiY.querySelector(".chay-goi-y-noi");
+    var muc = Math.min(3, mucGoiY + 1);
+    b.disabled = true;
+    var cho = document.createElement("p");
+    cho.className = "cho";
+    cho.textContent = "Trợ giảng đang xem mã của bạn…";
+    noi.appendChild(cho);
+    var x = { ngon: ngon, de: goc, kiem: kiem, ma: ta.value, loi: loiCuoi, docId: o.docId };
+    Promise.resolve(GOI_Y(x, muc, function () { b.disabled = false; mucGoiY = muc - 1; xinGoiY(); })).then(function (node) {
+      cho.remove();
+      var muc_ = document.createElement("div");
+      muc_.className = "goi-y-muc";
+      muc_.innerHTML = '<div class="goi-y-h">Gợi ý mức ' + muc + "</div>";
+      if (node) muc_.appendChild(node);
+      noi.appendChild(muc_);
+      mucGoiY = muc;
+      b.disabled = false;
+      nhanGoiY();
+    }, function (e) {
+      cho.textContent = (e && e.message) || "Không lấy được gợi ý";
+      b.disabled = false;
+    });
+  }
   hop.addEventListener("click", function (e) {
     var b = e.target.closest(".chay-nut");
-    if (!b) return;
+    if (!b || b.classList.contains("goi-y-nut")) return;
     var v = b.getAttribute("data-viec");
     if (v === "lai") { ta.value = goc; ghi("", null); cao(); ta.focus(); return; }
     chay(v);
@@ -625,6 +676,7 @@ function veMermaid(goc) {
 
 root.HienThi = {
   norm: norm, slugifyHeading: slugifyHeading, lamSach: lamSach, htmlSach: htmlSach,
-  resolveHref: resolveHref, render: render, veMermaid: veMermaid, tenTep: tenTep, phanTichLab: phanTichLab
+  resolveHref: resolveHref, render: render, veMermaid: veMermaid, tenTep: tenTep, phanTichLab: phanTichLab,
+  dangKyGoiY: function (fn) { GOI_Y = typeof fn === "function" ? fn : null; }
 };
 })(window);

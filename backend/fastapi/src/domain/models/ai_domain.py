@@ -7,6 +7,8 @@ These types are what the guard in front of that quota reasons about.
 
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -19,6 +21,9 @@ class AiCaller(BaseModel):
     admin: bool = False
     #: Holds a valid token issued for AI_ACCESS_CODE.
     code: bool = False
+    #: The model this caller picked (header X-AI-Model); None = the deployment's AI_MODEL.
+    #: Vetted against the catalog before use (see AiUseCase.resolve_model).
+    model: Optional[str] = None
 
 
 class AiCompletion(BaseModel):

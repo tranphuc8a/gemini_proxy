@@ -16,6 +16,11 @@ class AiModelOutputPort(ABC):
                        generation_config: Optional[Dict[str, Any]] = None) -> AiCompletion:
         """The answer; raises on an upstream failure or a refused prompt."""
 
+    async def list_models(self) -> List[Dict[str, Any]]:
+        """The provider's models: ``[{"id": "gemini-3.5-flash", "label": "Gemini 3.5 Flash"}]``,
+        only those that answer `generateContent`. [] when the provider cannot list them."""
+        return []
+
 
 class AiOutputPort(ABC):
     """Where AI spending is counted and reusable answers are kept."""

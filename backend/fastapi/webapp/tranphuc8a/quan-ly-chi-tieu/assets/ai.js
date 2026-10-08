@@ -30,7 +30,7 @@
   function keys(goc) {
     var du = goc;
     try { du = new URL(goc || "/", root.location.href).href.replace(/\/+$/, ""); } catch (e) { /* giữ nguyên */ }
-    return { admin: "qlkh.phien@" + du + ".token", ai: "ai.phien@" + du };
+    return { admin: "qlkh.phien@" + du + ".token", ai: "ai.phien@" + du, model: "ai.model@" + du };
   }
   function headers(goc) {
     var k = keys(goc), h = { "Content-Type": "application/json" };
@@ -42,10 +42,13 @@
       if (!het || (het > 1e12 ? het : het * 1000) > Date.now()) h["X-AI-Session"] = ai.token;
       else writeLS(k.ai, null);
     }
+    // Model chọn ở trang khác (khoá học, Quản lý khoá học…) của cùng máy chủ — xem ai-khach.js.
+    var model = readLS(k.model);
+    if (typeof model === "string" && /^[a-z0-9][a-z0-9.\-]{1,62}$/.test(model)) h["X-AI-Model"] = model;
     return h;
   }
 
-  function call(path, body) {
+  function call(path, body, retried) {
     var goc = base();
     if (!hasServer()) {
       var e0 = new Error("Bạn đang mở file trực tiếp — hãy điền “Địa chỉ máy chủ” ở Cài đặt để dùng AI.");
@@ -64,6 +67,13 @@
     }, function () {
       var e = new Error(root.navigator.onLine === false ? "Đang offline — cần mạng để dùng AI" : "Không kết nối được máy chủ");
       e.code = "network";
+      throw e;
+    }).catch(function (e) {
+      // Model đã chọn không còn / không được dùng: về model mặc định và thử lại một lần.
+      if (!retried && /^ai_model_(unknown|admin_only|invalid)$/.test(e.code || "") && readLS(keys(goc).model)) {
+        writeLS(keys(goc).model, null);
+        return call(path, body, true);
+      }
       throw e;
     });
   }

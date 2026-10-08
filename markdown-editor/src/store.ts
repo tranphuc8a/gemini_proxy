@@ -24,6 +24,7 @@ import {
 } from './lib/tree'
 import { DEFAULT_SETTINGS, clearLegacyStorage, loadFiles, loadSettings, saveFiles, saveSettings } from './lib/persistence'
 import type { InboxDocument } from './lib/inbox'
+import type { Layout, Pane } from './lib/responsive'
 
 /** Keystrokes inside this window collapse into a single undo step. */
 export const HISTORY_DEBOUNCE_MS = 600
@@ -99,7 +100,11 @@ interface StoreState extends EditorState {
   setEditorWidth: (editorWidth: number) => void
   setSidebarWidth: (sidebarWidth: number) => void
   setSidebarTab: (tab: SidebarTab) => void
+  /** Collapses the docked sidebar on desktop; opens or closes the drawer below it. */
   toggleSidebar: () => void
+  setLayout: (layout: Layout) => void
+  setDrawerOpen: (open: boolean) => void
+  setPhonePane: (pane: Pane) => void
   toggleFullscreen: () => void
   toggleLineNumbers: () => void
   toggleWordWrap: () => void
@@ -140,7 +145,10 @@ const initialState: EditorState = {
   fullscreen: false,
   saveState: 'idle',
   lastSavedAt: null,
-  toasts: []
+  toasts: [],
+  layout: 'desktop',
+  drawerOpen: false,
+  phonePane: null
 }
 
 /** Timers live outside the store so they never end up serialised. */
@@ -245,6 +253,8 @@ export const useEditorStore = create<StoreState>((set, get) => {
 
     setCurrentFile: (fileId: string | null) => {
       get().commitHistory()
+      // Picking a file from the drawer is the end of the errand: show the file.
+      if (get().drawerOpen) set({ drawerOpen: false })
       if (fileId === null) {
         set({ currentFileId: null, currentContent: '', history: [''], historyIndex: 0 })
         return
@@ -463,14 +473,35 @@ export const useEditorStore = create<StoreState>((set, get) => {
     },
 
     setSidebarTab: (sidebarTab) => {
-      set({ sidebarTab, sidebarCollapsed: false })
+      // Below desktop the sidebar is a drawer, and the docked preference is left
+      // alone so the desktop layout comes back exactly as it was.
+      if (get().layout !== 'desktop') set({ sidebarTab, drawerOpen: true })
+      else set({ sidebarTab, sidebarCollapsed: false })
       schedulePersist()
     },
 
     toggleSidebar: () => {
+      if (get().layout !== 'desktop') {
+        set((state) => ({ drawerOpen: !state.drawerOpen }))
+        return
+      }
       set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }))
       schedulePersist()
     },
+
+    setLayout: (layout) => {
+      if (layout === get().layout) return
+      // The drawer is a small-screen affordance; it never survives into desktop,
+      // and a phone always starts with it closed.
+      set({ layout, drawerOpen: false })
+    },
+
+    setDrawerOpen: (drawerOpen) => {
+      if (drawerOpen === get().drawerOpen) return
+      set({ drawerOpen: drawerOpen && get().layout !== 'desktop' })
+    },
+
+    setPhonePane: (phonePane) => set({ phonePane }),
 
     toggleFullscreen: () => set((state) => ({ fullscreen: !state.fullscreen })),
 

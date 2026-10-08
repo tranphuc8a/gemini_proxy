@@ -1,0 +1,47 @@
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  background-color: var(--bg-overlay);
+  animation: overlay-in 140ms var(--ease);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  width: min(320px, 86vw);
+  max-width: 100%;
+  background-color: var(--bg-subtle);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+  /* Clear of the notch and the home indicator on edge-to-edge phones. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.drawer-left {
+  left: 0;
+  padding-left: env(safe-area-inset-left, 0px);
+  border-right: 1px solid var(--border);
+  animation: drawer-in-left 180ms var(--ease);
+}
+
+.drawer-right {
+  right: 0;
+  padding-right: env(safe-area-inset-right, 0px);
+  border-left: 1px solid var(--border);
+  animation: drawer-in-right 180ms var(--ease);
+}
+
+@keyframes drawer-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+
+@keyframes drawer-in-right {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}

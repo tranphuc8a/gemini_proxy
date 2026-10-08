@@ -86,6 +86,13 @@ describe('AI client: who is asking', () => {
     }
   })
 
+  it('sends the model picked on another page of this server, and ignores a malformed one', () => {
+    localStorage.setItem(`ai.model@${root}`, JSON.stringify('gemini-3.8-flash'))
+    expect(aiIdentityHeaders('/api/v1')).toEqual({ 'X-AI-Model': 'gemini-3.8-flash' })
+    localStorage.setItem(`ai.model@${root}`, JSON.stringify('Not A Model!'))
+    expect(aiIdentityHeaders('/api/v1')).toEqual({})
+  })
+
   it('removes an expired AI token instead of sending it', () => {
     const key = aiSessionKey(root)
     localStorage.setItem(adminSessionKey(root), JSON.stringify('adm'))

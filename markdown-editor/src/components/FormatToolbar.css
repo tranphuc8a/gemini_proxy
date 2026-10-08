@@ -60,10 +60,10 @@
   position: relative;
 }
 
+/* Fixed, with top/left measured from the trigger: the scrolling toolbar
+   would otherwise clip it. */
 .toolbar-popover {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  position: fixed;
   z-index: 30;
   min-width: 180px;
   padding: 4px;
@@ -93,4 +93,25 @@
 
 .toolbar-popover-item kbd {
   font-weight: 400;
+}
+
+@media (pointer: coarse) {
+  .format-toolbar {
+    height: 48px;
+    gap: 2px;
+  }
+
+  .toolbar-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .toolbar-popover-item {
+    min-height: 40px;
+  }
+
+  /* Shortcuts mean nothing without a keyboard. */
+  .toolbar-popover-item kbd {
+    display: none;
+  }
 }

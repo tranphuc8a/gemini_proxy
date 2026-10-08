@@ -13,6 +13,13 @@
     POST /ai/http       explain a response, or write `pm.*` tests for it (Postman Lite)
     POST /ai/chat       one stateless answer from a chosen model (the chat's "compare")
     POST /ai/spending   free text → proposed transactions for the spending book (nothing is saved)
+    GET  /ai/models     the Gemini models this caller may pick (X-AI-Model), newest first
+    POST /ai/review     grade a learner's answer to a review card (0–5 for SM-2)
+    POST /ai/hint       a hint, level 1–3, for a self-checked code exercise that fails
+    POST /ai/notes      a course notebook → a study summary or review cards
+    POST /ai/opic/script  feedback on a WRITTEN OPIc script before practising it
+    POST /ai/draft/assist rewrite / expand / translate / quiz / exercise from a selected passage  [admin]
+    POST /ai/markdown   "smart format": raw text → readable markdown (Markdown Editor Pro)
 
 A caller is identified by the headers the course pages already send:
 `X-Admin-Session` / `X-Admin-Key` (course administrator) and `X-AI-Session`
@@ -33,16 +40,20 @@ from pydantic import BaseModel, Field
 
 from src.adapter.factory.ai_factory import (get_ai_chat_usecase, get_ai_course_usecase, get_ai_draft_usecase,
                                             get_ai_http_usecase, get_ai_query_usecase, get_ai_speaking_usecase,
-                                            get_ai_spending_usecase, get_ai_usecase)
+                                            get_ai_markdown_usecase, get_ai_spending_usecase, get_ai_study_usecase,
+                                            get_ai_usecase)
 from src.adapter.input.controllers.admin_auth import client_address, is_admin, require_admin
 from src.application.usecases import ai_usecase
 from src.application.usecases.ai_chat_usecase import PROMPT_CHARS, AiChatUseCase
 from src.application.usecases.ai_course_usecase import SELECTION_CHARS, AiCourseUseCase
 from src.application.usecases.ai_draft_usecase import AiDraftUseCase
 from src.application.usecases.ai_http_usecase import AiHttpUseCase
+from src.application.usecases.ai_markdown_usecase import MODES as MARKDOWN_MODES, TEXT_CHARS as MARKDOWN_TEXT_CHARS
+from src.application.usecases.ai_markdown_usecase import AiMarkdownUseCase
 from src.application.usecases.ai_query_usecase import CURRENT_CHARS, QUESTION_CHARS, AiQueryUseCase
 from src.application.usecases.ai_speaking_usecase import AiSpeakingUseCase
 from src.application.usecases.ai_spending_usecase import TEXT_CHARS as SPENDING_TEXT_CHARS, AiSpendingUseCase
+from src.application.usecases.ai_study_usecase import AiStudyUseCase
 from src.application.usecases.ai_usecase import AiUseCase
 from src.domain.models.ai_domain import AiCaller
 
@@ -54,9 +65,11 @@ def ai_caller(
     x_admin_key: Optional[str] = Header(default=None),
     x_admin_session: Optional[str] = Header(default=None),
     x_ai_session: Optional[str] = Header(default=None),
+    x_ai_model: Optional[str] = Header(default=None, max_length=64),
 ) -> AiCaller:
+    """Who is asking, and which model they picked (X-AI-Model; vetted by AiUseCase.resolve_model when used)."""
     return AiCaller(ip=client_address(request), admin=is_admin(x_admin_key, x_admin_session),
-                    code=ai_usecase.code_session_valid(x_ai_session))
+                    code=ai_usecase.code_session_valid(x_ai_session), model=(x_ai_model or "").strip() or None)
 
 
 class CodeLogin(BaseModel):
@@ -90,6 +103,8 @@ class DraftOutline(BaseModel):
 
 class AskAll(BaseModel):
     q: str = Field(..., min_length=1, max_length=1000)
+    # Only this course's lessons (its own search); empty = every published course.
+    course: str = Field(default="", max_length=63)
 
 
 class OpicAnswer(BaseModel):
@@ -186,6 +201,62 @@ class SpendingGroup(SpendingRef):
     memberIds: List[RefId] = Field(default_factory=list, max_length=40)
 
 
+class ReviewAnswer(BaseModel):
+    question: str = Field(..., min_length=1, max_length=600)
+    expected: str = Field(..., min_length=1, max_length=2000)
+    answer: str = Field(default="", max_length=2000)
+    course: str = Field(default="", max_length=63)
+    doc: str = Field(default="", max_length=300)
+
+
+class ExerciseHint(BaseModel):
+    course: str = Field(..., min_length=1, max_length=63)
+    doc: str = Field(..., min_length=1, max_length=300)
+    lang: Literal["py", "js"]
+    task: str = Field(default="", max_length=4000)
+    code: str = Field(..., min_length=1, max_length=8000)
+    checks: str = Field(default="", max_length=4000)
+    errors: List[Annotated[str, Field(max_length=2000)]] = Field(default_factory=list, max_length=20)
+    passed: int = Field(default=0, ge=0, le=1000)
+    total: int = Field(default=0, ge=0, le=1000)
+    level: int = Field(default=1, ge=1, le=3)
+
+
+class NoteItem(BaseModel):
+    doc: str = Field(default="", max_length=300)
+    title: str = Field(default="", max_length=200)
+    text: str = Field(..., max_length=4000)
+
+
+class StudyNotes(BaseModel):
+    course: str = Field(..., min_length=1, max_length=63)
+    action: Literal["summary", "cards"]
+    notes: List[NoteItem] = Field(..., min_length=1, max_length=200)
+
+
+class OpicScript(BaseModel):
+    question: str = Field(..., min_length=1, max_length=600)
+    questionVi: str = Field(default="", max_length=400)
+    kind: str = Field(default="", max_length=80)
+    script: str = Field(..., min_length=1, max_length=8000)
+
+
+class DraftAssist(BaseModel):
+    action: Literal["rewrite", "expand", "shorten", "simplify", "translate_en", "translate_vi", "quiz",
+                    "exercise_py", "exercise_js"]
+    selection: str = Field(..., min_length=1, max_length=12000)
+    course_title: str = Field(default="", max_length=120)
+    lesson_title: str = Field(default="", max_length=160)
+    level: Level = "co-ban"
+    notes: str = Field(default="", max_length=1000)
+
+
+class MarkdownFormat(BaseModel):
+    text: str = Field(..., min_length=1, max_length=MARKDOWN_TEXT_CHARS)
+    mode: Literal[MARKDOWN_MODES] = "smart"
+    hint: str = Field(default="", max_length=300)
+
+
 class SpendingAsk(BaseModel):
     """The text, and the names the answer may refer to (the page's own lists, no amounts)."""
     text: str = Field(..., min_length=1, max_length=SPENDING_TEXT_CHARS)
@@ -200,6 +271,12 @@ class SpendingAsk(BaseModel):
 @router.get("/status")
 async def ai_status(caller: AiCaller = Depends(ai_caller)):
     return JSONResponse(AiUseCase.status(caller), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/models")
+async def ai_models_list(caller: AiCaller = Depends(ai_caller), uc: AiUseCase = Depends(get_ai_usecase)):
+    """Models newest first, each marked `allowed` for this caller (Pro is for administrators)."""
+    return JSONResponse(await uc.models_for(caller), headers={"Cache-Control": "no-store"})
 
 
 @router.post("/session")
@@ -217,7 +294,39 @@ async def ai_tutor(body: TutorAsk, caller: AiCaller = Depends(ai_caller),
 @router.post("/ask")
 async def ai_ask(body: AskAll, caller: AiCaller = Depends(ai_caller),
                  uc: AiCourseUseCase = Depends(get_ai_course_usecase)):
-    return JSONResponse(await uc.answer(caller, question=body.q), headers={"Cache-Control": "no-store"})
+    return JSONResponse(await uc.answer(caller, question=body.q, course=body.course), headers={"Cache-Control": "no-store"})
+
+
+@router.post("/review")
+async def ai_review(body: ReviewAnswer, caller: AiCaller = Depends(ai_caller),
+                    uc: AiStudyUseCase = Depends(get_ai_study_usecase)):
+    return JSONResponse(await uc.review(caller, **body.model_dump()), headers={"Cache-Control": "no-store"})
+
+
+@router.post("/hint")
+async def ai_hint(body: ExerciseHint, caller: AiCaller = Depends(ai_caller),
+                  uc: AiStudyUseCase = Depends(get_ai_study_usecase)):
+    return JSONResponse(await uc.hint(caller, **body.model_dump()), headers={"Cache-Control": "no-store"})
+
+
+@router.post("/notes")
+async def ai_notes(body: StudyNotes, caller: AiCaller = Depends(ai_caller),
+                   uc: AiStudyUseCase = Depends(get_ai_study_usecase)):
+    out = await uc.notes(caller, course=body.course, action=body.action, notes=[n.model_dump() for n in body.notes])
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/opic/script")
+async def ai_opic_script(body: OpicScript, caller: AiCaller = Depends(ai_caller),
+                         uc: AiSpeakingUseCase = Depends(get_ai_speaking_usecase)):
+    out = await uc.script(caller, question=body.question, question_vi=body.questionVi, kind=body.kind, script=body.script)
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/markdown")
+async def ai_markdown(body: MarkdownFormat, caller: AiCaller = Depends(ai_caller),
+                      uc: AiMarkdownUseCase = Depends(get_ai_markdown_usecase)):
+    return JSONResponse(await uc.format(caller, **body.model_dump()), headers={"Cache-Control": "no-store"})
 
 
 @router.post("/opic")
@@ -240,6 +349,12 @@ async def ai_draft_lesson(body: DraftLesson, caller: AiCaller = Depends(ai_calle
     out = await uc.lesson(caller, course=body.course.model_dump(), outline=body.outline, part=body.part,
                           lesson=body.lesson.model_dump(), level=body.level, notes=body.notes)
     return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/draft/assist", dependencies=[Depends(require_admin)])
+async def ai_draft_assist(body: DraftAssist, caller: AiCaller = Depends(ai_caller),
+                          uc: AiDraftUseCase = Depends(get_ai_draft_usecase)):
+    return JSONResponse(await uc.assist(caller, **body.model_dump()), headers={"Cache-Control": "no-store"})
 
 
 @router.post("/sql")

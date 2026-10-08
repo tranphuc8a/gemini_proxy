@@ -94,6 +94,9 @@ export function identityHeaders(): Record<string, string> {
     if (!het || (het > 1e12 ? het : het * 1000) > Date.now()) headers['X-AI-Session'] = ai.token
     else writeJson(aiKey(), null)
   }
+  // The Gemini model picked on another page of this server (course tutor, course admin…), shared by key.
+  const model = readJson(`ai.model@${aiRoot()}`)
+  if (typeof model === 'string' && /^[a-z0-9][a-z0-9.-]{1,62}$/.test(model)) headers['X-AI-Model'] = model
   return headers
 }
 

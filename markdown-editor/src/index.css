@@ -154,6 +154,19 @@ button:disabled {
   border-radius: var(--radius-sm);
 }
 
+/* iOS zooms the page into any text field under 16px when it gains focus, and
+   leaves it zoomed. Every field gets 16px on phones and touch screens -- the
+   filter, find, rename and dialog boxes, and whatever is added later. The
+   editor sizes itself (EditorPane.css) so its own font-size setting can go
+   higher. Matches TOUCH_TEXT_QUERY in lib/responsive.ts. */
+@media (max-width: 767.98px), (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='file'], [type='range']),
+  select,
+  textarea:not(.editor-input) {
+    font-size: 16px !important;
+  }
+}
+
 kbd {
   display: inline-block;
   padding: 1px 5px;
@@ -433,6 +446,12 @@ kbd {
     color-scheme: light;
   }
 
+  html,
+  body,
+  #root {
+    height: auto;
+  }
+
   body {
     overflow: visible;
     background: #fff;
@@ -460,6 +479,23 @@ kbd {
     display: block !important;
     height: auto !important;
     overflow: visible !important;
+  }
+
+  /* On a phone the preview may be the pane hidden behind the editor. */
+  .preview-pane {
+    position: static !important;
+    visibility: visible !important;
+  }
+
+  .pane-switch,
+  .drawer,
+  .drawer-backdrop {
+    display: none !important;
+  }
+
+  /* In reading mode only the reading article is printed (ReadingView.css). */
+  .app.is-covered {
+    display: none !important;
   }
 
   .markdown-body {

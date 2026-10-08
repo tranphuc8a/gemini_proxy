@@ -4,15 +4,37 @@ import { useState } from 'react'
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-async-light'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { copyToClipboard } from '../lib/exporters'
+import { withContrast } from '../lib/contrast'
+import { prismLanguage } from '../lib/codeLanguages'
 import { IconCheck, IconCopy } from './Icons'
 
 interface CodeBlockProps {
   language: string
   source: string
   theme: 'light' | 'dark'
+  /**
+   * The colour the code sits on. When given, token colours are adjusted to
+   * 4.5:1 against it (reading mode); without it the stock theme is used as is.
+   */
+  contrastBackground?: string
 }
 
-function CodeBlock({ language, source, theme }: CodeBlockProps) {
+/** One adjusted sheet per theme and background, shared by every block. */
+const adjusted = new Map<string, typeof oneLight>()
+
+function styleFor(theme: 'light' | 'dark', background?: string) {
+  const base = theme === 'dark' ? oneDark : oneLight
+  if (!background) return base
+  const key = `${theme}|${background}`
+  let sheet = adjusted.get(key)
+  if (!sheet) {
+    sheet = withContrast(base, background)
+    adjusted.set(key, sheet)
+  }
+  return sheet
+}
+
+function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockProps) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
 
   const onCopy = async () => {
@@ -36,8 +58,8 @@ function CodeBlock({ language, source, theme }: CodeBlockProps) {
         </button>
       </div>
       <SyntaxHighlighter
-        language={language}
-        style={theme === 'dark' ? oneDark : oneLight}
+        language={prismLanguage(language)}
+        style={styleFor(theme, contrastBackground)}
         PreTag="div"
         customStyle={{ margin: 0, background: 'transparent', padding: '14px 16px', fontSize: '0.85em' }}
         codeTagProps={{ style: { fontFamily: 'var(--font-mono)' } }}

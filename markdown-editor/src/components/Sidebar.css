@@ -13,6 +13,25 @@
   border-bottom: 1px solid var(--border);
 }
 
+.sidebar-tablist {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Inside the off-canvas drawer the panel decides the size. */
+.sidebar.is-drawer {
+  flex: 1;
+  width: 100%;
+  border-right: 0;
+}
+
+.sidebar-close {
+  align-self: center;
+  margin: 0 4px;
+  color: var(--text-muted);
+}
+
 .sidebar-tab {
   display: flex;
   align-items: center;
@@ -142,4 +161,31 @@
   color: var(--warning);
   background-color: var(--warning-soft);
   border-radius: 8px;
+}
+
+/* Touch: every control is at least a 40px target. */
+@media (pointer: coarse) {
+  .sidebar-tab {
+    height: 44px;
+    font-size: 13px;
+  }
+
+  .sidebar-search {
+    height: 40px;
+    padding-right: 0;
+  }
+
+  .sidebar-search-clear {
+    width: 40px;
+    height: 38px;
+    border-radius: var(--radius);
+  }
+
+  .sidebar-draft {
+    height: 40px;
+  }
+
+  .sidebar-footer {
+    height: 34px;
+  }
 }

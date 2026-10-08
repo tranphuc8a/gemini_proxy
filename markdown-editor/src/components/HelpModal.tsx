@@ -13,12 +13,13 @@ const SHORTCUTS: { group: string; items: [string, string][] }[] = [
       ['Ctrl Shift P', 'Command palette — commands, files and headings'],
       ['Ctrl K', 'Same, when the editor does not have focus'],
       ['Ctrl \\', 'Cycle editor / split / preview'],
+      ['Ctrl Alt V', 'Reading mode — the document alone, read-only'],
       ['Ctrl Shift B', 'Show or hide the sidebar'],
       ['Ctrl Shift O', 'Jump to the document outline'],
       ['Ctrl S', 'Save to browser storage now'],
       ['Ctrl G', 'Go to line'],
       ['F11', 'Distraction-free mode'],
-      ['Esc', 'Close a dialog, or leave full screen']
+      ['Esc', 'Close a dialog, or leave full screen or reading mode']
     ]
   },
   {
@@ -81,7 +82,13 @@ function HelpModal({ open, onClose }: HelpModalProps) {
             <ul className="help-list">
               <li>
                 The <strong>editor</strong> is on the left and the live <strong>preview</strong> on the right. Drag the divider
-                to resize them, or double-click it to snap back to an even split.
+                to resize them, or double-click it to snap back to an even split. On a phone they share the screen: switch
+                between them with the <strong>Editor | Preview</strong> bar.
+              </li>
+              <li>
+                <strong>Reading mode</strong> (the book button, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>V</kbd>) shows the document
+                alone, with its own text size, line spacing, width and light, sepia or dark theme, plus a table of
+                contents. Add <code>?read=1</code> to the address to open the page straight into it.
               </li>
               <li>
                 <strong>Double-click</strong> any block in the preview to put the caret on the line that produced it — and

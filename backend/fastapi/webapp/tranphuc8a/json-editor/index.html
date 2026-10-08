@@ -43,8 +43,11 @@
   <section class="o dang" data-o="soan">
     <div class="soan-khung">
       <div class="so-dong" id="so-dong" aria-hidden="true"></div>
-      <textarea id="nhap" spellcheck="false" autocomplete="off"
-                placeholder='Dán JSON vào đây, hoặc bấm “Mở tệp”.
+      <div class="vung-soan" id="vung-soan">
+        <!-- Lớp tô màu nằm DƯỚI textarea; chữ của textarea trong suốt. -->
+        <pre class="lop-mau" id="lop-mau" aria-hidden="true"></pre>
+        <textarea id="nhap" spellcheck="false" autocomplete="off" aria-label="Nội dung JSON"
+                  placeholder='Dán JSON vào đây, hoặc bấm “Mở tệp”.
 
 Ví dụ:
 {
@@ -53,6 +56,7 @@ Ví dụ:
   "mang": [1, 2, 3],
   "long": { "sau": true }
 }'></textarea>
+      </div>
     </div>
   </section>
 
@@ -61,10 +65,21 @@ Ví dụ:
     <div class="thanh-phu">
       <button class="nut nho" id="cay-mo">⊞ Mở hết</button>
       <button class="nut nho" id="cay-dong">⊟ Đóng hết</button>
+      <span class="vach"></span>
+      <button class="nut nho" id="cay-hoan-tac" title="Hoàn tác (Ctrl+Z)" disabled>↶ Hoàn tác</button>
+      <button class="nut nho" id="cay-lam-lai" title="Làm lại (Ctrl+Y hoặc Ctrl+Shift+Z)" disabled>↷ Làm lại</button>
+      <span class="vach"></span>
       <label class="o-chon"><input type="checkbox" id="cay-kieu" checked> Hiện kiểu</label>
       <span class="phu" id="cay-tom"></span>
+      <span class="bao-cay" id="cay-bao" role="status" aria-live="polite"></span>
     </div>
-    <div class="cay" id="cay"></div>
+    <p class="mach mach-cay">
+      Bấm giá trị để sửa, bấm tên khoá để đổi tên<span class="mach-phim"> ·
+      <kbd>↑</kbd><kbd>↓</kbd> chọn · <kbd>Enter</kbd> sửa / gấp mở · <kbd>F2</kbd> đổi tên ·
+      <kbd>Insert</kbd> thêm · <kbd>Delete</kbd> xoá · <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> đổi chỗ ·
+      <kbd>Ctrl</kbd>+<kbd>Z</kbd> hoàn tác</span>
+    </p>
+    <div class="cay" id="cay" role="tree" aria-label="Cây JSON"></div>
   </section>
 
   <!-- ======================= TRUY VẤN ======================= -->
@@ -104,6 +119,7 @@ Ví dụ:
   <span class="day"></span>
   <span class="phu" id="vi-tri">dòng 1, cột 1</span>
   <span class="phu" id="co-tep"></span>
+  <span class="phu" id="bao-mau" hidden>Tô màu đã tắt — nội dung trên 300 KB</span>
 </footer>
 
 <input type="file" id="tep" accept=".json,.txt,application/json" hidden>

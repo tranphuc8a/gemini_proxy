@@ -7,16 +7,22 @@ export const ERole = {
 
 export type ERole = typeof ERole[keyof typeof ERole];
 
-export const EModel = {
-  GEMINI_2_5_PRO: 'gemini-2.5-pro',
-  GEMINI_2_5_FLASH: 'gemini-2.5-flash',
-  GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
-  GEMINI_2_0_FLASH: 'gemini-2.0-flash',
-  GEMINI_2_0_FLASH_LITE: 'gemini-2.0-flash-lite',
-  GEMINI_FLASH_LATEST: 'gemini-flash-latest',
-} as const;
+/**
+ * The models offered when the server cannot list its own (GET /ai/models): what
+ * the live Gemini API answered on 2026-10-08. The real list comes from the server
+ * — see useAiModels — and decides who may pick what (Pro is for administrators).
+ */
+export const FALLBACK_MODELS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
+  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+];
 
-export type EModel = typeof EModel[keyof typeof EModel];
+/** The server's own default when it cannot be asked (AI_MODEL). */
+export const DEFAULT_MODEL = 'gemini-3.5-flash';
 
 export interface MessageResponse {
   id: string;

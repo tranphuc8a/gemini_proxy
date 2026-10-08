@@ -34,8 +34,10 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.application.config.config import settings
-from src.application.exceptions.exceptions import AppException, BadGatewayError, GatewayTimeoutError
+from src.application.exceptions.exceptions import (AppException, BadGatewayError, BadRequestError,
+                                                   GatewayTimeoutError)
 from src.application.ports.output.ai_output_port import AiModelOutputPort, AiOutputPort
+from src.application.usecases import ai_models
 from src.application.utils import admin_session
 from src.application.utils.rate_limit import FailureWindow
 from src.domain.models.ai_domain import AiCaller, AiCompletion
@@ -103,17 +105,19 @@ def generation_config(*, schema: Optional[Dict[str, Any]] = None, temperature: f
                       max_tokens: int = 2048, model: Optional[str] = None) -> Dict[str, Any]:
     """Gemini `generationConfig`: JSON output when a schema is given.
 
-    Thinking is switched off on 2.5 Flash: these are short, well-specified tasks
-    where it adds seconds and output tokens but little else. (Pro cannot turn it
-    off, and older models do not know the field.) `model` is the one the call
-    goes to when it is not `AI_MODEL`.
+    Thinking is kept low or off: these are short, well-specified tasks where it
+    adds seconds and output tokens but little else. Each model family takes a
+    different switch (ai_models.thinking_config); Pro cannot turn it off.
+    `model` is the one the call goes to when it is not `AI_MODEL` — `ask` refits
+    the switch anyway when the caller picked another model.
     """
     config: Dict[str, Any] = {"temperature": temperature, "maxOutputTokens": max_tokens}
     if schema is not None:
         config["responseMimeType"] = "application/json"
         config["responseSchema"] = schema
-    if "2.5-flash" in str(model or settings.AI_MODEL):
-        config["thinkingConfig"] = {"thinkingBudget": 0}
+    thinking = ai_models.thinking_config(str(model or settings.AI_MODEL))
+    if thinking is not None:
+        config["thinkingConfig"] = thinking
     return config
 
 
@@ -181,6 +185,8 @@ class AiUseCase:
             "needs": None if allowed else ("code" if mode == "code" else "admin"),
             "admin": caller.admin,
             "model": settings.AI_MODEL,
+            # The model this caller asked for with X-AI-Model (vetted when it is used).
+            "chosen": caller.model,
             "limits": {"perMinute": int(settings.AI_RATE_PER_MINUTE), "perDay": int(settings.AI_RATE_PER_DAY)},
         }
 
@@ -230,6 +236,31 @@ class AiUseCase:
         except Exception:
             logger.warning("AI usage not recorded: usage store unavailable", exc_info=True)
 
+    # ----------------------------------------------------------- models
+
+    async def models_for(self, caller: AiCaller) -> Dict[str, Any]:
+        """The catalog as this caller sees it: Pro models are listed but marked for administrators."""
+        models, source = await ai_models.catalog(self.model)
+        for m in models:
+            m["allowed"] = caller.admin or not m["adminOnly"]
+        return {"default": settings.AI_MODEL, "source": source, "admin": caller.admin, "models": models}
+
+    async def resolve_model(self, caller: AiCaller, wanted: Optional[str]) -> str:
+        """The model to ask: `wanted` (a request field or X-AI-Model) once vetted, else AI_MODEL."""
+        wanted = (wanted or "").strip()
+        if not wanted or wanted == settings.AI_MODEL:
+            return settings.AI_MODEL
+        if not ai_models.valid_id(wanted):
+            raise BadRequestError("Tên model không hợp lệ", payload={"code": "ai_model_invalid"})
+        models, _source = await ai_models.catalog(self.model)
+        hit = next((m for m in models if m["id"] == wanted), None)
+        if hit is None:
+            raise BadRequestError(f"Máy chủ không có model {wanted!r} — chọn một model trong danh sách",
+                                  payload={"code": "ai_model_unknown", "models": [m["id"] for m in models]})
+        if hit["adminOnly"] and not caller.admin:
+            raise _error(403, f"Model {wanted} (dòng Pro) chỉ dành cho quản trị viên", "ai_model_admin_only")
+        return wanted
+
     # ----------------------------------------------------------- asking
 
     async def _cached(self, key: str) -> Optional[str]:
@@ -254,13 +285,19 @@ class AiUseCase:
 
         `parse` turns the answer text into the feature's result and raises
         ValueError when the model did not keep to the format; only a parsed
-        answer is cached. `model` overrides `AI_MODEL` (the caller vets it).
+        answer is cached. `model` (a feature's own choice) or else the caller's
+        X-AI-Model overrides `AI_MODEL`; either is vetted by resolve_model.
         Returns (result, completion).
         """
         self.check_access(caller)
         if not configured():
             raise _error(503, "Máy chủ chưa cấu hình Gemini (GEMINI_URL, GEMINI_API_KEY)", "ai_unconfigured")
         parse = parse or (lambda text: text)
+        model = await self.resolve_model(caller, model or caller.model)
+        config = ai_models.fit_config(config, model)
+        if cache and model != settings.AI_MODEL:
+            # cache_key() folded AI_MODEL in; an answer from another model is another answer.
+            cache = hashlib.sha1(f"{cache}|{model}".encode("utf-8")).hexdigest()
         if cache:
             stored = await self._cached(cache)
             if stored is not None:
@@ -271,8 +308,7 @@ class AiUseCase:
         await self.admit(caller, feature)
         try:
             completion = await asyncio.wait_for(
-                self.model.complete(model=model or settings.AI_MODEL, contents=contents, system=system,
-                                    generation_config=config),
+                self.model.complete(model=model, contents=contents, system=system, generation_config=config),
                 timeout=float(settings.AI_TIMEOUT_SECONDS))
         except asyncio.TimeoutError as exc:
             raise GatewayTimeoutError("AI trả lời quá lâu — thử lại sau ít phút") from exc

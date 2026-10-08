@@ -1,3 +1,5 @@
+import type { Layout, Pane } from './lib/responsive'
+
 export interface FileNode {
   id: string
   name: string
@@ -48,4 +50,13 @@ export interface EditorState extends Settings {
   saveState: SaveState
   lastSavedAt: number | null
   toasts: Toast[]
+  /**
+   * Responsive state. Deliberately not part of Settings: it describes this
+   * screen right now, not a preference worth carrying to the next visit.
+   */
+  layout: Layout
+  /** The sidebar as an off-canvas drawer, below desktop width. */
+  drawerOpen: boolean
+  /** Which pane a phone shows in the split view; null until the reader picks one. */
+  phonePane: Pane | null
 }

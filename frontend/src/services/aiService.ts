@@ -56,6 +56,29 @@ export interface AiSession {
   expiresAt: number;
 }
 
+/** One model of GET /ai/models. */
+export interface AiModel {
+  id: string;
+  label: string;
+  tier: 'flash' | 'flash-lite' | 'pro' | 'other' | string;
+  preview: boolean;
+  alias: boolean;
+  /** Pro models: only an administrator may pick them (`allowed` says whether THIS visitor may). */
+  adminOnly: boolean;
+  /** The deployment's AI_MODEL. */
+  default: boolean;
+  allowed: boolean;
+}
+
+/** GET /ai/models: the models the server can ask, newest first. */
+export interface AiModels {
+  default: string;
+  /** "api": Gemini's own list; "config": pinned by AI_MODELS; "fallback": a built-in list. */
+  source: string;
+  admin: boolean;
+  models: AiModel[];
+}
+
 /** Longest prompt /ai/chat accepts. */
 export const AI_PROMPT_MAX_CHARS = 8000;
 
@@ -102,6 +125,9 @@ export const aiRoot = (base: string): string => {
 export const adminSessionKey = (root: string) => `qlkh.phien@${root}.token`;
 /** Key of the token an AI access code was exchanged for. */
 export const aiSessionKey = (root: string) => `ai.phien@${root}`;
+/** Key of the Gemini model this visitor picked — shared with every page of the server (ai-khach.js). */
+export const aiModelKey = (root: string) => `ai.model@${root}`;
+const MODEL_ID = /^[a-z0-9][a-z0-9.-]{1,62}$/;
 
 /** `het` is seconds or milliseconds depending on who wrote it; tell them apart by size. */
 const expiryMs = (het: number) => (het > 1e12 ? het : het * 1000);
@@ -141,17 +167,24 @@ export interface AiClient {
   unlock(code: string): Promise<AiStatus>;
   /** POST /ai/chat. */
   chat(request: AiChatRequest, signal?: AbortSignal): Promise<AiChatAnswer>;
+  /** GET /ai/models, asked once and shared; `refresh` asks again. */
+  listModels(refresh?: boolean): Promise<AiModels>;
+  /** The model this visitor picked on any page of this server; '' = the server's default. */
+  chosenModel(): string;
+  /** Remember a pick ('' forgets it) for every page of this server. */
+  chooseModel(id: string): void;
 }
 
 /** A client bound to one API base (the app's resolved base, '' for same origin). */
 export const createAiClient = (base: string): AiClient => {
   const apiBase = base.replace(/\/+$/, '');
   let statusRequest: Promise<AiStatus> | null = null;
+  let modelsRequest: Promise<AiModels> | null = null;
 
   // Resolved per call rather than once: cheap, and immune to when the module loads.
   const keys = () => {
     const root = aiRoot(apiBase);
-    return { admin: adminSessionKey(root), ai: aiSessionKey(root) };
+    return { admin: adminSessionKey(root), ai: aiSessionKey(root), model: aiModelKey(root) };
   };
 
   const identityHeaders = (): Record<string, string> => {
@@ -246,7 +279,32 @@ export const createAiClient = (base: string): AiClient => {
   const chat = (request: AiChatRequest, signal?: AbortSignal) =>
     call<AiChatAnswer>('chat', { prompt: request.prompt, model: request.model }, signal);
 
-  return { identityHeaders, getStatus, unlock, chat };
+  const listModels = (refresh = false): Promise<AiModels> => {
+    if (!modelsRequest || refresh) {
+      const pending = call<AiModels>('models').then((answer) => {
+        if (!Array.isArray(answer.models)) {
+          throw new AiError(i18n.t('ai.errors.badResponse', { status: 200 }), 'bad_response', 200);
+        }
+        return answer;
+      });
+      modelsRequest = pending;
+      pending.catch(() => {
+        if (modelsRequest === pending) modelsRequest = null;
+      });
+    }
+    return modelsRequest;
+  };
+
+  const chosenModel = (): string => {
+    const stored = readStored(keys().model);
+    return typeof stored === 'string' && MODEL_ID.test(stored) ? stored : '';
+  };
+
+  const chooseModel = (id: string): void => {
+    writeStored(keys().model, id && MODEL_ID.test(id) ? id : null);
+  };
+
+  return { identityHeaders, getStatus, unlock, chat, listModels, chosenModel, chooseModel };
 };
 
 /** The app's client, on the same resolved API base as every other call. */

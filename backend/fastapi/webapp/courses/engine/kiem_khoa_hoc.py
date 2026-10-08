@@ -520,6 +520,7 @@ def tang_2(thu_muc, info, B, chup):
             kiem_offline(br, may, url, bundle, B)            # truoc ca_bien: ca bien xoa muc luc
             kiem_tro_giang(br, may, url, bundle, B)
             kiem_chay_ma(br, may, info, url, B)
+            kiem_ai_hoc_tap(br, may, url, bundle, B)
             kiem_cong_cu(br, url, bundle, B)
             ca_bien(pg, may, info, url, order, yeu_cau, B)
             br.close()
@@ -735,6 +736,90 @@ def kiem_chay_ma(br, may, info, url, B):
         B.sai("ma chay duoc trong bai: %s" % str(e).splitlines()[0])
     finally:
         ctx.close()
+
+
+def kiem_ai_hoc_tap(br, may, url, bundle, B):
+    """AI hoc tap (dot 2026-10-08) tren Gemini GIA, voi tu cach quan tri vien: chon model (X-AI-Model),
+    hoi ca khoa tu trang chu, goi y bai tap 3 muc, AI cham the on tap, on tu so tay.
+    Chay SAU kiem_chay_ma (bai cuoi da co bai tap js tu cham voi ma khoi dau sai)."""
+    order = bundle.get("order") or list(bundle["docs"])
+    dau, cuoi = bundle["docs"][order[0]], bundle["docs"][order[-1]]
+    ctx = br.new_context(viewport={"width": 1280, "height": 860})
+    loi = []
+    try:
+        pg = ctx.new_page()
+        pg.on("pageerror", lambda e: loi.append(str(e)))
+        pg.goto(url + "&t=13#/", wait_until="load")
+        pg.evaluate("([k, t]) => localStorage.setItem(k, JSON.stringify(t))",
+                    ["qlkh.phien@" + may.api + ".token", phien_quan_tri(may)])
+        pg.reload(wait_until="load")
+        pg.wait_for_selector("#btnAiKhoa", timeout=20000)
+
+        # 1. hoi ca khoa tu trang chu, voi model tu chon
+        pg.click("#btnAiKhoa")
+        pg.wait_for_selector("#aiKhung:not([hidden]) [data-pv='khoa'][aria-pressed='true']", timeout=5000)
+        pg.wait_for_selector("#aiKhung .ai-model select option[value='gemini-3.8-flash']", state="attached", timeout=15000)
+        pg.select_option("#aiKhung .ai-model select", "gemini-3.8-flash")
+        truoc = len(may.gemini.goi)
+        pg.fill("#aiCau", dau["title"])
+        pg.press("#aiCau", "Enter")
+        pg.wait_for_selector("#aiKhung .ai-muc .ai-nguon a", timeout=20000)
+        gui = may.gemini.goi[truoc:]
+        duong = gui[-1]["path"] if gui else ""
+        (B.ok if "/models/gemini-3.8-flash:" in duong else B.sai)(
+            "chon model: lua chon gui qua X-AI-Model, may chu goi dung model do (%s)" % duong)
+        nguon = pg.eval_on_selector_all("#aiKhung .ai-nguon a", "e => e.map(a => a.getAttribute('href'))")
+        (B.ok if nguon and all(h.startswith("#/") for h in nguon) else B.sai)("hoi ca khoa tu trang chu: tra loi kem nguon %s" % nguon)
+        luu = pg.evaluate("k => localStorage.getItem(k)", "ai.model@" + may.api)
+        (B.ok if luu and "gemini-3.8-flash" in luu else B.sai)("model da chon cat theo goc API (dung chung moi trang): %s" % luu)
+        pg.select_option("#aiKhung .ai-model select", "")
+        pg.keyboard.press("Escape")
+
+        # 2. goi y bai tap: nop sai -> nut Goi y -> muc 1, roi muc 2
+        pg.evaluate("s => { location.hash = '#/' + s; }", cuoi["slug"])
+        pg.wait_for_selector(".chay.bai-tap .chay-ma", timeout=20000)
+        o = pg.locator(".chay.bai-tap")
+        o.locator('[data-viec="nop"]').click()
+        o.locator(".chay-ra.chua-dat").wait_for(timeout=10000)
+        o.locator(".goi-y-nut").wait_for(timeout=5000)
+        truoc = len(may.gemini.goi)
+        o.locator(".goi-y-nut").click()
+        o.locator(".goi-y-muc").first.wait_for(timeout=15000)
+        hoi = may.gemini.goi[truoc:][-1]["body"]["contents"][0]["parts"][0]["text"] if may.gemini.goi[truoc:] else ""
+        nhan = o.locator(".goi-y-nut").inner_text()
+        (B.ok if "MÃ CỦA NGƯỜI HỌC" in hoi and "return 0" in hoi and "Mức 1" in hoi and "mức 2/3" in nhan else B.sai)(
+            "goi y bai tap: gui ma + loi cua nguoi hoc, muc 1 roi moi len muc 2 (%r)" % nhan)
+
+        # 3. AI cham the on tap: tu tra loi -> diem + goi y muc, dap an lat ra
+        pg.evaluate("id => KhoaHoc.onTap.them(id, [{front: 'Cau hoi kiem tra AI?', back: 'Dap an mau'}])", dau["id"])
+        pg.evaluate("() => { location.hash = '#/~on-tap'; }")
+        pg.wait_for_selector("#otKhung .ot-ai textarea", timeout=10000)
+        pg.fill("#otTraLoi", "Cau tra loi cua toi")
+        pg.click("#otAiCham")
+        pg.wait_for_selector("#otAiKq .ot-ai-diem", timeout=15000)
+        kq = pg.evaluate("() => ({sau: !document.querySelector('#otSau').hidden, cham: !document.querySelector('#otCham').hidden,"
+                         " goiY: [...document.querySelectorAll('#otCham .ot-goi-y')].map(b => b.dataset.q)})")
+        (B.ok if kq["sau"] and kq["cham"] and len(kq["goiY"]) == 1 else B.sai)(
+            "AI cham the on tap: lat dap an, goi y dung mot muc (%s)" % kq)
+
+        # 4. on tu so tay: sinh the -> them vao bo on tap; tom tat
+        pg.evaluate("id => KhoaHoc.LS.set('so-tay', [{id: 'st1', doc: id, chu: 'Mot doan to sang du dai de on tap', ghi: '', luc: Date.now()}])",
+                    dau["id"])
+        pg.evaluate("() => { location.hash = '#/~so-tay'; }")
+        pg.wait_for_selector("#stAi:not([hidden]) [data-st='ai-the']", timeout=10000)
+        pg.click("[data-st='ai-the']")
+        pg.wait_for_selector("#stAiKq .ai-the li", timeout=15000)
+        pg.click("#stAiKq .ai-the-chan button")
+        nut = pg.inner_text("#stAiKq .ai-the-chan button")
+        pg.click("[data-st='ai-tom']")
+        pg.wait_for_selector("#stAiKq .prose", timeout=15000)
+        (B.ok if nut.startswith("Đã thêm") else B.sai)("so tay: AI sinh the -> them vao bo on tap; tom tat de on (%r)" % nut)
+    except Exception as e:  # noqa: BLE001
+        B.sai("AI hoc tap: %s" % str(e).splitlines()[0])
+    finally:
+        ctx.close()
+    if loi:
+        B.sai("AI hoc tap: pageerror %s" % loi[0][:200])
 
 
 def kiem_cong_cu(br, url, bundle, B):

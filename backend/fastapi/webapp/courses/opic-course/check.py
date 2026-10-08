@@ -292,6 +292,24 @@ def tang_3(chup):
             except Exception as e:  # noqa: BLE001
                 sai("AI nhan xet bai noi: %s" % str(e).splitlines()[0])
 
+            # AI nhan xet SCRIPT viet (/ai/opic/script): khong cham troi chay / phat am, co o chon model
+            try:
+                pg.wait_for_selector("#btnAiScript:not([hidden])", timeout=10000)
+                pg.fill("#taToi", "I live in a small house near the river with my family. It has two floors and a garden "
+                                  "where we grow vegetables. I really like it because it is quiet and the air is fresh.")
+                truoc = len(may.gemini.goi)
+                pg.click("#btnAiScript")
+                pg.wait_for_selector("#aiOp .ai-op-diem", timeout=20000)
+                gui = may.gemini.goi[truoc:]
+                hoi = gui[-1]["body"]["contents"][0]["parts"][0]["text"] if gui else ""
+                tieu_chi = pg.eval_on_selector_all("#aiOp .ai-op-tc span:first-child", "e => e.map(x => x.textContent)")
+                (ok if "SCRIPT người học viết sẵn" in hoi and "small house near the river" in hoi
+                 and tieu_chi == ["Ngữ pháp", "Từ vựng", "Đúng trọng tâm", "Mạch lạc"]
+                 and "Lời bạn đã nói" not in pg.text_content("#aiOp") and pg.locator(".ai-model select").count() == 1 else sai)(
+                    "AI nhan xet script viet: gui script, 4 tieu chi (khong troi chay/phat am), co o chon model (%s)" % tieu_chi)
+            except Exception as e:  # noqa: BLE001
+                sai("AI nhan xet script viet: %s" % str(e).splitlines()[0])
+
             # doc offline: context moi, chua co worker
             ctx = br.new_context(viewport={"width": 1280, "height": 860})
             for dat, msg in kiem_pwa.trinh_duyet(ctx, ctx.new_page(), may.goc + "/webapp/courses/opic-course/?theme=light",

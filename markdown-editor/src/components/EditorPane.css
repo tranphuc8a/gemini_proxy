@@ -24,12 +24,24 @@
   --editor-line-height: 1.65;
   --editor-padding-y: 14px;
   --editor-padding-x: 16px;
+  /* The size actually rendered. Textarea, mirror and gutter all read this one
+     value, so their line boxes stay aligned whatever the clamp below does. */
+  --editor-fs: var(--editor-font-size, 14px);
+}
+
+/* iOS zooms the whole page into a text field under 16px when it is focused.
+   Matches TOUCH_TEXT_QUERY in lib/responsive.ts. */
+@media (max-width: 767.98px), (pointer: coarse) {
+  .editor-body {
+    --editor-fs: max(16px, var(--editor-font-size, 14px));
+    --editor-padding-x: 14px;
+  }
 }
 
 .editor-input,
 .mirror-line {
   font-family: var(--font-mono);
-  font-size: var(--editor-font-size, 14px);
+  font-size: var(--editor-fs);
   line-height: var(--editor-line-height);
   letter-spacing: 0;
   tab-size: 2;
@@ -90,7 +102,7 @@
 }
 
 .mirror-line {
-  min-height: calc(var(--editor-font-size, 14px) * var(--editor-line-height));
+  min-height: calc(var(--editor-fs) * var(--editor-line-height));
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
@@ -121,10 +133,10 @@
   right: 0;
   width: 100%;
   font-family: var(--font-mono);
-  font-size: calc(var(--editor-font-size, 14px) - 1px);
+  font-size: calc(var(--editor-fs) - 1px);
   /* Matches the text's line box in pixels rather than re-deriving the ratio
      from the smaller font, which would drift a little on every line. */
-  line-height: calc(var(--editor-font-size, 14px) * var(--editor-line-height));
+  line-height: calc(var(--editor-fs) * var(--editor-line-height));
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -147,5 +159,12 @@
 
   .pane-header-actions .pane-meta {
     display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .pane-header-actions .btn-icon {
+    width: 40px;
+    height: 40px;
   }
 }
