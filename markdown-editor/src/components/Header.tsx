@@ -24,6 +24,7 @@ import {
   IconRedo,
   IconSearch,
   IconSidebar,
+  IconSparkles,
   IconSun,
   IconUndo,
   IconUpload,
@@ -118,6 +119,7 @@ function Header({ onOpenHelp, onOpenPalette, onOpenAuth, tier = 'full' }: Header
   const loadBackendStorage = useEditorStore((state) => state.loadBackendStorage)
   const saveBackendStorage = useEditorStore((state) => state.saveBackendStorage)
   const openReading = useReadingStore((state) => state.openReading)
+  const openSmartFormat = useEditorStore((state) => state.openSmartFormat)
 
   const touchText = useMediaQuery(TOUCH_TEXT_QUERY)
   const [busy, setBusy] = useState<string | null>(null)
@@ -186,6 +188,19 @@ function Header({ onOpenHelp, onOpenPalette, onOpenAuth, tier = 'full' }: Header
   const background = dark ? '#0d1117' : '#ffffff'
 
   const actions: HeaderAction[] = [
+    ...(isAdmin
+      ? [
+          {
+            id: 'smart-format',
+            label: 'Smart format with AI',
+            menuLabel: 'Smart format with AI…',
+            title: 'Smart format with AI — turn raw text into readable Markdown',
+            icon: <IconSparkles />,
+            run: openSmartFormat,
+            inlineFrom: 'medium'
+          } satisfies HeaderAction
+        ]
+      : []),
     {
       id: 'scroll-sync',
       label: 'Toggle scroll sync',

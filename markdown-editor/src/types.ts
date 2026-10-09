@@ -59,4 +59,6 @@ export interface EditorState extends Settings {
   drawerOpen: boolean
   /** Which pane a phone shows in the split view; null until the reader picks one. */
   phonePane: Pane | null
+  /** The AI "smart format" dialog: null when closed, else the selection it was opened with. */
+  smartFormat: { start: number; end: number } | null
 }

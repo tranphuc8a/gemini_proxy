@@ -49,7 +49,8 @@ const SHORTCUTS: { group: string; items: [string, string][] }[] = [
       ['Ctrl Shift K', 'Delete the current lines'],
       ['Ctrl F', 'Find'],
       ['Ctrl H', 'Find and replace'],
-      ['Ctrl Z / Ctrl Y', 'Undo and redo']
+      ['Ctrl Z / Ctrl Y', 'Undo and redo'],
+      ['✨ toolbar · ⋯ menu · palette', 'Smart format with AI — raw text or the selection becomes readable Markdown (undo with Ctrl+Z)']
     ]
   }
 ]

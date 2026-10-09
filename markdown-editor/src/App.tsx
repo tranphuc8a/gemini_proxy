@@ -11,6 +11,7 @@ import ReadingView from './components/ReadingView'
 import StatusBar from './components/StatusBar'
 import AuthModal from './components/AuthModal'
 import HelpModal from './components/HelpModal'
+import SmartFormatModal from './components/SmartFormatModal'
 import CommandPalette from './components/CommandPalette'
 import Toasts from './components/Toasts'
 import { useViewport } from './hooks/useViewport'
@@ -225,6 +226,7 @@ function App() {
 
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
         <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+        <SmartFormatModal />
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onOpenHelp={() => setHelpOpen(true)} />
       </div>
 

@@ -20,6 +20,7 @@ import {
   type EditorSelection
 } from '../lib/editorCommands'
 import { createSyncLock, emitJump, emitScrollSync, lineForOffset, offsetForLine, onJump, onScrollSync, type LineAnchor } from '../lib/paneSync'
+import { registerEditorSelection } from '../lib/editorSelection'
 import FormatToolbar, { type FormatAction } from './FormatToolbar'
 import FindReplace from './FindReplace'
 import { IconNumbers, IconWrap } from './Icons'
@@ -42,6 +43,7 @@ function EditorPane() {
   const toggleLineNumbers = useEditorStore((state) => state.toggleLineNumbers)
   const toggleWordWrap = useEditorStore((state) => state.toggleWordWrap)
   const pushToast = useEditorStore((state) => state.pushToast)
+  const openSmartFormat = useEditorStore((state) => state.openSmartFormat)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
@@ -160,9 +162,21 @@ function EditorPane() {
           return apply((sel) => insertTable(sel))
         case 'rule':
           return apply((sel) => insertHorizontalRule(sel))
+        case 'smartFormat':
+          return openSmartFormat()
       }
     },
-    [apply]
+    [apply, openSmartFormat]
+  )
+
+  // Lets the AI dialog (opened from the header, the palette or the toolbar) read what is selected here.
+  useEffect(
+    () =>
+      registerEditorSelection(() => {
+        const textarea = textareaRef.current
+        return textarea ? { start: textarea.selectionStart, end: textarea.selectionEnd } : null
+      }),
+    []
   )
 
   /** Scrolls the textarea so `line` sits near the top. */

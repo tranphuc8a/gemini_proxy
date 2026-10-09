@@ -25,6 +25,7 @@ import {
 import { DEFAULT_SETTINGS, clearLegacyStorage, loadFiles, loadSettings, saveFiles, saveSettings } from './lib/persistence'
 import type { InboxDocument } from './lib/inbox'
 import type { Layout, Pane } from './lib/responsive'
+import { readEditorSelection } from './lib/editorSelection'
 
 /** Keystrokes inside this window collapse into a single undo step. */
 export const HISTORY_DEBOUNCE_MS = 600
@@ -73,6 +74,9 @@ interface StoreState extends EditorState {
   redo: () => void
   canUndo: () => boolean
   canRedo: () => boolean
+  /** Opens the AI smart-format dialog on the editor's current selection (admins only: it edits the document). */
+  openSmartFormat: () => void
+  closeSmartFormat: () => void
 
   setCurrentFile: (fileId: string | null) => void
   setSelectedFolder: (folderId: string | null) => void
@@ -148,7 +152,8 @@ const initialState: EditorState = {
   toasts: [],
   layout: 'desktop',
   drawerOpen: false,
-  phonePane: null
+  phonePane: null,
+  smartFormat: null
 }
 
 /** Timers live outside the store so they never end up serialised. */
@@ -199,6 +204,14 @@ export const useEditorStore = create<StoreState>((set, get) => {
       scheduleHistory()
       schedulePersist()
     },
+
+    openSmartFormat: () => {
+      if (!get().isAdmin) return
+      const selection = readEditorSelection()
+      set({ smartFormat: selection ?? { start: 0, end: 0 } })
+    },
+
+    closeSmartFormat: () => set({ smartFormat: null }),
 
     /**
      * Collapses a burst of typing into one undo step. Called on a debounce and
