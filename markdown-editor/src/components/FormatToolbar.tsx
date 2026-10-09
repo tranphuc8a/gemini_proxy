@@ -10,6 +10,7 @@ import {
   IconOrderedList,
   IconQuote,
   IconRule,
+  IconSparkles,
   IconStrike,
   IconTable,
   IconTask
@@ -31,6 +32,7 @@ export type FormatAction =
   | { kind: 'image' }
   | { kind: 'table' }
   | { kind: 'rule' }
+  | { kind: 'smartFormat' }
 
 interface FormatToolbarProps {
   disabled: boolean
@@ -88,6 +90,12 @@ function FormatToolbar({ disabled, onAction }: FormatToolbarProps) {
       </ToolbarButton>
       <ToolbarButton label="Horizontal rule" disabled={disabled} onClick={() => onAction({ kind: 'rule' })}>
         <IconRule />
+      </ToolbarButton>
+
+      <span className="toolbar-separator" />
+
+      <ToolbarButton label="Smart format with AI" disabled={disabled} onClick={() => onAction({ kind: 'smartFormat' })}>
+        <IconSparkles />
       </ToolbarButton>
     </div>
   )

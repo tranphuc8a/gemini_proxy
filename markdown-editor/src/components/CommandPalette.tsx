@@ -68,6 +68,9 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
       { id: 'wrap', label: 'Toggle word wrap', group: 'Commands', run: state.toggleWordWrap },
       { id: 'font-larger', label: 'Editor: Larger text', group: 'Commands', run: () => stepEditorFont(1) },
       { id: 'font-smaller', label: 'Editor: Smaller text', group: 'Commands', run: () => stepEditorFont(-1) },
+      ...(state.isAdmin
+        ? [{ id: 'smart-format', label: 'Smart format with AI…', group: 'Commands' as const, hint: 'Raw text → readable Markdown', run: state.openSmartFormat }]
+        : []),
       { id: 'save', label: 'Save now', group: 'Commands', shortcut: 'Ctrl+S', run: state.flushPersist },
       { id: 'export-md', label: 'Export as Markdown', group: 'Commands', run: () => exportMarkdown(fileName, content) },
       { id: 'print', label: 'Print or save as PDF', group: 'Commands', shortcut: 'Ctrl+P', run: () => window.print() },
