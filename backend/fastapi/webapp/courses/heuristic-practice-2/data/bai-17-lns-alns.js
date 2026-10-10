@@ -68,9 +68,9 @@ TH.dangKy({
 
   tomTat: [
     "LNS = **phá q phần tử → xây lại bằng heuristic tốt → chấp nhận hay không → cập nhật best**. Mỗi vòng là một canh bạc rẻ: thua thì quay về nghiệm cũ, thắng thì giữ; đánh vài trăm lượt thì chỉ cần vài lượt trúng.",
-    "Vì sao cần lân cận lớn: lời giải tốt hơn có thể **cách nghiệm hiện tại bốn thay đổi** mà ba bước đầu đều lỗ. Lịch F, G, A, B = 1 080 là cực trị cục bộ; bỏ cả A lẫn B rồi xây lại được F, G, C, D, E = 1 105 — leo đồi chỉ nhìn được một thay đổi.",
+    "Vì sao cần lân cận lớn: lời giải tốt hơn có thể **cách nghiệm hiện tại năm thay đổi** mà bốn bước đầu đều lỗ. Lịch F, G, A, B = 1 080 là cực trị cục bộ; bỏ cả A lẫn B rồi xây lại được F, G, C, D, E = 1 105 — leo đồi chỉ nhìn được một thay đổi.",
     "LNS **không duyệt** lân cận khổng lồ C(n, q)·q!; nó chỉ lấy **đúng một** phần tử — nghiệm do heuristic xây lại sinh ra. Toàn bộ cược nằm ở chỗ heuristic xây lại đủ giỏi; xây lại bừa thì LNS chỉ là khởi động lại ngẫu nhiên.",
-    "Bốn toán tử phá: ngẫu nhiên (đa dạng), **tệ nhất** (p_j + λ·Δt nhỏ nhất — chỉ viết được nhờ giá mờ λ), **theo quan hệ** (bỏ các phần tử giống nhau; mạnh nhất theo Ropke & Pisinger), đoạn liên tiếp. Xây lại: chèn tham lam (nhanh) hoặc chèn tiếc nuối (+1–3 %, đắt gấp đôi, hợp với phá theo quan hệ).",
+    "Bốn toán tử phá: ngẫu nhiên (đa dạng), **tệ nhất** (p_j + λ·Δt nhỏ nhất — chỉ viết được nhờ giá mờ λ), **theo quan hệ** (bỏ các phần tử giống nhau; được dùng nhiều nhất trong họ ALNS theo Ropke & Pisinger — thứ hạng thật phụ thuộc bài toán), đoạn liên tiếp. Xây lại: chèn tham lam (nhanh) hoặc chèn tiếc nuối (kỳ vọng +2–5 % theo Bài 7 §3.3, chi phí cùng bậc, chưa có phép đo riêng; hợp với phá theo quan hệ).",
     "Mức phá q: dưới 10 % gần như local search; **15–35 %** là điểm ngọt; trên 50 % gần như xây lại từ đầu và mất thông tin. Thường lấy q ngẫu nhiên trong khoảng, ví dụ q ∼ U(0,1·m ; 0,4·m).",
     "ALNS = LNS + bánh xe roulette: chọn toán tử với xác suất wᵢ/Σw; thưởng +10 (kỷ lục mới), +5 (tốt hơn hiện tại), +1 (được chấp nhận), 0 (bị từ chối); mỗi 50 vòng cập nhật w ← 0,8·w + 0,2·(điểm trung bình), với **sàn dưới 0,05** để không toán tử nào bị tắt vĩnh viễn.",
     "Tiêu chí chấp nhận không nên quá chặt: chỉ nhận khi tốt hơn thì LNS kẹt nhanh — thêm xác suất 2–5 % nhận nghiệm xấu hoặc dùng tiêu chuẩn SA.",
@@ -91,10 +91,10 @@ TH.dangKy({
         "Lịch F, G, C, D, E vượt quá 120 phút nên không hợp lệ",
         "Khách C, D, E trả quá ít nên không bao giờ đáng nhận",
         "Leo đồi chỉ chạy được trên bài toán có không quá 4 khách",
-        "Đường đi tới nó bắt buộc qua chỗ trũng: bỏ A, bỏ B rồi nhận C, D, E là bốn thay đổi mà ba bước đầu đều làm tiền giảm"
+        "Đường đi tới nó bắt buộc qua chỗ trũng: bỏ A, bỏ B rồi nhận C, D, E là năm thay đổi mà bốn bước đầu đều làm tiền thấp hơn 1 080"
       ],
       dung: 3,
-      giaiThich: "Mọi phép sửa một chỗ (nhét thêm, đổi một lấy một, chỉ bỏ) đều làm tiền xấu đi, nên F, G, A, B là cực trị cục bộ; lời giải tốt hơn nằm cách đó bốn thay đổi mà leo đồi chỉ nhìn được một. Lịch 1 105 dùng đúng 119 ≤ 120 phút nên hợp lệ; C, D, E hợp lý khi được nhận cùng lúc; và leo đồi không bị giới hạn số khách."
+      giaiThich: "Mọi phép sửa một chỗ (nhét thêm, đổi một lấy một, chỉ bỏ) đều làm tiền xấu đi, nên F, G, A, B là cực trị cục bộ; lời giải tốt hơn nằm cách đó năm thay đổi (bỏ A, bỏ B, nhận C, D, E; tiền đi 1 080 → 1 040 → 1 000 → 1 035 → 1 070 → 1 105, bốn bước đầu đều dưới 1 080) mà leo đồi chỉ nhìn được một. Lịch 1 105 dùng đúng 119 ≤ 120 phút nên hợp lệ; C, D, E hợp lý khi được nhận cùng lúc; và leo đồi không bị giới hạn số khách."
     },
     {
       id: "q3", loai: "mot", doKho: 2, ref: "§2.1",
@@ -188,7 +188,7 @@ TH.dangKy({
       id: "l1", doKho: 2, ref: "Bài tập 17.1, §2.1",
       hoi: "Với n = 260 ứng viên, q = 16 và nghiệm m = 65 phần tử, hãy ước lượng cỡ lân cận LNS C(n, q)·q! và so với lân cận 2-opt C(65, 2). Rồi giải thích vì sao LNS vẫn dùng được dù lân cận khổng lồ như vậy.",
       goiY: ["C(260, 16) cỡ 10²⁵; 16! cỡ 2·10¹³.", "Hỏi lại: LNS có thật sự “duyệt” lân cận không?"],
-      mau: "C(260, 16) ≈ 1,3 × 10²⁵ và 16! ≈ 2,1 × 10¹³ nên C(n, q)·q! ≈ 2,7 × 10³⁸ (số có 39 chữ số). Lân cận 2-opt: C(65, 2) = 2 080. Chênh nhau khoảng 10³⁵ lần — đúng “35 bậc độ lớn” ở đáp án 17.1. (Bài giảng §2.1 viết “cỡ 10³⁰ lần” là ước lượng thấp; con số chính xác của ví dụ này là cỡ 10³⁵.)\n\nLNS dùng được vì nó **không duyệt** lân cận: mỗi vòng chỉ lấy đúng **một** phần tử — nghiệm mà heuristic xây lại sinh ra. Toàn bộ cược nằm ở chỗ heuristic ấy đủ giỏi để mẫu duy nhất đó là một phần tử *tốt*. Đây là khác biệt triết lý so với Bài 9–12: ở đó duyệt hết lân cận nhỏ và lấy cái tốt nhất; ở đây không duyệt lân cận khổng lồ và tin vào một mẫu.",
+      mau: "C(260, 16) ≈ 1,3 × 10²⁵ và 16! ≈ 2,1 × 10¹³ nên C(n, q)·q! ≈ 2,7 × 10³⁸ (số có 39 chữ số). Lân cận 2-opt: C(65, 2) = 2 080. Chênh nhau khoảng 10³⁵ lần — đúng “35 bậc độ lớn” ở đáp án 17.1 (2,7 × 10³⁸ / 2 080 ≈ 1,3 × 10³⁵).\n\nLNS dùng được vì nó **không duyệt** lân cận: mỗi vòng chỉ lấy đúng **một** phần tử — nghiệm mà heuristic xây lại sinh ra. Toàn bộ cược nằm ở chỗ heuristic ấy đủ giỏi để mẫu duy nhất đó là một phần tử *tốt*. Đây là khác biệt triết lý so với Bài 9–12: ở đó duyệt hết lân cận nhỏ và lấy cái tốt nhất; ở đây không duyệt lân cận khổng lồ và tin vào một mẫu.",
       tieuChi: [
         "Tính đúng bậc độ lớn: C(n, q)·q! ~ 10³⁸ so với 2 080 của 2-opt (chênh ~35 bậc)",
         "Nêu ý then chốt: LNS không duyệt, chỉ lấy một phần tử của lân cận",
@@ -199,7 +199,7 @@ TH.dangKy({
       id: "l2", doKho: 2, ref: "Bài tập 17.2, §4.5",
       hoi: "Quét q/m ∈ {0,05 ; 0,15 ; 0,25 ; 0,40 ; 0,60}. Hãy dự đoán hình dạng đường cong điểm theo q/m và giải thích hai đầu mút. (Lab bên dưới cho bạn đo thật trên TSP với Q = 5, 15, 30, 60, 90.)",
       goiY: ["Phá quá ít thì LNS giống thuật toán nào? Phá quá nhiều thì giống thuật toán nào?"],
-      mau: "Đường cong có dạng chữ U ngược, **đỉnh quanh q/m ≈ 0,25** (điểm ngọt 15–35 %).\n\n- **q/m nhỏ (≤ 5–10 %)**: phá chỉ vài phần tử, xây lại gần như trả về đúng nghiệm cũ — LNS gần như local search, ít tác dụng (đáp án 17.2: tại 0,05 gần như không cải thiện).\n- **q/m lớn (> 50 %)**: phá gần hết rồi xây lại từ đầu — mất thông tin tích luỹ, LNS gần như khởi động lại ngẫu nhiên (đáp án 17.2: tại 0,60 kém hơn khoảng 2 %).\n\nTrong lab TSP của trang này (tỉ lệ so với 2-opt, người soạn đo trên 10 bộ n = 100, 300 vòng): Q = 5 chỉ hơn 2-opt khoảng 1 %; Q = 30 đạt đỉnh khoảng 5–6 %; Q = 90 còn khoảng 4 %. Đầu nhỏ đúng dự đoán, nhưng đầu lớn đi xuống nhẹ hơn dự đoán: vì mỗi vòng phá theo quan hệ rồi chèn rẻ nhất vẫn là một lần xây lại khá tốt và ta giữ kỷ lục. Điều này nhắc rằng hình dạng đường cong phụ thuộc cả toán tử phá lẫn bài toán.",
+      mau: "Đường cong có dạng chữ U ngược, **đỉnh quanh q/m ≈ 0,25** (điểm ngọt 15–35 %).\n\n- **q/m nhỏ (≤ 5–10 %)**: phá chỉ vài phần tử, xây lại gần như trả về đúng nghiệm cũ — LNS gần như local search, ít tác dụng (đáp án 17.2: tại 0,05 gần như không cải thiện).\n- **q/m lớn (> 50 %)**: phá gần hết rồi xây lại từ đầu — mất thông tin tích luỹ, LNS gần như khởi động lại ngẫu nhiên (đáp án 17.2: tại 0,60 kém hơn khoảng 2 % — số đo của lab P2 gốc, mức giảm phụ thuộc dữ liệu: trên một phép đo khác, nghiệm ngắn, phá nhiều lại không thua).\n\nTrong lab TSP của trang này (tỉ lệ so với 2-opt, người soạn đo trên 10 bộ n = 100, 300 vòng): Q = 5 chỉ hơn 2-opt khoảng 1 %; Q = 30 đạt đỉnh khoảng 5–6 %; Q = 90 còn khoảng 4 %. Đầu nhỏ đúng dự đoán, nhưng đầu lớn đi xuống nhẹ hơn dự đoán: vì mỗi vòng phá theo quan hệ rồi chèn rẻ nhất vẫn là một lần xây lại khá tốt và ta giữ kỷ lục. Điều này nhắc rằng hình dạng đường cong phụ thuộc cả toán tử phá lẫn bài toán.",
       tieuChi: [
         "Dự đoán đường cong dạng U ngược, đỉnh khoảng 15–35 %",
         "Giải thích đầu nhỏ: gần như local search, xây lại về chỗ cũ",

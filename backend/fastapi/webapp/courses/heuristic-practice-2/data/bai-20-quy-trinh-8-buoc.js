@@ -58,11 +58,11 @@ TH.dangKy({
 
   tomTat: [
     "Quy trình 8 bước theo đúng thứ tự: **① đọc mã grader**, ② mô hình hoá (S, C, f) và biểu diễn, **③ bộ chấm cục bộ trước khi có thuật toán**, ④ nghiệm cơ sở, ⑤ cận trên, ⑥ cải tiến có đo, ⑦ ablation, ⑧ chốt an toàn — với tỉ lệ thời gian 10 / 10 / 15 / 5 / 5 / 40 / 10 / 5 %.",
-    "Văn bản đề có thể mơ hồ hoặc sai, **mã bộ chấm là chân lý**: ở đề Samsung 2607, `nextDay()` gọi được 30 lần nên có 31 khung ngày — riêng phát hiện này đáng +3,08 % điểm, lớn hơn mọi metaheuristic của khoá cộng lại.",
+    "Văn bản đề có thể mơ hồ hoặc sai, **mã bộ chấm là chân lý**: ở đề Samsung 2607, `nextDay()` gọi được 30 lần nên có 31 khung ngày — riêng phát hiện này đáng +3,08 % điểm, nhiều hơn cả beam search (−2,43 % khi bỏ), thành phần tìm kiếm lớn nhất của lời giải cuối.",
     "Bộ chấm dựng trước thuật toán: không có nó, mọi con số chỉ là một mẫu duy nhất và không phân biệt nổi “tốt hơn” với “may hơn”; chênh lệch giữa hai phiên bản chỉ đáng tin khi lớn hơn 2·SE. Đây là khoản đầu tư có tỉ suất sinh lời cao nhất của cả quy trình.",
-    "Nghiệm cơ sở (greedy tỉ số) cho mốc: P3 được 31 755 020. Cận trên 33 943 173 cho biết dư địa (33 943 173 − 31 755 020) / 31 755 020 ≈ 6,9 %; theo bảng Bài 18, 5–15 % nghĩa là “thiếu tìm kiếm” nên đầu tư vào Phần 3–4.",
+    "Nghiệm cơ sở (greedy tỉ số) cho mốc: P3 được 30 714 270. Cận tham chiếu τ = 7 là 33 943 173 (chỉ τ = 0 là cận chứng minh được) cho biết độ hở (33 943 173 − 30 714 270) / 30 714 270 ≈ 10,5 %; theo bảng Bài 18, 5–15 % nghĩa là “thiếu tìm kiếm” nên đầu tư vào Phần 3–4.",
     "Bước ⑥ chiếm 40 % thời gian nhưng không phải bước quan trọng nhất: năm bước đầu chỉ chiếm 45 % mà quyết định ⑥ có ý nghĩa hay không. Quy tắc bất di bất dịch: **mỗi lần đo MỘT thay đổi**, ghi nhật ký, không cải thiện thì hoàn tác ngay.",
-    "Quy trình cấm **bỏ qua** một bước chứ không cấm quay lại: còn cách cận trên > 20 % → ②; điểm dao động mạnh giữa các test → ③; thêm thuật toán mạnh mà không cải thiện → ④; thời gian vượt giới hạn → ⑥.",
+    "Quy trình cấm **bỏ qua** một bước chứ không cấm quay lại: còn cách cận trên > 30 % (Bài 18 §6) → ②; điểm dao động mạnh giữa các test → ③; thêm thuật toán mạnh mà không cải thiện → ④; thời gian vượt giới hạn → ⑥.",
     "Ablation: bỏ từng thành phần rồi đo lại. Ở đề 2607, bỏ khung ngày thứ 31 tụt 3,08 %, bỏ beam search tụt 2,43 %, còn thưởng ρ và mật độ σ chỉ 0,10 % và 0,01 % — xoá, rồi **chạy lại** ablation vì con số có thể đổi (−1,33 % thành −2,43 %).",
     "Chốt an toàn: 0 vi phạm trên ≥ 500 test và ≥ 3 họ seed, worst-case ≤ 50 % giới hạn, build sạch bốn cờ, sanitizer, trường hợp biên, và **hai cấu hình** (chính 27,4 / 37,8 ms; an toàn 8,6 / 13,2 ms, kém 0,22 %). Khai thác có thể là lỗi của ban tổ chức thì đặt sau cờ biên dịch."
   ],
@@ -78,7 +78,7 @@ TH.dangKy({
         "Thử cả hai cách rồi chọn con số cao hơn, không cần mô hình hoá"
       ],
       dung: 2,
-      giaiThich: "Văn bản đề có thể mơ hồ, lỗi thời hoặc sai; mã bộ chấm mới là chân lý. 30 lần chuyển ngày cho 31 khung ngày, và ablation ở bước ⑦ cho thấy bỏ khung thứ 31 làm điểm tụt 3,08 % (32 915 840 → 31 900 896), lớn hơn mọi metaheuristic của khoá cộng lại. Coi nhẹ “một ngày” là sai, còn thử mò hai cách không thay được việc hiểu mô hình."
+      giaiThich: "Văn bản đề có thể mơ hồ, lỗi thời hoặc sai; mã bộ chấm mới là chân lý. 30 lần chuyển ngày cho 31 khung ngày, và ablation ở bước ⑦ cho thấy bỏ khung thứ 31 làm điểm tụt 3,08 % (32 915 840 → 31 900 896), nhiều hơn cả beam search (−2,43 % khi bỏ), thành phần tìm kiếm lớn nhất của lời giải cuối. Coi nhẹ “một ngày” là sai, còn thử mò hai cách không thay được việc hiểu mô hình."
     },
     {
       id: "q2", loai: "mot", doKho: 1, ref: "§1.1–1.3, §5",
@@ -90,38 +90,38 @@ TH.dangKy({
         "Tính cận trên bằng LP vì đó là bước rẻ nhất"
       ],
       dung: 0,
-      giaiThich: "Bước ③ nằm trước mọi thuật toán. An bỏ qua nó nên có ba phiên bản mà không biết cái nào tốt hơn — mỗi con số chỉ là một mẫu duy nhất, không phân biệt nổi “tốt hơn” với “may hơn”. Bộ chấm tốn 15 % thời gian nhưng là khoản đầu tư sinh lời cao nhất. Chạy greedy trên một bộ dữ liệu cũng chỉ là một mẫu; cận trên là bước ⑤, sau nghiệm cơ sở."
+      giaiThich: "Bước ③ nằm trước mọi thuật toán. An bỏ qua nó nên có hai phiên bản (greedy và simulated annealing) mà không biết cái nào tốt hơn — mỗi con số chỉ là một mẫu duy nhất, không phân biệt nổi “tốt hơn” với “may hơn”. Bộ chấm tốn 15 % thời gian nhưng là khoản đầu tư sinh lời cao nhất. Chạy greedy trên một bộ dữ liệu cũng chỉ là một mẫu; cận trên là bước ⑤, sau nghiệm cơ sở."
     },
     {
       id: "q3", loai: "so", doKho: 1, ref: "§1.2, §7", donVi: "(%)",
-      hoi: "Nghiệm cơ sở (greedy theo tỉ số) đạt 31 755 020 và cận trên là 33 943 173. Dư địa còn lại, tính theo phần trăm của **nghiệm cơ sở**, là bao nhiêu? (làm tròn một chữ số thập phân)",
-      dapAn: 6.89, saiSo: 0.05,
-      giaiThich: "(33 943 173 − 31 755 020) / 31 755 020 = 2 188 153 / 31 755 020 ≈ 0,0689, tức 6,9 % (đã tính bằng code: 6,8907 %). Bài tính dư địa theo nghiệm cơ sở; nếu lấy mẫu số là cận trên bạn sẽ ra 6,4 % — sai quy ước."
+      hoi: "Nghiệm cơ sở (greedy theo tỉ số) đạt 30 714 270 và cận tham chiếu (τ = 7) là 33 943 173. Độ hở còn lại, tính theo phần trăm của **nghiệm cơ sở**, là bao nhiêu? (làm tròn một chữ số thập phân)",
+      dapAn: 10.51, saiSo: 0.05,
+      giaiThich: "(33 943 173 − 30 714 270) / 30 714 270 = 3 228 903 / 30 714 270 ≈ 0,1051, tức 10,5 % (đã tính bằng code: 10,5127 %). Độ hở của khoá là (cận trên − nghiệm) / nghiệm, mẫu số là nghiệm cơ sở; nếu lấy mẫu số là cận trên bạn sẽ ra 9,5 % — sai quy ước."
     },
     {
       id: "q4", loai: "mot", doKho: 2, ref: "§7, §8.3",
-      hoi: "Với dư địa 6,9 % ở bước ⑤ (theo bảng Bài 18, khoảng 5–15 % nghĩa là “thiếu tìm kiếm”), hướng đầu tư đúng là gì?",
+      hoi: "Với độ hở 10,5 % ở bước ⑤ (theo bảng Bài 18, khoảng 5–15 % nghĩa là “thiếu tìm kiếm”), hướng đầu tư đúng là gì?",
       chon: [
         "Quay lại bước ② vì mô hình chắc chắn sai",
         "Đầu tư vào các kỹ thuật tìm kiếm ở Phần 3–4 của khoá (local search, beam, metaheuristic), không viết lại mô hình",
-        "Dừng lại vì 6,9 % quá nhỏ để đáng làm tiếp",
+        "Dừng lại vì 10,5 % quá nhỏ để đáng làm tiếp",
         "Đổi sang một greedy khác rồi tính lại cận trên"
       ],
       dung: 1,
-      giaiThich: "Dư địa 5–15 % là dấu hiệu “thiếu tìm kiếm”: mô hình ổn, cái thiếu là sức tìm kiếm nên bước ⑥ nên đi vào Phần 3–4. Chỉ khi còn cách cận trên hơn 20 % mới nên nghi mô hình và quay lại bước ②. Con số 6,9 % cũng không phải lý do để dừng — nó chính là câu trả lời cho “còn đáng làm tiếp không”; và đổi greedy khác không phải việc của bước ⑤."
+      giaiThich: "Độ hở 5–15 % là dấu hiệu “thiếu tìm kiếm”: mô hình ổn, cái thiếu là sức tìm kiếm nên bước ⑥ nên đi vào Phần 3–4. Chỉ khi còn cách cận trên hơn 30 % (Bài 18 §6) mới nên nghi mô hình và quay lại bước ②. Con số 10,5 % cũng không phải lý do để dừng — nó chính là câu trả lời cho “còn đáng làm tiếp không”; và đổi greedy khác không phải việc của bước ⑤."
     },
     {
       id: "q5", loai: "nhieu", doKho: 2, ref: "§2.1, §5, §8.2",
       hoi: "Những hành vi nào dưới đây **đi ngược** quy trình 8 bước?",
       chon: [
         "Gõ simulated annealing khi chưa có bộ chấm cục bộ, định “đo sau”",
-        "Sau bước ⑤ thấy còn cách cận trên 25 %, quay lại sửa mô hình ở bước ②",
+        "Sau bước ⑤ thấy còn cách cận trên 35 %, quay lại sửa mô hình ở bước ②",
         "Thêm đồng thời hai cải tiến rồi đo tổng hiệu quả của cả hai",
         "Tính cận trên đơn giản bằng LP trước khi bắt đầu cải tiến",
         "Chỉ đọc đề, bỏ qua mã grader vì mã nguồn rối hơn văn bản"
       ],
       dung: [0, 2, 4],
-      giaiThich: "Quy trình cấm **bỏ qua** bước: bộ chấm phải có trước thuật toán, mỗi lần đo chỉ một thay đổi, và mã grader là chân lý nên phải đọc. Quay lại một bước thì hoàn toàn bình thường — bảng §8.3 có hẳn dấu hiệu (> 20 % cách cận trên → ②). Tính cận trên trước khi cải tiến chính là đúng thứ tự của bước ⑤."
+      giaiThich: "Quy trình cấm **bỏ qua** bước: bộ chấm phải có trước thuật toán, mỗi lần đo chỉ một thay đổi, và mã grader là chân lý nên phải đọc. Quay lại một bước thì hoàn toàn bình thường — bảng §8.3 có hẳn dấu hiệu (> 30 % cách cận trên → ②). Tính cận trên trước khi cải tiến chính là đúng thứ tự của bước ⑤."
     },
     {
       id: "q6", loai: "so", doKho: 1, ref: "§2", donVi: "(phút)",
@@ -164,7 +164,7 @@ TH.dangKy({
         "Bước ⑥: giảm quy mô"
       ],
       dung: 2,
-      giaiThich: "Bảng của bài: còn cách cận trên > 20 % → ②; điểm dao động mạnh giữa các test → ③; thêm thuật toán mạnh mà không cải thiện → ④ (nghiệm cơ sở có vấn đề, có thể nó đã gần trần hoặc đang sai); thời gian vượt giới hạn → ⑥ (giảm quy mô). Mỗi dấu hiệu chỉ đúng với một bước."
+      giaiThich: "Bảng của bài: còn cách cận trên > 30 % (Bài 18 §6) → ②; điểm dao động mạnh giữa các test → ③; thêm thuật toán mạnh mà không cải thiện → ④ (nghiệm cơ sở có vấn đề, có thể nó đã gần trần hoặc đang sai); thời gian vượt giới hạn → ⑥ (giảm quy mô). Mỗi dấu hiệu chỉ đúng với một bước."
     },
     {
       id: "q10", loai: "mot", doKho: 2, ref: "§10.1–10.2",
@@ -185,24 +185,24 @@ TH.dangKy({
       id: "l1", doKho: 3, ref: "§2, §11, Bài tập 20.2",
       hoi: "Bạn nhận một đề mới (giả định) **“Lập lịch bảo trì”**: 150 máy, 5 ngày; mỗi ngày kỹ thuật viên làm tối đa 8 giờ; máy `i` mất `t_i` phút bảo trì và mang lại `v_i` điểm; đi giữa hai máy mất thời gian theo khoảng cách. Bảo trì quá giờ trong ngày thì điểm của cả test bằng 0. Đề kèm sẵn `main.cpp` của grader, điểm cộng dồn qua 500 test, và bạn có đúng **3 giờ**. Hãy lập kế hoạch buổi làm: với **từng bước ①–⑧** nêu việc cụ thể, sản phẩm đầu ra và số phút (theo tỉ lệ của bài).",
       goiY: ["Tỉ lệ thời gian: 10 / 10 / 15 / 5 / 5 / 40 / 10 / 5 %. 3 giờ là 180 phút.", "Với mỗi bước hãy nêu một việc làm ĐƯỢC CỤ THỂ cho đề này, không chỉ chép lại tên bước."],
-      mau: "| Bước | Phút | Việc cụ thể cho đề này | Sản phẩm |\n|---|---:|---|---|\n| ① Đọc mã grader | 18 | Điều kiện nào ra 0 (quá 8 giờ trong ngày)? điểm cộng ở dòng nào? biến nào không reset giữa các ngày (vị trí, giờ)? số ngày có off-by-one không? hành động “miễn phí” (đi mà không phục vụ)? điểm có tích luỹ qua test không | danh sách quan sát cấu trúc |\n| ② Mô hình hoá | 18 | S = lịch (máy → ngày, thứ tự trong ngày); C = ≤ 8 giờ mỗi ngày, mỗi máy tối đa một lần; f = Σ v_i. Biểu diễn: danh sách thứ tự cho từng ngày. Tài nguyên bão hoà trước: **thời gian trong ngày** | một trang giấy (S, C, f) |\n| ③ Bộ chấm cục bộ | 27 | Bộ sinh dữ liệu tất định từ seed, bộ chấm chép logic grader, thống kê trung bình và SE, đếm vi phạm, nhật ký thí nghiệm — **chưa có thuật toán** | harness chạy được 500 test |\n| ④ Nghiệm cơ sở | 9 | Greedy theo tỉ số v / (t + đi lại) | một con số mốc |\n| ⑤ Cận trên | 9 | Bỏ thời gian đi lại, giải cái túi phân số theo tổng giờ của 5 ngày | dư địa (%) |\n| ⑥ Cải tiến có đo | 72 | Mỗi lần MỘT thay đổi, ghi nhật ký: khai thác điều phát hiện ở ① → giá mờ → chèn → beam / local search → đa khởi động | bảng nhật ký, bản tốt nhất |\n| ⑦ Ablation | 18 | Bỏ từng thành phần, đo lại, xoá thứ đóng góp ≈ 0 rồi chạy lại | bảng ablation |\n| ⑧ Chốt an toàn | 9 | 0 vi phạm trên ≥ 500 test, worst-case ≤ 50 % giới hạn, build sạch, sanitizer, trường hợp biên, cấu hình dự phòng | checklist đã tick |\n\nTổng: 18 + 18 + 27 + 9 + 9 + 72 + 18 + 9 = 180 phút. Năm bước đầu chỉ 81 phút (45 %) nhưng quyết định 72 phút của bước ⑥ có ý nghĩa hay chỉ là đoán mò. Nếu sau ⑤ còn cách cận trên hơn 20 %, quay lại ② thay vì viết thêm thuật toán.",
+      mau: "| Bước | Phút | Việc cụ thể cho đề này | Sản phẩm |\n|---|---:|---|---|\n| ① Đọc mã grader | 18 | Điều kiện nào ra 0 (quá 8 giờ trong ngày)? điểm cộng ở dòng nào? biến nào không reset giữa các ngày (vị trí, giờ)? số ngày có off-by-one không? hành động “miễn phí” (đi mà không phục vụ)? điểm có tích luỹ qua test không | danh sách quan sát cấu trúc |\n| ② Mô hình hoá | 18 | S = lịch (máy → ngày, thứ tự trong ngày); C = ≤ 8 giờ mỗi ngày, mỗi máy tối đa một lần; f = Σ v_i. Biểu diễn: danh sách thứ tự cho từng ngày. Tài nguyên bão hoà trước: **thời gian trong ngày** | một trang giấy (S, C, f) |\n| ③ Bộ chấm cục bộ | 27 | Bộ sinh dữ liệu tất định từ seed, bộ chấm chép logic grader, thống kê trung bình và SE, đếm vi phạm, nhật ký thí nghiệm — **chưa có thuật toán** | harness chạy được 500 test |\n| ④ Nghiệm cơ sở | 9 | Greedy theo tỉ số v / (t + đi lại) | một con số mốc |\n| ⑤ Cận trên | 9 | Bỏ thời gian đi lại, giải cái túi phân số theo tổng giờ của 5 ngày | độ hở (%) |\n| ⑥ Cải tiến có đo | 72 | Mỗi lần MỘT thay đổi, ghi nhật ký: khai thác điều phát hiện ở ① → giá mờ → chèn → beam / local search → đa khởi động | bảng nhật ký, bản tốt nhất |\n| ⑦ Ablation | 18 | Bỏ từng thành phần, đo lại, xoá thứ đóng góp ≈ 0 rồi chạy lại | bảng ablation |\n| ⑧ Chốt an toàn | 9 | 0 vi phạm trên ≥ 500 test, worst-case ≤ 50 % giới hạn, build sạch, sanitizer, trường hợp biên, cấu hình dự phòng | checklist đã tick |\n\nTổng: 18 + 18 + 27 + 9 + 9 + 72 + 18 + 9 = 180 phút. Năm bước đầu chỉ 81 phút (45 %) nhưng quyết định 72 phút của bước ⑥ có ý nghĩa hay chỉ là đoán mò. Nếu sau ⑤ còn cách cận trên hơn 30 % (Bài 18 §6), quay lại ② thay vì viết thêm thuật toán.",
       tieuChi: [
         "Đúng thứ tự ①–⑧: bộ chấm (③) trước mọi thuật toán, nghiệm cơ sở (④) trước cận trên (⑤)",
         "Phân bổ thời gian bám tỉ lệ 10 / 10 / 15 / 5 / 5 / 40 / 10 / 5 % (tổng 180 phút), không dồn hết vào bước ⑥",
         "Bước ① nêu ít nhất 3 câu hỏi cụ thể từ checklist (điều kiện 0 điểm, biến không reset, off-by-one, hành động miễn phí…)",
         "Bước ② viết đủ (S, C, f), biểu diễn, và trả lời “tài nguyên nào bão hoà trước?”",
         "Bước ⑥ có “mỗi lần một thay đổi” và nhật ký; bước ⑦–⑧ có ablation rồi checklist chốt (0 vi phạm, worst-case ≤ 50 %)",
-        "Nêu ít nhất một mốc để quay lại bước trước (ví dụ dư địa > 20 % → ②)"
+        "Nêu ít nhất một mốc để quay lại bước trước (ví dụ độ hở > 30 % → ②)"
       ]
     },
     {
       id: "l2", doKho: 2, ref: "§3.2–3.3, Bài tập 20.1",
       hoi: "Đây là hàm `move` trong mã grader của một đề tương tự:\n\n```cpp\nvoid move(int mY, int mX) {\n    int startMin = gCurMin;\n    gCurMin += ABS(...) + ABS(...);\n    if (gCurMin > 720) { SCORE = 0; return; }\n    gPosY = mY; gPosX = mX;\n    if (gMapInfo[gPosY][gPosX] == 0) return;\n    gCurMin += gMapInfo[gPosY][gPosX]*30 + 30;\n    if (gCurMin > 720) { SCORE = 0; return; }\n    SCORE += gPrice[...];\n    if (gCurMin > 480) SCORE += (gCurMin - MAX(480, startMin)) * 200;\n    gMapInfo[gPosY][gPosX] = 0;\n}\n```\nÁp dụng bước ①: liệt kê **ít nhất 4 quan sát cấu trúc** từ mã này và nói mỗi quan sát ảnh hưởng đến mô hình hoá hay thuật toán thế nào.",
       goiY: ["Đi qua checklist: điều kiện nào làm điểm bằng 0? điểm cộng ở những dòng nào? có hành động “miễn phí” không?", "Nhìn kỹ dòng `if (gMapInfo[...] == 0) return;` và dòng thưởng OT."],
-      mau: "1. **Ràng buộc cứng 720 phút**: vượt 720 (khi chỉ đi hoặc sau khi phục vụ) thì `SCORE = 0` — không phải bị trừ điểm, và nếu điểm cộng dồn qua test thì cả bài hỏng. Mô hình: 720 là ràng buộc cứng, bộ chấm phải đếm vi phạm riêng; mốc 480 chỉ là điểm bắt đầu thưởng OT.\n2. **Đi vào ô trống vẫn tốn thời gian đi nhưng không sinh điểm, không tốn thời gian phục vụ** (hàm `return` sớm sau khi cộng thời gian di chuyển). Hệ quả: tuyệt đối tránh giữa kỳ; còn sau lần phục vụ cuối thì thời gian đó **miễn phí** — kỹ thuật “di chuyển chết cuối ngày”.\n3. **Thưởng OT** chỉ tính phần vượt 480 của chính lần ghé này, `(gCurMin − MAX(480, startMin)) × 200`; cộng lại nó chỉ phụ thuộc giờ kết thúc (thưởng OT “co rút”) nên mô hình đơn giản hơn bề ngoài.\n4. **Mỗi ô chỉ ăn điểm một lần**: `gMapInfo = 0` sau khi phục vụ, nên ghé lại ô đó thành đi vào ô trống. Thời gian phục vụ phụ thuộc giá trị ô (`× 30 + 30`).\n5. **Vị trí hiện tại được ghi lại** (`gPosY`, `gPosX`): chi phí lần di chuyển sau tính từ đây — trạng thái nối tiếp, không reset.",
+      mau: "1. **Ràng buộc cứng 720 phút**: vượt 720 (khi chỉ đi hoặc sau khi phục vụ) thì `SCORE = 0` — không phải bị trừ điểm, và nếu điểm cộng dồn qua test thì cả bài hỏng. Mô hình: 720 là ràng buộc cứng, bộ chấm phải đếm vi phạm riêng; mốc 480 chỉ là điểm bắt đầu thưởng OT.\n2. **Đi vào ô trống vẫn tốn thời gian đi nhưng không sinh điểm, không tốn thời gian phục vụ** (hàm `return` sớm sau khi cộng thời gian di chuyển). Hệ quả: tuyệt đối tránh giữa kỳ; còn sau lần phục vụ cuối thì thời gian đó **không tốn điểm nào** — miễn là ô đích trống và đồng hồ vẫn ≤ 720 — kỹ thuật “di chuyển chết cuối ngày”.\n3. **Thưởng OT** chỉ tính phần vượt 480 của chính lần ghé này, `(gCurMin − MAX(480, startMin)) × 200`; cộng lại nó chỉ phụ thuộc giờ kết thúc (thưởng OT “co rút”) nên mô hình đơn giản hơn bề ngoài.\n4. **Mỗi ô chỉ ăn điểm một lần**: `gMapInfo = 0` sau khi phục vụ, nên ghé lại ô đó thành đi vào ô trống. Thời gian phục vụ phụ thuộc giá trị ô (`× 30 + 30`).\n5. **Vị trí hiện tại được ghi lại** (`gPosY`, `gPosX`): chi phí lần di chuyển sau tính từ đây — trạng thái nối tiếp, không reset.",
       tieuChi: [
         "Nêu ràng buộc cứng 720 phút và `SCORE = 0` (không phải trừ điểm)",
-        "Nêu “ô trống: tốn thời gian đi, không điểm, không thời gian phục vụ” và hệ quả (tránh giữa kỳ; miễn phí sau lần phục vụ cuối)",
+        "Nêu “ô trống: tốn thời gian đi, không điểm, không thời gian phục vụ” và hệ quả (tránh giữa kỳ; sau lần phục vụ cuối thì không tốn điểm, miễn là ô đích trống và ≤ 720)",
         "Nêu thưởng OT chỉ tính phần vượt 480 và nó “co rút” theo giờ kết thúc",
         "Mỗi quan sát được gắn với ảnh hưởng tới mô hình hoá hoặc thuật toán, không chỉ chép lại dòng mã"
       ]

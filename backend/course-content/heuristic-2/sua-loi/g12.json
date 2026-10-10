@@ -1,0 +1,218 @@
+[
+ {
+  "bai": "2607/tong-quan",
+  "old": "Cận trên nới lỏng tuyến tính: **33 943 173** (di chuyển tối ưu kiểu TSP) ⇒ lời giải C\nđạt **97 % cận trên**.",
+  "new": "Cận trên nới lỏng tuyến tính **chứng minh được** (bỏ qua di chuyển, $\\tau{=}0$): **35 571 464** ⇒ lời giải C\nđạt **92,5 %** cận này. Hai mức tham chiếu **33 943 173** ($\\tau{=}7$, quãng đường ước lượng kiểu TSP) và **33 388 769**\n($\\tau{=}9{,}5$, quãng đường thực của chính lời giải) chỉ là *ước lượng*, không chứng minh được là cận trên; so với chúng C đạt 97,0 % và 98,6 %.",
+  "ly_do": "[LOGIC] Mục 26. 'Cận trên' τ=7 (kỳ vọng BHH) và τ=9,5 (quãng đường thực của chính lời giải C) không chứng minh được; chỉ τ=0 hợp lệ. 32 915 840 / 35 571 464 = 92,53 %; /33 943 173 = 96,98 %; /33 388 769 = 98,58 %. Câu cũ viết 'đạt 97 % cận trên' cho mức τ=7. Đồng bộ với Bài 18 §6 (τ=0 'luôn đúng'; Cạm bẫy 1: cận phải đến từ nới lỏng chứng minh được)."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "Cả ba lời giải hiện có (xem `02-…`) đều",
+  "new": "Cả hai lời giải hiện có (xem `02-…`) đều",
+  "ly_do": "[MÂU THUẪN] Mục 26. §4.5 ngay dưới nói 'Cả hai lời giải hiện có'; 02 §1–§2 và tong-quan chỉ mổ xẻ hai bản cài đặt (A greedy, B preset); analyze.md là đề xuất, không phải lời giải."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "Mỗi phút chết mất ~1 450 điểm",
+  "new": "Mỗi phút chết mất ~1 420 điểm",
+  "ly_do": "[MÂU THUẪN] Mục 26. Mọi chỗ khác (tong-quan, §5 ngay dưới: 'λ ≈ 1 420 điểm/phút', §8, 03 §2.2) đều là 1 420; 1 450 không có cơ sở tính."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "| $\\tau$ | Ý nghĩa | Cận trên (TB 300 TC) |",
+  "new": "| $\\tau$ | Ý nghĩa | Cận trên / mức tham chiếu (TB 300 TC) |",
+  "ly_do": "[LOGIC] Mục 26. Chỉ τ=0 là cận chứng minh được; hai dòng sau là mức ước lượng, đổi tiêu đề cột cho đúng."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "| 7,0 | di chuyển tối ưu cỡ TSP-Manhattan ($0{,}92\\sqrt{An}$) | **33 943 173** |",
+  "new": "| 7,0 | *ước lượng* di chuyển cỡ TSP-Manhattan ($0{,}92\\sqrt{An}$, BHH) — **không** phải cận chứng minh được | **33 943 173** |",
+  "ly_do": "[LOGIC] Mục 26. τ=7 là kỳ vọng tiệm cận BHH cho điểm rải đều (đúng cho n=158 nhà đã chọn lọc chỉ ở mức ước chừng), không phải cận chứng minh được của bài toán."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "| 9,5 | di chuyển thực tế của lời giải đề xuất | **33 388 769** |",
+  "new": "| 9,5 | di chuyển thực đo của chính lời giải đề xuất — chỉ là mức tham chiếu, **không** phải cận | **33 388 769** |",
+  "ly_do": "[LOGIC] Mục 26. τ=9,5 lấy từ quãng đường thật của lời giải C (1 510/158 ≈ 9,56); nghiệm khác có thể đi ít hơn nên con số này không bị chặn bởi bài toán — không phải cận trên."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "Đối chiếu: lời giải đề xuất đạt **32 915 840** = **98,6 %** cận $\\tau{=}9{,}5$,\n**97,0 %** cận $\\tau{=}7$.",
+  "new": "Đối chiếu: lời giải đề xuất đạt **32 915 840** = **92,5 %** cận $\\tau{=}0$ (cận duy nhất ở đây chứng minh được);\ncòn **98,6 %** / **97,0 %** là so với hai mức tham chiếu $\\tau{=}9{,}5$ / $\\tau{=}7$ (ước lượng, không phải cận trên).",
+  "ly_do": "[LOGIC] Mục 26. 32 915 840 / 35 571 464 = 92,53 %; /33 388 769 = 98,58 %; /33 943 173 = 96,98 %. Câu cũ gọi cả hai tỉ lệ sau là '% cận'."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "**(a) 1 561 phút chết — mất ~2,26 triệu điểm (7,3 %).**",
+  "new": "**(a) 1 561 phút chết — mất ~2,22 triệu điểm (7,2 %).**",
+  "ly_do": "[SỐ] Mục 26 (phút chết 1 450 vs 1 420). Câu ngay dưới dùng λ ≈ 1 420: 1 561 × 1 420 = 2 216 620 = 7,22 % của 30 714 270. Con số 2,26 triệu (7,37 %) ứng với 1 450 điểm/phút, mâu thuẫn với λ của chính đoạn."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "$240000/160 = 1500$ — sát nhau, nên greedy thường \"gặm\" hết máy nhỏ quanh mình.",
+  "new": "$240000/160 = 1500$ — chỉ hơn ~16 %, nên chỉ cần máy $m{=}4$ xa thêm cỡ 26 phút ($240000/186 \\approx 1290$) là greedy bỏ nó và \"gặm\" hết máy nhỏ quanh mình.",
+  "ly_do": "[LOGIC] Ví dụ minh hoạ ngược chiều luận điểm: với số đã cho, 1 500 > 1 290 nên greedy theo tỉ số chọn máy m=4 cách 10 phút, không chọn máy m=1 cách 2 phút. Để m=1 thắng cần 240000/(150+d) < 1290,3, tức d > 36 (xa hơn 26 phút so với ví dụ). Sửa tối thiểu để câu 'sát nhau → gặm máy nhỏ' đúng."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "thời gian chết **giảm từ 1 561 xuống 501 phút** — đây là",
+  "new": "thời gian chết **giảm từ 841 xuống 501 phút** (cùng cơ sở 30 khung ngày: 1 561 của A còn gồm 720 phút của khung ngày thứ 31 bị bỏ không, còn 501 của B thì không tính khung ấy) — đây là",
+  "ly_do": "[LOGIC] So hai cơ sở khác nhau. Bảng §1.2/§2.2: A: 1 306 + 19 452 + 1 561 = 22 319 (31 khung, gồm 720 phút khung 31 bỏ không + 841 dư cuối ngày); B: 1 377 + 19 722 + 501 = 21 600 (30 khung). Cùng cơ sở 30 khung là 841 → 501 (−340 phút ≈ 483 000 điểm ≈ 1,6 % của A, khớp '+1,5 %'); nếu cùng tính khung 31 thì 1 561 → 1 221. Cũng khớp OT: A 1 271 703/30 = 42 390 → T_end = 692 = 720 − 28."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "đã đạt **+5,35 %**. Nghĩa là vấn đề nằm ở",
+  "new": "đã đạt **+6,94 %** so với A (**+5,35 %** so với chính B). Nghĩa là vấn đề nằm ở",
+  "ly_do": "[SỐ] So lẫn hai cơ sở: '+1,5 %' của B là so với A, còn '+5,35 %' = 32 844 376 / 31 175 718 là so với B. Cùng cơ sở A: 32 844 376 / 30 714 270 = +6,94 %."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "chỉ làm điểm dao động **±0,8 %**, trong khi",
+  "new": "chỉ làm điểm dao động **0,84 %** (biên độ đỉnh–đáy, tức ≈ ±0,4 %; đo trên 40 test case, xem `03-…` §2.3), trong khi",
+  "ly_do": "[SỐ] Mục 26. Bảng quét λ ở 03 §2.3: max 32 849 395 (λ=1420), min 32 572 555 (λ=1600) ⇒ (max−min)/max = 0,843 %. '±0,8 %' nghĩa là biên độ 1,6 %."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "\\approx 7\\,600$ lần **mỗi bước**, nhân 150 bước, nhân 8 preset\n≈ 9,1 triệu lượt gọi hàm với số thực.",
+  "new": "\\approx 7\\,600$ (ứng với $n = 400$, cỡ tối đa của mảng; ở cỡ điển hình $n \\approx 293$ thì $19n \\approx 5\\,600$) lần **mỗi bước**, nhân 150 bước, nhân 8 preset\n≈ 9,1 triệu lượt gọi hàm với số thực (≈ 6,7 triệu ở $n \\approx 293$).",
+  "ly_do": "[SỐ] n + 18·n = 19n; 19 × 400 = 7 600 nhưng cả bài dùng n ≈ 293 (⇒ 5 567/bước, 5 567 × 150 × 8 = 6,7 triệu). Làm rõ cơ sở; kết luận 'rủi ro TLE' không đổi."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "vẫn hơn B **+2,33 %** và nhanh hơn **3,5 lần**.",
+  "new": "vẫn hơn B **+2,33 %** và nhanh hơn **≈ 2,8 lần** (76,2 / 26,8 ms; trường hợp xấu nhất 111,0 / 35,4 ms ≈ 3,1 lần).",
+  "ly_do": "[SỐ] Bảng §6: 76,2 / 26,8 = 2,84; 111,0 / 35,4 = 3,14; không cặp nào cho 3,5 (76,2 / 27,4 của C = 2,78)."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "(C đi *nhiều* hơn 200 phút so với B)",
+  "new": "(C đi *nhiều* hơn 133 phút so với B: 1 510 − 1 377; so với A là 204 phút)",
+  "ly_do": "[SỐ] Bảng §6: di chuyển C = 1 510, B = 1 377 ⇒ chênh 133 phút; 200 phút chỉ đúng khi so với A (1 510 − 1 306 = 204)."
+ },
+ {
+  "bai": "2607/02-giai-phap-hien-tai",
+  "old": "Cận trên nới lỏng tuyến tính (tham chiếu): 33 388 769 ($\\tau{=}9{,}5$) / 33 943 173 ($\\tau{=}7$).",
+  "new": "Mức tham chiếu nới lỏng tuyến tính: 33 388 769 ($\\tau{=}9{,}5$) / 33 943 173 ($\\tau{=}7$) — chỉ là ước lượng, không phải cận chứng minh được (cận chứng minh được, $\\tau{=}0$: 35 571 464; xem `01-…` §6).",
+  "ly_do": "[LOGIC] Mục 26. Đồng bộ cách gọi với 01 §6: chỉ τ=0 là cận trên hợp lệ."
+ },
+ {
+  "bai": "2607/03-de-xuat-cai-tien",
+  "old": "Một ngày chỉ chứa **tối đa 12 ngôi nhà** ($720/60$), nên chiều sâu tìm kiếm rất",
+  "new": "Một ngày chỉ chứa **tối đa 11 ngôi nhà** (12 nhà loại 1 đã tốn đủ $12 \\times 60 = 720$ phút dọn, chưa kể $\\ge 1$ phút đi giữa hai ô khác nhau; $720/61 < 12$), nên chiều sâu tìm kiếm rất",
+  "ly_do": "[SỐ] Mục 26. Các nhà ở ô phân biệt nên mỗi nhà phải đi ≥ 1 phút (trừ nhà đầu tiên nếu xuất phát trúng nhà): 12 nhà cần ≥ 12×60 + 11 = 731 > 720; 11 nhà loại 1 cần 11×61 = 671 ≤ 720. Tối đa là 11."
+ },
+ {
+  "bai": "2607/03-de-xuat-cai-tien",
+  "old": "Vì mỗi ngày tối đa 12 nhà, `take[]` nằm gọn trong 26 byte → sao chép trạng thái rẻ,\nvà kiểm tra trùng lặp `inTake()` chỉ là vòng lặp ≤ 12 phần tử.",
+  "new": "Vì mỗi ngày tối đa 11 nhà (mảng 13 phần tử, dư 2), `take[]` nằm gọn trong 26 byte → sao chép trạng thái rẻ,\nvà kiểm tra trùng lặp `inTake()` chỉ là vòng lặp ≤ 11 phần tử.",
+  "ly_do": "[SỐ] Đồng bộ với §3.1 đã sửa (tối đa 11 nhà/ngày); `short take[13]` = 26 byte giữ nguyên, chỉ nói rõ là có dư."
+ },
+ {
+  "bai": "2607/03-de-xuat-cai-tien",
+  "old": "Điểm số giảm 0,45 %, tức ~148 000",
+  "new": "Điểm số giảm 0,45 %, tức ~147 000",
+  "ly_do": "[SỐ] Bảng §7: 32 915 840 − 32 768 866 = 146 974 (≈ 147 000, không phải 148 000); 146 974 / 1 420 = 103,5 ≈ 104 phút giữ nguyên."
+ },
+ {
+  "bai": "2607/03-de-xuat-cai-tien",
+  "old": "**Ba lớp an toàn** (vì đây là đoạn mã nguy hiểm nhất trong lời giải):",
+  "new": "**Bốn lớp an toàn** (vì đây là đoạn mã nguy hiểm nhất trong lời giải):",
+  "ly_do": "[NHỎ] Bảng ngay dưới liệt kê 4 rủi ro/biện pháp (ô có nhà, đích, ngoài bản đồ, vòng lặp), không phải 3."
+ },
+ {
+  "bai": "2607/03-de-xuat-cai-tien",
+  "old": "Khoảng cách còn lại tới cận trên $\\tau{=}7$ là **~3,0 %**, gần như toàn bộ nằm ở quãng\nđường (1 510 phút thực tế so với ~1 150 phút cỡ TSP-L1). Ba hướng có thể thu hẹp:",
+  "new": "Khoảng cách còn lại tới mức tham chiếu $\\tau{=}7$ (ước lượng, không phải cận chứng minh được) là **~3,0 %**; khoảng một nửa (≈ 1,5 %, xem `05-…` §3.5) nằm ở quãng\nđường (1 510 phút thực tế so với ~1 150 phút cỡ TSP-L1), nửa còn lại không liên quan tới quãng đường (thời gian chết ≈ 88 phút ≈ 0,4 %, độ chênh của nới lỏng LP…). Ba hướng có thể thu hẹp:",
+  "ly_do": "[LOGIC] Mục 26. Khoảng cách tới τ=7 là 33 943 173 − 32 915 840 = 1 027 333 (3,0 %). Phần quãng đường: ~360 phút × 1 420 ≈ 511 000 ≈ 1,5 % (khớp 05 §3.5; hiệu hai mức tham chiếu τ=7 và τ=9,5 là 554 404 ≈ 1,6 %) — chỉ khoảng một nửa, không phải 'gần như toàn bộ'. Phần còn lại ≈ 0,5 triệu điểm, trong đó thời gian chết 88 phút × 1 420 ≈ 125 000 (0,4 %)."
+ },
+ {
+  "bai": "2607/04-implementation",
+  "old": "### Hai công tắc cấu hình",
+  "new": "### Ba hằng số cấu hình",
+  "ly_do": "[NHỎ] Khối mã ngay dưới có 3 dòng #define (USE_31_DAYS, BEAM_W, BEAM_B), không phải 2."
+ },
+ {
+  "bai": "2607/05-lien-he-bai-toan",
+  "old": "Ba trong bốn cải tiến lớn nhất\n   (thưởng OT co rút, di chuyển chết cuối ngày, khung ngày thứ 31) đến từ việc đọc\n   `main.cpp` chứ không đến từ văn bản đề.",
+  "new": "Hai trong bốn thành phần lớn nhất của bảng ablation (`03-…` §7) — khung ngày thứ 31 (−3,08 %) và di chuyển chết cuối ngày (−0,45 %), cộng 3,53 điểm %, khoảng 40 % của tổng 8,72 điểm % — đến từ việc đọc\n   `main.cpp` chứ không đến từ văn bản đề (thưởng OT co rút cũng là phát hiện từ mã nhưng không có dòng ablation riêng). Hai thành phần lớn còn lại (beam và phạt thời gian chết, mỗi cái −2,43 %) đến từ mô hình hoá, không phải từ đọc mã.",
+  "ly_do": "[LOGIC] Mục 25 / quyết định thống nhất số 6. Bảng ablation 2607 (so với đầy đủ 32 915 840): khung ngày 31 −1 014 944 (3,08 %), beam −800 865 (2,43 %), phạt thời gian chết −799 044 (2,43 %), di chuyển chết −146 974 (0,45 %), multi-start −0,22 %, ρ −0,10 %, σ −0,01 %; tổng 8,72 điểm %. Chỉ khung ngày 31 và di chuyển chết cuối ngày đến từ đọc main.cpp: 1 161 918 điểm = 3,53 điểm % = 40,5 % của tổng 8,72 (42 % của 8,39 điểm % của bốn dòng lớn nhất). Nên là 2/4, không phải 3/4; thưởng OT co rút không có dòng ablation riêng."
+ },
+ {
+  "bai": "2607/05-lien-he-bai-toan",
+  "old": "### 3.5 Hằng số BHH và cận dưới cho quãng đường",
+  "new": "### 3.5 Hằng số BHH và ước lượng quãng đường (không phải cận dưới)",
+  "ly_do": "[LOGIC] BHH là giới hạn tiệm cận cho kỳ vọng độ dài tour của điểm rải đều ngẫu nhiên; 158 nhà đã chọn lọc không rải đều nên không phải cận dưới chứng minh được (cùng vấn đề với Bài 18 §4, mục 18)."
+ },
+ {
+  "bai": "2607/05-lien-he-bai-toan",
+  "old": "\\approx 1\\,157\\ \\text{phút}",
+  "new": "\\approx 1\\,156\\ \\text{phút}",
+  "ly_do": "[SỐ] 0,92 × √(10 000 × 158) = 0,92 × 1 256,98 = 1 156,4 (không phải 1 157). 1 510 / 1 156,4 = 1,306 nên '31 %' vẫn đúng."
+ },
+ {
+  "bai": "2607/05-lien-he-bai-toan",
+  "old": "— cao hơn cận TSP **31 %**.",
+  "new": "— cao hơn ước lượng TSP **31 %**.",
+  "ly_do": "[LOGIC] Đồng bộ với tiêu đề §3.5 đã sửa: 1 157/1 156 là ước lượng BHH, không phải cận."
+ },
+ {
+  "bai": "2607/05-lien-he-bai-toan",
+  "old": "cho ta biết chính xác dư địa còn lại: ~350 phút ≈ 1,5 % điểm.",
+  "new": "cho ta ước chừng dư địa còn lại (BHH là kỳ vọng tiệm cận cho điểm rải đều, không phải cận cho 158 nhà đã chọn lọc): ~350 phút ≈ 1,5 % điểm.",
+  "ly_do": "[LOGIC] 'chính xác' vượt bằng chứng: một ước lượng tiệm cận không cho dư địa chính xác. Số suy ra 354 phút × 1 420 ≈ 0,50 triệu ≈ 1,5 % vẫn đúng."
+ },
+ {
+  "bai": "case-2609/tong-quan",
+  "old": "| **SCORE trung bình** (200 TC) | 7 369 | 151 123 | **161 205** |",
+  "new": "| **SCORE trung bình** (200 TC; v1/v2 chỉ 10 seed) | 7 369 | 151 123 | **161 205** |",
+  "ly_do": "[SỐ] Mục 28. 02 §3: 'seed 1..200 (trừ v1/v2 dùng 10 seed vì kết quả đã rõ)' và 04: sample_input.txt có 10 test case; 7 369 đo trên 10 seed, không phải 200."
+ },
+ {
+  "bai": "case-2609/tong-quan",
+  "old": "| Nước đi hỏng (2 000 TC) | 0 | 0 | **0** |",
+  "new": "| Nước đi hỏng (v1/v2: 10 TC; v3: 200 TC; đề xuất: 2 000 TC) | 0 | 0 | **0** |",
+  "ly_do": "[SỐ] Cùng loại lỗi cơ sở như mục 28: 2 000 TC chỉ là lần chạy của lời giải đề xuất (03 §3.2/§5); v1/v2 chạy 10 seed, v3 chạy 200 seed (03 §5: 'seed 1..200 cho cả hai')."
+ },
+ {
+  "bai": "case-2609/tong-quan",
+  "old": "Cận trên chặt (entropy tối ưu + cận dưới vận tải): **161 318** ⇒ lời giải đề xuất đạt\n**99,76 % cận trên**.",
+  "new": "Cận trên chặt (entropy tối ưu + cận dưới vận tải, đo trên 1 000 TC): **161 318** ⇒ trên cùng 1 000 TC ấy lời giải đề xuất đạt 160 933 =\n**99,76 % cận trên** (161 205 ở bảng là trung bình 200 TC, không chia cho cận này được: 161 205 / 161 318 = 99,93 % là so lẫn hai tập).",
+  "ly_do": "[SỐ] Mục 28. 03 §5: 161 205 là TB 200 TC; 160 933 (= 156 400 + 4 532) và cận 161 318 (= 156 400 + 4 918) là TB 1 000 TC. 160 933 / 161 318 = 99,761 % (đúng); 161 205 / 161 318 = 99,930 %. Dư địa '~0,25 %' (386/161 318 = 0,24 %) không đổi."
+ },
+ {
+  "bai": "case-2609/tong-quan",
+  "old": "Lỗi hoàn toàn im lặng nếu không bật `-Wreturn-type`.",
+  "new": "Trình biên dịch có báo (g++ bật `-Wreturn-type` mặc định ở C++ và trong `-Wall`), nhưng nếu không ai đọc cảnh báo thì lỗi hoàn toàn im lặng.",
+  "ly_do": "[LOGIC] Quyết định thống nhất số 2. Đã thử g++ 14.0.1 (MinGW): biên dịch không cờ nào vẫn in 'warning: no return statement in function returning non-void [-Wreturn-type]'. (Cùng thử: -O0 → Illegal instruction, -O2 → Segmentation fault trên mã đơn giản; hành vi cụ thể của -O2 phụ thuộc mã xung quanh nên không sửa mô tả '-O2 xoá vòng lặp'.)"
+ },
+ {
+  "bai": "case-2609/01-phat-bieu-de-bai",
+  "old": "| $E_0$ | ~$3\\times10^8$ |",
+  "new": "| $E_0$ | ~$10^8$ |",
+  "ly_do": "[SỐ] E₀ ≈ N²(H+W)/6 (Quan sát 7): với N = 1 920, H+W = 160 ra 9,8×10⁷ ≈ 10⁸; 3×10⁸ chỉ ứng với N = 3 200 (p = 0,5, lưới 80×80) nên không phải 'nhỏ nhất'. Cột 'điển hình' (N=6 760, H+W=260 → 2,0×10⁹) và 'lớn nhất' (N=15 905, H+W=358 → 1,5×10¹⁰) đúng."
+ },
+ {
+  "bai": "case-2609/02-giai-phap-hien-tai",
+  "old": "$k = 1$ thắng **mọi test case**, hơn $k = 2$ khoảng **gấp đôi** và hơn $k = 5$ khoảng\n**gấp 9 lần**. Vòng quét",
+  "new": "$k = 1$ thắng **cả 12/12 test case đã in**; trong ba dòng in ra, điểm của $k = 1$ gấp $1{,}9$–$3{,}7$ lần $k = 2$ và $4{,}8$–$9{,}3$ lần $k = 5$ (chỉ dòng đầu mới là \"xấp xỉ gấp đôi, gấp 9\"). Vòng quét",
+  "ly_do": "[SỐ] Mục 28. Ba dòng in: 181 864/94 727 = 1,92 và /19 462 = 9,34; 198 462/62 168 = 3,19 và /24 653 = 8,05; 211 449/57 604 = 3,67 và /44 045 = 4,80. Chỉ dòng 1 ≈ 'gấp đôi, gấp 9'. Bằng chứng in ra chỉ là 12/12 test case nên hạ 'mọi test case' cho đúng mức."
+ },
+ {
+  "bai": "case-2609/02-giai-phap-hien-tai",
+  "old": "Đây chính là lý do v1 và v2 về 0 điểm entropy. Lỗi **im lặng** — không cảnh báo nếu\nkhông bật `-Wreturn-type`. v3 đã sửa bằng cách đổi sang `void`.",
+  "new": "Đây chính là lý do v1 và v2 về 0 điểm entropy. Lỗi chỉ **im lặng** nếu không ai đọc cảnh báo: g++ báo `-Wreturn-type` ngay cả khi không đặt cờ nào (mặc định bật ở C++, nằm trong `-Wall`). v3 đã sửa bằng cách đổi sang `void`.",
+  "ly_do": "[LOGIC] Quyết định thống nhất số 2. Thử g++ 14.0.1: `int f(){}` trong một lớp biên dịch không cờ vẫn in cảnh báo [-Wreturn-type]. Câu cũ 'không cảnh báo nếu không bật -Wreturn-type' sai với g++."
+ },
+ {
+  "bai": "case-2609/03-de-xuat-cai-tien",
+  "old": "Chênh lệch tối đa **0,001 %**. Frank–Wolfe từ dữ liệu ban đầu cho tối ưu toàn cục\ntrong mọi thực nghiệm;",
+  "new": "Chênh lệch tối đa **≈ 0,001 %** (0,0012 % ở seed 1). Frank–Wolfe từ dữ liệu ban đầu *không* luôn cho giá trị nhỏ nhất trong bảng\n(seed 1: 439 643 508 so với 439 638 394 của khởi tạo ngẫu nhiên; chỉ seed 1015 là bằng giá trị tốt nhất) nhưng luôn nằm trong ≈ 0,001 % của nó,\nnên coi như tối ưu toàn cục *theo thực nghiệm* (không chứng minh được);",
+  "ly_do": "[LOGIC] Mục 28. Bảng (bài cực tiểu hoá): 'từ dữ liệu' vs giá trị nhỏ nhất của hàng — seed 1: 439 643 508 > 439 638 394 (lệch 5 114 = 0,0012 %); seed 5: 2 467 787 547 > 2 467 786 550 (từ đĩa tròn); seed 10: 3 175 201 271 > 3 175 197 033 (từ đĩa tròn); seed 1015: 10 372 127 816 = nhỏ nhất. Mâu thuẫn với 'tối ưu toàn cục trong mọi thực nghiệm' (và với câu 'Frank–Wolfe chỉ bảo đảm cực tiểu địa phương' ngay trên bảng)."
+ },
+ {
+  "bai": "case-2609/03-de-xuat-cai-tien",
+  "old": "| Tối ưu hình dạng | ~0,001 % | đã chạm tối ưu toàn cục |",
+  "new": "| Tối ưu hình dạng | ~0,001 % | gần như chạm tối ưu toàn cục (theo thực nghiệm §2.5, chưa chứng minh) |",
+  "ly_do": "[LOGIC] Đồng bộ với §2.5 đã sửa: Frank–Wolfe cho hàm lõm chỉ bảo đảm cực tiểu địa phương; bảng đa khởi tạo cho thấy lệch tới 0,0012 %, nên 'đã chạm' hạ thành 'gần như chạm'."
+ }
+]

@@ -77,12 +77,12 @@ TH.dangKy({
   tomTat: [
     "**Phát hiện trung tâm:** ba đề thi thật (2605: +10,27 %; 2607: +7,17 %; 2609: +6,67 %, trong đó 0 % từ tìm kiếm) cùng cho một kết luận — công sức đổ vào **hiểu bài toán** (đọc grader, mô hình hoá, định giá tài nguyên, đọc hàm mục tiêu) sinh lợi cao hơn công sức đổ vào **tìm kiếm mạnh hơn**, thường gấp nhiều lần.",
     "Năng suất = % điểm thu được / giờ bỏ ra. Ablation đề 2607: đọc mã grader **6,2 %/giờ**, mô hình hoá/định giá 1,15, tìm kiếm (beam) 0,81, tinh chỉnh tham số **0,11** — chênh nhau **56 lần** giữa đầu và cuối bảng.",
-    "**EV = P(thành công) × Δ / giờ** — ước lượng được *trước khi làm*. Việc “hỏi 6 câu về cấu trúc hàm mục tiêu” có EV 9,0 dù P chỉ 0,15: cược rẻ (tối đa mất 30 phút), trần lỗ rõ, phần thưởng có thể là cả bài toán.",
+    "**EV = P(thành công) × Δ / giờ** — ước lượng được *trước khi làm*. Việc “hỏi 6 câu về cấu trúc hàm mục tiêu” có EV 9,0 **với giả định minh hoạ Δ = 30 %** dù P chỉ 0,15: cược rẻ (tối đa mất 30 phút), trần lỗ rõ, phần thưởng có thể là cả bài toán. Số đo thật của 2609 chỉ ≈ +6,67 % (EV ≈ 2,0 %/giờ, thấp hơn đọc mã grader 3,0), nên thứ hạng thực tế đổi theo điểm xuất phát — điều cần nhớ là quy tắc dùng EV.",
     "Dựng bộ chấm và tính cận trên không có EV vì chúng là **điều kiện cần** (không có bộ chấm thì không đo được gì; không có cận trên thì không biết lúc nào dừng) — làm trước khi bắt tay vào cải tiến.",
     "Đường cong lợi ích giảm dần có ba đoạn: ① đọc đề, mô hình hoá (3–10 %/giờ) → ② local search, định giá, beam (1–3) → ③ tinh chỉnh (0,1–0,5). Sang đoạn ③ khi hai thay đổi liên tiếp nhỏ hơn nhiễu đo, hoặc đã trên 95 % cận trên, hoặc bắt đầu tinh chỉnh tham số — lúc đó nên kiểm độ bền, giữ phương án dự phòng và **nộp**.",
     "Ba câu hỏi trước mọi việc hơn một giờ: nếu thành công thì đáng bao nhiêu **phần trăm** điểm? xác suất bao nhiêu (đã thành công ở đề tương tự chưa)? **bao lâu** thì biết nó thất bại (điểm dừng)? Không trả lời được bằng số thì không làm.",
     "Kết quả âm tính là dữ liệu đắt giá: 2-opt/Or-opt làm quãng đường giảm 20–30 % nhưng **điểm giảm 6–10 %**. Một cải thiện ở đại lượng thay thế có thể đi ngược mục tiêu thật — luôn đo bằng điểm số, và ghi kết quả âm tính vào nhật ký.",
-    "Đóng băng bản tốt nhất đã kiểm chứng ở T−45 phút và nộp **bản đã kiểm chứng**, không phải bản mới nhất. Ngân sách mẫu 4 giờ: cỡ 35 % cho hiểu bài toán, 37 % cải tiến có đo, 28 % kiểm chứng và chốt an toàn."
+    "50 phút cuối của đề 240 phút (khớp lịch tuyệt đối ở §7): chẩn đoán T−50…T−35, ablation/tinh chỉnh T−35…T−20, **đóng băng** bản tốt nhất đã kiểm chứng ở T−20, kiểm định, nộp ở T−5 — nộp **bản đã kiểm chứng**, không phải bản mới nhất. Ngân sách mẫu 4 giờ: cỡ 35 % (85 phút) cho hiểu bài toán, 37,5 % (90 phút) cải tiến có đo, 27 % (65 phút) kiểm chứng và chốt an toàn."
   ],
 
   trac: [
@@ -108,7 +108,7 @@ TH.dangKy({
       id: "q3", loai: "so", doKho: 2, ref: "§1", donVi: "(lần)",
       hoi: "Cùng đề 2607: năng suất đọc mã grader là 6,16 %/giờ; ba thành phần tinh chỉnh (multi-start λ −0,22 %, thưởng ρ −0,10 %, số hạng mật độ σ −0,01 %) tốn 3 giờ. Năng suất đọc mã grader gấp bao nhiêu lần năng suất tinh chỉnh tham số?",
       dapAn: 56, saiSo: 1,
-      giaiThich: "Tinh chỉnh: (0,22 + 0,10 + 0,01) % / 3 giờ = 0,33 / 3 = 0,11 %/giờ. Tỉ số 6,16 / 0,11 = 56. Nửa giờ đọc mã grader thu 3,08 %, nhiều hơn gấp chín lần ba giờ tinh chỉnh (0,33 %)."
+      giaiThich: "Tinh chỉnh: (0,22 + 0,10 + 0,01) % / 3 giờ = 0,33 / 3 = 0,11 %/giờ. Tỉ số 6,16 / 0,11 = 56. Nửa giờ đọc mã grader thu 3,08 %, gấp hơn chín lần ba giờ tinh chỉnh (0,33 %) về tổng; còn tính theo năng suất mỗi giờ thì chênh 56 lần."
     },
     {
       id: "q4", loai: "so", doKho: 2, ref: "§2", donVi: "(%/giờ)",
@@ -118,15 +118,15 @@ TH.dangKy({
     },
     {
       id: "q5", loai: "mot", doKho: 2, ref: "§2.1",
-      hoi: "Vì sao việc “hỏi 6 câu về cấu trúc hàm mục tiêu” đứng đầu bảng EV (9,0 %/giờ) dù xác suất thành công chỉ 0,15?",
+      hoi: "Vì sao, với các giả định của bảng §2, việc “hỏi 6 câu về cấu trúc hàm mục tiêu” đứng đầu bảng EV (9,0 %/giờ) dù xác suất thành công chỉ 0,15?",
       chon: [
         "Vì mọi đề thi đều có cấu trúc hàm mục tiêu khai thác được",
-        "Vì Δ nếu trúng rất lớn (cỡ 30 %, có khi là cả bài toán), trong khi chi phí chỉ nửa giờ và trần lỗ rõ ràng",
+        "Vì Δ nếu trúng được giả định rất lớn (30 %, một giả định minh hoạ; có khi là cả bài toán), trong khi chi phí chỉ nửa giờ và trần lỗ rõ ràng",
         "Vì xác suất 0,15 là xác suất cao nhất trong cả bảng",
         "Vì EV chỉ phụ thuộc vào Δ, không phụ thuộc xác suất hay giờ"
       ],
       dung: 1,
-      giaiThich: "EV = 0,15 × 30 % / 0,5 giờ = 9,0. Đa số đề không có cấu trúc khai thác được nên P thấp, nhưng khi có thì phần thưởng là cả bài toán (đề 2609: +6,67 % và gỡ luôn 17 % test vượt giờ). Đó là loại “cược rẻ, trần lỗ rõ ràng”: tối đa mất 30 phút, được nhiều nhất là mọi thứ — luôn đáng đặt. EV phụ thuộc cả ba đại lượng P, Δ và giờ."
+      giaiThich: "EV = 0,15 × 30 % / 0,5 giờ = 9,0. Đa số đề không có cấu trúc khai thác được nên P thấp, nhưng khi có thì phần thưởng là cả bài toán (đề 2609: +6,67 % và gỡ luôn 17 % test vượt giờ). Đó là loại “cược rẻ, trần lỗ rõ ràng”: tối đa mất 30 phút, được nhiều nhất là mọi thứ — luôn đáng đặt. EV phụ thuộc cả ba đại lượng P, Δ và giờ. Nhưng Δ = 30 % là giả định minh hoạ: số đo thật của 2609 chỉ ≈ +6,67 %, tức EV = 0,15 × 6,67 / 0,5 ≈ 2,0 %/giờ, thấp hơn đọc mã grader (3,0). Vì vậy “đứng đầu” chỉ đúng với các giả định ở bảng; điều cần nhớ là quy tắc dùng EV."
     },
     {
       id: "q6", loai: "mot", doKho: 2, ref: "§3.1",
@@ -172,7 +172,7 @@ TH.dangKy({
       id: "l1", doKho: 2, ref: "Câu 1",
       hoi: "Với bảng EV ở §2, hãy xếp hạng các việc theo EV. Nếu bạn chỉ có 2 giờ, bạn làm những việc nào, theo thứ tự nào? Giải thích cách bạn xử lý hai việc không có EV (dựng bộ chấm, tính cận trên).",
       goiY: ["Tính EV = P × Δ / giờ cho từng dòng có đủ ba số.", "Hai việc không có EV được gọi là gì trong bài? Chúng có thể bỏ không?"],
-      mau: "EV từ cao xuống thấp: hỏi 6 câu về hàm mục tiêu **9,0** > đọc kỹ mã grader **3,0** > định giá tài nguyên bằng giá mờ **1,0** > thêm local search **0,7** > đổi sang metaheuristic mạnh hơn **0,42** > tinh chỉnh tham số **0,10**. Hai việc còn lại — dựng bộ chấm (1,0 giờ) và tính cận trên (0,5 giờ) — không có EV vì chúng là **điều kiện cần**, không trực tiếp sinh điểm: không có bộ chấm thì mọi việc khác không đo được, không có cận trên thì không biết lúc nào dừng.\n\nVới 2 giờ: bộ chấm (1,0 giờ) là không thể bỏ nếu muốn cải tiến có đo; phần còn lại dành cho hai việc EV cao nhất, vừa vặn 0,5 + 0,5 giờ: **hỏi 6 câu về hàm mục tiêu** và **đọc mã grader** — tổng 2 giờ (đúng thứ tự §7: đọc grader → 6 câu hỏi → bộ chấm). Cận trên (0,5 giờ) phải hoãn: với 2 giờ chưa tới lúc cần biết “đã gần trần chưa”; nếu muốn giữ nó thì phải bỏ một trong hai việc đầu, và nên bỏ việc có EV thấp hơn (đọc grader). Từ “định giá” trở xuống không còn chỗ.",
+      mau: "EV từ cao xuống thấp: hỏi 6 câu về hàm mục tiêu **9,0** > đọc kỹ mã grader **3,0** > định giá tài nguyên bằng giá mờ **1,0** > thêm local search **0,7** > đổi sang metaheuristic mạnh hơn **0,42** > tinh chỉnh tham số **0,10** (thứ hạng này theo các giả định của bảng — Δ = 30 % của dòng “hỏi 6 câu” là giả định minh hoạ; với Δ = 6,67 % đo ở 2609 thì EV của dòng đó chỉ ≈ 2,0, xuống sau đọc mã grader). Hai việc còn lại — dựng bộ chấm (1,0 giờ) và tính cận trên (0,5 giờ) — không có EV vì chúng là **điều kiện cần**, không trực tiếp sinh điểm: không có bộ chấm thì mọi việc khác không đo được, không có cận trên thì không biết lúc nào dừng.\n\nVới 2 giờ: bộ chấm (1,0 giờ) là không thể bỏ nếu muốn cải tiến có đo; phần còn lại dành cho hai việc EV cao nhất, vừa vặn 0,5 + 0,5 giờ: **hỏi 6 câu về hàm mục tiêu** và **đọc mã grader** — tổng 2 giờ (đúng thứ tự §7: đọc grader → 6 câu hỏi → bộ chấm). Cận trên (0,5 giờ) phải hoãn: với 2 giờ chưa tới lúc cần biết “đã gần trần chưa”; nếu muốn giữ nó thì phải bỏ một trong hai việc đầu, và nên bỏ việc có EV thấp hơn (đọc grader). Từ “định giá” trở xuống không còn chỗ.",
       tieuChi: ["Xếp đúng thứ tự EV: 9,0 > 3,0 > 1,0 > 0,7 > 0,42 > 0,10", "Nhận ra bộ chấm và cận trên là điều kiện cần (không có EV) và đưa bộ chấm vào kế hoạch", "Kế hoạch tổng ≤ 2 giờ, ưu tiên việc EV cao, bỏ việc EV thấp, và nêu rõ lý do hoãn hay giữ cận trên"]
     },
     {

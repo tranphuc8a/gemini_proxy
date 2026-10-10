@@ -83,7 +83,7 @@
         var dai = xa ? (r() < 0.5 ? 1 : 2) : (r() < 0.5 ? 3 : 4);
         if (ket && !xa && !rong) dai = 4;                          /* kẹt ở nơi đã sát cận: “đỉnh thật” */
         if (!ket && xa && !rong) dai = 1;                          /* chưa kẹt mà còn cách cận rất xa */
-        var gap = dai === 1 ? 0.22 + r() * 0.2 : dai === 2 ? 0.07 + r() * 0.11 : dai === 3 ? 0.025 + r() * 0.02 : 0.002 + r() * 0.014;
+        var gap = dai === 1 ? 0.22 + r() * 0.2 : dai === 2 ? 0.07 + r() * 0.07 : dai === 3 ? 0.025 + r() * 0.02 : 0.002 + r() * 0.014;
         var tot = Math.round(U * (1 - gap));
         var s = rong ? 0.07 + r() * 0.09 : 0.004 + r() * 0.031;
         var thap = Math.round(tot * (1 - s)), N = r.khoang(4, 8), res = [tot, thap];
@@ -107,7 +107,7 @@
         var L = k.curve.length, mx = Math.max.apply(null, k.res), mn = Math.min.apply(null, k.res);
         var c1 = L >= 11 && k.curve[L - 1] === k.curve[L - 11] ? 1 : 0;
         var c2 = (mx - mn) / mx > 0.05 ? 1 : 0, g = (k.U - mx) / k.U;
-        var dai = g > 0.2 ? 1 : g > 0.05 ? 2 : g > 0.02 ? 3 : 4;
+        var dai = g > 0.15 ? 1 : g > 0.05 ? 2 : g > 0.02 ? 3 : 4;
         return [c1, c2, g > 0.05 ? 1 : 0, dai];
       });
     },
@@ -126,10 +126,10 @@
       "Cực trị cục bộ là tính chất của **cặp (bài toán, bộ toán tử)**, không phải của riêng bài toán. Vì vậy “thêm một toán tử” là cách thoát bẫy rẻ nhất — thử trước mọi metaheuristic ở Phần 4.",
       "Ba chỉ dấu “đang kẹt” đo được mà không cần biết đỉnh núi: đường cong hội tụ đi ngang ≥ 10 000 nước; nhiều điểm xuất phát cho kết quả chênh > 5 %; còn cách cận trên > 5 %.",
       "Bốn chiến lược thoát bẫy: chấp nhận nghiệm xấu (SA) · cấm quay lại (Tabu) · đổi lân cận (VND/VNS) · phá và xây lại (LNS/ALNS). ILS là khung bao trùm đơn giản nhất; thứ tự thử: ILS → SA hoặc LNS → ALNS/Tabu/lai ghép.",
-      "Đo trên TSP n = 200: 20 lần 2-opt từ điểm ngẫu nhiên cho 18 980 … 24 240 (phân tán 1,277), còn nghiệm khởi tạo tốt + 2-opt cho 14 656 — **tốt hơn cả 20 lần ngẫu nhiên**. Điểm xuất phát quan trọng hơn số lần thử.",
+      "Đo trên TSP n = 200: 20 lần 2-opt từ điểm ngẫu nhiên cho 18 980 … 24 240 (phân tán 1,277), còn nghiệm khởi tạo tốt + 2-opt cho 14 656 — **tốt hơn trung bình các lần ngẫu nhiên** (số đo gốc, mã không còn trong repo: tốt hơn cả 20 lần; dựng lại độc lập cho độ phân tán nhỏ hơn, ≈ 1,06–1,11 ở n = 200). Điểm xuất phát quan trọng hơn số lần thử (khi n đủ lớn).",
       "Phân tán giảm khi n tăng (n = 600: 1,158) nhờ tự trung bình hoá: với bài rất lớn, đa khởi động kém hiệu quả — nên đầu tư một lần chạy sâu hơn là nhiều lần chạy nông.",
       "Đếm số cực trị cục bộ phân biệt qua nhiều lần leo đồi: ~1 000 giá trị → bề mặt rất gồ ghề; ~10 giá trị → vài lưu vực lớn, đa khởi động là đủ. Dùng độ dài làm dấu vân tay thì con số đếm được chỉ là **chặn dưới**.",
-      "Double-bridge là nước 4-opt mà 2-opt và Or-opt không hoàn tác được. Cường độ nhiễu loạn: bắt đầu nhẹ, tăng dần khi 100 lần liên tiếp không cải thiện; quá mạnh thì thành khởi động lại."
+      "Double-bridge là nước 4-opt (đổi 4 cạnh) mà một nước 2-opt hay Or-opt đơn lẻ không hoàn tác được, nên cú đá không bị xoá ngay và thường đưa leo đồi sang lưu vực khác — không có gì bảo đảm tuyệt đối. Cường độ nhiễu loạn: bắt đầu nhẹ, tăng dần khi 100 lần liên tiếp không cải thiện; quá mạnh thì thành khởi động lại."
     ],
 
     trac: [
@@ -161,7 +161,7 @@
           "Bỏ qua heuristic xây dựng, vì 2-opt luôn tự tìm được nghiệm tốt dù khởi tạo thế nào"
         ],
         dung: 0,
-        giaiThich: "Điểm xuất phát quan trọng hơn số lần thử: một khởi tạo tốt đã thắng cả 20 lần ngẫu nhiên (14 656 so với 18 980, tức tệ hơn 29,5 %). Cần nhớ điều kiện: kết luận này đúng vì láng giềng gần nhất ở đây thật sự tốt — nếu chưa có heuristic xây dựng tử tế thì phải quay về Phần 2 trước. Ba phương án kia đều bỏ qua bằng chứng đo được."
+        giaiThich: "Điểm xuất phát quan trọng hơn số lần thử: trong số đo gốc, một khởi tạo tốt thắng cả 20 lần ngẫu nhiên (14 656 so với 18 980, tức tệ hơn 29,5 %); dựng lại độc lập thì nó thắng trung bình các lần ngẫu nhiên và, khi n lớn, thường thắng cả lần tốt nhất, nhưng khoảng cách nhỏ hơn nhiều. Cần nhớ điều kiện: kết luận này đúng vì láng giềng gần nhất ở đây thật sự tốt — nếu chưa có heuristic xây dựng tử tế thì phải quay về Phần 2 trước. Ba phương án kia đều bỏ qua bằng chứng đo được."
       },
       {
         id: "q4", loai: "nhieu", doKho: 2, ref: "§3",
@@ -178,15 +178,15 @@
       },
       {
         id: "q5", loai: "mot", doKho: 2, ref: "§3.3",
-        hoi: "Bài toán cực đại hoá có cận trên 5 000, nghiệm tốt nhất hiện có là 4 300. Theo bảng “khoảng cách tới cận trên” ở §3.3, kết luận nào đúng?",
+        hoi: "Bài toán cực đại hoá có cận trên 5 000, nghiệm tốt nhất hiện có là 4 400. Theo bảng “khoảng cách tới cận trên” ở §3.3, kết luận nào đúng?",
         chon: [
-          "Cách cận trên > 20 %: mô hình hoặc heuristic xây dựng có vấn đề",
+          "Cách cận trên > 15 %: mô hình hoặc heuristic xây dựng có vấn đề",
           "Cách cận trên 2–5 %: chỉ cần tinh chỉnh tham số, thêm toán tử",
-          "Cách cận trên khoảng 14 % (dải 5–20 %): cần metaheuristic",
-          "Cách cận trên < 2 %: gần hết dư địa, cân nhắc dừng"
+          "Cách cận trên khoảng 12 % (dải 5–15 %): cần metaheuristic",
+          "Cách cận trên < 2 %: gần hết độ hở, cân nhắc dừng"
         ],
         dung: 2,
-        giaiThich: "Khoảng cách là (5000 − 4300) / 5000 = 14 % (tính theo nghiệm: 700/4300 ≈ 16 %, vẫn cùng dải), nằm trong 5–20 % nên cần metaheuristic. Dải > 20 % chỉ vấn đề của mô hình hay heuristic xây dựng; 2–5 % là tinh chỉnh; < 2 % là gần hết dư địa — không dải nào khớp với 14 %."
+        giaiThich: "Khoảng cách là (5000 − 4400) / 5000 = 12 % (tính theo nghiệm: 600/4400 ≈ 13,6 %, vẫn cùng dải), nằm trong 5–15 % nên cần metaheuristic. Dải > 15 % chỉ vấn đề của mô hình hay heuristic xây dựng (Bài 18 §6 tách: > 30 % mô hình/cận, 15–30 % heuristic xây dựng yếu); 2–5 % là tinh chỉnh; < 2 % là gần hết độ hở — không dải nào khớp với 12 %."
       },
       {
         id: "q6", loai: "mot", doKho: 2, ref: "§4.3",
@@ -217,13 +217,13 @@
         id: "q8", loai: "mot", doKho: 2, ref: "§7.1",
         hoi: "Vì sao double-bridge được chọn làm nhiễu loạn kinh điển cho TSP, thay vì một nước 2-opt ngẫu nhiên?",
         chon: [
-          "Vì nó là nước 4-opt mà 2-opt và Or-opt không hoàn tác được, nên chắc chắn thoát khỏi lưu vực hiện tại",
+          "Vì nó là nước 4-opt mà một nước 2-opt hay Or-opt đơn lẻ không hoàn tác được, nên cú đá không bị xoá ngay và thường đưa leo đồi sang lưu vực khác",
           "Vì nó luôn cho nghiệm tốt hơn nghiệm hiện tại",
           "Vì nó rẻ hơn mọi nước đi khác",
           "Vì nó giữ nguyên độ dài chu trình nên không cần đánh giá lại"
         ],
         dung: 0,
-        giaiThich: "Nếu nhiễu loạn chỉ là một nước 2-opt, bước leo đồi kế tiếp hoàn tác ngay và rơi về đúng cực trị cũ (nhiễu quá nhẹ). Double-bridge là nước 4-opt mà 2-opt hay Or-opt không thể đảo ngược, nên đảm bảo ra khỏi lưu vực. Nó không hề cho nghiệm tốt hơn (còn thường làm tệ đi) và cũng làm đổi độ dài."
+        giaiThich: "Nếu nhiễu loạn chỉ là một nước 2-opt, bước leo đồi kế tiếp có thể hoàn tác ngay (đảo đoạn chính là một nước 2-opt) và rơi về đúng cực trị cũ (nhiễu quá nhẹ). Double-bridge là nước 4-opt (đổi 4 cạnh) mà một nước 2-opt hay Or-opt đơn lẻ không thể đảo ngược, nên cú đá không bị xoá ngay và thường đưa leo đồi sang lưu vực khác — không có gì bảo đảm tuyệt đối, vì leo đồi vẫn có thể rơi về cực trị cũ sau vài nước. Nó không hề cho nghiệm tốt hơn (còn thường làm tệ đi) và cũng làm đổi độ dài."
       },
       {
         id: "q9", loai: "mot", doKho: 3, ref: "§6.3",
@@ -256,15 +256,15 @@
         id: "l1", doKho: 2, ref: "Bài tập 12.2, §6.3",
         hoi: "Bạn cài thí nghiệm “đếm cực trị cục bộ phân biệt” (§6.3): chạy leo đồi 2-opt từ 1 000 điểm xuất phát ngẫu nhiên và đếm số độ dài khác nhau, cho TSP n = 50 rồi n = 200. Hãy dự đoán hai con số, nói chúng cho biết gì về chiến lược (nhiều lần nông hay một lần sâu), và nêu một hạn chế của phép đếm.",
         goiY: ["Nghĩ xem khi n tăng thì lưu vực hấp dẫn của mỗi cực trị lớn hơn hay nhỏ đi.", "Độ dài có phải dấu vân tay hoàn hảo của một cực trị không?"],
-        mau: "- **n = 50:** cỡ vài trăm giá trị khác nhau trong 1 000 lần (đáp án của khoá: khoảng 200–400). Nhiều lần chạy rơi vào cùng một lưu vực, tức có những lưu vực lớn ⇒ đa khởi động còn giá trị.\n- **n = 200:** gần 1 000 giá trị khác nhau — gần như mỗi lần một cực trị mới. Bề mặt cực kỳ gồ ghề, mỗi lưu vực rất nhỏ, thêm lần khởi động ngẫu nhiên hầu như chỉ ra cực trị mới ⇒ nên đầu tư một lần chạy sâu (SA/ALNS) thay vì nhiều lần chạy nông.\n- **Hạn chế:** độ dài chỉ là “dấu vân tay” thô — hai cực trị khác nhau có thể tình cờ cùng độ dài (hay gặp khi khoảng cách nguyên và n nhỏ), nên số đếm được là **chặn dưới**. Muốn chính xác hơn thì băm cả dãy đỉnh.\n\nPhép đo này đáng làm **một lần cho mỗi bài toán mới** vì nó trả lời thẳng câu hỏi chiến lược, mà chỉ tốn vài chục dòng code.",
+        mau: "- **n = 50:** cỡ vài trăm giá trị khác nhau trong 1 000 lần (đáp án của khoá: khoảng 200–400 — số đo gốc, mã không còn trong repo; dựng lại độc lập thì con số đếm theo độ dài phụ thuộc thang toạ độ, ≈ 450 với toạ độ 0–999, còn băm cả dãy đỉnh cho ≈ 900–1 000). Nhiều lần chạy rơi vào cùng một lưu vực, tức có những lưu vực lớn ⇒ đa khởi động còn giá trị.\n- **n = 200:** gần 1 000 giá trị khác nhau — gần như mỗi lần một cực trị mới. Bề mặt cực kỳ gồ ghề, mỗi lưu vực rất nhỏ, thêm lần khởi động ngẫu nhiên hầu như chỉ ra cực trị mới ⇒ nên đầu tư một lần chạy sâu (SA/ALNS) thay vì nhiều lần chạy nông.\n- **Hạn chế:** độ dài chỉ là “dấu vân tay” thô — hai cực trị khác nhau có thể tình cờ cùng độ dài (hay gặp khi khoảng cách nguyên và n nhỏ), nên số đếm được là **chặn dưới**. Muốn chính xác hơn thì băm cả dãy đỉnh.\n\nPhép đo này đáng làm **một lần cho mỗi bài toán mới** vì nó trả lời thẳng câu hỏi chiến lược, mà chỉ tốn vài chục dòng code.",
         tieuChi: ["Dự đoán số giá trị tăng theo n: vài trăm với n = 50, gần 1 000 với n = 200", "Rút ra: ít giá trị → vài lưu vực lớn, đa khởi động hiệu quả; nhiều giá trị → gồ ghề, nên chạy sâu", "Nêu hạn chế: đếm theo độ dài chỉ là chặn dưới (hai cực trị có thể trùng độ dài)", "Đề xuất cách chính xác hơn: băm cả dãy đỉnh"]
       },
       {
         id: "l2", doKho: 2, ref: "Bài tập 12.3, §7",
         hoi: "Viết giả mã một thuật toán ILS đơn giản cho TSP dùng `doubleBridge` (như Bài tập 12.3). Giải thích vì sao nhiễu loạn dùng double-bridge thay vì một nước 2-opt ngẫu nhiên, và quy tắc điều chỉnh cường độ nhiễu.",
         goiY: ["Hỏi: leo đồi 2-opt ngay sau một nước 2-opt ngẫu nhiên sẽ làm gì?", "Nhiễu quá nhẹ và quá mạnh, mỗi kiểu hỏng thế nào?"],
-        mau: "```\nx = khởi tạo tốt + 2-opt\nbest = x\nlặp 1000 lần:\n    y = doubleBridge(x)\n    y = 2-opt(y)\n    nếu f(y) tốt hơn f(x): x = y\n```\n\n- **Vì sao double-bridge:** nó là nước **4-opt** mà 2-opt và Or-opt không hoàn tác được — leo đồi sau cú đá không thể quay lại đúng cực trị cũ, nên chắc chắn rời lưu vực. Nếu nhiễu chỉ là một nước 2-opt, bước 2-opt kế tiếp đảo ngược ngay và ta đứng yên.\n- **Cường độ:** quá nhẹ (1 nước swap) thì rơi về chỗ cũ; vừa (double-bridge, phá 10–30 %) thì thoát lưu vực mà vẫn giữ cấu trúc tốt; quá mạnh thì mất hết thông tin, thành khởi động lại. Bắt đầu nhẹ; nếu 100 lần liên tiếp không cải thiện thì **tăng dần cường độ** (ý tưởng “shaking” của VNS).\n- **Kết quả kỳ vọng** (đáp án của khoá, n = 200): từ 14 656 (2-opt một lần) xuống khoảng 13 800–14 000, tức giảm khoảng 5 %.\n- Với ràng buộc cứng, nhiễu loạn phải giữ nghiệm hợp lệ (hoặc có bước sửa chữa).",
-        tieuChi: ["Giả mã có đủ: nhiễu loạn → leo đồi → nhận nếu tốt hơn", "Giải thích double-bridge là 4-opt mà 2-opt/Or-opt không hoàn tác được", "Nêu cường độ: nhẹ thì rơi về cũ, mạnh thì thành khởi động lại", "Nêu quy tắc: bắt đầu nhẹ, tăng dần khi 100 lần liên tiếp không cải thiện"]
+        mau: "```\nx = khởi tạo tốt + 2-opt\nbest = x\nlặp 1000 lần:\n    y = doubleBridge(x)\n    y = 2-opt(y)\n    nếu f(y) tốt hơn f(x): x = y\n```\n\n- **Vì sao double-bridge:** nó là nước **4-opt** (đổi 4 cạnh) mà một nước 2-opt hay Or-opt đơn lẻ không hoàn tác được — cú đá không bị xoá ngay, nên thường đưa leo đồi sang lưu vực khác (không bảo đảm tuyệt đối: leo đồi vẫn có thể rơi về cực trị cũ sau vài nước). Nếu nhiễu chỉ là một nước 2-opt, bước 2-opt kế tiếp có thể đảo ngược ngay và ta đứng yên.\n- **Cường độ:** quá nhẹ (1 nước swap) thì rơi về chỗ cũ; vừa (double-bridge, phá 10–30 %) thì thoát lưu vực mà vẫn giữ cấu trúc tốt; quá mạnh thì mất hết thông tin, thành khởi động lại. Bắt đầu nhẹ; nếu 100 lần liên tiếp không cải thiện thì **tăng dần cường độ** (ý tưởng “shaking” của VNS).\n- **Kết quả kỳ vọng** (đáp án của khoá, n = 200): từ 14 656 (2-opt một lần) xuống khoảng 13 800–14 000, tức giảm khoảng 5 %.\n- Với ràng buộc cứng, nhiễu loạn phải giữ nghiệm hợp lệ (hoặc có bước sửa chữa).",
+        tieuChi: ["Giả mã có đủ: nhiễu loạn → leo đồi → nhận nếu tốt hơn", "Giải thích double-bridge là 4-opt mà một nước 2-opt/Or-opt đơn lẻ không hoàn tác được (thường, không phải luôn luôn, đưa sang lưu vực khác)", "Nêu cường độ: nhẹ thì rơi về cũ, mạnh thì thành khởi động lại", "Nêu quy tắc: bắt đầu nhẹ, tăng dần khi 100 lần liên tiếp không cải thiện"]
       },
       {
         id: "l3", doKho: 3, ref: "Bài tập 12.4",
@@ -502,7 +502,7 @@ int main() {
           "- `c₁` = 1 nếu **đường cong đi ngang**: `L ≥ 11` và `f_L = f_{L−10}` (10 000 nước liên tiếp không cải thiện), ngược lại 0;\n" +
           "- `c₂` = 1 nếu **kết quả phân tán**: `(max r − min r) / max r > 0,05`;\n" +
           "- `c₃` = 1 nếu **còn cách cận trên xa**: `g = (U − max r) / U > 0,05`;\n" +
-          "- `d` = dải của `g` theo bảng §3.3: 1 nếu `g > 0,20`; 2 nếu `0,05 < g ≤ 0,20`; 3 nếu `0,02 < g ≤ 0,05`; 4 nếu `g ≤ 0,02`.\n\n" +
+          "- `d` = dải của `g` theo bảng §3.3: 1 nếu `g > 0,15`; 2 nếu `0,05 < g ≤ 0,15`; 3 nếu `0,02 < g ≤ 0,05`; 4 nếu `g ≤ 0,02`.\n\n" +
           "**Mức đạt:** in đúng cả bốn số của mọi kịch bản trên cả 10 bộ dữ liệu.\n\n" +
           "**Câu hỏi suy ngẫm:** trong mỗi bộ có đủ tám tổ hợp của ba cờ. Hãy tìm kịch bản có `c₁ = 1` nhưng `d = 4`, và kịch bản có `c₁ = 0` nhưng `d = 1`. Mỗi trường hợp nói gì? Vì sao một chỉ dấu đứng riêng không đủ để kết luận “tôi đang kẹt trên gò đất”?",
         vanDe: "b12-chan-doan",
@@ -548,7 +548,7 @@ for (let s = 0; s < S; s++) {
   const c2 = (mx - mn) / mx > 0.05 ? 1 : 0;                      // phân tán giữa các điểm xuất phát
   const g = (U - mx) / U;                                        // khoảng cách tới cận trên
   const c3 = g > 0.05 ? 1 : 0;
-  const dai = g > 0.20 ? 1 : g > 0.05 ? 2 : g > 0.02 ? 3 : 4;
+  const dai = g > 0.15 ? 1 : g > 0.05 ? 2 : g > 0.02 ? 3 : 4;
   print(c1, c2, c3, dai);
 }
 `
@@ -556,7 +556,7 @@ for (let s = 0; s < S; s++) {
         goiY: [
           "Đường cong lấy mẫu mỗi 1 000 nước nên 10 000 nước là **10 khoảng**: so `f[L−1]` với `f[L−11]` (đếm từ 0), và nhớ điều kiện `L ≥ 11`.",
           "Cả hai tỉ lệ đều chia cho giá trị lớn: phân tán chia cho `max r`; khoảng cách tới cận chia cho `U`. Đừng chia cho `min r`.",
-          "Dải: kiểm theo thứ tự từ lớn đến nhỏ (`g > 0,20` rồi `g > 0,05` …) để mỗi `g` rơi vào đúng một dải."
+          "Dải: kiểm theo thứ tự từ lớn đến nhỏ (`g > 0,15` rồi `g > 0,05` …) để mỗi `g` rơi vào đúng một dải."
         ]
       }
     ]

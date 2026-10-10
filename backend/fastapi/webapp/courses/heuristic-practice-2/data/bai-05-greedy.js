@@ -6,7 +6,7 @@ TH.dangKy({
     "Mọi greedy có ngân sách đều là **một khung cố định + một chỗ cắm**: hàm chỉ số xếp hạng ứng viên. Nghệ thuật nằm ở việc chọn chỉ số, không ở việc viết thêm code.",
     "Bốn họ chỉ số: lợi ích `p`, chi phí `−c`, **tỉ số `p/c`**, tiếc nuối (regret). Hai họ đầu là hai cực (chỉ tử số / chỉ mẫu số); tỉ số hợp nhất cả hai.",
     "Định lý Dantzig: greedy theo tỉ số **tối ưu** cho cái túi **phân số** (chứng minh bằng đổi chỗ một lượng ε). Với 0/1 chứng minh gãy vì không cắt món được.",
-    "Phản ví dụ nhỏ nhất: X(7,6), Y(5,5), Z(5,5), W=10 → greedy 7, tối ưu 10 (sai 30 %). Tỉ số đo **hiệu quả**, không đo **độ vừa vặn** với ngân sách.",
+    "Một phản ví dụ nhỏ: X(7,6), Y(5,5), Z(5,5), W=10 → greedy 7, tối ưu 10 (sai 30 %). Tỉ số đo **hiệu quả**, không đo **độ vừa vặn** với ngân sách.",
     "Chỉ số tốt là chỉ số **phân biệt được** ứng viên. Nếu σ/x̄ < 0,05 thì chỉ số đang thoái hoá (ví dụ subset-sum p = w làm mọi tỉ số bằng 1).",
     "Ở P1 chi phí c = d(vị trí hiện tại, j) + s phụ thuộc trạng thái ⇒ phải **tính lại chỉ số mỗi bước**. Quên điều này là bug im lặng: vẫn ra nghiệm hợp lệ nhưng kém.",
     "Một ví dụ nhỏ giải thích được **cơ chế**, không kết luận được **hiệu năng** — muốn kết luận phải đo trên nhiều test (Bài 4).",
@@ -120,8 +120,8 @@ TH.dangKy({
     {
       id: "l1", doKho: 2, ref: "Bài tập 5.2",
       hoi: "Hãy dựng một bộ dữ liệu cái túi 0/1 chỉ với 3 món mà greedy theo tỉ số kém tối ưu **hơn 40 %**. Nêu rõ p, w, W và tính kết quả của cả hai.",
-      goiY: ["Dùng cơ chế ở §4.3: món có tỉ số cao nhất nhưng kích thước không ăn khớp với sức chứa.", "Muốn sai nhiều hơn 30 %, hãy để món “tỉ số cao” chiếm hơn một nửa túi một chút."],
-      mau: "Chọn W = 100, X (p=52, w=51), Y (p=50, w=50), Z (p=50, w=50).\n\n- Tỉ số: X = 1,0196; Y = Z = 1,0. Greedy lấy X trước (51 kg), còn 49 kg — Y và Z đều cần 50 nên không vừa. Tổng **52**.\n- Tối ưu: bỏ X, lấy Y + Z = 100 kg vừa khít, tổng **100**.\n- Greedy kém tối ưu (100 − 52) / 100 = **48 %** > 40 %.\n\nCơ chế: X chỉ hơn Y, Z đúng một chút về tỉ số nhưng nó chiếm hơn nửa túi, để lại mẩu ngân sách chết 49 kg. Ví dụ 7/6, 5/5, 5/5 ở §4.3 chỉ sai 30 % vì X nhỏ hơn nửa túi; đẩy X lên trên một nửa là sai gần 50 %.",
+      goiY: ["Dùng cơ chế ở §4.3: món có tỉ số cao nhất nhưng kích thước không ăn khớp với sức chứa.", "Muốn sai nhiều hơn 40 %, hãy để món “tỉ số cao” chiếm hơn một nửa túi một chút (không phải tới 60 % như ở §4.3) và cần W đủ lớn."],
+      mau: "Chọn W = 100, X (p=52, w=51), Y (p=50, w=50), Z (p=50, w=50).\n\n- Tỉ số: X = 1,0196; Y = Z = 1,0. Greedy lấy X trước (51 kg), còn 49 kg — Y và Z đều cần 50 nên không vừa. Tổng **52**.\n- Tối ưu: bỏ X, lấy Y + Z = 100 kg vừa khít, tổng **100**.\n- Greedy kém tối ưu (100 − 52) / 100 = **48 %** > 40 %.\n\nCơ chế: X chỉ hơn Y, Z đúng một chút về tỉ số nhưng nó chiếm hơn nửa túi, để lại mẩu ngân sách chết 49 kg. Ví dụ 7/6, 5/5, 5/5 ở §4.3 chỉ sai 30 %: X nặng 6/10 túi; vì tối ưu không thể vượt (p_X/w_X)·W nên greedy (≥ p_X) luôn đạt ít nhất w_X/W = 60 % tối ưu, tức sai tối đa 40 %. Muốn sai hơn 40 % thì X phải nhẹ hơn 60 % túi nhưng vẫn chặn được cả Y và Z — tức chiếm hơn một nửa túi một chút (51/100) — và điều đó cần W lớn.",
       tieuChi: ["Dữ liệu hợp lệ: có 3 món, Y và Z mỗi món vừa khít một nửa túi", "Món có tỉ số cao nhất nặng hơn một nửa W nên chặn cả hai món còn lại", "Tính đúng kết quả greedy và tối ưu, và tỉ lệ sai > 40 %"]
     },
     {
@@ -135,14 +135,14 @@ TH.dangKy({
       id: "l3", doKho: 2, ref: "Bài tập 5.3",
       hoi: "Xét chỉ số tham số hoá index(j) = p_j / (d_j + s_j)^α. α = 0 và α → ∞ cho ra chỉ số nào? α < 1 và α > 1 nghiêng về phía nào, vì sao?",
       goiY: ["Thử α = 0 rồi nhìn mẫu số.", "Khi α rất lớn, thứ nào trong p_j và (d_j + s_j)^α quyết định thứ hạng?"],
-      mau: "- α = 0: mẫu số bằng 1 nên index = p_j — **greedy theo lợi ích** (tiền nhất).\n- α → ∞: (d_j + s_j)^α bùng nổ và áp đảo p_j, nên ứng viên có chi phí nhỏ nhất luôn thắng — **greedy theo chi phí** (gần nhất).\n- α = 1 là tỉ số thuần.\n- α < 1 giảm sức nặng của chi phí ⇒ nghiêng về lợi ích (tiền nhất); α > 1 tăng sức nặng chi phí ⇒ nghiêng về gần nhất.\n\nThực nghiệm trên P1 thường cho α ≈ 1,0–1,2 là tốt: chi phí nên được phạt hơi nặng hơn tỉ số thuần vì đi xa còn làm đơn sau đắt lên. Chỉ kết luận sau khi đo trên nhiều test.",
-      tieuChi: ["Nêu α = 0 → p_j (tiền nhất) và α → ∞ → chi phí nhỏ nhất (gần nhất)", "Giải thích α < 1 nghiêng về lợi ích, α > 1 nghiêng về chi phí", "Nhắc rằng cần đo trên nhiều test mới kết luận được α tốt nhất"]
+      mau: "- α = 0: mẫu số bằng 1 nên index = p_j — **greedy theo lợi ích** (tiền nhất).\n- α → ∞: (d_j + s_j)^α bùng nổ và áp đảo p_j, nên ứng viên có chi phí nhỏ nhất luôn thắng — **greedy theo chi phí** (d + s nhỏ nhất; trùng hẳn với “gần nhất” chỉ khi chi phí là quãng đường, không cộng s).\n- α = 1 là tỉ số thuần.\n- α < 1 giảm sức nặng của chi phí ⇒ nghiêng về lợi ích (tiền nhất); α > 1 tăng sức nặng chi phí ⇒ nghiêng về gần nhất.\n\nThực nghiệm trên P1 thường cho α ≈ 1,0–1,2 là tốt: chi phí nên được phạt hơi nặng hơn tỉ số thuần vì đi xa còn làm đơn sau đắt lên. Chỉ kết luận sau khi đo trên nhiều test.",
+      tieuChi: ["Nêu α = 0 → p_j (tiền nhất) và α → ∞ → chi phí nhỏ nhất (xấp xỉ gần nhất)", "Giải thích α < 1 nghiêng về lợi ích, α > 1 nghiêng về chi phí", "Nhắc rằng cần đo trên nhiều test mới kết luận được α tốt nhất"]
     },
     {
       id: "l4", doKho: 3, ref: "§6.1, §9",
       hoi: "Greedy của bạn cho điểm gần như một thứ tự tuỳ ý. Hãy nêu ít nhất ba nguyên nhân có thể và cách kiểm tra rẻ cho từng nguyên nhân.",
       goiY: ["Nghĩ về chỉ số, về trạng thái, và về cách phá hoà.", "Mỗi nguyên nhân cần một phép kiểm chỉ tốn vài dòng code."],
-      mau: "1. **Chỉ số thoái hoá** (mọi ứng viên gần bằng nhau, như subset-sum p = w). Kiểm tra: in σ/x̄ của chỉ số hoặc histogram; nếu σ/x̄ < 0,05 thì tìm chỉ số khác.\n2. **Không tính lại chỉ số khi trạng thái đổi** (P1: chi phí phụ thuộc vị trí hiện tại). Kiểm tra: so kết quả với bản tính lại ở mọi bước; nếu bản đúng khác nhiều thì bug nằm ở đây. Đây là bug im lặng vì nghiệm vẫn hợp lệ.\n3. **Phá hoà không nhất quán hoặc dùng `>=`** làm ứng viên bị đổi liên tục, kết quả phụ thuộc thứ tự duyệt. Kiểm tra: cố định quy tắc phá hoà (chỉ số nhỏ hơn thắng) và chạy lại hai lần xem kết quả có tất định không.\n4. (Thêm) **Mẫu số bằng 0 / EPS** làm tỉ số bùng nổ. Kiểm tra: in ứng viên có chỉ số cực đại.",
+      mau: "1. **Chỉ số thoái hoá** (mọi ứng viên gần bằng nhau, như subset-sum p = w). Kiểm tra: in σ/x̄ của chỉ số hoặc histogram; nếu σ/x̄ < 0,05 thì tìm chỉ số khác.\n2. **Không tính lại chỉ số khi trạng thái đổi** (P1: chi phí phụ thuộc vị trí hiện tại). Kiểm tra: so kết quả với bản tính lại ở mọi bước; nếu bản đúng khác nhiều thì bug nằm ở đây. Đây là bug im lặng vì nghiệm vẫn hợp lệ.\n3. **Phá hoà không nhất quán hoặc dùng `>=`** làm ứng viên bị đổi liên tục, kết quả phụ thuộc thứ tự duyệt. Kiểm tra: cố định quy tắc phá hoà (ứng viên có số thứ tự nhỏ hơn thắng) và chạy lại hai lần xem kết quả có tất định không.\n4. (Thêm) **Mẫu số bằng 0 / EPS** làm tỉ số bùng nổ. Kiểm tra: in ứng viên có chỉ số cực đại.",
       tieuChi: ["Nêu được ít nhất 3 nguyên nhân khác nhau", "Mỗi nguyên nhân đi kèm một cách kiểm tra cụ thể, rẻ", "Nhận ra bug “không tính lại chỉ số” là bug im lặng"]
     }
   ],
@@ -209,7 +209,7 @@ const n = t[0], B = t[1];
 const w = [], p = [];
 for (let i = 0; i < n; i++) { w.push(t[2 + 2 * i]); p.push(t[3 + 2 * i]); }
 
-// So sánh p_i/w_i > p_j/w_j bằng phép nhân chéo để khỏi sai số số thực; hoà thì món chỉ số nhỏ hơn thắng.
+// So sánh p_i/w_i > p_j/w_j bằng phép nhân chéo để khỏi sai số số thực; hoà thì món có số thứ tự nhỏ hơn thắng.
 const thuTu = w.map((_, i) => i).sort((a, b) => p[b] * w[a] - p[a] * w[b] || a - b);
 let con = B;
 const chon = [];
@@ -251,7 +251,7 @@ int main() {
       goiY: [
         "So sánh hai tỉ số p_a/w_a và p_b/w_b bằng phép nhân chéo p_a·w_b so với p_b·w_a — tránh số thực và chia cho 0.",
         "Sau khi sắp xếp, đừng `break` khi gặp món không vừa: các món nhỏ hơn phía sau vẫn có thể vừa.",
-        "Khi hai món có cùng tỉ số, hãy phá hoà bằng chỉ số nhỏ hơn để kết quả tất định (§9, cạm bẫy 3)."
+        "Khi hai món có cùng tỉ số, hãy phá hoà bằng số thứ tự nhỏ hơn để kết quả tất định (§9, cạm bẫy 3)."
       ]
     },
     {

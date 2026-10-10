@@ -44,9 +44,9 @@ TH.dangKy({
     "Ba nước cờ theo thứ tự nên thử: **đổi thứ tự tổng** (hạ O(N²) xuống O(N)), **tách biến** (hàm có dấu + giữa các trục thì sửa từng trục riêng), **thống kê đủ** (hàm chỉ nhìn một bản tóm tắt nhỏ của nghiệm ⇒ không gian nghiệm sập).",
     "Nước cờ 1: Σ_{i<j} |p_i − p_j| = Σ_t S_t·(N − S_t), với S_t là số hạt bên trái khe t — mỗi nhát dao bị đúng S_t·(N − S_t) cặp bắc qua. Ví dụ {1, 2, 5, 8, 9, 12} cho 79 bằng cả hai cách; ở N = 16 000 cách theo lát cắt rẻ hơn khoảng 700 000 lần.",
     "Nước cờ 2: tổng Manhattan và Euclid **bình phương** tách được theo trục; Euclid L₂ (có căn) và Chebyshev (có max) thì không, và căn bậc hai phá vỡ mọi thứ. Kiểm bằng một phản ví dụ hai điểm trước khi tin: nếu d tách được thì d(3, 4) phải bằng d(3, 0) + d(0, 4).",
-    "Nước cờ 3: E = F(r) + F(c) chỉ phụ thuộc **biên duyên** (số hạt mỗi hàng r, mỗi cột c), không phụ thuộc hạt nào ở ô nào. Hai nghiệm cùng (r, c) thay thế được cho nhau; 10⁹⁷⁴⁹ cấu hình sập xuống 358 biến. Tự kiểm: xáo nghiệm giữ nguyên thống kê nghi ngờ, điểm không đổi trên 100 lần thử.",
-    "Bài rút gọn trên mật độ u có J(u) lõm, cực tiểu ở **đỉnh** của đa diện {0 ≤ u ≤ 1, Σu = N}, mà đỉnh là các vectơ 0/1 thật ⇒ nới lỏng là **chặt**. Frank–Wolfe hội tụ ≤ 5 vòng; hình đích tối ưu là **đĩa tròn** (κ = 0,6502), không phải hình vuông (0,6668) hay kim cương (0,6598).",
-    "Thi hành: pha dọc rồi pha ngang (nhờ tách trục), ghép cặp đơn điệu **chứng minh trước** là không va chạm (0 nước hỏng trên 2 000 test). Cận dưới cho *tài nguyên*: m ≥ Σ_t |S^R_t − S^r_t| + Σ_t |S^C_t − S^c_t|; chi phí thực / cận dưới ≈ 1,205 nên dư địa chỉ còn 0,24 % điểm — quyết định không làm thêm, có căn cứ.",
+    "Nước cờ 3: E = F(r) + F(c) chỉ phụ thuộc **biên duyên** (số hạt mỗi hàng r, mỗi cột c), không phụ thuộc hạt nào ở ô nào. Hai nghiệm cùng (r, c) thay thế được cho nhau; 10⁹⁷⁴⁹ cấu hình sập xuống 358 biến (358 = H + W ở test lớn nhất đo được; lưới đủ 180 × 180 sẽ là 360). Tự kiểm: xáo nghiệm giữ nguyên thống kê nghi ngờ, điểm không đổi trên 100 lần thử.",
+    "Bài rút gọn trên mật độ u có J(u) lõm, cực tiểu ở **đỉnh** của đa diện {0 ≤ u ≤ 1, Σu = N}, mà đỉnh là các vectơ 0/1 thật ⇒ nới lỏng là **chặt**. Frank–Wolfe hội tụ ≤ 5 vòng (thực nghiệm: 16 điểm xuất phát cho cùng một giá trị; với hàm lõm nó chỉ bảo đảm dừng ở một đỉnh, chưa chứng minh là toàn cục); hình đích tối ưu gần như **đĩa tròn** (κ = 0,6502, đĩa tròn 0,6504), không phải hình vuông (0,6668) hay kim cương (0,6598).",
+    "Thi hành: pha dọc rồi pha ngang (nhờ tách trục), ghép cặp đơn điệu **chứng minh trước** là không va chạm (0 nước hỏng trên 2 000 test). Cận dưới cho *tài nguyên*: m ≥ Σ_t |S^R_t − S^r_t| + Σ_t |S^C_t − S^c_t|; chi phí thực / cận dưới ≈ 1,205 (tỉ lệ số nước đi); bài kết luận khoảng cách tới trần điểm chỉ còn 0,24 % — hai số đo hai thứ khác nhau và bước suy luận nối chúng không kiểm lại được từ mã — nên quyết định không làm thêm.",
     "Sáu câu hỏi trong 30 phút (time-box); không câu nào “có” thì **đóng sổ, quay lại metaheuristic** — đa số đề (P0–P3) không có cấu trúc này. Tìm ra thống kê đủ mới xong một nửa: ràng buộc vẫn nhìn vị trí (Gale–Ryser), và vẫn phải chạy 1 000 test, đếm nước đi hỏng, đo thời gian xấu nhất."
   ],
 
@@ -122,7 +122,7 @@ TH.dangKy({
         "Vì J lõm trên mặt phẳng Σu = N nên cực tiểu nằm ở đỉnh của đa diện {0 ≤ u ≤ 1, Σu = N}, mà đỉnh ấy chính là các vectơ 0/1, tức các cấu hình thật"
       ],
       dung: 3,
-      giaiThich: "J(u) = ½ ΣΣ u_p·u_q·‖p − q‖₁ là dạng toàn phương lõm trên Σu = N, và cực tiểu của hàm lõm nằm ở mép — đỉnh của đa diện. Các đỉnh của {0 ≤ u ≤ 1, Σu = N} là vectơ 0/1. Đó là “nới lỏng chặt”, không phải làm tròn xấp xỉ; nếu J lồi thì cực tiểu ở giữa và lập luận này hỏng. Frank–Wolfe tuyến tính hoá rồi nhảy tới đỉnh tốt nhất; mỗi bước chắc chắn giảm vì J lõm."
+      giaiThich: "J(u) = ½ ΣΣ u_p·u_q·‖p − q‖₁ là dạng toàn phương lõm trên Σu = N, và cực tiểu của hàm lõm nằm ở mép — đỉnh của đa diện. Các đỉnh của {0 ≤ u ≤ 1, Σu = N} là vectơ 0/1. Đó là “nới lỏng chặt”, không phải làm tròn xấp xỉ; nếu J lồi thì cực tiểu ở giữa và lập luận này hỏng. Frank–Wolfe tuyến tính hoá rồi nhảy tới đỉnh tốt nhất; mỗi bước chắc chắn giảm vì J lõm. Lưu ý: với hàm lõm Frank–Wolfe chỉ bảo đảm dừng ở một đỉnh (cực trị cục bộ); việc đó là cực tiểu toàn cục ở đây là bằng chứng thực nghiệm (16 điểm xuất phát cho cùng một giá trị), chưa phải chứng minh."
     },
     {
       id: "q8", loai: "mot", doKho: 3, ref: "§6.3",
@@ -134,7 +134,7 @@ TH.dangKy({
         "Dải ngang kín chiều rộng, vì mọi hạt cùng hàng nên khoảng cách theo y bằng 0"
       ],
       dung: 2,
-      giaiThich: "Kết quả phản trực giác: κ (khoảng cách L₁ trung bình giữa hai điểm ngẫu nhiên, diện tích chuẩn hoá 1) là 0,6668 cho hình vuông, 0,6598 cho kim cương, 0,6504 cho đĩa tròn và 0,6502 cho nghiệm Frank–Wolfe. “Hình cầu của L₁” đúng khi gom hạt về một tâm cố định, nhưng bài này cực tiểu khoảng cách giữa các hạt với nhau. Dải ngang kín chiều rộng còn tệ nhất (116 520 so với 177 109 của hình vuông ở mật độ 0,33)."
+      giaiThich: "Kết quả phản trực giác: κ (khoảng cách L₁ trung bình giữa hai điểm ngẫu nhiên, diện tích chuẩn hoá 1) là 0,6668 cho hình vuông (đo trên lưới; chính xác 2/3 = 0,6667), 0,6598 cho kim cương, 0,6504 cho đĩa tròn và 0,6502 cho nghiệm Frank–Wolfe. “Hình cầu của L₁” đúng khi gom hạt về một tâm cố định, nhưng bài này cực tiểu khoảng cách giữa các hạt với nhau. Dải ngang kín chiều rộng còn tệ nhất (116 520 so với 177 109 của hình vuông ở mật độ 0,33)."
     },
     {
       id: "q9", loai: "mot", doKho: 3, ref: "§9 (cạm bẫy 3, 6)",

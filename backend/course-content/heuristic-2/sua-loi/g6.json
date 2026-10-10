@@ -1,0 +1,164 @@
+[
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "| 10 | $10^{-44}$ | leo đồi thuần |",
+  "new": "| 10 | $3{,}7\\times10^{-44}$ | leo đồi thuần |",
+  "ly_do": "[SỐ] exp(-1000/10) = exp(-100) = 3,72e-44, không phải 1e-44 (lệch 3,7 lần; các ô khác trong bảng đều ghi cả hệ số, vd 4,5e-5)."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "6000      2500      60100         62300         0.42",
+  "new": "6000      1745      60100         62300         0.42",
+  "ly_do": "[SỐ] Nhật ký mẫu §7 (T0=4000, T_end=1,0 ở dòng cuối, K=60 000): T_k = 4000·(1/4000)^(k/60000) cho T(6000)=1745,2 và T(12000)=761,5. Bản gốc ghi 2500 và 1560 (cùng tỉ lệ 0,625 mỗi 6000 bước ⇒ dẫn tới T_end≈36, không phải 1,0) — mâu thuẫn với dòng cuối T=1,0. Sửa hai dòng giữa cho khớp T0, T_end, K đã nêu; f và tỉ lệ chấp nhận (số mẫu) giữ nguyên."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "12000     1560      63200         64100         0.21",
+  "new": "12000     761       63200         64100         0.21",
+  "ly_do": "[SỐ] xem bản vá ngay trên: T(12000) = 4000·4000^(-0,2) = 761,5."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "**Công cụ chẩn đoán bắt buộc:** in đường cong bốn cột này",
+  "new": "**Công cụ chẩn đoán bắt buộc:** in đường cong năm cột này (ví dụ dưới đây: $T_0 = 4000$, $T_{\\text{end}} = 1$, $K = 60\\,000$ bước)",
+  "ly_do": "[NHỎ] Tiêu đề bảng nhật ký có 5 cột (buoc, T, f(hien tai), f(tot nhat), ti le chap nhan) nhưng câu dẫn ghi 'bốn cột'. Đồng thời nêu rõ tham số của nhật ký mẫu (T0=4000 là giá trị bài tập 13.3 gọi là 'đang dùng'; T_end=1 và K=60 000 lấy từ dòng cuối và §5.2) để T ở các dòng có thể kiểm lại bằng công thức §2.3."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "làm điểm tụt 35 %",
+  "new": "làm điểm tụt ~36 %",
+  "ly_do": "[SỐ] §4.2: 65 929 → 42 483 là giảm 1 − 42483/65929 = 35,56 % ≈ 36 % (không phải 35 %)."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "bỏ qua chúng không đổi kết quả mà tiết kiệm phần lớn lời gọi `exp`.",
+  "new": "bỏ qua chúng gần như không đổi kết quả (chỉ cắt phần đuôi có xác suất nhận dưới 5 %) mà tiết kiệm phần lớn lời gọi `exp`.",
+  "ly_do": "[LOGIC] Ngay sát ngưỡng 3T một nước vẫn được nhận với xác suất exp(-3)=4,98 %, nên cắt cụt ở 3T làm đổi (dù rất ít) phân phối chấp nhận — 'không đổi kết quả' là nói quá; hạ xuống 'gần như không đổi'."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "**Bước 2:** nước tốt nhất tuyệt đối là quay lại swap(1,2) — đúng cái bẫy ở §1.1. Bảng cấm chặn nó, buộc thuật toán đi hướng khác. **Đây là toàn bộ giá trị của tabu, nhìn thấy bằng mắt.**",
+  "new": "**Bước 3 (nước tốt nhất bị cấm):** nước tốt nhất tuyệt đối là quay lại swap(2,4) (về đúng $x_1$, $f = 50$) — đúng cái bẫy ở §1.1. Bảng cấm chặn nó, buộc thuật toán đi hướng khác. **Đây là toàn bộ giá trị của tabu, nhìn thấy bằng mắt.** (Ở bước 2, swap(1,2) cũng đang bị cấm, nhưng nó quay về $x_0$ với $f = 60$, tệ hơn nước 55 được chọn, nên lệnh cấm chưa chặn nước nào đáng kể.)",
+  "ly_do": "[LOGIC] Bài cực tiểu hoá. Bước 2: swap(1,2)=60 (quay về x0, f(x0)=60) KHÔNG phải nước tốt nhất — nước tốt nhất là swap(2,4)=55, bảng cấm không đổi lựa chọn. Cái bẫy 'nước tốt nhất chính là quay lại' xảy ra ở bước 3: swap(2,4)=50 (về x1, f(x1)=50) là nhỏ nhất nhưng bị cấm, phải chọn swap(1,3)=57. Mô phỏng lại bảng bằng code (quy ước mã §3.2) xác nhận: bước 2 chọn 55 như bảng; bước 3 nước nhỏ nhất 50 bị cấm. Chuyển lời giải thích sang bước 3 (khớp đoạn 'Bước 3' ngay dưới)."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "**Bước 3:** $f$ đi từ 55 lên 57",
+  "new": "**Bước 3 (hệ quả):** $f$ đi từ 55 lên 57",
+  "ly_do": "[NHỎ] Tránh hai đoạn liên tiếp cùng nhãn 'Bước 3' sau khi chuyển lời giải thích sang bước 3 (bản vá trên)."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "- Khởi tạo: `memset` một lần.",
+  "new": "- Khởi tạo: `memset` một lần.\n- ⚠️ Quy ước của mẫu này: lệnh cấm đặt ở bước $k$ chặn các bước $k+1, \\dots, k+TT-1$ — tức **$TT-1$** bước, và $TT = 1$ không chặn gì. (Ví dụ ở §4: đặt ở bước 1 với $TT = 3$ thì chặn bước 2 và 3, sang bước 4 là hết hạn.) Muốn chặn đủ $TT$ bước thì đặt `buoc + tenure + 1`.",
+  "ly_do": "[MÂU THUẪN] Từ điển ghi TT là 'số bước mà một lệnh cấm còn hiệu lực', nhưng mã `tabuUntil = buoc + TT` với `biCam: tabuUntil > buoc` chỉ chặn TT-1 quyết định kế tiếp (TT=1: tabuUntil=k+1, tại bước k+1 thì k+1>k+1 sai ⇒ không chặn gì). Bảng ví dụ §4 (TT=3, cấm tới bước 4, hết hạn ở bước 4) khớp quy ước của mã — mô phỏng lại xác nhận — nên giữ mã và bảng, ghi rõ quy ước thay vì đổi mã ở 4 chỗ. (Cheatsheet và từ điển thuật ngữ chung trích cùng mẫu mã: ngoài phạm vi.)"
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "| Thời hạn cấm | tabu tenure | số bước mà một lệnh cấm còn hiệu lực |",
+  "new": "| Thời hạn cấm | tabu tenure | số bước mà một lệnh cấm còn hiệu lực (tính cả bước đặt lệnh — xem lưu ý ở §3.2) |",
+  "ly_do": "[MÂU THUẪN] Cùng lý do bản vá §3.2: định nghĩa 'TT bước' phải nói rõ cách đếm để khớp mã (chặn TT-1 quyết định kế tiếp)."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "là khoảng 1 700 phép. Với 1 000 bước: 1,7 triệu phép → khoảng 2 ms. Chấp nhận được.",
+  "new": "là khoảng 1 700 lần đánh giá delta. Với 1 000 bước: 1,7 triệu lần đánh giá; mỗi lần (kèm kiểm tra bảng cấm và ràng buộc) tốn cỡ 10 phép đơn giản, tức khoảng $1{,}7\\times10^7$ phép → khoảng 17 ms ở $10^9$ phép/giây (Bài 2), khớp với ~16 ms ở bảng dưới. Chấp nhận được.",
+  "ly_do": "[MÂU THUẪN] Bản gốc đếm 1,7 triệu 'phép' như phép đơn giản ⇒ 1,7e6/1e9 = 1,7 ms ≈ 2 ms, nhưng bảng ngay dưới (cùng mục) ghi 1 000 bước ≈ 16 ms, đáp án 14.3 ghi ~15 ms, và kết luận 'ít bước hơn 100 lần' chỉ đúng với 16 ms. Ba chỗ ủng hộ ~16 ms; số '2 ms' chỉ đúng nếu mỗi lần đánh giá delta tốn 1 phép đơn giản. Giữ 16 ms (không đổi số đo), sửa phép quy đổi: 1,68e6 lần đánh giá × ~10 phép = 1,7e7 phép ≈ 17 ms (chuẩn 1e9 phép đơn giản/giây của Bài 2)."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "SA làm $10^5$ bước trong 16 ms, vì",
+  "new": "SA làm khoảng $6\\times10^4$ bước trong 16 ms (Bài 13 §5.2), vì",
+  "ly_do": "[MÂU THUẪN] Bài 13 (§5.2 bảng tuyến tính: 10 000 bước 2,7 ms … 1 000 000 bước 265 ms; §7 nhật ký dừng ở bước 60 000; §9 'SA (60 000 bước, 16 ms)') nói 16 ms = 60 000 bước. 100 000 bước sẽ tốn ≈ 27 ms. Bài 14 trích lại số này nên phải khớp Bài 13."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "| SA | ~100 000 | $O(1)$ | một nước **ngẫu nhiên** |",
+  "new": "| SA | ~60 000 | $O(1)$ | một nước **ngẫu nhiên** |",
+  "ly_do": "[MÂU THUẪN] Như trên: 16 ms ≈ 60 000 bước SA (Bài 13)."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "Tabu đi **ít bước hơn 100 lần** nhưng",
+  "new": "Tabu đi **ít bước hơn khoảng 60 lần** nhưng",
+  "ly_do": "[SỐ] 60 000 / 1 000 = 60 (không phải 100) sau khi đồng bộ số bước SA với Bài 13."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "  SA   : ~100 000 bước RẺ, mỗi bước 1 nước NGẪU NHIÊN",
+  "new": "  SA   : ~60 000 bước RẺ, mỗi bước 1 nước NGẪU NHIÊN",
+  "ly_do": "[MÂU THUẪN] Mục tóm tắt, cùng số bước SA như bản vá trên."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "sẽ nhận ra ngay đó là nước tệ và **đảo lại**. Bạn quay về đúng chỗ cũ, tốn công vô ích.",
+  "new": "**có thể** nhận ra đó là nước tệ và **đảo lại** — đảo đoạn *chính là* một nước 2-opt, nên chỉ một nước 2-opt là đủ để hoàn tác. Mỗi lần như thế bạn quay về đúng chỗ cũ, tốn công vô ích; còn xảy ra thường đến mức nào thì phụ thuộc cách cài local search (xem phần đo bên dưới).",
+  "ly_do": "[LOGIC] Mục 45. 'sẽ nhận ra ngay… và đảo lại' chỉ đúng với 2-opt chọn nước tốt nhất (đo: 99,9 % vòng bị hoàn tác); với 2-opt gặp-là-đổi chỉ ~38 %, với 2-opt+Or-opt ~70 % (TSP n=100, ILS 300 vòng, 10 bộ phân bố đều; gom cụm: 42 % / 73 % / 99,8 %). Hạ 'sẽ' thành 'có thể' và nêu đúng lý do (đảo đoạn = một nước 2-opt)."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "Nó là một nước **4-opt** mà **không một nước 2-opt hay Or-opt đơn lẻ nào hoàn tác được** — nên local search buộc phải chấp nhận cấu hình mới và tìm đường xuống từ đó.",
+  "new": "Nó là một nước **4-opt** (đổi 4 cạnh) mà **không một nước 2-opt hay Or-opt đơn lẻ nào hoàn tác được trong một bước** — nên local search phải tìm đường xuống từ cấu hình mới, thường qua nhiều nước. Điều đó làm giảm khả năng quay về chỗ cũ chứ **không đảm bảo** nó: một chuỗi nhiều nước cải thiện vẫn có thể đưa về đúng cực trị cũ.",
+  "ly_do": "[LOGIC] Mục 45. 'không nước đơn lẻ nào hoàn tác được' đúng (kiểm tra vét cạn 30 lần thử: 0/30 bằng một nước 2-opt, 0/30 bằng một nước Or-opt L<=3), nhưng suy ra 'local search buộc phải chấp nhận cấu hình mới' là sai: với 2-opt chọn nước tốt nhất 96,7 % vòng double-bridge vẫn về đúng nghiệm cũ; với 2-opt+Or-opt 27 %; với gặp-là-đổi 3,7 %."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "Sau:    P1 ─ P3 ─ P2 ─ P4\n```",
+  "new": "Sau:    P1 ─ P4 ─ P3 ─ P2          (đổi 4 cạnh)\n```\n\n> 📌 **Đo thử, để khỏi tin suông** (TSP $n = 100$, ILS 300 vòng, 10 bộ phân bố đều và 10 bộ gom cụm; xem bài tập 15.1). Tỉ lệ vòng mà local search đưa nghiệm về **đúng** nghiệm trước nhiễu loạn, đảo đoạn so với double-bridge: với 2-opt + Or-opt (cấu hình ở §2.3) khoảng 70 % so với 27 %; với 2-opt gặp-là-đổi khoảng 40 % so với 4–5 %; với 2-opt chọn nước tốt nhất thì cả hai đều bị hoàn tác gần hết (≈ 100 % và ≈ 97 %) và ILS kém hơn rõ. Nhưng với hai cấu hình đầu, độ dài cuối cùng của hai loại nhiễu loạn chỉ chênh nhau dưới 0,3 % (trên dữ liệu gom cụm đảo đoạn còn nhỉnh hơn chút). Kết luận đúng mức: double-bridge **thường** ít bị hoàn tác hơn nhiều, nhưng điều đó không nhất thiết kéo theo kết quả cuối tốt hơn — hãy tự đo trên bài toán của bạn.",
+  "ly_do": "[MÂU THUẪN] Sơ đồ ghi P1 ─ P3 ─ P2 ─ P4, nhưng đó chỉ đổi 3 cạnh (đo: 3 cạnh) trong khi câu ngay trên gọi là nước 4-opt; mã `doubleBridge` ở Bài 12 §7.1 ghép A + D + C + B = P1 ─ P4 ─ P3 ─ P2 (đổi 4 cạnh; chu trình P1 P4 P3 P2 ≡ hoán vị P2 P1 P4 P3 của mô tả double-bridge kinh điển). Đồng bộ với bản sửa Bài 12 §7.1. Thêm hộp đo thử (số liệu do chạy lại thí nghiệm) làm bằng chứng cho mức hạ khẳng định ở hai bản vá trên (mục 45)."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "  NHIỄU LOẠN PHẢI KHÔNG BỊ LOCAL SEARCH HOÀN TÁC",
+  "new": "  NHIỄU LOẠN NÊN KHÓ BỊ LOCAL SEARCH HOÀN TÁC",
+  "ly_do": "[LOGIC] Mục 45: tóm tắt phải khớp mức khẳng định đã hạ ở §2.7 (không đảm bảo, chỉ giảm khả năng)."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "    → double-bridge (4-opt) cho TSP; đảo đoạn ngẫu nhiên thì KHÔNG dùng được",
+  "new": "    → double-bridge (4-opt) cho TSP; đảo đoạn ngẫu nhiên (= 1 nước 2-opt) dễ bị hoàn tác hơn nhiều\n      (không nước đơn lẻ nào hoàn tác được double-bridge, nhưng cả chuỗi nước thì có thể — đo thử ở §2.7)",
+  "ly_do": "[LOGIC] Mục 45: 'KHÔNG dùng được' là nói quá — với 2-opt gặp-là-đổi và với 2-opt+Or-opt, ILS dùng đảo đoạn cho độ dài cuối chênh double-bridge dưới 0,3 % (đo, tỉ số so với tốt nhất tìm được — phân bố đều: gặp-là-đổi 1,0103 vs 1,0078, 2-opt+Or-opt 1,0023 vs 1,0000; gom cụm 1,0014 vs 1,0033 và 1,0000 vs 1,0001 — đảo đoạn còn nhỉnh hơn); chỉ với 2-opt chọn nước tốt nhất thì đảo đoạn kém rõ (1,0447 phân bố đều, 1,0126 gom cụm) — mà double-bridge cũng kém (1,0269; 1,0071) vì vẫn bị hoàn tác 97 %."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "Nghiệm hiện tại: tuyến `[A, B, C, D]`, đã dùng 450 trong 480 phút.",
+  "new": "Nghiệm hiện tại: tuyến `[A, B, C, D]`, đã dùng 450 trong 480 phút.\n\n(Ví dụ dùng bốn lân cận của `leoDoi` ở Bài 9 §5.2: $N_1$ = 2-opt, $N_2$ = Or-opt $L=1$, $N_3$ = chèn một đơn chưa dùng, $N_4$ = exchange — nên số thứ tự khác danh sách tổng quát ở §3.3 và khác bộ bốn lân cận tự nêu ở bài tập 15.3.)",
+  "ly_do": "[MÂU THUẪN] Mục 45. Ví dụ §6 đánh số k=3 'chèn', k=4 'exchange', còn §3.3 có N3 = Or-opt L=2,3, N4 = swap, N5 = exchange (không có 'chèn'); BT 15.3 dùng bộ thứ ba (3 = exchange 1 đơn, 4 = exchange 3 đơn). Thứ tự ở §6 trùng bốn toán tử của leoDoi (Bài 9 §5.2: rút ngắn → chuyển đoạn → lấp đầy → đổi đơn). Chỉ thêm ghi chú nói rõ bộ lân cận của ví dụ, không đổi ví dụ."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "Nhưng ta vẫn nhận, vì 12 phút đó là **nguyên liệu** cho bước sau.",
+  "new": "Nhưng ta vẫn nhận, vì 12 phút đó là **nguyên liệu** cho bước sau. (Theo khung §3.2, nước này chỉ được nhận nếu \"tốt hơn\" tính cả thời gian — điểm trừ $\\lambda\\cdot$phút như ở Bài 9 §5.1 — hoặc nếu với toán tử rút ngắn \"thành công\" nghĩa là *thời gian giảm* như trong `leoDoi` (Bài 9 §5.2).)",
+  "ly_do": "[MÂU THUẪN] Khung §3.2 chỉ nhận y khi f(y) > f(x) (điểm), nhưng ví dụ §6 nhận nước k=2 'không tăng điểm chút nào' và gọi là THÀNH CÔNG, quay về k=1. Thêm điều kiện ngầm để ví dụ khớp khung."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "Giải thích vì sao double-bridge là nhiễu loạn tốt cho TSP, còn \"đảo một đoạn ngẫu nhiên\" thì không. Dùng lập luận ở §2.7, và nêu một cách **kiểm chứng bằng thực nghiệm** cho kết luận đó.",
+  "new": "Giải thích vì sao double-bridge thường được chọn làm nhiễu loạn cho TSP thay cho \"đảo một đoạn ngẫu nhiên\". Dùng lập luận ở §2.7, và nêu một cách **kiểm chứng bằng thực nghiệm** cho kết luận đó (kết luận đúng tới mức nào?).",
+  "ly_do": "[LOGIC] Mục 45. Đề 15.1 coi như đã biết 'double-bridge tốt, đảo đoạn thì không' — vượt quá bằng chứng đo được (độ dài cuối chênh dưới 0,3 % với hai trong ba cách cài local search; đảo đoạn thậm chí nhỉnh hơn trên dữ liệu gom cụm). Hạ cho khớp §2.7 đã sửa và đáp án 15.1."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "(đắt nhất, và là cái duy nhất đổi TẬP được chọn)",
+  "new": "(đắt nhất; trong danh sách này nó là cái duy nhất đổi TẬP được chọn — nhưng ở P1, chèn/bỏ một đơn cũng đổi tập, xem $N_3$ ở ví dụ §6)",
+  "ly_do": "[MÂU THUẪN] Bài 9 §3.2 liệt kê 'Chèn' và 'Bỏ' là hai lân cận của P1 và cả hai đổi tập đơn; chính ví dụ §6 của Bài 15 dùng 'chèn' (k=3) để thêm đơn E. 'Cái duy nhất đổi tập' chỉ đúng trong danh sách năm lân cận của §3.3. Đồng bộ với bản vá g5 cho Bài 11 §2.5."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "⚠️ **Đừng dùng ngẫu nhiên** — Bài 12 đo được rằng khởi tạo tốt thắng cả 20 lần chạy từ điểm ngẫu nhiên",
+  "new": "⚠️ **Nên tránh khởi tạo ngẫu nhiên** — Bài 12 báo cáo khởi tạo tốt thắng cả 20 lần chạy từ điểm ngẫu nhiên, nhưng mức hơn phụ thuộc cách cài 2-opt (đo lại với 2-opt hội tụ trên TSP n = 100–200: ngang nhau, có khi đảo chiều) — hãy tự đo trước khi tin",
+  "ly_do": "[LOGIC] Số đo của Bài 12 (14 656 vs 18 980) không tái lập được (mục 36/37 của phát hiện; g4 đã hạ 28 % ở Bài 9). Tự chạy lại: TSP phân bố đều, 10 bộ mỗi cỡ, 2-opt hội tụ — n=100: cái tốt nhất trong 20 lần ngẫu nhiên tốt hơn NN+2-opt 3,3 % (gặp-là-đổi) và 2,0 % (chọn nước tốt nhất), khởi tạo tốt chỉ thắng 2/10 và 1/10 bộ; n=200: −0,4 % và +0,6 %, thắng 4/10 và 7/10. Vậy 'thắng cả 20 lần' không đúng chung; hạ từ 'đo được' xuống 'báo cáo' và nêu điều kiện."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "Double-bridge là nước **4-opt** không thể phân tách thành các nước 2-opt cải thiện, nên 2-opt **không hoàn tác được** nó → đảm bảo thoát khỏi lưu vực.",
+  "new": "Double-bridge là nước **4-opt** (đổi 4 cạnh) nên **không một nước 2-opt hay Or-opt đơn lẻ nào hoàn tác được trong một bước** — nhưng điều đó **không đảm bảo** thoát khỏi lưu vực: một chuỗi nhiều nước 2-opt cải thiện vẫn có thể đưa về đúng cực trị cũ.",
+  "ly_do": "[LOGIC] Mục 45. 'không thể phân tách thành các nước 2-opt cải thiện' bị thực nghiệm bác: với 2-opt chọn nước tốt nhất, 96,7 % vòng double-bridge vẫn bị đưa về đúng nghiệm trước nhiễu loạn (TSP n=100, ILS 300 vòng, 10 bộ). Bất kỳ hoán vị đoạn nào cũng là một chuỗi phép đảo (2-opt), chỉ không phải chuỗi luôn cải thiện."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**chính là** một nước 2-opt → local search hoàn tác ngay ở bước đầu.",
+  "new": "**chính là** một nước 2-opt → chỉ một nước 2-opt là hoàn tác được, và local search thường làm vậy (mức độ phụ thuộc cách cài). **Kiểm chứng bằng thực nghiệm:** chạy ILS với hai kiểu nhiễu loạn trên cùng bộ TSP, cùng local search, cùng số vòng; đếm tỉ lệ vòng mà nghiệm sau local search **trùng đúng** nghiệm trước nhiễu loạn (cùng tập cạnh) và so độ dài cuối cùng. Đo thử (TSP $n = 100$, 300 vòng, 10 bộ, 2-opt + Or-opt): khoảng 70 % vòng bị hoàn tác với đảo đoạn, khoảng 27 % với double-bridge; độ dài cuối chênh nhau rất ít.",
+  "ly_do": "[LOGIC] Mục 45. Đề 15.1 yêu cầu 'nêu một cách kiểm chứng bằng thực nghiệm' nhưng đáp án gốc không có; thêm cách kiểm + số đo thử. 'hoàn tác ngay ở bước đầu' hạ xuống 'thường' vì chỉ đúng hẳn với 2-opt chọn nước tốt nhất (99,9 %), còn gặp-là-đổi ~38 %."
+ }
+]

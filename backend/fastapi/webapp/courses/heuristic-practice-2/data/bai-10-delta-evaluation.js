@@ -100,12 +100,12 @@ TH.dangKy({
   tomTat: [
     "Nguyên tắc: **không bao giờ tính lại f(x) từ đầu** sau mỗi nước đi — chỉ tính phần thay đổi. Như giỏ siêu thị 1 240 000 − 35 000 + 48 000: hai phép tính, dù giỏ có 50 hay 5 000 món; công sức không phụ thuộc kích thước.",
     "Điều kiện để có delta: hàm mục tiêu **phân rã được** thành tổng các số hạng địa phương (f = Σ chi phí cạnh), nên nước đi chỉ bỏ vài cạnh và thêm vài cạnh. Có thành phần toàn cục (độ lệch chuẩn của tải) thì làm theo thứ tự: duy trì đại lượng phụ (Σx, Σx²) → xấp xỉ → đổi hàm mục tiêu.",
-    "Bốn công thức: **2-opt** Δ = d(q[i−1],q[j]) + d(q[i],q[j+1]) − d(q[i−1],q[i]) − d(q[j],q[j+1]); **Or-opt** = Δ_tháo + Δ_gắn; **chèn** Δ = d(q[k−1],j) + d(j,q[k]) − d(q[k−1],q[k]) + s[j]; **bỏ** Δ = d(q[k−1],q[k+1]) − d(q[k−1],q[k]) − d(q[k],q[k+1]) − s[q[k]] (luôn ≤ 0). Trường hợp biên (đầu/cuối tuyến, hai phần tử kề nhau) là nguồn bug số một.",
+    "Bốn công thức: **2-opt** Δ = d(q[i−1],q[j]) + d(q[i],q[j+1]) − d(q[i−1],q[i]) − d(q[j],q[j+1]); **Or-opt** = Δ_tháo + Δ_gắn (chỉ đúng khi vị trí đích k nằm ngoài đoạn và không phải chỗ cũ của nó); **chèn** Δ = d(q[k−1],j) + d(j,q[k]) − d(q[k−1],q[k]) + s[j]; **bỏ** Δ = d(q[k−1],q[k+1]) − d(q[k−1],q[k]) − d(q[k],q[k+1]) − s[q[k]] (luôn ≤ 0). Trường hợp biên (đầu/cuối tuyến, hai phần tử kề nhau) là nguồn bug số một.",
     "Số liệu (TSP n = 200, cùng 99 500 nước): tính lại 539,7 ms ≈ 184 355 nước/s; có delta 0,5 ms ≈ 213 381 485 nước/s — **nhanh hơn 1 157 lần**, kết quả giống hệt (14 656). Heuristic chạy tới hết ngân sách nên nhanh gấp 1 000 lần = nhiều nước gấp 1 000 lần = điểm cao hơn.",
     "Ngưỡng cần đạt: leo đồi 10⁶, Tabu 10⁷, SA 10⁸ nước/giây. Dưới 10⁶ nước/giây là gần như chắc chắn bạn còn tính lại từ đầu ở đâu đó (hàm đánh giá trong vòng nóng, sao chép nghiệm `tam = q`, cập nhật `pos[]` cả mảng). Đo nước/giây theo n: giảm khi n tăng ⇒ còn O(n) trong vòng nóng.",
-    "Hai kỹ thuật khác nhau, **nhân với nhau**: delta làm mỗi nước rẻ hơn (cùng 99 500 nước, nhanh 1 157 lần); danh sách ứng viên làm ít nước hơn (845 thay vì 99 500, chất lượng kém khoảng 1 %). Đừng so tốc độ khi tổng thời gian chỉ 0,03 ms — hãy so tổng thời gian.",
+    "Hai kỹ thuật khác nhau, **nhân với nhau**: delta làm mỗi nước rẻ hơn (cùng 99 500 nước, nhanh 1 157 lần); danh sách ứng viên làm ít nước hơn (845 thay vì 99 500, chất lượng kém khoảng 1 %). Đừng so tốc độ khi tổng thời gian chỉ 0,04 ms — hãy so tổng thời gian.",
     "Kiểm chứng là **bắt buộc**: với mỗi hàm `delta*` viết ngay hàm đối chiếu với tính lại từ đầu (f_trước + Δ = f_sau) và chạy 10 000 nước ngẫu nhiên, gồm cả nước biên. Viết bản ngây thơ đúng trước, rồi mới viết delta. Delta sai nhỏ không crash, chỉ làm điểm kém đi bí ẩn.",
-    "Trôi delta: sai số `double` cộng dồn, delta sai ở biên, áp dụng nước không khớp delta. Chữa: dùng **số nguyên** (đó là lý do khoá chọn Manhattan; nhân mọi thứ lên thành số nguyên), và đồng bộ lại f từ đầu mỗi 65 536 bước — chi phí O(n) chia cho 65 536 bước là không đáng kể."
+    "Trôi delta: sai số `double` cộng dồn, delta sai ở biên, áp dụng nước không khớp delta. Chữa: dùng **số nguyên** (một lý do để các bài toán trên lưới của khoá dùng Manhattan thay vì Euclid; nhân mọi thứ lên thành số nguyên), và đồng bộ lại f từ đầu mỗi 65 536 bước — chi phí O(n) chia cho 65 536 bước là không đáng kể."
   ],
 
   trac: [
@@ -160,7 +160,7 @@ TH.dangKy({
     },
     {
       id: "q6", loai: "mot", doKho: 2, ref: "§5.3",
-      hoi: "Vì sao khoá học chọn khoảng cách Manhattan (số nguyên) ở các bài toán chính thay vì Euclid?",
+      hoi: "Một lý do khiến các bài toán trên lưới của khoá học dùng khoảng cách Manhattan (số nguyên) thay vì Euclid là gì?",
       chon: [
         "Hàm mục tiêu toàn số nguyên nên cộng/trừ delta chính xác tuyệt đối: điểm lưu trong bộ nhớ không thể trôi dần khỏi điểm thật",
         "Vì khoảng cách Manhattan luôn ngắn hơn Euclid nên tuyến luôn ngắn hơn",
@@ -217,10 +217,10 @@ TH.dangKy({
   luan: [
     {
       id: "l1", doKho: 1, ref: "Bài tập 10.1",
-      hoi: "Dãy `[5, 2, 8, 1, 9]` với d(a, b) = |a − b|, kho = 0, tuyến mở. Tính bằng tay delta của 2-opt đảo đoạn [1..3] rồi kiểm bằng tính lại từ đầu. Sau đó giải thích vì sao ví dụ này (Δ = 0) là ví dụ **yếu** để kiểm một công thức delta, và nêu nước đi bạn sẽ chọn thêm.",
+      hoi: "Dãy `[5, 2, 8, 1, 9]` với d(a, b) = |a − b|, kho = 0, tuyến mở. Tính bằng tay delta của 2-opt đảo đoạn [2..3] (các phần tử `8, 1`; vị trí đếm từ 0) rồi kiểm bằng tính lại từ đầu. Sau đó giải thích vì sao đề cũ — đảo đoạn [1..3], cho Δ = 0 — là ví dụ **yếu** để kiểm một công thức delta, và nêu nước đi bạn sẽ chọn thêm.",
       goiY: ["Tính tổng ban đầu: 0 → 5 → 2 → 8 → 1 → 9.", "Một công thức sai vẫn có thể cho đúng 0 — vậy nên ưu tiên nước đi có đặc điểm gì?"],
-      mau: "Ban đầu: 5 + 3 + 6 + 7 + 8 = 29. Đảo [1..3] cho `[5, 1, 8, 2, 9]`: Δ = d(5,1) + d(2,9) − d(5,2) − d(1,9) = 4 + 7 − 3 − 8 = **0**; tính lại 5 + 4 + 7 + 6 + 7 = 29 ✓.\n\nVí dụ yếu vì (i) Δ = 0: một công thức sai (thiếu hay thừa một cặp số hạng triệt tiêu) vẫn có thể ra 0 và qua; (ii) đoạn nằm giữa tuyến nên không chạm biên — chỗ bug nhiều nhất.\n\nNên thêm: nước có Δ ≠ 0; nước chạm **đầu** tuyến (i = 0, q[−1] là kho) như đảo [0..1] cho Δ = d(0,2) + d(5,8) − d(0,5) − d(2,8) = 2 + 3 − 5 − 6 = −6 (tuyến mới dài 23); nước chạm **cuối** tuyến (j = m − 1, bỏ hai số hạng chứa q[j+1]) như đảo [2..4] cho Δ = d(2,9) − d(2,8) = +1. Và quan trọng hơn: chạy hàng nghìn nước ngẫu nhiên bằng kiemTraDelta chứ không dừng ở vài ví dụ tay.",
-      tieuChi: ["Tính đúng Δ = 0 và kiểm bằng tính lại (29 = 29)", "Chỉ ra Δ = 0 là yếu: công thức sai vẫn có thể cho 0, và nước nằm giữa tuyến không chạm biên", "Đề xuất kiểm nước chạm đầu tuyến (i = 0, dùng kho) và chạm cuối tuyến (j = m − 1)", "Nêu cần chạy hàng nghìn nước ngẫu nhiên, không chỉ vài ví dụ tay"]
+      mau: "Ban đầu: 5 + 3 + 6 + 7 + 8 = 29. Đảo [2..3] cho `[5, 2, 1, 8, 9]`: Δ = d(2,1) + d(8,9) − d(2,8) − d(1,9) = 1 + 1 − 6 − 8 = **−12**; tính lại 5 + 3 + 1 + 7 + 1 = 17 = 29 − 12 ✓.\n\nĐề cũ (đảo [1..3] cho `[5, 1, 8, 2, 9]`) có Δ = 0, tính lại vẫn 29 = 29, nhưng là ví dụ yếu vì (i) Δ = 0: một công thức sai (đảo dấu cả bốn số hạng, thiếu hay thừa một cặp số hạng triệt tiêu) vẫn có thể ra 0 và qua; (ii) đoạn nằm giữa tuyến nên không chạm biên — chỗ bug nhiều nhất. Với Δ = −12 thì các biến thể sai thường gặp đều ra số khác: đảo dấu +12, thiếu một số hạng −13, dùng công thức biên ở giữa tuyến −5, cộng thay vì trừ +16.\n\nNên thêm: nước có Δ ≠ 0; nước chạm **đầu** tuyến (i = 0, q[−1] là kho) như đảo [0..1] cho Δ = d(0,2) + d(5,8) − d(0,5) − d(2,8) = 2 + 3 − 5 − 6 = −6 (tuyến mới dài 23); nước chạm **cuối** tuyến (j = m − 1, bỏ hai số hạng chứa q[j+1]) như đảo [2..4] cho Δ = d(2,9) − d(2,8) = +1. Và quan trọng hơn: chạy hàng nghìn nước ngẫu nhiên bằng kiemTraDelta chứ không dừng ở vài ví dụ tay.",
+      tieuChi: ["Tính đúng Δ = −12 và kiểm bằng tính lại (29 → 17)", "Chỉ ra đề cũ [1..3] với Δ = 0 là yếu: công thức sai vẫn có thể cho 0, và nước nằm giữa tuyến không chạm biên", "Đề xuất kiểm nước chạm đầu tuyến (i = 0, dùng kho) và chạm cuối tuyến (j = m − 1)", "Nêu cần chạy hàng nghìn nước ngẫu nhiên, không chỉ vài ví dụ tay"]
     },
     {
       id: "l2", doKho: 2, ref: "Bài tập 10.2",
@@ -233,7 +233,7 @@ TH.dangKy({
       id: "l3", doKho: 2, ref: "Bài tập 10.4",
       hoi: "Trong `deltaHaiOpt`, trường hợp j = m − 1 được xử lý riêng. (a) Vì sao? (b) Nếu bỏ nhánh đó, điều gì xảy ra và hàm kiemTraDelta ở §4.2 sẽ thấy gì? (c) Với chu trình kín (TSP) có còn nhánh biên này không?",
       goiY: ["Nghĩ xem q[j + 1] là gì khi j = m − 1 ở một tuyến mở.", "Chu trình kín khác tuyến mở ở chỗ nào về phần tử đứng sau q[m − 1]?"],
-      mau: "(a) Tuyến mở không quay về kho: khi j = m − 1 **không có** q[j+1], nên hai số hạng chứa nó biến mất: Δ = d(q[i−1],q[j]) − d(q[i−1],q[i]).\n\n(b) Bỏ nhánh thì chương trình đọc q[m] ngoài mảng: crash hoặc giá trị rác. Nếu thay bằng một “quy ước” sai (ví dụ coi q[m] là kho) thì không crash mà Δ lệch; kiemTraDelta sẽ thấy `trước + dt ≠ sau` ngay ở nước đầu tiên chạm biên và abort. Vì thế phải kiểm cả nước biên, không chỉ nước giữa tuyến.\n\n(c) Chu trình kín quay vòng: q[j+1] = q₀ khi j là phần tử cuối, nên không có nhánh biên; chỉ cần loại cặp (0, n − 1) vì hai cạnh đó kề nhau (chung điểm q₀).",
+      mau: "(a) Tuyến mở không quay về kho: khi j = m − 1 **không có** q[j+1], nên hai số hạng chứa nó biến mất: Δ = d(q[i−1],q[j]) − d(q[i−1],q[i]).\n\n(b) Bỏ nhánh thì chương trình đọc q[m] ngoài mảng: crash hoặc giá trị rác. Nếu thay bằng một “quy ước” sai (ví dụ coi q[m] là kho) thì không crash mà Δ lệch; kiemTraDelta sẽ thấy `trước + dt ≠ sau` ngay ở nước đầu tiên chạm biên và abort. Vì thế phải kiểm cả nước biên, không chỉ nước giữa tuyến.\n\n(c) Chu trình kín quay vòng: q[j+1] = q₀ khi j là phần tử cuối, nên không còn nhánh biên “không có q[j+1]”; chỉ cần loại cặp (0, n − 1): đảo cả chu trình thì chu trình không đổi, nhưng hai cạnh “bị bỏ” trùng nhau (cùng là cạnh (q[n−1], q₀)) nên công thức cho Δ = −2·d(q[n−1], q₀) — sai, và nếu để lọt thì leo đồi sẽ “cải thiện” mãi không dừng.",
       tieuChi: ["Giải thích: tuyến mở không có q[j+1] khi j = m − 1, nên bỏ hai số hạng chứa nó", "Nêu hậu quả khi bỏ nhánh (ngoài mảng/giá trị rác hoặc Δ lệch) và kiemTraDelta bắt được ở nước chạm biên", "Phân biệt chu trình kín: q[j+1] quay vòng về q₀ nên không có nhánh biên (chỉ loại cặp (0, n − 1))"]
     },
     {

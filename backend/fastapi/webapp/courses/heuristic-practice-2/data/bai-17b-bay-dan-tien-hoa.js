@@ -69,7 +69,7 @@ TH.dangKy({
     "Lai ghép một điểm trên **hoán vị** sinh ra rác (thăm một thành phố hai lần, bỏ sót thành phố khác). Dùng OX / PMX / ERX, hoặc đổi sang ACO vì ACO xây nghiệm từ đầu nên luôn hợp lệ. Đây là Bài 3 quay lại: biểu diễn quyết định những nước đi nào tồn tại.",
     "DE: v = a + F·(b − c); hiệu b − c chính là độ toè hiện tại của quần thể nên bước đi **tự hiệu chuẩn** (F = 0 đứng im, F ≥ 1,2 quần thể nở ra, mặc định F = 0,7). PSO có **quán tính** nên nhớ hướng và lướt qua hố nông: w ≥ 1 làm bầy nổ tung, c₂ = 0 thoái hoá thành đa khởi động, luôn phải chặn v_max.",
     "So sánh các thuật toán này **theo ngân sách đánh giá** (số lần gọi f), không theo số vòng lặp hay đồng hồ: một vòng PSO 20 hạt gọi f 20 lần. Cần ≥ 30 hạt giống, báo cáo trung bình ± 2·SE; mốc bắt buộc vượt qua là tìm kiếm ngẫu nhiên và đa khởi động + local search.",
-    "Đồ án của khoá không dùng chúng vì: ngân sách 100 ms chỉ đủ vài chục nghìn lần đánh giá (cần cỡ 10⁵–10⁶), nghiệm chỉ ~12 phần tử (lai ghép, “phá 25 %” gần như vô nghĩa), ràng buộc chặt (hàm sửa chữa làm hết việc). Chúng mạnh khi ngân sách **lớn**, nghiệm **dài**, ràng buộc **lỏng**."
+    "Đồ án của khoá không dùng chúng vì: ngân sách 100 ms chỉ đủ vài chục nghìn lần đánh giá (cần cỡ 10⁵–10⁶), nghiệm chỉ ≤ 11 phần tử (lai ghép, “phá 25 %” gần như vô nghĩa), ràng buộc chặt (hàm sửa chữa làm hết việc). Chúng mạnh khi ngân sách **lớn**, nghiệm **dài**, ràng buộc **lỏng**."
   ],
 
   trac: [
@@ -81,15 +81,15 @@ TH.dangKy({
     },
     {
       id: "q2", loai: "mot", doKho: 2, ref: "§1.7 (điều 2)",
-      hoi: "Một bạn bỏ hẳn bước bay hơi khỏi ACO (ρ = 0), chỉ cộng mùi. Hậu quả điển hình sau vài chục vòng là gì?",
+      hoi: "Một bạn bỏ hẳn bước bay hơi khỏi ACO (ρ = 0), chỉ cộng mùi. Hậu quả điển hình về lâu dài là gì?",
       chon: [
-        "Mùi chỉ có thể tăng, tuyến được ưu tiên sớm ngày càng áp đảo, đàn không bao giờ thử lại tuyến khác kể cả khi tuyến khác tốt hơn",
+        "Mùi chỉ có thể tăng và không bao giờ phai, tuyến được ưu tiên sớm ngày càng áp đảo, đàn ngày càng hiếm khi thử lại tuyến khác kể cả khi tuyến khác tốt hơn",
         "Đàn hội tụ nhanh hơn và chắc chắn hơn tới tối ưu toàn cục vì không quên điều gì đã học",
         "Mọi cạnh đều đậm như nhau nên kiến đi hoàn toàn ngẫu nhiên",
         "ACO thoái hoá thành GRASP vì mùi không còn tác dụng"
       ],
       dung: 0,
-      giaiThich: "Bay hơi là cơ chế quên để có thể học lại: thiếu nó, mùi trên tuyến sớm may mắn chỉ dày thêm, xác suất chọn cạnh khác tiến về 0 và đàn bị khoá — khoá vĩnh viễn nếu ρ ≈ 0. Ý “hội tụ chắc chắn tới tối ưu” sai vì khoá vào tuyến sớm thường là cực trị cục bộ. “Đi ngẫu nhiên” là hậu quả của β = 0 khi mùi còn đều, không phải của ρ = 0. Thoái hoá thành GRASP là hậu quả của α = 0."
+      giaiThich: "Bay hơi là cơ chế quên để có thể học lại: thiếu nó, mùi trên tuyến sớm may mắn chỉ dày thêm, xác suất chọn cạnh khác chỉ có giảm và đàn ngày càng bị khoá. Cái khoá đến chậm — với số liệu §1.5, mùi cộng thêm chỉ 1/11 mỗi vòng nên sau 30 vòng tỉ số mùi A–B : A–C mới ≈ 3,7 và phải cỡ 10³ vòng xác suất chọn A–C mới xuống dưới 10⁻³ — nhưng không có gì kéo ngược lại, và nếu tuyến qua C mới là tuyến tốt thì mùi mới phải đuổi kịp cả núi mùi cũ. (Nói cho chính xác: với cập nhật elitist có bay hơi ρ = 0,5 thì xác suất chọn A–C xuống dưới 10⁻³ chỉ sau 10 vòng — khoá nhanh hơn nhiều; cái bay hơi giữ lại là mùi trên cạnh dẫn đầu bị chặn ở Q/(ρL) ≈ 0,18 nên tuyến tốt hơn xuất hiện sau đó đuổi kịp chỉ sau vài vòng.) Ý “hội tụ chắc chắn tới tối ưu” sai vì khoá vào tuyến sớm thường là cực trị cục bộ. “Đi ngẫu nhiên” là hậu quả của β = 0 khi mùi còn đều, không phải của ρ = 0. Thoái hoá thành GRASP là hậu quả của α = 0."
     },
     {
       id: "q3", loai: "mot", doKho: 2, ref: "§3.3",
@@ -164,12 +164,12 @@ TH.dangKy({
       chon: [
         "Giới hạn 100 ms mỗi test, chỉ đủ vài chục nghìn lần đánh giá hàm mục tiêu",
         "Ngân sách đánh giá lớn, cỡ 10⁵–10⁶ lần gọi hàm mục tiêu trở lên",
-        "Nghiệm chỉ gồm khoảng 12 phần tử với ràng buộc thời gian rất chặt",
+        "Nghiệm chỉ gồm tối đa 11 phần tử với ràng buộc thời gian rất chặt",
         "Nghiệm dài và có nhiều cấu trúc để các cá thể trao đổi cho nhau",
         "Ràng buộc lỏng, hoặc dễ sửa nghiệm sau khi lai ghép"
       ],
       dung: [1, 3, 4],
-      giaiThich: "Ba điều kiện (a) ngân sách lớn, (b) nghiệm dài nhiều cấu trúc, (c) ràng buộc lỏng hoặc dễ sửa là điều kiện để quần thể có lợi. Thiếu một trong ba thì quay lại Phần 2–3. Đồ án của khoá vi phạm cả ba: vài chục nghìn lần đánh giá trong 100 ms, nghiệm ~12 phần tử (lai ghép sinh ra rất ít tổ hợp mới), và ràng buộc 720 phút làm hàm sửa chữa trở thành chính heuristic chèn."
+      giaiThich: "Ba điều kiện (a) ngân sách lớn, (b) nghiệm dài nhiều cấu trúc, (c) ràng buộc lỏng hoặc dễ sửa là điều kiện để quần thể có lợi. Thiếu một trong ba thì quay lại Phần 2–3. Đồ án của khoá vi phạm cả ba: vài chục nghìn lần đánh giá trong 100 ms, nghiệm ≤ 11 phần tử (lai ghép sinh ra rất ít tổ hợp mới), và ràng buộc 720 phút làm hàm sửa chữa trở thành chính heuristic chèn."
     }
   ],
 
@@ -203,15 +203,15 @@ TH.dangKy({
     },
     {
       id: "l3", doKho: 3, ref: "§8, Bài tập 17B.5",
-      hoi: "Đồ án của khoá (ship hàng, 100 ms mỗi test, mỗi ngày tối đa 12 ngôi nhà, ràng buộc 720 phút) không dùng thuật toán quần thể nào. Hãy nêu ba lý do và, với mỗi lý do, một phép đo cụ thể để bảo vệ kết luận bằng con số.",
+      hoi: "Đồ án của khoá (ship hàng, 100 ms mỗi test, mỗi ngày tối đa 11 ngôi nhà, ràng buộc 720 phút) không dùng thuật toán quần thể nào. Hãy nêu ba lý do và, với mỗi lý do, một phép đo cụ thể để bảo vệ kết luận bằng con số.",
       goiY: ["Một lý do về ngân sách, một về độ dài nghiệm, một về ràng buộc.", "Đã có một con số của lời giải thật: 27,4 ms và “vài chục nghìn” lần đánh giá."],
       mau: "1. **Ngân sách quá nhỏ (§8.1).** Lời giải thật dùng 27,4 ms và chạy được cỡ vài chục nghìn lần đánh giá, trong khi thuật toán quần thể cần cỡ 10⁵–10⁶ lần; với m = 50 chỉ đủ vài trăm thế hệ, mà GA thường cần hàng nghìn thế hệ. *Phép đo:* đếm số lần gọi hàm đánh giá trong 100 ms rồi so với 10⁵.\n" +
-           "2. **Nghiệm quá ngắn (§8.2).** Chỉ 12 ngôi nhà mỗi ngày: lai ghép hai nghiệm 12 phần tử sinh ra rất ít tổ hợp mới, và “phá 25 %” chỉ là bỏ 3 phần tử, không lớn hơn một nước local search thường (cùng hiện tượng LNS thắng trên P2 65 phần tử nhưng không thắng trên P1 14 phần tử). *Phép đo:* đếm số con lai ghép khác cả hai cha mẹ; so LNS trên bài 12 phần tử với local search thường.\n" +
+           "2. **Nghiệm quá ngắn (§8.2).** Chỉ tối đa 11 ngôi nhà mỗi ngày (720/60 = 12 là chưa tính di chuyển; 12×60 + 11 = 731 > 720): lai ghép hai nghiệm 11 phần tử sinh ra rất ít tổ hợp mới, và “phá 25 %” chỉ là bỏ 3 phần tử, không lớn hơn một nước local search thường (cùng hiện tượng LNS thắng trên P2 65 phần tử nhưng không thắng trên P1 14 phần tử). *Phép đo:* đếm số con lai ghép khác cả hai cha mẹ; so LNS trên bài 11 phần tử với local search thường.\n" +
            "3. **Ràng buộc chặt (§8.3).** Ghép nửa lịch ngày A với nửa lịch ngày B gần như luôn vi phạm (quá 720 phút hoặc trùng nhà), nên phải viết hàm sửa chữa — mà hàm đó cuối cùng chính là heuristic chèn của Bài 7, GA chỉ còn là lớp vỏ. *Phép đo:* tỉ lệ con lai ghép không hợp lệ trước khi sửa; so GA + sửa với heuristic chèn đơn thuần cùng ngân sách.\n\n" +
            "Quy tắc tổng quát: quần thể mạnh khi ngân sách **lớn**, nghiệm **dài**, ràng buộc **lỏng**; thiếu một trong ba thì quay lại Phần 2–3.",
       tieuChi: [
         "Nêu đủ ba lý do: ngân sách, độ dài nghiệm, ràng buộc chặt",
-        "Dẫn được con số của §8 (100 ms, vài chục nghìn lần đánh giá so với 10⁵–10⁶; 12 phần tử; 720 phút)",
+        "Dẫn được con số của §8 (100 ms, vài chục nghìn lần đánh giá so với 10⁵–10⁶; ≤ 11 phần tử; 720 phút)",
         "Mỗi lý do đi kèm một phép đo cụ thể, rẻ, có thể chạy được",
         "Phát biểu được quy tắc tổng quát ba điều kiện để thuật toán quần thể có lợi"
       ]

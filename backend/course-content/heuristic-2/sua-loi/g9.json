@@ -1,0 +1,200 @@
+[
+  {
+    "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+    "old": "Không crash. Không cảnh báo. Không vi phạm ràng buộc nào.",
+    "new": "Không crash. Không cảnh báo nào lọt vào mắt. Không vi phạm ràng buộc nào.",
+    "ly_do": "[MÂU THUẪN] Với g++ (14.0.1, thử thật) đoạn `int move(...)` thiếu `return` luôn in `warning: no return statement in function returning non-void [-Wreturn-type]` ngay cả khi không truyền cờ nào (-Wreturn-type bật mặc định ở C++). \"Không cảnh báo\" sai theo nghĩa đen; chỉ đúng là cảnh báo bị bỏ qua. Mục 21 (nửa sau)."
+  },
+  {
+    "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+    "old": "Không cờ nào in ra lời cảnh báo nếu bạn quên `-Wreturn-type`.",
+    "new": "Trình biên dịch thì **có** báo — `-Wreturn-type` nằm sẵn trong `-Wall` và g++ còn bật nó mặc định cho C++ — nhưng chỉ là một dòng `warning`, dễ chìm giữa đống thông báo hoặc bị tắt (`-Wno-return-type`, `-w`), còn tệp chạy vẫn được sinh ra bình thường.",
+    "ly_do": "[LOGIC] Khẳng định \"không cờ nào cảnh báo nếu quên -Wreturn-type\" sai với g++: đã chạy `g++ -O0/-O2 -std=c++17` (không cờ cảnh báo nào), `-Wall -Wextra`, và `-Wshadow -Wconversion` trên đúng hàm `move` của bài — cả ba đều in cảnh báo -Wreturn-type; chỉ `-Wno-return-type` mới im (hàm `int g(){}` → \"no return statement in function returning non-void\"; hàm `int f(int x){ if (x>0) return 1; }` → \"control reaches end of non-void function\"). Chính lệnh ngay trên (`-Wall -Wextra`) đã chứa cờ này. Mục 21."
+  },
+  {
+    "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+    "old": "-Wall -Wextra -Wreturn-type -Wshadow",
+    "new": "-Wall -Wextra -Wshadow -Wconversion",
+    "ly_do": "[MÂU THUẪN] Hai bộ khác nhau cùng gọi là \"bốn cờ\": 19B §6.1 `-Wall -Wextra -Wreturn-type -Wshadow` còn Bài 19 §8 (mục chuẩn theo quyết định thống nhất số 2), Bài 20 §10.1 và §11 là `-Wall -Wextra -Wshadow -Wconversion`. Đồng bộ theo Bài 19 §8. Mục 21."
+  },
+  {
+    "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+    "old": "`-Wreturn-type` bắt đúng bug này **tại thời điểm biên dịch**, miễn phí. Bài 19 §8 có danh sách đầy đủ;",
+    "new": "`-Wall` đã chứa `-Wreturn-type` (g++ còn bật sẵn nó cho C++ dù không truyền cờ nào), nên bộ cờ này bắt đúng bug này **tại thời điểm biên dịch**, miễn phí (`warning: no return statement in function returning non-void`). Bài 19 §8 có danh sách đầy đủ (cũng là bộ cờ của checklist Bài 20 §10.1);",
+    "ly_do": "[MÂU THUẪN] Đi kèm việc đổi bộ cờ ở trên: nói rõ -Wreturn-type thuộc -Wall (đã kiểm bằng g++ 14.0.1) nên bộ cờ của Bài 19 §8 đã bắt được bug; trỏ đúng tới Bài 19 §8 / Bài 20 §10.1. Mục 21."
+  },
+  {
+    "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+    "old": "(ở $n=6$ thì greedy cũng tối ưu)",
+    "new": "(ở $n=6$ thì ngay cả greedy cũng thường tối ưu)",
+    "ly_do": "[NHỎ] \"ở n=6 thì greedy cũng tối ưu\" nói chắc quá: chính Bài 1 §3.4 có ví dụ 5 món mà greedy sai 40 % (60 so với 100). Mô phỏng 3 000 thể hiện knapsack ngẫu nhiên n=6 (w 5–40, p 10–100, W = nửa tổng w): greedy tỉ số tối ưu 69,8 %, greedy giá trị 78,1 % số thể hiện — \"thường\", không phải \"luôn\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "**Bình** không gõ dòng code thuật toán nào trong **tiếng rưỡi đầu**.",
+    "new": "**Bình** không gõ dòng code thuật toán nào trong **hơn một tiếng đầu**.",
+    "ly_do": "[MÂU THUẪN] Bảng §1.2: bước ④ (greedy — dòng code thuật toán đầu tiên) bắt đầu lúc 15:05, tức sau 65 phút kể từ 14:00, chứ không phải sau 90 phút; đến 15:30 (đúng 1,5 giờ) Bình đã có greedy và cận trên. §1.4 ghi \"chuẩn bị ~1 giờ\" khớp với 65 phút (20 + 15 + 30). Mục 22."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "| 15:05 | ④ | Greedy theo tỉ số — đơn giản nhất chạy được. | **31 755 020** |",
+    "new": "| 15:05 | ④ | Greedy theo tỉ số — đơn giản nhất chạy được. | **30 714 270** |",
+    "ly_do": "[SỐ] Mốc greedy theo tỉ số của P3 (300 test, seed 20260913) là 30 714 270 ở MỌI nguồn: 2607/02 §1.2, 2607/03 §6 (A), 2607/tong-quan, Bài 22 §1.1 (v1), lab-p3-aircon (v0_greedy), cheatsheet. Số 31 755 020 chỉ xuất hiện trong Bài 20 và không khớp nguồn nào (cũng không phải greedy 31 ngày: starter 31 ngày là 31 718 184). Hơn nữa dãy cải tiến ở ⑥ (khai thác 31 ngày → phạt thời gian chết → beam → di chuyển chết → đa khởi động) chính là thang v1→v6 của Bài 22 xuất phát từ 30 714 270; xuất phát từ 31 755 020 thì \"khai thác 31 ngày\" đã nằm trong mốc. Tính lại: 32 915 840 / 30 714 270 = +7,17 % (khớp 2607). Mục 22 (nửa liên quan); xem báo cáo: nếu tác giả có số đo riêng 31 755 020 thì hoàn tác nhóm bản vá này."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "| 15:20 | ⑤ | Cận trên (Bài 18): giải phiên bản dễ hơn của bài. | **33 943 173** → còn **6,9 %** |",
+    "new": "| 15:20 | ⑤ | Cận trên (Bài 18): giải phiên bản dễ hơn của bài. | **33 943 173** → còn **10,5 %** |",
+    "ly_do": "[SỐ] Đi theo mốc greedy 30 714 270: (33 943 173 − 30 714 270) / 30 714 270 = 3 228 903 / 30 714 270 = 10,51 % (cùng quy ước \"dư địa tính theo nghiệm\", như 6,9 % cũ = 2 188 153 / 31 755 020). 10,5 % vẫn nằm trong khoảng 5–15 % \"thiếu tìm kiếm\" của Bài 18 §6 nên kết luận ở §1.3/§7 giữ nguyên."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "Con số 6,9 % trả lời một câu",
+    "new": "Con số 10,5 % trả lời một câu",
+    "ly_do": "[SỐ] Đồng bộ với bản vá dư địa 6,9 % → 10,5 % ở bảng §1.2 (cùng nhóm bản vá về mốc greedy 30 714 270)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "| 17:00 | ⑧ | Chốt: 0 vi phạm / 500 test, 27,4 ms trên giới hạn 100 ms. | nộp |",
+    "new": "| 17:00 | ⑧ | Chốt: 0 vi phạm / 1 000 test, 27,4 ms trên giới hạn 100 ms. | nộp |",
+    "ly_do": "[SỐ] Bài kể lại bằng \"số liệu thật\" của đề 2607, mà nguồn ghi 0 vi phạm trên **1 000** test case, 5 họ seed, 27,4 ms/test (2607/03 đầu trang và §9, 2607/04, 2607/tong-quan; Bài 22 §8 cũng \"1 000 test\"). Con số 500 chỉ là ngưỡng tối thiểu của checklist §10.1, không phải số lần chạy thật. Giữ nguyên checklist §10.1/§11 (ngưỡng ≥ 500)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "| Kết quả cuối buổi | không dùng được | +3,66 % so với mốc cơ sở, biết còn ~3 % dư địa |",
+    "new": "| Kết quả cuối buổi | không dùng được | +7,17 % so với mốc cơ sở, biết còn ~3 % dư địa |",
+    "ly_do": "[SỐ] 32 915 840 / 30 714 270 = 1,0717 → +7,17 % (khớp 2607/03 §6 và Bài 22 §1.1). \"+3,66 %\" cũ = 32 915 840 / 31 755 020, mốc không có nguồn. \"~3 % dư địa\" vẫn đúng: 33 943 173 / 32 915 840 − 1 = 3,12 %."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "> **Phân bổ thời gian trên là số thật**, rút từ",
+    "new": "> **Phân bổ thời gian trên là số xấp xỉ (đã làm tròn)**, rút từ",
+    "ly_do": "[MÂU THUẪN] Tính từ bảng §1.2 (tổng 14:00–17:00 = 180 phút): ① 20 ph = 11 %, ② 15 = 8 %, ③ 30 = 17 %, ④ 15 = 8 %, ⑤ 10 = 6 %, ⑥ 80 = 44 %, ⑦ 10 = 6 %, ⑧ ≈ 0 — gần nhưng không trùng 10/10/15/5/5/40/10/5. \"Số thật … chính là buổi chiều của Bình\" nói quá; hạ xuống \"xấp xỉ\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "**Bằng chứng:** ba trong bốn cải tiến lớn nhất của lời giải đề Samsung đến từ đọc mã, **không** từ đọc đề:",
+    "new": "**Bằng chứng:** trong bốn thành phần đóng góp lớn nhất của lời giải đề Samsung (bảng ablation §9), **hai** cái đến từ đọc mã chứ không phải từ đọc đề — khung ngày thứ 31 (−3,08 %, lớn nhất bảng) và di chuyển chết cuối ngày (−0,45 %, xuất phát từ một dòng trong mã chấm, xem §3.3); hai cái còn lại (beam và phạt thời gian chết, mỗi cái −2,43 %) là kết quả của tìm kiếm và mô hình hoá. Cộng lại hai phát hiện từ mã chiếm 3,53 trên 8,39 điểm phần trăm (≈ 42 %) tổng mức tụt của bốn thành phần ấy. Các phát hiện chỉ có trong mã:",
+    "ly_do": "[LOGIC] Mục 22 + 25 + quyết định thống nhất số 6. Tính lại từ ablation 2607/03 §7: bốn dòng lớn nhất là khung 31 ngày 3,08 · beam 2,43 · phạt thời gian chết 2,43 · di chuyển chết 0,45 (tổng 8,39). Chỉ hai dòng (31 ngày, di chuyển chết — theo chính §3.3 của bài) đến từ đọc mã ⇒ 2/4, không phải 3/4; phần của chúng = 3,53 / 8,39 = 42 %. Bảng ngay dưới liệt kê bốn *phát hiện* trong mã (cả bốn đều ✓), không phải bốn cải tiến lớn nhất — nên câu \"ba trong bốn\" vừa lệch số vừa mâu thuẫn với bảng. Lưu ý: Bài 4B §1 xếp \"di chuyển chết\" là mô hình hoá; nếu chỉ tính khung 31 ngày thì 3,08/8,39 = 37 %."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "**Thời gian:** 30 phút. Nếu lâu hơn, bạn đang làm quá phức tạp.",
+    "new": "**Thời gian:** cỡ 15 phút (như Bình ở §1.2). Nếu lâu hơn, bạn đang làm quá phức tạp.",
+    "ly_do": "[MÂU THUẪN] §1.2: bước ④ từ 15:05 đến 15:20 = 15 phút; §2 cho bước ④ chỉ 5 % buổi (≈ 9 phút trên 3 giờ). \"30 phút\" ở §6 mâu thuẫn cả hai (30 phút là thời gian của bước ③, bộ chấm). Mục 22."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "→ còn 6,9 % dư địa",
+    "new": "→ còn 10,5 % dư địa",
+    "ly_do": "[SỐ] Đồng bộ với bản vá mốc greedy 30 714 270 (xem bản vá ở bảng §1.2): (33 943 173 − 30 714 270) / 30 714 270 = 10,51 %. \"5–15 % → thiếu tìm kiếm\" ở dòng sau vẫn đúng."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "nghiệm cơ sở   = 31 755 020",
+    "new": "nghiệm cơ sở   = 30 714 270",
+    "ly_do": "[SỐ] §7 (khối \"P3: cận trên … nghiệm cơ sở\"): mốc greedy P3 là 30 714 270 (nhiều nguồn, xem bản vá bảng §1.2)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "→ 31 755 020",
+    "new": "→ 30 714 270",
+    "ly_do": "[SỐ] §6 (khối \"P0/P1/P3: greedy theo tỉ số\"): P3 = 30 714 270 (nhiều nguồn, xem bản vá bảng §1.2). P0 40 376 khớp Bài 1 §8.2; P1 61 420 khớp Bài 5/7."
+  },
+  {
+    "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+    "old": "| Còn cách cận trên > 20 % | ② (mô hình) |",
+    "new": "| Còn cách cận trên > 30 % (Bài 18 §6) | ② (mô hình) |",
+    "ly_do": "[MÂU THUẪN] Quyết định thống nhất số 1 + mục 23: ngưỡng chuẩn ở Bài 18 §6 là \"> 30 % → mô hình hoá sai hoặc cận quá lỏng\"; 15–30 % là \"heuristic xây dựng yếu → Phần 2\". Bài 20 tự đặt 20 % (nằm giữa dải 15–30 %). Đồng bộ thành 30 %."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**20.1** Ba quan sát từ `p2.h`:",
+    "new": "**20.1** Bốn quan sát từ `p2.h` (đề chỉ đòi ít nhất ba):",
+    "ly_do": "[MÂU THUẪN] Câu mở đầu nói \"Ba quan sát\" nhưng ngay dưới liệt kê đánh số 1–4. Mục 22 (đáp án 20.1). Không kiểm được nội dung 4 quan sát vì p2.h không có trong repo."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "| 5 | **1,8 %** | 0 % |",
+    "new": "| 5 | **2,1 %** | 0 % |",
+    "ly_do": "[SỐ] Mục 40 (bảng §1.1). Với σ = 10, N = 30 ⇒ SE = 1,826; kỳ vọng chính xác của max K mẫu N(0, SE²) = SE·E[max_K] (E[max_K] = 1,163 · 1,868 · 2,508 · 3,037 cho K = 5 · 20 · 100 · 500; tích phân số + Monte Carlo 4 000 lần đều khớp) = 2,12 · 3,41 · 4,58 · 5,54. Bảng cũ (1,8/2,5/3,0/3,5) trùng với công thức (σ/√N)√(2 ln K) khi N = 100 (SE = 1,0: 1,79/2,45/3,04/3,53) chứ không phải N = 30 như bài nói; lời giải thích \"tương quan\" ở §1.1 không giải thích được vì công thức ở đó cũng dùng N = 30."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "| 20 | **2,5 %** | 0 % |",
+    "new": "| 20 | **3,4 %** | 0 % |",
+    "ly_do": "[SỐ] Mục 40: K = 20 ⇒ 1,826 × 1,868 = 3,41 % (xem bản vá dòng K = 5)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "| 100 | **3,0 %** | 0 % |",
+    "new": "| 100 | **4,6 %** | 0 % |",
+    "ly_do": "[SỐ] Mục 40: K = 100 ⇒ 1,826 × 2,508 = 4,58 % (xem bản vá dòng K = 5). Công thức §1.1 cho 5,54 % — cao hơn vì là cận trên."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "| 500 | **3,5 %** | 0 % |",
+    "new": "| 500 | **5,5 %** | 0 % |",
+    "ly_do": "[SỐ] Mục 40: K = 500 ⇒ 1,826 × 3,037 = 5,54 % (xem bản vá dòng K = 5)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "⇒ **5,5 %**… lớn hơn bảng trên vì bảng dùng $N=30$ với $\\sigma$ tương quan giữa các cấu hình. Tương quan **làm giảm** ảo giác — các cấu hình gần nhau gặp cùng những test khó.",
+    "new": "⇒ **5,5 %**, hơi **lớn hơn** bảng trên (4,6 %): $\\sqrt{2\\ln K}$ là xấp xỉ tiệm cận, với $K$ cỡ trăm nó còn cao hơn kỳ vọng chính xác của giá trị lớn nhất (3,04 so với 2,51 độ lệch chuẩn). Thêm vào đó, tương quan giữa các cấu hình cũng **làm giảm** ảo giác — các cấu hình gần nhau gặp cùng những test khó.",
+    "ly_do": "[LOGIC] Mục 40. Lời giải thích cũ (\"bảng dùng N=30\") không đứng vững — dòng kiểm lại cũng dùng N = 30. Nguyên nhân thật của chênh lệch: √(2 ln K) > E[max của K chuẩn] (K = 100: 3,035 so với 2,508), cộng thêm tương quan nếu có. Giữ kết luận \"công thức là cận trên\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "Đúng quy tắc Bài 4, nhân thêm $\\ln K$.",
+    "new": "Đúng quy tắc Bài 4, nhân thêm $\\ln K$ — áp dụng cho $K \\ge 3$ (lúc $\\ln K \\ge 1$). Với $K=1$ không có gì để chọn nên ảo giác bằng 0 và công thức trên cho $N \\gtrsim 0$; khi đó cứ dùng nguyên quy tắc Bài 4, nên tổng quát hệ số nhân là $\\max(1,\\ln K)$.",
+    "ly_do": "[LOGIC] Mục 40. Công thức N ≳ 8(σ/Δ)² ln K cho 0 khi K = 1 (ln 1 = 0) và 139 < 200 khi K = 2, trong khi bảng ngay dưới ghi 200 cho K = 1 — số 200 là quy tắc Bài 4 (8 · 5² = 200), không phải công thức ln K. Với K = 20/100/500 công thức cho 599/921/1 243 ≈ 600/920/1 240 (khớp bảng). Tính lại bằng code."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "| 1 (so một lần) | 200 |",
+    "new": "| 1 (so một lần — quy tắc Bài 4) | 200 |",
+    "ly_do": "[LOGIC] Mục 40: ghi rõ dòng K = 1 lấy từ quy tắc Bài 4, không phải từ công thức × ln K (xem bản vá câu trước bảng)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "seed  1 ..  300   -> HUAN LUYEN",
+    "new": "seed  1 ..  600   -> HUAN LUYEN",
+    "ly_do": "[SỐ] Mục 40. Quy trình §3.2/§8 ④ cần vòng 3 = 3 cấu hình × 600 test (và vòng 2 = 200 test) trên dải huấn luyện, nhưng dải seed 1..300 chỉ có 300 test case khác nhau. Mở rộng dải huấn luyện thành 1..600 (vẫn cách xa dải kiểm định 901..1200). Không động tới các chỗ dùng \"300\" cho tập kiểm định."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "Cat seed: 1..300 huan luyen",
+    "new": "Cat seed: 1..600 huan luyen",
+    "ly_do": "[SỐ] Mục 40: đồng bộ với dải huấn luyện 1..600 ở §3 (cần 600 test cho vòng 3 của §3.2/§8 ④)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "Cùng ngân sách, thông tin nhiều hơn một bậc.",
+    "new": "Ngân sách chỉ bằng khoảng 1/70 (60 so với 4 096 lần chạy) mà số giá trị được thử nhiều gấp 15 lần; với *cùng* ngân sách thì ngẫu nhiên luôn cho mỗi tham số nhiều giá trị khác nhau hơn lưới.",
+    "ly_do": "[LOGIC] \"Cùng ngân sách\" sai cơ sở so sánh: lưới là 4 096 lần chạy, ngẫu nhiên là 60 lần (4 096/60 ≈ 68). 4 giá trị so với 60 giá trị là hơn 15 lần chứ không phải \"cùng ngân sách\". Câu hỏi 3 của bài mới là so sánh cùng ngân sách 64 lần (2 giá trị/tham số so với 64)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "tắt hẳn* chỉ mất 0,01 % thì *chỉnh số* cho nó tối đa cũng chỉ được chừng ấy",
+    "new": "tắt hẳn* chỉ mất 0,01 % thì *chỉnh số* cho nó thường cũng chỉ được cỡ chừng ấy",
+    "ly_do": "[LOGIC] \"tối đa\" nói chắc hơn bằng chứng: ablation đo f(θ hiện tại) − f(tắt), không chặn f(θ tốt nhất) − f(θ hiện tại). Một thành phần đặt tham số quá tệ có thể trông vô dụng (Δ ≈ 0) mà chỉnh đúng lại có ích. Hạ \"tối đa\" xuống \"thường … cỡ\" (đi cùng bản vá ở khung Quy tắc)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "là **cận trên** cho lợi ích của việc tinh chỉnh tham số bên trong nó.",
+    "new": "là **cận trên thực dụng** cho lợi ích của việc tinh chỉnh tham số bên trong nó (đúng khi tham số đang ở mức tạm ổn; một thành phần đặt quá tệ có thể trông vô dụng chỉ vì chưa được bật đúng — nghi thì quét thô một lần trước khi bỏ).",
+    "ly_do": "[LOGIC] \"|Δ ablation| là cận trên cho lợi ích tinh chỉnh\" không phải định lý: Δ = f(θ hiện tại) − f(tắt) không chặn được f(θ*) − f(θ hiện tại) (ví dụ: hệ số σ của số hạng mật độ đặt quá nhỏ ⇒ tắt hay bật như nhau, nhưng chỉnh hệ số có thể có ích). Giữ nguyên quy tắc xếp hạng, chỉ hạ mức khẳng định và nêu điều kiện. Cũng phù hợp Bài 22 §8 \"đừng vội xoá thứ đo ra 0 %\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "Hai thành phần cùng phục vụ một mục tiêu sẽ **bù cho nhau** khi bạn tắt một cái.",
+    "new": "Hai thành phần cùng phục vụ một mục tiêu sẽ **tương tác** khi bạn tắt một cái: nếu chúng *thay thế* nhau thì cái còn lại bù chỗ (từng cái trông vô dụng — xem §6.2); nếu chúng *bổ trợ* nhau thì tắt một cái là mất cả phần chung.",
+    "ly_do": "[MÂU THUẪN] Câu dẫn nói hai thành phần \"bù cho nhau\" (⇒ tắt một cái mất ít) nhưng ví dụ ngay sau là beam và phạt thời gian chết: tắt cái nào cũng mất đúng 2,43 % và thời gian chết vọt 269 → 767/777 phút (2607/03 §7) — tức chúng *bổ trợ* (mỗi cái vô dụng nếu thiếu cái kia; ở thang phiên bản Bài 22, thêm giá mờ + phạt thời gian chết khi chưa có beam đo −0,08 %), không phải thay thế. Ví dụ minh hoạ ngược với câu dẫn; làm rõ hai kiểu tương tác. Cùng nhóm với mục 39 (Bài 22 §8.3, nhóm khác phụ trách)."
+  },
+  {
+    "bai": "khoa-hoc/bai-20b-tinh-chinh-tham-so",
+    "old": "Tắt riêng từng cái thì con số nói thật; nhưng nếu có ba, bốn thành phần bù nhau thì từng cái sẽ trông vô dụng.",
+    "new": "Cặp này thuộc loại *bổ trợ*: con số của từng cái đúng cho việc *bỏ cái đó*, nhưng **không cộng được** (mỗi con số đã gồm cả phần chung của cặp). Còn nếu có ba, bốn thành phần *thay thế* nhau thì từng cái sẽ trông vô dụng.",
+    "ly_do": "[MÂU THUẪN] Đi kèm bản vá câu dẫn §6.1: tách rõ bổ trợ (không cộng được: tổng 7 dòng ablation 2607 = 3,08 + 2,43 + 2,43 + 0,45 + 0,22 + 0,10 + 0,01 = 8,72 % của bản đầy đủ, trong khi toàn bộ chênh lệch bản đầy đủ so với greedy chỉ (32 915 840 − 30 714 270) / 32 915 840 = 6,69 % cùng cơ sở) và thay thế (che khuất, như §6.2)."
+  }
+]

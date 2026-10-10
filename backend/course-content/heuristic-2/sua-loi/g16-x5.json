@@ -1,0 +1,272 @@
+[
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "Khoảng cách từ nghiệm của bạn tới nó cho biết **còn bao nhiêu dư địa** — và do đó có nên đầu tư tiếp không.",
+  "new": "Khoảng cách từ nghiệm của bạn tới nó, tính theo phần trăm của nghiệm hiện tại — gọi là **độ hở** — cho biết còn khoảng bao nhiêu chỗ để cải thiện, và do đó có nên đầu tư tiếp không.",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Chỗ này là nhắc lại ⑦ (Bài 18); thêm định nghĩa độ hở một lần ở đầu bài."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "Ba tiếng sau An có ba phiên bản code, không biết cái nào tốt hơn cái nào, và vừa phát hiện mình bỏ sót một luật trong đề nên cả ba đều phải viết lại.",
+  "new": "Ba tiếng sau An có hai phiên bản code (greedy và simulated annealing), không biết cái nào tốt hơn cái nào, và vừa phát hiện mình bỏ sót một luật trong đề nên cả hai đều phải viết lại.",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #1 (g9 mục 2): bảng §1.1 chỉ có hai phiên bản của An (14:10 greedy; 14:45 simulated annealing), không phải ba → 'hai phiên bản' ở đoạn mở đầu."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "| 17:00 | Cả ba phiên bản phải viết lại. | **không có con số nào dùng được** |",
+  "new": "| 17:00 | Cả hai phiên bản phải viết lại. | **không có con số nào dùng được** |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #1: đồng bộ 'hai phiên bản' với bảng §1.1 (greedy + SA)."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "| 15:20 | ⑤ | Cận trên (Bài 18): giải phiên bản dễ hơn của bài. | **33 943 173** → còn **10,5 %** |",
+  "new": "| 15:20 | ⑤ | Cận trên (Bài 18): giải phiên bản dễ hơn của bài — mức tham chiếu τ = 7, xem §7. | **33 943 173** → độ hở **10,5 %** |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Thêm nhãn 'mức tham chiếu τ = 7' (định nghĩa chung: chỉ τ = 0 là cận chứng minh được; (33 943 173 − 30 714 270)/30 714 270 = 10,51 %)."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "Ablation sau này cho thấy riêng phát hiện ấy đáng **+3,08 %** — lớn hơn mọi metaheuristic trong khoá cộng lại.",
+  "new": "Ablation sau này cho thấy riêng phát hiện ấy đáng **+3,08 %** — nhiều hơn cả beam search (−2,43 % khi bỏ), thành phần tìm kiếm lớn nhất của lời giải cuối.",
+  "ly_do": "[LOGIC] Mở rộng quyết định X5 #5(b) cho cùng một khẳng định ở Bài 20: 'lớn hơn mọi metaheuristic cộng lại' không có số đo (lời giải cuối không dùng SA/tabu/ILS/ALNS); số có nguồn là ablation Bài 22 §8.1: khung ngày 31 −3,08 % > beam −2,43 %."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "| Thời gian gõ code thuật toán | ~2 giờ | ~1,5 giờ |",
+  "new": "| Thời gian gõ code thuật toán | ≈ 1,5 giờ (30 + 60 phút) | ≈ 1,6 giờ (15 + 80 phút) |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #1: tính từ bảng §1.1/§1.2 — An 14:10–14:40 (30 ph) + 14:45–15:45 (60 ph) = 90 ph = 1,5 giờ; Bình ④ 15:05–15:20 (15 ph) + ⑥ 15:30–16:50 (80 ph) = 95 ph ≈ 1,6 giờ (không phải ~2 và ~1,5)."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "| Kết quả cuối buổi | không dùng được | +7,17 % so với mốc cơ sở, biết còn ~3 % dư địa |",
+  "new": "| Kết quả cuối buổi | không dùng được | +7,17 % so với mốc cơ sở, biết độ hở còn ~3 % |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Kiểm: (33 943 173 − 32 915 840)/32 915 840 = 3,12 %."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "📌 Bình **gõ code ít hơn** An. Cái Bình có nhiều hơn là **thông tin** — và thông tin rẻ hơn code rất nhiều.",
+  "new": "📌 Bình **không gõ ít code hơn** An: lượng thời gian gõ code tương đương (≈ 1,5 giờ so với ≈ 1,6 giờ). Khác biệt nằm ở **thứ tự việc**, không phải khối lượng code — cái Bình có nhiều hơn là **thông tin**, và thông tin rẻ hơn code rất nhiều.",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #1: câu 'Bình gõ code ít hơn An' không đúng theo chính bảng §1.1/§1.2 (≈ 1,5 giờ so với ≈ 1,6 giờ) → 'tương đương', ý chính (thông tin rẻ hơn code) giữ nguyên."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "│ ⑤  CẬN TRÊN → biết còn bao nhiêu dư địa                5 %     │",
+  "new": "│ ⑤  CẬN TRÊN → biết độ hở còn bao nhiêu                 5 %     │",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Hộp ASCII §2: giữ nguyên bề rộng dòng (đã đệm một dấu cách)."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "(b) **miễn phí sau lần phục vụ cuối** ⇒",
+  "new": "(b) sau lần phục vụ cuối thì **không tốn điểm nào** — miễn là ô đích trống và đồng hồ vẫn ≤ 720 (Bài 21 §4.3) ⇒",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #3: đồng bộ với Bài 21 §4.3(b) đã hạ mức ('không tốn điểm nào — miễn là ô đích trống và ≤ 720'; dòng `gCurMin > 720` vẫn chốt SCORE = 0, ô đích có nhà thì bị bắt buộc dọn)."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "có tách biến theo trục không, có **thống kê đủ** không…",
+  "new": "có tách biến theo trục không, có **thống kê đủ** không… (Lưu ý thời lượng: bài mẫu ở §1.2 chỉ dùng 15 phút cho cả bước ② vì đồ án nhỏ; 30 phút là mức đầy đủ.)",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #2: §4.1 nói 30 phút cho 6 câu hỏi 18B còn §1.2 chỉ dành 15 phút cho cả bước ② (14:20→14:35) → nêu rõ hai mức (rút gọn / đầy đủ). Khớp lịch 4B §7 (25–55 = 30 phút)."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "P3:  cận trên (τ=7) = 33 943 173\n     nghiệm cơ sở   = 30 714 270\n     → còn 10,5 % dư địa",
+  "new": "P3:  cận tham chiếu (τ=7) = 33 943 173\n     nghiệm cơ sở         = 30 714 270\n     → độ hở 10,5 %",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Và nhãn τ: τ = 7 là mức tham chiếu, không phải cận chứng minh được (định nghĩa chung; Bài 21 §7.2)."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "**Giá trị:** biết ngay mình đang ở đâu và nên đầu tư vào đâu.",
+  "new": "**Giá trị:** biết ngay mình đang ở đâu và nên đầu tư vào đâu. (τ = 7 là mức *tham chiếu*; cận chứng minh được là τ = 0 — xem Bài 21 §7.2.)",
+  "ly_do": "[QUYẾT ĐỊNH] Định nghĩa chung 'Cận τ' (X5 #9): chỉ τ = 0 chứng minh được; τ = 7, 9,5 là mức tham chiếu."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "║ ⑤ CẬN TRÊN → còn bao nhiêu dư địa?                     5 %   ║",
+  "new": "║ ⑤ CẬN TRÊN → độ hở còn bao nhiêu?                      5 %   ║",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Hộp ASCII §11: giữ nguyên bề rộng dòng."
+ },
+ {
+  "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
+  "old": "| Dư địa | headroom / gap | Khoảng cách từ nghiệm hiện tại tới cận trên. |",
+  "new": "| Độ hở | optimality gap | (cận trên − nghiệm hiện tại) / nghiệm hiện tại — còn khoảng bao nhiêu phần trăm để cải thiện (Bài 18 §2, §6). |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Mục từ điển: đổi tên và ghi công thức (cùng định nghĩa Bài 18 §2: (UB − LB)/LB)."
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "Ba trong số đó đáng hơn toàn bộ phần metaheuristic của khoá cộng lại.",
+  "new": "Một vài trong số đó đáng giá ngang cả phần metaheuristic của khoá: riêng khung ngày thứ 31 cho +3,27 % điểm, nhiều hơn beam search (+3,15 %) — cải tiến tìm kiếm lớn nhất của lời giải cuối (Bài 22 §1.1).",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #5(b): 'ba trong bảy … hơn toàn bộ metaheuristic cộng lại' chỉ được ủng hộ bởi một cặp số — Bài 22 §1.1: v2 (khung ngày 31) +3,27 % > v4 (beam) +3,15 % (đã kiểm lại hai số này ở bảng 1.1)."
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "bạn vừa kiếm được nhiều điểm hơn toàn bộ Phần 4 của khoá này cộng lại (simulated annealing, tabu, ILS, beam, ALNS), **chỉ bằng cách đếm ngón tay trên một dòng `if`**.",
+  "new": "bạn vừa kiếm được nhiều điểm hơn beam search (+3,27 % so với +3,15 %, Bài 22 §1.1) — kỹ thuật tìm kiếm cho lợi ích lớn nhất ở lời giải cuối của khoá này — **chỉ bằng cách đếm ngón tay trên một dòng `if`**.",
+  "ly_do": "[LOGIC] Mở rộng quyết định X5 #5(b) cho cùng khẳng định ở §1.1: lời giải cuối không dùng SA/tabu/ILS/ALNS nên 'hơn toàn bộ Phần 4 cộng lại' không có số đo; số có nguồn: +3,27 % (khung ngày 31) > +3,15 % (beam), Bài 22 §1.1."
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "**⑦ Cận trên và dư địa (Bài 18).** Một con số chắc chắn không ai vượt được, tính bằng cách giải phiên bản dễ hơn của bài toán. Khoảng cách tới nó cho biết còn đáng đầu tư tiếp không, và đầu tư vào đâu.",
+  "new": "**⑦ Cận trên và độ hở (Bài 18).** Một con số chắc chắn không ai vượt được, tính bằng cách giải phiên bản dễ hơn của bài toán. Khoảng cách tới nó, tính theo phần trăm của nghiệm hiện tại và gọi là **độ hở**, cho biết còn đáng đầu tư tiếp không, và đầu tư vào đâu.",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). "
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "- **M4.** Tính cận trên và xác định dư địa.",
+  "new": "- **M4.** Tính cận trên và xác định độ hở.",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). "
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "## 6. Bước ③ — Định cỡ: đòn bẩy nằm ở đâu",
+  "new": "## 6. Định cỡ (bước ②–③ của Bài 20): đòn bẩy nằm ở đâu",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #5(a): trong Bài 20 bước ③ là dựng bộ chấm, không có bước 'định cỡ' → đặt tên mục theo đúng phạm vi (định cỡ nằm trong ②–③ của Bài 20). Lưu ý: tiêu đề đổi nên `outline` của bài (trường dẫn xuất) cần sinh lại nếu dùng."
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "| 3 | **Chọn đúng loại máy** | nâng giá/phút từ ~1 450 lên ~1 530 | +3…5 % |",
+  "new": "| 3 | **Chọn đúng loại máy** | nâng giá/phút từ ~1 450 lên ~1 530 (ước tính; đo thật: greedy ≈ 1 512, lời giải cuối ≈ 1 519 — 2607/02 §1.4, §6) | +3…5 % |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #5(c): ghi rõ đây là ước tính. Đo thật: 2607/02 §1.4(b) ghi greedy 1 512; lời giải cuối (32 915 840 − 1 434 274)/20 722 = 1 519,2 (bảng 2607/02 §6) — cùng định nghĩa 'giá/phút' như §6.2."
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "nghiệm cơ sở v2     = 31 718 184\ncận trên (τ=7)      = 33 943 173\n→ còn 7,0 % dư địa (so với v2; so với v1 = 30 714 270 là 10,5 %, cùng nằm trong khoảng 5–15 %)",
+  "new": "nghiệm cơ sở v2          = 31 718 184\ncận tham chiếu (τ=7)     = 33 943 173\n→ độ hở 7,0 % (so với v2; so với v1 = 30 714 270 là 10,5 %, cùng nằm trong khoảng 5–15 %)",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Kiểm: (33 943 173 − 31 718 184)/31 718 184 = 7,015 %; so với v1 = 10,513 %. Thêm nhãn 'cận tham chiếu' cho τ = 7 (định nghĩa chung; §7.2 đã nêu)."
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "③ thời gian sau lần dọn cuối MIỄN PHÍ → dùng để đi trước",
+  "new": "③ thời gian sau lần dọn cuối KHÔNG TỐN ĐIỂM (nếu ô đích trống, ≤ 720) → dùng để đi trước",
+  "ly_do": "[NHỎ] Cùng lý do §4.3(b) (đã hạ 'miễn phí hoàn toàn' ở g10): tóm tắt §8 cũng cần điều kiện ô đích trống và đồng hồ ≤ 720."
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "□ Cận trên + kết luận \"còn bao nhiêu dư địa\"",
+  "new": "□ Cận trên + kết luận \"độ hở còn bao nhiêu\"",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). "
+ },
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "| Dư địa | headroom | Khoảng cách từ nghiệm hiện tại tới cận trên. |",
+  "new": "| Độ hở | optimality gap | (cận trên − nghiệm hiện tại) / nghiệm hiện tại — còn khoảng bao nhiêu phần trăm để cải thiện (Bài 18 §2, §6). |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Mục từ điển."
+ },
+ {
+  "bai": "khoa-hoc/bai-22-bay-phien-ban",
+  "old": "╌╌╌╌╌ cận trên",
+  "new": "╌╌╌╌╌ cận tham chiếu τ=7",
+  "ly_do": "[NHỎ] Định nghĩa chung 'Cận τ': đường nét đứt là τ = 7 (33 943 173) — mức tham chiếu, không phải cận chứng minh được; đồng bộ nhãn với dòng cuối bảng §1.1 đã ghi 'cận tham chiếu τ=7'."
+ },
+ {
+  "bai": "khoa-hoc/bai-22-bay-phien-ban",
+  "old": "✓ mảng hành động dư 2,4× (461 max / 528 chỗ)",
+  "new": "✓ mảng hành động không tràn: dùng tối đa 461 / 528 chỗ (528/461 ≈ 1,15× dự phòng; hệ số “dư 2,4×” ở 2607/03 §9 không khớp 461/528, chưa đối chiếu được log gốc)",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #6(a): 528/461 = 1,145 ≈ 1,15, không phải 2,4 → bỏ hệ số '2,4×' khỏi Bài 22 và ghi chỗ lệch với 2607/03 §9 (X6 xử lý phía 2607). Số 461/528 giữ nguyên."
+ },
+ {
+  "bai": "khoa-hoc/bai-22-bay-phien-ban",
+  "old": "**−48 %.** Thảm hoạ.",
+  "new": "**−48 %.** Thảm hoạ.\n\n(Về dòng log trên: nhãn `waste` chưa đối chiếu được với đẳng thức 22 320 = dọn + đi + chết — 74,8 nhà ≈ 10 100 phút dọn, nên phút chết phải cỡ 10⁴, trong khi `waste = 771`; chưa có log gốc để xác nhận nhãn.)",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #6(b): g10 mục 3 — 74,8 × 135 phút ≈ 10 098 ≈ 10 100 phút dọn; 22 320 − 10 100 ≈ 12 200 phút còn lại cho đi + chết, nên 'waste = 771' khó là phút chết. Hạ mức, không đổi số."
+ },
+ {
+  "bai": "khoa-hoc/bai-22-bay-phien-ban",
+  "old": "□ Xoá mọi thành phần đóng góp < 0,05 %, chạy lại ablation",
+  "new": "□ Xoá mọi thành phần đóng góp < 0,05 % (ngoại lệ: σ, −0,01 %, bản cuối vẫn giữ), chạy lại ablation",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #6(c): bảng ablation §8.1 còn mật độ σ −0,01 % (< 0,05 %) ở bản cuối → nêu ngoại lệ thay vì để quy tắc tự mâu thuẫn với kết quả."
+ },
+ {
+  "bai": "khoa-hoc/bai-23-tu-danh-gia",
+  "old": "Khoảng cách còn lại tới cận tham chiếu $\\tau{=}7$ là **~3 %**",
+  "new": "Độ hở còn lại tới cận tham chiếu $\\tau{=}7$ là **~3 %**",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7/#9: áp định nghĩa chung 'độ hở' (= (cận trên − nghiệm)/nghiệm; (33 943 173 − 32 915 840)/32 915 840 = 3,12 %). Bài 23 không có chữ 'dư địa'; nhãn τ = 7 'cận tham chiếu' đã đúng."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**20.1** Bốn quan sát từ `p2.h` (đề chỉ đòi ít nhất ba):",
+  "new": "**20.1** Bốn quan sát từ `p2.h` (theo mã `p2.h` gốc; không có trong repo nên chưa kiểm lại được; đề chỉ đòi ít nhất ba):",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #4: giữ nguyên bốn quan sát, thêm nguồn và nêu rõ không đối chiếu được (mã p2.h không có trong repo)."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**21.2, 21.3, 22.\\*, 23.\\*** Bài mở — chấm theo rubric ở",
+  "new": "**21.2** Đáp số mong đợi (300 test, seed gốc 20260913, bộ sinh của `judge.cpp`): ba cận **35 571 464** ($\\tau = 0$), **33 943 173** ($\\tau = 7$), **33 388 769** ($\\tau = 9{,}5$) — các số của §7.2.\n\nCách tính mỗi test: bài cái túi phân số (Dantzig, Bài 18). Mỗi nhà loại $m$ tốn $s_m + \\tau$ phút của ngân sách $31 \\times 720 = 22\\,320$ phút; xếp loại máy theo $p_m/(s_m + \\tau)$ giảm dần (cả ba giá trị $\\tau$ đều cho thứ tự 4, 2, 3, 6, 5, 1), lấy trọn từng loại tới khi hết ngân sách, loại cuối chỉ lấy một phần; cộng tổng $p$ đó với trần thưởng OT $31 \\times 48\\,000 = 1\\,488\\,000$; rồi lấy trung bình 300 test. Chỉ $\\tau = 0$ là cận chứng minh được; $\\tau = 7$ và $9{,}5$ là mức tham chiếu (§7.2).\n\nKiểm tính lại, không cần mã chấm: lấy 293 nhà phân biệt chia đều 6 loại (§6.1; ≈ 48,8 nhà mỗi loại) ra 35 606 095 / 33 969 920 / 33 410 863, cao hơn ba số trên +0,10 % / +0,08 % / +0,07 %; mô phỏng độc lập 300 thể hiện (số nhà $N$ đều trong 200…399, ô và loại máy ngẫu nhiên đều) ra khoảng 35,61 / 33,97 / 33,41 triệu. Nếu bộ sinh của bạn không phải `judge.cpp` thì chấp nhận lệch cỡ ±0,2 %. Độ hở tương ứng: $(33\\,943\\,173 - 31\\,718\\,184)/31\\,718\\,184 \\approx 7{,}0\\,\\%$ so với v2 và $\\approx 10{,}5\\,\\%$ so với v1 $= 30\\,714\\,270$.\n\n**21.3** Đáp số mong đợi (§4.6): số nhà phân biệt trung bình **≈ 295**, và **≈ 29 trong 1 000 test** có vị trí xuất phát trùng một ngôi nhà.\n\nCách tính: $N$ đều trong 200…399 (trung bình 299,5); $N$ nhà rơi ngẫu nhiên vào 10 000 ô nên số ô khác nhau kỳ vọng là $10\\,000\\,\\bigl(1 - (1 - 10^{-4})^N\\bigr)$, lấy trung bình theo $N$ ra ≈ 294,9. Vị trí xuất phát cũng đều trên 10 000 ô nên xác suất trùng một nhà ≈ 294,9 / 10 000 ≈ 2,95 %, tức ≈ 29,5 test trên 1 000 (độ lệch chuẩn ≈ 5). Số đo của bài (≈ 293 nhà phân biệt ở §6.1; 27/1000 ở §4.6) lệch lý thuyết cỡ một độ lệch chuẩn của mẫu 1 000 test — khớp. Chương trình kiểm chứng của bạn nên in cả hai số rồi đối chiếu với lý thuyết này.\n\n**22.\\*, 23.\\*** Bài mở — chấm theo rubric ở",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #5(d): 21.2/21.3 có đáp số kiểm được. Tính lại bằng code: LP Dantzig với 293 nhà chia đều 6 loại cho 35 606 095 / 33 969 920 / 33 410 863 (so với số đo của bài: +0,097 % / +0,079 % / +0,066 %); mô phỏng 300 thể hiện cho 35,607 / 33,966 / 33,408 triệu (sd của trung bình ≈ 0,02 triệu); E[số nhà phân biệt] = trung bình theo N∈[200,399] của 10 000·(1−0,9999^N) = 294,91; P(trùng nhà) = 2,95 %. Chỉ dùng các số tính lại được từ bài (293 ở §6.1; 200…399 ở §3.3; 100×100 ở đề). 22.*, 23.* vẫn là bài mở."
+ },
+ {
+  "bai": "tai-lieu/cheatsheet",
+  "old": "| Khoảng cách tới cận trên | Hành động |",
+  "new": "| Độ hở tới cận trên = (cận trên − nghiệm) / nghiệm | Hành động |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Tiêu đề cột bảng quyết định Bài 18 §6."
+ },
+ {
+  "bai": "tai-lieu/cheatsheet",
+  "old": "| — | cận trên $\\tau{=}7$ | *33 943 173* | |",
+  "new": "| — | cận tham chiếu $\\tau{=}7$ | *33 943 173* | |",
+  "ly_do": "[QUYẾT ĐỊNH] Định nghĩa chung 'Cận τ': τ = 7 là mức tham chiếu, chỉ τ = 0 chứng minh được (g10/g13 đã nêu, chưa vá)."
+ },
+ {
+  "bai": "tai-lieu/cheatsheet",
+  "old": "seed   1.. 300  HUAN LUYEN : quet thoai mai",
+  "new": "seed   1.. 600  HUAN LUYEN : quet thoai mai",
+  "ly_do": "[MÂU THUẪN] g9 mục 40 đã đổi dải huấn luyện Bài 20B (§3, §8 ②) thành 1..600 (vòng 3 = 3 × 600 test cần 600 seed khác nhau); cheatsheet còn ghi 1..300 — đồng bộ."
+ },
+ {
+  "bai": "tai-lieu/cheatsheet",
+  "old": "T−45 phút: **đóng băng** bản tốt nhất. Nộp bản **đã kiểm chứng**, không phải bản mới nhất.",
+  "new": "T−20 phút: **đóng băng** bản tốt nhất (đề 4 giờ: chẩn đoán ở phút 190–205; đóng băng, kiểm định, nộp ở 220–240 — Bài 4B §7). Nộp bản **đã kiểm chứng**, không phải bản mới nhất.",
+  "ly_do": "[MÂU THUẪN] Phụ thuộc quyết định X1 #9: lịch Bài 4B thống nhất theo lịch tuyệt đối ở §7 (đóng băng 220–240 trong đề 240 phút ≈ T−20); cheatsheet còn ghi T−45 theo bản cũ của 4B §6. Nếu X1 chọn lịch khác thì sửa lại dòng này."
+ },
+ {
+  "bai": "tai-lieu/checklist-lam-bai",
+  "old": "□ Chọn biểu diễn nghiệm (tập con / dãy / gán nhãn / lai)",
+  "new": "□ Chạy 6 câu hỏi cấu trúc hàm mục tiêu (Bài 18B) — 30 phút, một lần duy nhất; không câu nào \"có\" thì đi tiếp\n□ Chọn biểu diễn nghiệm (tập con / dãy / gán nhãn / lai)",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #8(a): Bài 20 §4.1 đặt '6 câu hỏi 18B, 30 phút' trong bước ② nhưng giai đoạn 2 của checklist thiếu ô tick (cheatsheet đã có bảng 6 câu). Đặt trước ô 'Chọn biểu diễn' vì §4.1 nói 'trước khi chốt biểu diễn'."
+ },
+ {
+  "bai": "tai-lieu/checklist-lam-bai",
+  "old": "□ Tính khoảng cách: (cận trên − cơ sở) / cơ sở = ___ %",
+  "new": "□ Tính độ hở: (cận trên − cơ sở) / cơ sở = ___ %",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Checklist đã ghi đúng công thức; chỉ thống nhất tên gọi."
+ },
+ {
+  "bai": "tai-lieu/mau-nhat-ky",
+  "old": "Cận trên           : ___ điểm  → dư địa ___ %",
+  "new": "Cận trên           : ___ điểm  → độ hở ___ % (= (cận trên − cơ sở) / cơ sở)",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). "
+ },
+ {
+  "bai": "tai-lieu/mau-nhat-ky",
+  "old": "### 2026-09-17 · P1 · chèn rẻ nhất chỉ nhận được 0,2 đơn mỗi test",
+  "new": "### 2026-09-15 · P1 · chèn rẻ nhất chỉ nhận được 0,2 đơn mỗi test",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #8(b), chọn khác chữ của điều phối (xem báo cáo): theo chính số liệu, lỗi `bestV = 0.0` (1 076 → 59 614) phải được sửa TRƯỚC khi chèn rẻ nhất chạy ra 61 001 ở Ví dụ 1 (2026-09-16), nên Ví dụ 3 đặt sớm hơn (09-15), không phải sau. Không đổi số nào."
+ },
+ {
+  "bai": "tai-lieu/mau-nhat-ky",
+  "old": "- **Kết quả:** 1 076 → 59 614. Sau khi hiệu chuẩn λ: **65 425**.",
+  "new": "- **Kết quả:** 1 076 → 59 614 (với λ = 164 của lần thử này; mỗi lần thử dùng λ của lần hiệu chuẩn riêng, đừng so trực tiếp với λ = 142 ở Ví dụ 1). Lần hiệu chuẩn λ ở Ví dụ 1 (ngày hôm sau) mới đưa chèn rẻ nhất lên **65 425**.",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #8(b): câu cũ 'Sau khi hiệu chuẩn λ: 65 425' kể hiệu chuẩn xảy ra sau lỗi nhưng 65 425 là kết quả của Ví dụ 1 (hạ λ 142 → 88, ngày 09-16) → nối đúng thứ tự, nêu λ khác nhau giữa hai ví dụ. Số 1 076, 59 614, 65 425, 164, 142 giữ nguyên."
+ },
+ {
+  "bai": "tai-lieu/mau-bao-cao",
+  "old": "## 8. Cận trên và dư địa còn lại",
+  "new": "## 8. Cận trên và độ hở còn lại",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). "
+ },
+ {
+  "bai": "tai-lieu/mau-bao-cao",
+  "old": "Khoảng cách        = __ %",
+  "new": "Độ hở              = __ %   ((cận trên − lời giải của tôi) / lời giải của tôi)",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #7 + định nghĩa chung: 'dư địa' chỉ phần trăm còn lại tới cận trên → 'độ hở' := (cận trên − cơ sở) / cơ sở (đại lượng mà ngưỡng Bài 18 §6 dùng). Ô 'Khoảng cách' trong khung §8 là chính độ hở; ghi công thức để người điền cùng một mẫu số."
+ },
+ {
+  "bai": "tai-lieu/tai-lieu-tham-khao",
+  "old": "| TopCoder Marathon Match | Thể loại gốc (từ 2006), bài dài hơn |",
+  "new": "| TopCoder Marathon Match | Thể loại gốc (từ những năm 2000), bài dài hơn |",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #8(c): năm '2006' không kiểm chứng được (g13: theo trí nhớ Marathon Match có từ khoảng 2003) → mốc thời gian rộng hơn, không bịa năm."
+ },
+ {
+  "bai": "tai-lieu/tai-lieu-tham-khao",
+  "old": "| [`samsung/expe/2607/research`](../../expe/2607/research/) | Nghiên cứu hoàn chỉnh đề thi thật: mô hình hoá, khảo sát, thiết kế, mã nguồn, liên hệ tài liệu | Bài 21–23; và làm mẫu cho báo cáo đồ án |",
+  "new": "| [`samsung/expe/2607/research`](../../expe/2607/research/) | Nghiên cứu hoàn chỉnh đề thi thật: mô hình hoá, khảo sát, thiết kế, mã nguồn, liên hệ tài liệu | Bài 21–23; và làm mẫu cho báo cáo đồ án |\n\n> Số chương ở bảng trên ghi theo kho `samsung/metaheuristic`; chưa đối chiếu được với kho.",
+  "ly_do": "[QUYẾT ĐỊNH] X5 #8(c): giữ mục `chapter-16`; thêm chú thích số chương chưa đối chiếu (g13 mục 2: Bài 17B từng ghi khác; 17B đã bỏ số chương ở cụm X4)."
+ }
+]

@@ -1,0 +1,266 @@
+[
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "Nhưng thêm 5 vòng số nữa thôi là lại **63 triệu năm**.",
+  "new": "Nhưng thêm 14 vòng số nữa thôi (24 vòng tất cả) là lại **63 triệu năm**.",
+  "ly_do": "[SỐ] \"63 triệu năm\" = 10^15 mã × 2 s = 2×10^15 s (63,4 triệu năm) chỉ đúng ở tốc độ GỐC (15 vòng). Trên máy nhanh 10^9 lần như câu trước nói: 15 vòng = 10^15 × 2 ns = 2×10^6 s ≈ 23 ngày. Để lại ra 63 triệu năm trên máy nhanh cần 10^24 mã = 24 vòng (10^24 × 2 ns = 2×10^15 s). Đã kiểm bằng code (mục 10 trong danh sách)."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "| $10^{18}$ | $2^{60}$, $20!$ | **36 năm** |",
+  "new": "| $10^{18}$ | $2^{60}$, $20!$ | **32 năm** ($2^{60}$ cụ thể: 36 năm; $20!$: 77 năm) |",
+  "ly_do": "[SỐ] Các hàng khác của bảng tính theo đúng luỹ thừa 10 ở cột 1 (10^12 → 17 phút, 10^15 → 12 ngày); 10^18/10^9 = 10^9 s = 31,7 năm. 36 năm là của riêng 2^60 = 1,153×10^18 (36,5 năm); 20! = 2,43×10^18 ra 77 năm. Đáp án 2.1(c) dùng 36 năm cho 4^30 = 2^60 là đúng."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "| $10^{24}$ | $2^{80}$, $24!$ | 36 tỉ năm ≈ **2,6 lần tuổi vũ trụ** |",
+  "new": "| $10^{24}$ | $2^{80}$, $24!$ | ≈ **32 triệu năm** (cỡ 1 % tuổi vũ trụ) |",
+  "ly_do": "[SỐ] 10^24/10^9 = 10^15 s = 3,17×10^7 năm = 32 TRIỆU năm (2^80 = 1,21×10^24 → 38,3 triệu năm; 24! = 6,2×10^23 → 19,7 triệu năm). \"36 tỉ năm\" sai đúng 1000 lần. §2.2 ngay dưới cũng tự tính ra ≈ 32 triệu năm ≈ 1 % tuổi vũ trụ (mốc 10^17 s)."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "Bảng trên ghi 36 tỉ năm, tức ~2,6 lần tuổi vũ trụ — sai lệch là do bảng tính theo $2^{80} = 1{,}2\\times10^{24}$ và làm tròn khác.",
+  "new": "Con số này khớp với hàng $10^{24}$ của bảng trên (≈ 32 triệu năm); nếu tính riêng $2^{80} = 1{,}2\\times10^{24}$ thì ≈ 38 triệu năm.",
+  "ly_do": "[MÂU THUẪN] Đoạn này tự tính ra ≈ 32 triệu năm (10^15 s) nhưng rồi biện hộ cho \"36 tỉ năm\" của bảng bằng \"làm tròn khác\" — làm tròn không thể sai 1000 lần; bảng mới là chỗ sai (đã sửa ở bản vá trước). 2^80/10^9 s = 3,83×10^7 năm."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "tức $10^{22}$ giây — gấp **100 000 lần tuổi vũ trụ**.",
+  "new": "tức $10^{22}$ giây — gấp **hàng chục nghìn lần tuổi vũ trụ** (≈ $2\\times10^{4}$ lần so với 13,8 tỉ năm ≈ $4{,}4\\times10^{17}$ giây).",
+  "ly_do": "[SỐ] 100 000 lần chỉ đúng nếu lấy mốc nhẩm tròn 10^17 s làm tuổi vũ trụ. Tuổi thật 13,8 tỉ năm = 4,35×10^17 s ⇒ 10^22 s ≈ 2,3×10^4 lần; với tích thật 120×119×…×106 = 6,19×10^30 ⇒ 6,19×10^21 s ≈ 1,4×10^4 lần. \"Hàng chục nghìn\" đúng cho cả hai."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "1.55e+25      4.25e+19",
+  "new": "1.55e+25      4.27e+18",
+  "ly_do": "[SỐ] 25!/10! = 1,551×10^25 / 3,629×10^6 = 4,27×10^18 (không phải 4,25×10^19). Tính bằng Python big-int."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "2.65e+32      2.02e+22",
+  "new": "2.65e+32      2.03e+20",
+  "ly_do": "[SỐ] 30!/15! = 2,653×10^32 / 1,308×10^12 = 2,03×10^20 (không phải 2,02×10^22). Tính bằng Python big-int."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "Con số này sẽ rất quan trọng ở Bài 16 và Bài 21 —",
+  "new": "Con số này sẽ rất quan trọng ở Bài 23 §6.3 (matheuristic) —",
+  "ly_do": "[THAM CHIẾU] Bài 16 (Beam search) và Bài 21 (Mổ xẻ đề thi) không dùng Held–Karp hay giải chính xác bài con nào (grep \"Held\", \"matheuristic\", \"bài con\", \"quy hoạch động\" → không có). Chỗ khoá học thực sự dùng ý \"giải chính xác từng bài con ≤ 12–15 nhà bằng Held–Karp ≈ 0,6 ms\" là Bài 23 §6.3 \"Matheuristic\"."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "(ví dụ mỗi ngày ≤ 12 nhà — đúng như đề thi thật!)",
+  "new": "(ví dụ mỗi ngày ≤ 11 nhà — đúng như đề thi thật!)",
+  "ly_do": "[SỐ] Theo đề thi thật (2607/01 §2.1): mỗi nhà phục vụ ≥ 60 phút, nhà nằm ở các ô phân biệt nên hai nhà liên tiếp cách nhau ≥ 1 phút. 12 nhà cần ≥ 12×60 + 11 = 731 > 720 phút ⇒ một ngày chứa tối đa 11 nhà (11 nhà: ≥ 660 + 10 = 670 ≤ 720). 12 = 720/60 chỉ là cận thô."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "Trong đề thi thật, mỗi ngày phục vụ tối đa 12 ngôi nhà (vì $720/60 = 12$). Nếu đã biết **tập** 12 ngôi nhà của một ngày,",
+  "new": "Trong đề thi thật, mỗi ngày phục vụ tối đa 11 ngôi nhà (mỗi nhà ≥ 60 phút nên $720/60 = 12$ là cận thô; nhưng giữa hai nhà ở hai ô khác nhau luôn đi ≥ 1 phút, nên 12 nhà cần ≥ $12 \\times 60 + 11 = 731 > 720$). Nếu đã biết **tập** 11 ngôi nhà của một ngày,",
+  "ly_do": "[SỐ] Như bản vá trước: 12 nhà cần ≥ 731 phút > 720 ⇒ tối đa 11 nhà/ngày. Đáp án 2.4 đổi theo (11²·2¹¹ = 247 808)."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "(Đây chính là ý tưởng nền của Bài 16 và của *matheuristic* ở §9.)",
+  "new": "(Đây chính là ý tưởng nền của *matheuristic* ở §9 và của Bài 23 §6.3.)",
+  "ly_do": "[THAM CHIẾU] Bài 16 là Beam search, không giải chính xác bài con nào (chỉ nhắc \"tối đa 12 ngôi nhà\" khi bàn cấu trúc dữ liệu); Held–Karp cho từng ngày nằm ở Bài 23 §6.3."
+ },
+ {
+  "bai": "khoa-hoc/bai-02-vi-sao-kho",
+  "old": "| $n \\le 20$ và không có ràng buộc phức tạp | ① vét cạn / DP bitmask |",
+  "new": "| $n \\le 20$ và không có ràng buộc phức tạp | ① DP bitmask (hoặc vét cạn nếu là bài *tập con*: $2^{20} \\approx 10^6$; vét cạn *hoán vị* $n!$ chỉ tới $n \\approx 12$) |",
+  "ly_do": "[LOGIC] \"n ≤ 20 → vét cạn\" mâu thuẫn số của chính bài: §3.2 tính 20! = 2,4×10^18 ⇒ 77 năm ở 10^9 phép/s, §2.2 đặt ngưỡng vét cạn ở log10|S| ≤ 12 (12! = 4,8×10^8 ≈ 0,5 s; 13! = 6,2×10^9 ≈ 6 s). Với n=20 chỉ bài tập con (2^20 ≈ 10^6) mới vét cạn được; bài hoán vị cần DP bitmask."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "\\approx 5\\times10^{17}$ | 16 năm |",
+  "new": "\\approx 2{,}79\\times10^{17}$ | ≈ 8,8 năm |",
+  "ly_do": "[SỐ] Σ_{k=0..10} 60!/(60−k)! = 2,7906×10^17 (số hạng k=10 một mình đã là 2,736×10^17); ÷10^9 = 2,79×10^8 s = 8,84 năm. Đáp án cũ 5×10^17 / 16 năm tự nhất quán với nhau nhưng sai ~1,8 lần so với tổng thật. Python big-int."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**2.2** $n^2 2^n \\le 10^7$ (ngân sách 100 ms). Thử: $n=18 \\Rightarrow 324 \\times 262\\,144 = 8{,}5\\times10^7$ — hơi quá. $n=16 \\Rightarrow 256 \\times 65\\,536 = 1{,}7\\times10^7$. **$n \\approx 16$–17.**",
+  "new": "**2.2** Ở $10^9$ phép/giây (Bài 2 §2.1), 100 ms ≈ $10^8$ phép, nên cần $n^2 2^n \\le 10^8$. Thử: $n=18 \\Rightarrow 324 \\times 262\\,144 = 8{,}5\\times10^7$ ✓; $n=19 \\Rightarrow 361 \\times 524\\,288 = 1{,}9\\times10^8$ ✗. **$n = 18$.** Với 10 giây (gấp 100 lần, $10^{10}$ phép): $n=24 \\Rightarrow 576 \\times 16\\,777\\,216 = 9{,}7\\times10^9$ ✓, $n=25 \\Rightarrow 2{,}1\\times10^{10}$ ✗ ⇒ $n = 24$, tức **chỉ thêm được 6 phần tử** (gấp 100 lần ≈ $2^{6{,}6}$ — đúng ý cạm bẫy 1 ở §9: phần cứng nhanh gấp trăm lần chỉ mua được vài phần tử).",
+  "ly_do": "[SỐ] Đáp án cũ dùng ngân sách 10^7 cho 100 ms, mâu thuẫn mốc 10^9 phép/s của Bài 2 §2.1 (100 ms = 10^8). Ngay cả với 10^7 thì \"n ≈ 16–17\" cũng sai (n=15: 7,4×10^6 ✓; n=16: 1,7×10^7 ✗ — chính dòng đáp án cũ ghi 1,7×10^7 > 10^7). Với 10^8: n=18 (8,49×10^7), n=19 (1,89×10^8 ✗). Nửa sau của đề (10 giây, ×100) chưa được trả lời: 10^10 phép ⇒ n=24 (9,66×10^9), n=25 (2,10×10^10 ✗) ⇒ +6. Kiểm bằng code."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**2.4** 12 nhà, Held–Karp $O(n^2 2^n) = 144 \\times 4096 = 589\\,824$ phép ≈ **0,6 ms**. Với 31 ngày × 3 preset = 93 lần gọi → 55 ms. **Vừa 100 ms nhưng sát** — khả thi nếu chỉ dùng cho ngày quan trọng. Đây là ý tưởng **matheuristic** (Bài 23 §5.3).",
+  "new": "**2.4** Một ngày chứa tối đa **11** nhà (12 nhà cần ≥ $12 \\times 60 + 11 = 731 > 720$ phút). Held–Karp $O(n^2 2^n) = 11^2 \\times 2^{11} = 121 \\times 2\\,048 = 247\\,808$ phép ≈ **0,25 ms**. Cho cả 31 ngày: $31 \\times 0{,}25 \\approx 7{,}7$ ms — thoải mái trong 100 ms; ngay cả gọi lại 3 lần (ví dụ 3 cấu hình × 31 ngày = 93 lần) cũng chỉ ≈ 23 ms. Chỉ khi heuristic gọi bộ giải chính xác cỡ vài trăm lần trở lên (100 ms ≈ 400 lần) thì ngân sách mới thành vấn đề. Đây là ý tưởng **matheuristic** (Bài 23 §6.3).",
+  "ly_do": "[SỐ][THAM CHIẾU] (1) Một ngày tối đa 11 nhà, không phải 12 (xem bản vá Bài 2 §9): 11²·2¹¹ = 247 808 phép ≈ 0,25 ms; 31 ngày ≈ 7,7 ms; 93 lần ≈ 23 ms. Kết luận \"sát 100 ms\" của đáp án cũ dựa trên 12 nhà và một hệ số \"3 preset\" không có trong đề; đề chỉ hỏi 31 ngày. (2) \"Bài 23 §5.3\" không tồn tại — matheuristic với Held–Karp ở Bài 23 §6.3."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**Khử dư thừa:** cố định đỉnh 0 ở vị trí đầu, và ép $\\pi_1 < \\pi_{n-1}$ (chọn chiều).",
+  "new": "**Khử dư thừa:** cố định đỉnh 0 ở vị trí đầu, và ép $\\pi_1 < \\pi_{n-1}$ (chọn chiều). Còn lại đúng $(n-1)!/2$ mã — khớp $|S|$ ở Bài 2 §3.2. Dư thừa không phải một tiêu chí riêng trong §5, nhưng theo §9 cạm bẫy 2 nó làm phình không gian tìm kiếm $2n$ lần và khiến nhiều nước đi chỉ chuyển giữa các mã của *cùng một* chu trình ($\\Delta f = 0$, \"chạy mà không tiến\") — nên gần nhất với tiêu chí ③ (tính địa phương).",
+  "ly_do": "[LOGIC] Đề 3.1 hỏi ba ý (số mã, cách khử, ảnh hưởng tiêu chí nào) nhưng đáp án chỉ trả lời hai. Thêm ý thứ ba dựa đúng vào lập luận của Bài 3 §9 cạm bẫy 2 (\"tốn nhiều nước đi để đi từ mã này sang mã khác của cùng một nghiệm — chạy mà không tiến\"); đánh dấu là tiêu chí ③ — xem mục \"Cần tác giả quyết định\" trong báo cáo. Kiểm: (n−1)!/2 mã sau khi khử = |S| của Bài 2 §3.2."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "(chia cho $3!$ vì nhóm không phân biệt).",
+  "new": "(chia cho $3!$ vì nhóm không phân biệt). Biểu diễn `nhom[i]` thì có $12!/(4!)^3 = 34\\,650$ mã hợp lệ cho 5 775 cách chia — **dư thừa đúng 6 lần** ($3!$ cách đặt tên ba nhóm); khử bằng cách ép nhãn theo thứ tự xuất hiện (học sinh đầu tiên luôn ở nhóm 0, nhóm mới kế tiếp luôn là nhóm 1…). Chú ý ràng buộc \"mỗi nhóm đúng 4 người\" làm đổi nhãn *một* học sinh phá cỡ nhóm: nước đi tự nhiên ở đây là **hoán đổi nhãn của hai học sinh**.",
+  "ly_do": "[LOGIC] Đề 3.2 hỏi 3 ý: chọn họ nào, |S|, biểu diễn có dư thừa không; đáp án bỏ ý cuối. Tính lại: 12!/(4!)^3 = 479001600/13824 = 34 650 mã; ÷ 3! = 5 775 cách chia khác nhau ⇒ dư thừa ×6 (khớp con số 5 775 đáp án đã ghi). Ghi chú cuối đi cùng sửa §3.3 của bài."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "Lý do: nó đã có tự do \"chèn vào giữa\" (đòn bẩy lớn nhất, +6,5 % theo Bài 7) nhưng vẫn thiếu tự do \"chọn ngày\" (+~2 %).",
+  "new": "Lý do: nó đã có tự do \"chèn vào giữa\" (đòn bẩy lớn nhất ở Bài 7: +6,5 % so với greedy trên **P1**) nhưng vẫn thiếu tự do \"chọn ngày\". Hai con số không cộng được với nhau: tổng chênh A → B trên P2 chỉ là +5,69 % (Bài 3 §6.2), nên (A') chỉ chiếm một phần khoảng đó — đây là **dự đoán**, hãy chạy để kiểm lại.",
+  "ly_do": "[MÂU THUẪN] \"+6,5 %\" là chèn so với greedy tỉ số trên P1 (Bài 7: 65 425 / 61 420), không phải trên P2; \"+~2 %\" cho \"chọn ngày\" không có nguồn nào trong khoá. Nếu cả hai cùng nằm trong khoảng A → B của P2 thì 6,5 % + 2 % = 8,5 % > 5,69 % (tổng A → B thật, Bài 3 §6.2) — vô lý. Giữ nguyên dự đoán \"giữa A và B, gần B hơn\" nhưng bỏ số không kiểm chứng được."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "- (a) **Đầy đủ:** ✓ — mọi tập con + thứ tự đều mã hoá được (đặt các đơn được chọn lên đầu).",
+  "new": "- (a) **Đầy đủ:** ✓ theo nghĩa \"chứa nghiệm tối ưu\" — mọi nghiệm **cực đại** (không còn đơn nào nhét thêm được ở cuối) đều mã hoá chính xác bằng cách đặt các đơn được chọn lên đầu, và nghiệm tối ưu (giá trị đơn > 0) luôn cực đại. Nhưng **không phải** mọi tập con + thứ tự đều mã hoá được: bộ giải mã tham lam nhận thêm các đơn còn vừa, nên nghiệm chưa cực đại không có mã riêng.",
+  "ly_do": "[LOGIC] Bộ giải mã đề 3.5 \"duyệt hoán vị và nhận đơn nào còn vừa thời gian\": đặt các đơn được chọn lên đầu thì chúng được nhận, nhưng các đơn còn lại phía sau cũng được nhận nếu còn vừa ⇒ chỉ nghiệm cực đại mới giải mã đúng. Phản ví dụ: ngân sách 100, đơn A tốn 10, đơn B tốn 20: nghiệm {A} không có mã (mọi hoán vị chứa A đều nhận thêm B). Nghiệm tối ưu với giá trị dương luôn cực đại (nếu còn thêm được thì thêm sẽ tăng điểm) nên tiêu chí ① vẫn thoả."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**Cần ≈ 93 test case.**",
+  "new": "**Cần ≈ 93 test case.** Nếu so theo cặp và $\\sigma$ hiệu dụng giảm một nửa (6 và 7,5): $N > 4 \\times (6^2 + 7{,}5^2)/16 = 23{,}1$ ⇒ **cần ≈ 24 test** — đúng một phần tư (§3.4).",
+  "ly_do": "[LOGIC] Đề 4.1 có câu cuối \"so theo cặp và σ hiệu dụng giảm một nửa thì cần bao nhiêu?\" mà đáp án bỏ trống. Tính: N > 4(σ_A² + σ_B²)/Δ² = 4(36 + 56,25)/16 = 23,06 ⇒ 24 (= 92,25/4)."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "Số đo thực tế thường khớp trong ±15 % (do $\\sigma$ ước lượng cũng có sai số).",
+  "new": "Số đo thực tế thường khớp trong ±15 % (do $\\sigma$ ước lượng cũng có sai số). Cột `sd` thì **không giảm theo $N$**: $\\sigma$ là tính chất của dữ liệu, tăng $N$ chỉ làm ước lượng nó ổn định hơn (xem bảng §3.1 của bài).",
+  "ly_do": "[NHỎ] Đề 4.2 hỏi cả cột `sd` (\"đổi thế nào — và vì sao?\") nhưng đáp án chỉ nói SEM. Bổ sung theo đúng bảng σ vs SEM của Bài 4 §3.1 (σ không đổi khi N tăng)."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "đóng góp **+9,4 %**.",
+  "new": "đóng góp **≈ 8,6 %** điểm của bản đầy đủ ((65 425 − 59 800)/65 425 — cùng cách tính với các bảng ablation §5.1, §5.2; tính trên bản đã tắt thì là +9,4 %).",
+  "ly_do": "[SỐ] Bài 4 §5.1–5.2 định nghĩa đóng góp = (điểm bản đầy đủ − điểm bản tắt)/điểm bản đầy đủ (vd tắt A: 100 → 96,9 ⇒ 3,1 %; bảng §5.2 cột Δ cũng tính trên bản đầy đủ). Đáp án 4.4 chia cho bản đã tắt: 5 625/59 800 = 9,41 % — khác cơ sở. Cùng cơ sở: 5 625/65 425 = 8,60 %. (59 800 khớp \"greedy GIA MO\" 59 774,9 ở §7.2: 5 650/65 424,9 = 8,64 %.)"
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "## 2. Trực giác: cùng một bài, ba cách lưu",
+  "new": "## 2. Trực giác: cùng một bài, bốn cách lưu",
+  "ly_do": "[NHỎ] Tiêu đề nói \"ba cách\" nhưng mục liệt kê bốn cách A, B, C, D và câu ngay dưới ghi \"cả bốn cách dưới\"."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "order = [0, 0, 1, 0, 1, 1, 2, ...]     (thứ tự trong ngày)",
+  "new": "order = [2, 1, 0, 1, 0, 2, 1, ...]     (thứ tự trong ngày; chỉ số i ứng với đơn i+1, ngày đánh số từ 0)",
+  "ly_do": "[SỐ] Mảng `day = [0,1,0,2,1,2,0,…]` khớp nghiệm \"3-7-1 / 5-2 / 9-4-6\" khi chỉ số i ứng với đơn i+1 (đơn 1→ngày 0, 2→1, 3→0, 4→2, 5→1, 6→2, 7→0). Thứ tự trong ngày của đơn 1..7 phải là [2,1,0,1,0,2,1] (3-7-1: đơn 3 đứng 0, đơn 7 đứng 1, đơn 1 đứng 2; 5-2: đơn 5 đứng 0, đơn 2 đứng 1; 9-4-6: đơn 4 đứng 1, đơn 6 đứng 2). Mảng cũ [0,0,1,0,1,1,2] là thứ tự tăng dần theo mã đơn (1-3-7 / 2-5 / 4-6-9) — KHÔNG phải cùng nghiệm với A, B, D như đề bài khẳng định."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "§6 sẽ **đo** lợi ích đó bằng con số: 5,7 %.",
+  "new": "§6 sẽ **đo** một dạng của lợi ích đó bằng con số: quyết định ngày muộn hơn cho điểm cao hơn 5,7 % (so (B) với (A); xem ghi chú về giới hạn của phép đo này ở §6.3).",
+  "ly_do": "[LOGIC] Số 5,7 % ở §6 là B so với A, tức hai thủ tục dựng nghiệm (lấp đầy từng ngày vs chèn toàn cục). §6 không đặt các BIỂU DIỄN A/B/C/D của §2 cạnh nhau, và bài tập 3.4 còn nói rõ \"(A) và (B) dùng cùng một biểu diễn nhưng khác thời điểm quyết định\". Hạ khẳng định xuống đúng mức: đó là bằng chứng cho nguyên tắc \"trì hoãn quyết định ngày\", chưa phải số đo lợi ích của biểu diễn chuỗi phẳng."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "Họ này lại **đóng miễn phí** như họ 1: gán nhãn nào cũng hợp lệ về mặt cấu trúc.",
+  "new": "Họ này lại **đóng miễn phí** như họ 1: gán nhãn nào cũng hợp lệ về mặt cấu trúc (miễn là bài không đòi cỡ nhóm cố định — nếu mỗi nhóm phải đúng $k$ người như bài tập 3.2 thì đổi nhãn *một* phần tử làm hỏng cỡ nhóm, và nước đi tự nhiên phải là **hoán đổi nhãn của hai phần tử**).",
+  "ly_do": "[LOGIC] \"Gán nhãn đóng miễn phí\" chỉ đúng với ràng buộc cấu trúc thuần (hàm vào {1..m}). Khi có ràng buộc kích thước nhóm (bài tập 3.2: 3 nhóm × 4 người), đổi nhãn một học sinh luôn cho nhóm 5 người + nhóm 3 người ⇒ không còn hợp lệ; chỉ hoán đổi nhãn hai học sinh giữ được cỡ nhóm."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "Điều khiến cách D vẫn thắng là: lợi ích từ tính hợp lệ tự động và tái dùng toán tử **lớn hơn** thiệt hại từ tính địa phương — và §6 đo được điều đó.",
+  "new": "Điều khiến cách D vẫn thắng là: lợi ích từ tính hợp lệ tự động và tái dùng toán tử **lớn hơn** thiệt hại từ tính địa phương — đó là lựa chọn của lời giải đề thi thật; §6 chỉ cho bằng chứng gián tiếp (quyết định ngày càng muộn thì điểm càng cao), chưa đặt D cạnh các biểu diễn khác để đo trực tiếp phép so này.",
+  "ly_do": "[LOGIC] §6 đo ba chiến lược dựng nghiệm A/B/C (không có số cho tính hợp lệ, tái dùng toán tử hay độ gồ ghề của bề mặt), nên không thể \"đo được\" việc lợi ích lớn hơn thiệt hại. Hạ cho đúng mức bằng chứng."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "Phải đo. §6 đo, và D thắng rõ.",
+  "new": "Phải đo. §6 đo một mặt của câu hỏi — trì hoãn quyết định ngày có lợi không — và kết quả nghiêng rõ về phía trì hoãn; nó **không** đặt bốn biểu diễn A/B/C/D cạnh nhau, nên với chính D ta mới có lập luận chứ chưa có số đo trực tiếp.",
+  "ly_do": "[LOGIC] \"§6 đo, và D thắng rõ\" khẳng định có phép so bốn biểu diễn; §6 chỉ so (A) lấp đầy từng ngày / (B) chèn toàn cục / (C) chèn + LNS. Không có số nào cho D. Mục tiêu M4 \"bằng số liệu thực nghiệm\" chỉ được đáp ứng gián tiếp."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "Ba chiến lược trên khác nhau ở **thời điểm quyết định \"đơn này thuộc ngày nào\"**:",
+  "new": "Ba chiến lược trên khác nhau ở **thời điểm quyết định \"đơn này thuộc ngày nào\"** (và cả ở độ tinh vi của thủ tục dựng nghiệm — (B) tốn thời gian gấp ~70 lần (A) — nên đây là bằng chứng gợi ý chứ không phải thí nghiệm tách riêng một yếu tố):",
+  "ly_do": "[LOGIC] Nguyên nhân (thời điểm chốt ngày) và kết quả (điểm) bị gán thẳng, trong khi (A) 0,10 ms và (B) 6,93 ms (×69) khác nhau ở nhiều thứ ngoài thời điểm quyết định. Thêm điều kiện cho đúng mức; không đổi số nào."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "Giả sử khoảng cách từ D tới C chỉ mất **8 phút** (D và C tình cờ nằm cạnh nhau, còn C thì xa B):",
+  "new": "Giả sử ở thứ tự mới, đi B→D tốn **35** phút (đúng bằng chi phí tới D ở bảng trên) còn D→C chỉ tốn **8 phút** (D và C tình cờ nằm cạnh nhau, còn C thì xa B; chi phí gồm cả thời gian phục vụ đơn đến nên không đối xứng — C→D ở bảng là 35, D→C chỉ 8):",
+  "ly_do": "[MÂU THUẪN] Dòng ví dụ ghi D(90) = B(55) + 35, nghĩa là cần chi phí B→D = 35, nhưng bài chỉ nêu D→C = 8; con số 35 ở bảng là chi phí C→D (đơn trước D là C). Nêu rõ cả hai chi phí giả định và lưu ý chi phí không đối xứng (gồm thời gian phục vụ đơn đến). Xem \"Cần tác giả quyết định\": với khoảng cách Manhattan, B→D→C ≥ 75 − d(C,D) nên số liệu minh hoạ này không tương ứng một bản đồ thật."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "            if (soNgayDaSang >= SO_NGAY_TOI_DA) break;   // het ngay -> dung",
+  "new": "            if (soNgayDaSang + 1 >= SO_NGAY_TOI_DA) break;   // dang o ngay cuoi -> dung (SO_NGAY_TOI_DA = tong so ngay)",
+  "ly_do": "[MÃ] `soNgayDaSang` bắt đầu 0 và đếm số lần ĐÃ SANG ngày mới, nên ngày hiện tại là soNgayDaSang+1. Với điều kiện `soNgayDaSang >= SO_NGAY_TOI_DA` bộ giải mã cho phép SO_NGAY_TOI_DA lần sang ngày = SO_NGAY_TOI_DA+1 ngày. Chạy mô phỏng g++ (SO_NGAY_TOI_DA = 5, mỗi đơn 60 phút, ngày 100 phút): mã cũ dùng 6 ngày, mã sửa dùng 5. (Mã thật ở Bài 22 dùng hằng MAX_NEXTDAY = 30 = số lần nextDay() nên viết >= đúng; ở đây tên SO_NGAY_TOI_DA nghĩa là tổng số ngày.)"
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "| `if (soNgayDaSang >= SO_NGAY_TOI_DA) break;` | hết ngày thì dừng hẳn |",
+  "new": "| `if (soNgayDaSang + 1 >= SO_NGAY_TOI_DA) break;` | đang ở ngày cuối mà vẫn không vừa thì dừng hẳn (`soNgayDaSang` đếm số lần *đã sang* ngày mới nên ngày hiện tại là `soNgayDaSang + 1`) |",
+  "ly_do": "[MÃ] Đồng bộ dòng giải thích với sửa điều kiện trong khối mã (xem bản vá trước)."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "| `chiPhi = khoangCach(viTri, h) + ...` | tính lại chi phí | vì `t` đã reset nhưng vị trí thì chưa |",
+  "new": "| `chiPhi = khoangCach(viTri, h) + ...` | tính lại chi phí | **thừa** ở đây: `viTri` và `h` không đổi nên `chiPhi` y nguyên (reset `t` không làm đổi chi phí). Dòng này chỉ có tác dụng nếu ngày mới xuất phát từ chỗ khác (vd kho) — khi đó phải đặt lại `viTri` ngay trước nó |",
+  "ly_do": "[LOGIC] Lý do cũ (\"`t` đã reset nhưng vị trí thì chưa\") không giải thích được việc tính lại: chiPhi chỉ phụ thuộc viTri và h, cả hai không đổi giữa hai lần tính, nên dòng này là no-op (đã xác nhận bằng mô phỏng). Sửa lời giải thích; không xoá dòng mã (vô hại, và đúng nếu mô hình ngày mới xuất phát từ kho)."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "1. **Không bao giờ sinh nghiệm không hợp lệ** — điều kiện `t + chiPhi > NGAN_SACH` luôn được kiểm tra.",
+  "new": "1. **Không bao giờ sinh nghiệm không hợp lệ** — điều kiện `t + chiPhi > NGAN_SACH` luôn được kiểm tra (với giả định mỗi đơn đứng một mình vẫn vừa trọn một ngày, `chiPhi ≤ NGAN_SACH_NGAY`; nếu không thì sau khi sang ngày còn phải kiểm lại và bỏ đơn đó, vì mã trên cộng thẳng `chiPhi` vào `t` mà không kiểm lần hai).",
+  "ly_do": "[LOGIC] Mô phỏng: ngân sách 100, chuỗi chi phí [30,150,20]: đơn 150 sang ngày mới rồi vẫn được cộng ⇒ t = 150 > 100 (vi phạm), vì sau `++soNgayDaSang; t = 0;` không kiểm lại. Khẳng định \"không bao giờ\" cần điều kiện (thực tế mỗi nhà ≤ 210 + di chuyển < 720 nên đề thi thật thoả)."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "**Cách chữa:** cố định điểm bắt đầu là đỉnh 0.",
+  "new": "**Cách chữa:** cố định điểm bắt đầu là đỉnh 0 (khử hệ số $n$) và ép đỉnh đứng ngay sau đỉnh 0 nhỏ hơn đỉnh đứng cuối (khử hệ số 2 của chiều đi — xem đáp án 3.1).",
+  "ly_do": "[NHỎ] Đoạn trên nói không gian phình lên 2n lần, nhưng cách chữa chỉ khử hệ số n; còn lại 2 mã/chu trình (hai chiều). Đáp án 3.1 của chính bài đã nêu cả hai bước."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "(đo được: quyết định ngày sớm làm mất 5,7 % điểm trên P2)",
+  "new": "(đo được trên P2: trì hoãn quyết định ngày cho điểm cao hơn chốt sớm 5,7 % — tức chốt sớm thấp hơn ≈ 5,4 %)",
+  "ly_do": "[SỐ] 5,7 % = (B − A)/A = 19 267,1/338 672,6 = 5,69 %. \"Mất bao nhiêu %\" tính trên cơ sở tốt hơn (B): 19 267,1/357 939,7 = 5,38 %. Nói \"mất 5,7 %\" lẫn cơ sở. Ngoài ra bản vá hạ phát biểu cho khớp §6 (so ba chiến lược dựng nghiệm)."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "và đọc nhầm nó làm mất ~5 % điểm.",
+  "new": "và đọc nhầm nó làm sai cả mô hình (coi mỗi ngày là một tuyến xuất phát từ vị trí cố định). Khoá học không có số đo nào cho mức điểm mất vì lỗi này.",
+  "ly_do": "[LOGIC] Con số \"~5 %\" không có nguồn: ablation đề thi thật (2607/03, Bài 4 §5.2) chỉ có khung ngày 31 −3,08 %, beam −2,43 %, phạt thời gian chết −2,43 %, di chuyển chết −0,45 %… không dòng nào đo việc \"reset vị trí\"; 2607/tong-quan ghi riêng mục này là \"(quyết định cách mô hình hoá)\" chứ không kèm %; Bài 21 §3.2 chỉ nêu sự kiện nextDay() không reset gPosY/gPosX. Hạ khẳng định, không thay bằng số khác. (Cùng khẳng định \"~5 %\" còn ở Bài 1 §1.3 và §9 — ngoài nhóm.)"
+ },
+ {
+  "bai": "khoa-hoc/bai-04-do-luong",
+  "old": "Trung bình khác nhau rõ ràng, nhưng hai phân bố chồng lấn tới ~70 %.",
+  "new": "Trung bình khác nhau rõ ràng, nhưng hai phân bố chồng lấn tới ~50 % (hệ số chồng lấn của hai đường cong chuông có đúng trung bình và $\\sigma$ như bảng ≈ 52 %).",
+  "ly_do": "[SỐ] Với (61 419,7; 3 448,9) và (65 424,9; 2 816,1): hệ số chồng lấn ∫min(f1,f2) = 0,5175 (tích phân số, xấp xỉ chuẩn); công thức cùng-σ 2Φ(−Δ/2σ) = 0,523. Không có cách tính chuẩn nào cho ~70 %."
+ },
+ {
+  "bai": "khoa-hoc/bai-04-do-luong",
+  "old": "Và đi xuống mỗi hàng, chênh lệch giảm một nửa thì số test gấp bốn.",
+  "new": "Và cứ mỗi lần chênh lệch giảm một nửa (10 % → 5 %, hay 2 % → 1 %) thì số test gấp bốn.",
+  "ly_do": "[NHỎ] \"Đi xuống mỗi hàng, chênh lệch giảm một nửa\" sai ở hàng 5 % → 2 % (giảm 2,5 lần, số test ×6,25: 8→50 hoặc 32→200); chỉ đúng ở 10 %→5 % và 2 %→1 %."
+ },
+ {
+  "bai": "khoa-hoc/bai-04-do-luong",
+  "old": "chênh 37 điểm.",
+  "new": "chênh 36,3 điểm (65 928,5 − 65 892,2 trong bảng).",
+  "ly_do": "[SỐ] Dùng số có một chữ số thập phân của bảng để các phép tính sau khớp: 65 928,5 − 65 892,2 = 36,3."
+ },
+ {
+  "bai": "khoa-hoc/bai-04-do-luong",
+  "old": "= 2 \\times 488 = 976 \\gg 37$$",
+  "new": "= 2 \\times 488 = 976 \\gg 36{,}3$$",
+  "ly_do": "[SỐ] Đồng bộ Δ = 36,3 (xem bản vá trước)."
+ },
+ {
+  "bai": "khoa-hoc/bai-04-do-luong",
+  "old": "$N = 60 \\times (976/37)^2 \\approx 41\\,000$",
+  "new": "$N = 60 \\times (976/36{,}3)^2 \\approx 43\\,000$",
+  "ly_do": "[SỐ] 2·√(337,4² + 352,9²) = 976,5; N = 60 × (976,5/36,3)² = 43 417 ≈ 43 000. Ngay cả với Δ = 37 làm tròn thì 60 × (976/37)² = 41 750 chứ không phải 41 000."
+ },
+ {
+  "bai": "khoa-hoc/bai-04-do-luong",
+  "old": "★ Con số 41 000 đáng dừng lại.",
+  "new": "★ Con số 43 000 đáng dừng lại.",
+  "ly_do": "[SỐ] Đồng bộ với N ≈ 43 000."
+ },
+ {
+  "bai": "khoa-hoc/bai-04-do-luong",
+  "old": "cải thiện 10 % → 30 test;  cải thiện 1 % → 800 test",
+  "new": "cải thiện 10 % → 8 test (lấy 30 cho chắc);  cải thiện 1 % → 800 test (σ/x̄ = 10 %)",
+  "ly_do": "[NHỎ] Bảng §3.3 cho 8 test (σ = 10 %) hoặc 2 test (σ = 5 %) khi cần phát hiện chênh 10 %; \"30\" là mức dư dả §3.3 khuyên chứ không phải kết quả của N ≳ 8(σ/Δ)² mà dòng này đang trích. Hàng 1 % → 800 lấy từ cột σ = 10 % nên ghi rõ."
+ }
+]

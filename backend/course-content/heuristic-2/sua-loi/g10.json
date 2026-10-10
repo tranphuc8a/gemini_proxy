@@ -1,0 +1,206 @@
+[
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "với $T^{\\text{end}}$ = thời điểm kết thúc **lần vệ sinh cuối cùng**.",
+    "new": "với $T^{\\text{end}}$ = thời điểm kết thúc **lần vệ sinh cuối cùng**, và chỉ khi **mọi bước trong ngày đều đáp xuống ô có nhà**. Nếu chen một di chuyển rỗng giữa ngày thì các khoảng không còn lát kín: phần của nó nằm sau phút 480 không được tính, nên tổng thưởng thấp hơn công thức đúng 200 điểm mỗi phút ấy (xem Quan sát 3a).",
+    "ly_do": "[LOGIC] §4.2 khẳng định công thức co rút vô điều kiện (\"các bước liên tiếp thoả start_{k+1} = end_k\"), nhưng §4.3(a) ngay dưới nói di chuyển rỗng giữa ngày sau phút 480 làm mất 200 điểm/phút. Theo mã move(): ô trống thì return TRƯỚC khi cộng OT và startMin của bước kế lấy gCurMin SAU lần đi rỗng, nên khoảng đi rỗng không thuộc khoảng nào => mất. Hai câu mâu thuẫn nếu công thức đúng vô điều kiện. Công thức chỉ đúng khi mọi bước đáp xuống nhà (đúng với ví dụ §1.2 và với mô hình §5.3). Ca 2607/03 §4.1 cũng ghi 'lỗ trong chuỗi lát kín => mất 200 điểm/phút'. Mục đã biết 41 (§4.2): XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "- **(b)** Di chuyển rỗng **sau lần vệ sinh cuối cùng** thì **miễn phí hoàn toàn** → dùng nó để tiến trước về mục tiêu ngày mai là cải tiến **trội tuyệt đối**.",
+    "new": "- **(b)** Di chuyển rỗng **sau lần vệ sinh cuối cùng** thì **không tốn điểm nào** — miễn là đồng hồ vẫn ≤ 720 (dòng `gCurMin > 720` vẫn chốt `SCORE = 0`) và ô đích trống (Quan sát 4) → dùng nó để tiến trước về mục tiêu ngày mai là cải tiến **trội tuyệt đối**.",
+    "ly_do": "[LOGIC] 'miễn phí hoàn toàn' sai nếu hiểu theo nghĩa đen: move() vẫn có chốt B (`if (gCurMin > 720) SCORE = 0` sau phần đi) và đáp xuống ô có nhà thì bị bắt buộc dọn (D). Chính Quan sát 4 ngay dưới gọi đây là 'cái bẫy nguy hiểm nhất'. Chỉ 'không tốn điểm' là đúng. Mục đã biết 41 (§4.3b): XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "> Bảng giá **không đơn điệu** theo $m$. Máy loại 4 hiệu quả nhất, loại 1 kém nhất.",
+    "new": "> Cột $p_m/s_m$ **không đơn điệu** theo $m$ (bản thân giá $p_m$ thì tăng dần theo $m$). Máy loại 4 hiệu quả nhất, loại 1 kém nhất.",
+    "ly_do": "[NHỎ] p_m = 80 000, 140 000, 180 000, 240 000, 250 000, 300 000 là dãy TĂNG NGHIÊM NGẶT theo m; cái không đơn điệu là tỉ số p/s (1333,3; 1555,6; 1500,0; 1600,0; 1388,9; 1428,6). Câu gốc nói 'bảng giá' nhưng nghĩa là hiệu quả p/s. (Ca 2607/01 §2.2 Nhận xét 1 có cùng câu — ngoài phạm vi.)"
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "$$d(\\text{pos}_{d-1}, h_a) + \\sum_{i=a}^{b}\\bigl(d(h_{i-1},h_i) + s_{h_i}\\bigr) \\le 720$$",
+    "new": "$$d(\\text{pos}_{d-1}, h_a) + s_{h_a} + \\sum_{i=a+1}^{b}\\bigl(d(h_{i-1},h_i) + s_{h_i}\\bigr) \\le 720$$",
+    "ly_do": "[SỐ] Công thức gốc đếm TRÙNG quãng đi vào nhà đầu tiên của ngày: số hạng d(pos_{d-1}, h_a) đã là quãng đó, mà tổng bắt đầu từ i = a lại cộng thêm d(h_{a-1}, h_a). Thử ngày chỉ có một nhà (a = b): vế trái gốc = d(pos,h_a) + d(h_{a-1},h_a) + s — hai lần quãng đi. Sửa: tách số hạng i = a (chỉ còn d(pos,h_a) + s_{h_a}) và cho tổng chạy từ i = a+1. (Ca 2607/01 §2.3 cùng công thức — ngoài phạm vi.)"
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "với mỗi ngày $d$:",
+    "new": "với mỗi ngày $d$ (phục vụ các nhà $h_a, \\dots, h_b$; $\\text{pos}_{d-1}$ là vị trí kết thúc của ngày trước):",
+    "ly_do": "[NHỎ] Kèm bản vá công thức ràng buộc: các ký hiệu a, b, pos_{d-1} chưa được định nghĩa trong Bài 21 (chỉ có ở 2607/01 §2.3)."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "tức **chọn lọc 54 %**.",
+    "new": "tức chỉ chọn phục vụ **khoảng 54 %** số nhà (bỏ lại ~46 %).",
+    "ly_do": "[NHỎ] 54 % là tỉ lệ nhà ĐƯỢC phục vụ: 157/293 = 53,6 % (155–160/293 = 52,9–54,6 %). 'Chọn lọc 54 %' đọc được cả hai chiều (bỏ 54 % hay giữ 54 %). Làm rõ chiều. Mục đã biết 41 (§6.1): XÁC NHẬN (chỉ là mơ hồ cách nói, số đúng)."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "$\\approx 293 \\times 135 = 39\\,600$ phút",
+    "new": "$293 \\times 135 = 39\\,555 \\approx 39\\,600$ phút",
+    "ly_do": "[SỐ] 293 × 135 = 39 555, không phải 39 600 (dấu '=' đặt sau phép nhân đã làm tròn). 39 555/22 320 = 1,77 ≈ 1,8 nên kết luận 'gấp 1,8 lần' không đổi. s trung bình = 30 × 3,5 + 30 = 135 đã kiểm."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "### 6.2 Phân rã điểm số",
+    "new": "### 6.2 Phân rã điểm số (của lời giải cuối ở Bài 22, ≈ 32,9 triệu)",
+    "ly_do": "[NHỎ] §6.2 không nói phân rã cho lời giải nào; đọc cạnh §7.1 (31,7 triệu) thì 20 700 × 1 520 + 1,43 M = 32,89 M trông như sai. Thực ra khớp lời giải cuối: ca 2607/02 §6 cột C ghi phút vệ sinh 20 722, thưởng OT 1 434 274; (32 915 840 − 1 434 274)/20 722 = 1 519,2 ≈ 1 520. Greedy 31 ngày (31,7 M) có phân rã khác. Mục đã biết 41 (§6.2): KHÔNG XÁC NHẬN là lỗi số; chỉ thiếu nêu đối tượng."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "mỗi phút chết mất ~1 450 điểm, **không phải 200**",
+    "new": "mỗi phút chết mất ≈ λ ≈ 1 420 điểm, **không phải 200**",
+    "ly_do": "[MÂU THUẪN] Cùng một đại lượng (chi phí của một phút chết) ghi ~1 450 ở bảng §6.3 nhưng 'giá mờ λ ≈ 1 420' ở hộp ngay dưới, ở §10 và ở mọi nơi trong Bài 22 (preset λ ∈ {1360, 1420, 1480}; λ tối ưu thực nghiệm 1 420 ở 2607/03 §2.3). 1 450 chỉ xuất hiện như 'giá/phút trung bình' của dòng đòn bẩy #3 (Σp/Σs = 1 190/810 = 1 469 cho một mẫu loại máy đều) — là đại lượng khác, giữ nguyên. Mục đã biết 41 (§6.3): XÁC NHẬN. 'Gấp 7 lần' vẫn đúng (1 420/200 = 7,1)."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "v0 greedy 30 ngay : avg=30714270",
+    "new": "v1 greedy 30 ngay : avg=30714270",
+    "ly_do": "[THAM CHIẾU] Quyết định thống nhất 3: chuẩn đánh số là Bài 22 (v1 = greedy tỉ số 30 ngày, v2 = +ngày thứ 31). Bài 21 §7.1 gọi cùng hai nghiệm là v0 và v1 (và §7.3 gọi 31 718 184 là 'v1' trong khi Bài 22 gọi nó là v2). Tên tệp nhị phân p3_v0 / v0_greedy.cpp giữ nguyên."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "v1 greedy 31 ngay : avg=31718184",
+    "new": "v2 greedy 31 ngay : avg=31718184",
+    "ly_do": "[THAM CHIẾU] Như trên: 31 718 184 là v2 theo Bài 22 §1.1 (+3,27 % so với v1)."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "Chỉ sửa \"dùng thêm ngày 31\" đã cho **+3,27 %** trong 0,3 ms.",
+    "new": "Chỉ sửa \"dùng thêm ngày 31\" đã cho **+3,27 %** trong 0,3 ms. (Đánh số theo Bài 22: `p3_v0` là **v1**, `p3_starter` là **v2**.)",
+    "ly_do": "[THAM CHIẾU] Nối cách gọi `p3_v0`/`p3_starter` với cách đánh số v1…v7 của Bài 22 (quyết định thống nhất 3)."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "| 9,5 | di chuyển thực tế | 33 388 769 |",
+    "new": "| 9,5 | di chuyển thực tế | 33 388 769 |\n\n> Chỉ dòng $\\tau = 0$ là cận trên **chứng minh được**. Hai dòng còn lại là cận **tham chiếu** (Bài 18 §3.3): chặt hơn, nhưng chỉ đúng nếu $\\tau$ thật sự là cận dưới của số phút di chuyển trung bình mỗi nhà — mà $\\tau = 9{,}5$ là quãng đường thực của chính lời giải, còn $\\tau = 7$ là giá trị kỳ vọng cỡ TSP-Manhattan cho điểm rải đều (nhà được chọn có thể gần nhau hơn).",
+    "ly_do": "[LOGIC] Bảng gọi cả ba dòng là 'Cận trên' và §7.3 dùng dòng τ = 7 để kết luận 'còn 7,0 % dư địa'. Chỉ τ = 0 (bỏ hẳn di chuyển) là nới lỏng thật sự; Bài 18 §3.3 tự nói τ thực tế là cận 'tham chiếu, chỉ đúng nếu τ là cận dưới thật'. Hạ khẳng định cho đúng mức, không đổi số. Tái lập gần đúng bằng mô phỏng 300 thể hiện ngẫu nhiên (LP cái túi + 31 × 48 000): 35,62 M / 33,97 M / 33,41 M so với 35,57 M / 33,94 M / 33,39 M (lệch < 0,15 %), nên các số trong bảng hợp lý."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "nghiệm cơ sở v1     = 31 718 184",
+    "new": "nghiệm cơ sở v2     = 31 718 184",
+    "ly_do": "[THAM CHIẾU] 31 718 184 là v2 theo Bài 22 (quyết định thống nhất 3). Dư địa (33 943 173 − 31 718 184)/31 718 184 = 7,01 % đã tính lại: đúng, và nằm trong khoảng 5–15 % của bảng Bài 18 §6."
+  },
+  {
+    "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+    "old": "→ còn 7,0 % dư địa",
+    "new": "→ còn 7,0 % dư địa (so với v2; so với v1 = 30 714 270 là 10,5 %, cùng nằm trong khoảng 5–15 %)",
+    "ly_do": "[THAM CHIẾU] Đồng bộ với g9 (Bài 20): mốc greedy P3 trong khoá là 30 714 270 (v1, greedy 30 ngày); 31 718 184 là v2 (greedy 31 ngày). Tính lại: (33 943 173 − 31 718 184)/31 718 184 = 7,01 %; (33 943 173 − 30 714 270)/30 714 270 = 10,51 %. Cả hai nằm trong khoảng 5–15 % của Bài 18 §6, nên kết luận điều hướng không đổi; chỉ ghi rõ cơ sở."
+  },
+  {
+    "bai": "khoa-hoc/bai-22-bay-phien-ban",
+    "old": "| +0,47 % | +6,93 % | 9,50 ms |",
+    "new": "| +0,47 % | +6,94 % | 9,50 ms |",
+    "ly_do": "[SỐ] (32 844 376 − 30 714 270)/30 714 270 = 2 130 106/30 714 270 = 0,069352 = 6,9352 % => làm tròn 6,94 %, không phải 6,93 %. (Các ô Δ khác đã tính lại đều đúng: +3,27 / −0,08 / +3,15 / +0,47 / +0,22; tích luỹ 3,18 / 6,43 / 7,17.) Mục đã biết 39 (§1.1): XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/bai-22-bay-phien-ban",
+    "old": "| | *(cận trên $\\tau{=}7$)* | *33 943 173* | | | |",
+    "new": "| | *(cận tham chiếu $\\tau{=}7$)* | *33 943 173* | | | |",
+    "ly_do": "[NHỎ] Đồng bộ với Bài 21 §7.2 và Bài 18 §3.3: τ = 7 là cận tham chiếu (không chứng minh được), chỉ τ = 0 là cận trên tuyệt đối."
+  },
+  {
+    "bai": "khoa-hoc/bai-22-bay-phien-ban",
+    "old": "Nhưng cả đồ án chỉ cải thiện được **7,17 %**.",
+    "new": "Nhưng cả đồ án chỉ cải thiện được **7,17 %** so với v1 (cột \"Mất\" ở trên lấy bản đầy đủ làm cơ sở; tính cùng cơ sở đó thì đồ án hơn v1 $2\\,201\\,570 / 32\\,915\\,840 = 6{,}69\\,\\%$ — chênh lệch với 8,72 % còn lớn hơn nữa).",
+    "ly_do": "[SỐ] So hai phần trăm khác cơ sở: 8,72 % = tổng (điểm tụt / điểm bản đầy đủ), còn 7,17 % = (đầy đủ − v1)/v1. Cùng cơ sở bản đầy đủ: 2 201 570/32 915 840 = 6,688 % (hoặc quy ablation về cơ sở v1: 9,35 %). Kết luận 'tổng ablation > tổng cải thiện' vẫn đúng và mạnh hơn; chỉ cần nói rõ cơ sở. Số 8,72 % đã tính lại: 3,0835 + 2,4331 + 2,4275 + 0,4465 + 0,2171 + 0,0981 + 0,0149 = 8,7206. Mục đã biết 39 (§1.4): XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/bai-22-bay-phien-ban",
+    "old": "### 6.2 Ba lớp an toàn — đây là đoạn code nguy hiểm nhất",
+    "new": "### 6.2 Bốn lớp an toàn — đây là đoạn code nguy hiểm nhất",
+    "ly_do": "[NHỎ] Bảng ngay dưới liệt kê BỐN rủi ro và bốn biện pháp (đáp trúng nhà; đáp trúng đích; ra ngoài bản đồ; vòng lặp không kết thúc), không phải ba. (Tiêu đề gốc ở 2607/03 §4.1 cũng ghi 'ba lớp' với bảng bốn dòng — ngoài phạm vi.)"
+  },
+  {
+    "bai": "khoa-hoc/bai-22-bay-phien-ban",
+    "old": "Chú ý chữ **mình mày**: khi bỏ beam search, sáu thành phần kia **vẫn còn đó** và chúng gánh đỡ một phần việc của beam. Khi bỏ số hạng phạt thời gian chết, beam vẫn còn và nó cũng gánh đỡ một phần. Hai thành phần này **cùng phục vụ một mục tiêu** — lấp đầy ngày cho sát 720 phút — nên công của chúng chồng lên nhau.",
+    "new": "Chú ý chữ **mình mày**: khi bỏ beam search, số hạng phạt thời gian chết **vẫn còn đó** nhưng không còn ai hành động theo nó, nên phần công **chỉ có khi đủ cả hai** cũng mất theo. Khi bỏ số hạng phạt, beam vẫn còn nhưng không còn mục tiêu để theo đuổi, nên cũng mất đúng phần công chung ấy. Hai thành phần này **bổ trợ nhau** — cùng phục vụ một mục tiêu, lấp đầy ngày cho sát 720 phút, và thiếu một cái thì cái kia vô dụng (§4.3, §5.3) — nên phần công chung của chúng nằm trong **cả hai** dòng ablation.",
+    "ly_do": "[LOGIC] Cơ chế bị nói ngược. Gọi G(A), G(B), G(AB) là điểm tăng khi thêm riêng A, riêng B, cả hai: ablation(A) = G(AB) − G(B), ablation(B) = G(AB) − G(A); tổng ablation − lợi ích thật = G(AB) − G(A) − G(B) — DƯƠNG khi bổ trợ (G(AB) > G(A)+G(B)), ÂM khi thay thế. Bài ghi 'sáu thành phần kia gánh đỡ một phần việc của beam' (= thay thế/che khuất) rồi kết luận tổng ablation LỚN hơn — thay thế cho kết quả ngược lại. Dữ liệu của bài là bổ trợ: bỏ beam hay bỏ phạt đều mất 2,43 %, và §4.4/§5.3/§1.5 ('đỡ không nổi', 'thiếu cái nào thì hai cái còn lại vô dụng'). Mục đã biết 39 (§8.3): XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/bai-22-bay-phien-ban",
+    "old": "Vì thế tổng các ablation **lớn hơn** tổng lợi ích thật. Điều ngược lại cũng xảy ra được: hai thành phần *bổ trợ* nhau (như §4.3) thì tổng ablation **nhỏ hơn** lợi ích thật, vì bỏ một cái đã làm cái kia mất tác dụng theo.",
+    "new": "Vì thế tổng các ablation **lớn hơn** tổng lợi ích thật. Điều ngược lại xảy ra với hai thành phần *thay thế* nhau (như `tailFill` và số hạng phạt ở §8.2 — cái này làm được một phần việc của cái kia): bỏ riêng một cái thì cái còn lại gánh đỡ, nên ablation của từng cái nhỏ hơn giá trị thật và tổng ablation **nhỏ hơn** lợi ích thật.",
+    "ly_do": "[LOGIC] Câu gốc gán 'bổ trợ (như §4.3) => tổng nhỏ hơn' — ngược: §4.3 chính là cặp bổ trợ và nó làm tổng LỚN hơn (8,72 % > 6,69 %). Trường hợp tổng nhỏ hơn là thay thế/che khuất — đúng ví dụ §8.2 (tailFill che phạt: −1,33 % thay vì −2,43 %) và đúng bảng thuật ngữ ('Che khuất: A gánh đỡ việc của B nên ablation của B nhỏ hơn giá trị thật')."
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "Đây là **delta evaluation** (Bài 10), và trong đồ án nó làm mọi thứ nhanh lên **1 157 lần**.",
+    "new": "Đây là **delta evaluation** (Bài 10); trong thí nghiệm 2-opt trên TSP 200 điểm ở Bài 10 (lab `tsp-sandbox`), nó làm mỗi nước đi nhanh hơn **1 157 lần**.",
+    "ly_do": "[THAM CHIẾU] Con số 1 157× là đo ở Bài 10 §1/§6: 'TSP n=200, cùng 99 500 nước đi', 184 355 → 213 381 485 nước/giây (cheatsheet cũng ghi như vậy). Nó không phải số đo trên đồ án P3 (Bài 22 không có phép đo nào như thế; ở P3 2-opt còn làm điểm giảm). 'Trong đồ án' là gán nhầm nguồn. (Bài 10 mở đầu cũng viết 'trong đồ án cuối khoá' — ngoài phạm vi.)"
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "Và $\\rho$ chính là $\\lambda$ của câu hỏi 1 — cùng một đại lượng.",
+    "new": "Ở đây $f$ là điểm **gộp** (đã thu, chưa trừ chi phí thời gian), nên $\\rho$ chính là $\\lambda$ của câu hỏi 1 — cùng một đại lượng: giá của một phút còn lại. Nếu $f$ đã là giá trị **ròng** (đã trừ $\\lambda c$, như $f = \\sum (p + \\text{OT} - \\lambda c)$ ở Bài 22 §4.1) thì $\\lambda$ đã nằm sẵn trong $f$ và $\\rho \\neq \\lambda$: ở đồ án $\\rho \\approx 90$ còn $\\lambda \\approx 1\\,420$.",
+    "ly_do": "[LOGIC] Quyết định thống nhất 5. 'ρ = λ' chỉ đúng khi f là điểm gộp (ví dụ A/B ở câu 3, và lab P1 của Bài 16 dùng beamSearch(..., lambda, lambda)). Ở lời giải đồ án f = Σ(p + OT − λc) đã là giá trị ròng (Bài 22 §4.1; 2607/03 §3.4) và ρ = 90 được quét thực nghiệm (32 849 395 là điểm tốt nhất ở ρ = 90; Bài 20 §10.2 có `{ 1420.0, 90.0, 0.0002 }`), khác hẳn λ = 1 420. Giữ ý chính (ρ là 'giá một phút còn lại'). Mục đã biết 24: XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "vì các thành phần che khuất lẫn nhau (Bài 22 §8.3).",
+    "new": "vì các thành phần bổ trợ nhau (beam và phạt thời gian chết) nên phần công chung bị mỗi dòng ablation tính trọn một lần (Bài 22 §8.3).",
+    "ly_do": "[MÂU THUẪN] Đồng bộ với bản sửa Bài 22 §8.3: tổng ablation LỚN hơn lợi ích thật là do bổ trợ; 'che khuất' (thay thế) làm tổng NHỎ hơn và được định nghĩa như vậy trong chính bảng thuật ngữ Bài 23 §7.5 ('A gánh đỡ việc của B nên ablation của B nhỏ hơn giá trị thật'). Câu gốc dùng 'che khuất' cho hiện tượng ngược lại."
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "3/4 cải tiến lớn nhất của đồ án đến từ đây.",
+    "new": "Cải tiến lớn nhất của đồ án (khung ngày 31, −3,08 %) chỉ có trong mã;\n   di chuyển chết (−0,45 %) cũng khởi từ một quan sát đọc mã (Bài 21).",
+    "ly_do": "[SỐ] Quyết định thống nhất 6. Tính lại từ bảng ablation (2607/03 §7, Bài 22 §8.1; điểm tụt/bản đầy đủ 32 915 840): ngày 31 = 3,0835 %, beam = 2,4331 %, phạt = 2,4275 %, di chuyển chết = 0,4465 %, multi-start 0,2171 %, ρ 0,0981 %, σ 0,0149 %. '3/4 cải tiến lớn nhất đến từ đọc mã' sai: beam và phạt (2,43 % mỗi dòng) là thuật toán / mô hình Lagrange (2607/tong-quan: beam 'nhìn xa trong phạm vi một ngày', phạt 'mô hình Lagrange'; 2607/03 §1: '#4 chỉ là đọc mã kỹ, còn #1–#2 là phần thay đổi mô hình quyết định'), chỉ ngày 31 chắc chắn là đọc mã. Dòng di chuyển chết được xếp khác nhau: 2607/tong-quan, Bài 20 §3.1, 2607/05 §5 và Bài 22 §6.1 ('Khai thác Quan sát 3 của Bài 21') coi nó khởi từ đọc mã; Bài 4B §1 xếp 'mô hình hoá' (g9 báo). Nên câu mới không đếm 'x/4' mà nêu đúng cả hai: ngày 31 hoàn toàn từ đọc mã, di chuyển chết khởi từ quan sát đọc mã (khai thác bằng mô hình hoá). Theo Δ bước Bài 22 §1.1: v2 + v5 = 3,27 + 0,47 = 3,74 trên 7,02 điểm phần trăm cộng dồn ≈ 53 %. Mục đã biết 25: XÁC NHẬN ('3/4' sai; theo g12 là 'hai trong bốn', theo Bài 4B có thể chỉ một — tuỳ cách xếp loại)."
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "| Mô hình hoá sai | còn cách cận trên > 20 % dù đã thử nhiều thuật toán | về Bài 1, 3 |",
+    "new": "| Mô hình hoá sai | còn cách cận trên > 30 % dù đã thử nhiều thuật toán (cũng có thể do cận quá lỏng) | về Bài 1, 3; thử cận chặt hơn |",
+    "ly_do": "[MÂU THUẪN] Quyết định thống nhất 1: ngưỡng chuẩn là Bài 18 §6 — '> 30 %: mô hình hoá sai hoặc cận quá lỏng → kiểm tra lại Bài 1, thử cận chặt hơn'; '15–30 %' là 'heuristic xây dựng yếu → quay lại Phần 2'. Bài 23 ghi > 20 % (rơi vào khoảng 20–30 % mà Bài 18 chẩn đoán khác). Mục đã biết 23 (nửa Bài 23 §4): XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "Khoảng cách còn lại tới cận trên là **~3 %** — đủ chỗ cho cả ba hướng.",
+    "new": "Khoảng cách còn lại tới cận tham chiếu $\\tau{=}7$ là **~3 %** — đủ chỗ cho cả ba hướng.",
+    "ly_do": "[NHỎ] Số đúng: (33 943 173 − 32 915 840)/32 915 840 = 3,12 % (3,03 % so với cận). Nhưng cận τ = 7 là cận tham chiếu, không chứng minh được (Bài 18 §3.3; ghi chú mới ở Bài 21 §7.2), nên gọi là 'cận tham chiếu'."
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "mỗi ngày chỉ phục vụ tối đa 12 ngôi nhà. Với 12 điểm, Held–Karp chạy trong $12^2 \\cdot 2^{12} = 590\\,000$ phép ≈ 0,6 ms.",
+    "new": "mỗi ngày chỉ phục vụ tối đa 11 ngôi nhà (12 nhà cần ít nhất $12 \\times 60 + 11 = 731 > 720$ phút: mỗi nhà dọn ≥ 60 phút, hai nhà khác ô cách nhau ≥ 1 phút đi). Với 11 điểm, Held–Karp chạy trong $11^2 \\cdot 2^{11} \\approx 248\\,000$ phép ≈ 0,25 ms.",
+    "ly_do": "[SỐ] 720/60 = 12 là cận lỏng bỏ qua đi lại. Mỗi nhà có s = 30m + 30 ≥ 60 phút; các nhà nằm ở ô phân biệt nên 11 lần chuyển giữa 12 nhà tốn ≥ 11 phút => ≥ 12 × 60 + 11 = 731 > 720. Vậy tối đa 11 (11 × 60 + 10 = 670 ≤ 720 nên đạt được). Held–Karp tính lại: 11² × 2¹¹ = 247 808 (thay 12² × 2¹² = 589 824). Nhóm g12 (ca 2607) chuyển: kiểm chứng độc lập, XÁC NHẬN. Ý chính (có thể giải chính xác thứ tự mỗi ngày) giữ nguyên, càng dễ hơn."
+  },
+  {
+    "bai": "khoa-hoc/bai-23-tu-danh-gia",
+    "old": "Tra nhanh 40 thuật ngữ cốt lõi.",
+    "new": "Tra nhanh 47 thuật ngữ cốt lõi.",
+    "ly_do": "[NHỎ] Đếm các bảng §7.1–§7.5: 10 + 9 + 8 + 10 + 10 = 47 dòng, không phải 40."
+  },
+  {
+    "bai": "khoa-hoc/lab-p3-aircon",
+    "old": "| `v0_greedy` (30 ngày) |",
+    "new": "| `v0_greedy` (30 ngày; = **v1** ở Bài 22) |",
+    "ly_do": "[THAM CHIẾU] Quyết định thống nhất 3: chuẩn đánh số là Bài 22 (v1…v7). Tên tệp v0_greedy.cpp (còn được Bài 18 §7 dùng) giữ nguyên, nhưng bảng mốc điểm phải nói nó là v1 ở Bài 22."
+  },
+  {
+    "bai": "khoa-hoc/lab-p3-aircon",
+    "old": "| `starter` (31 ngày) |",
+    "new": "| `starter` (31 ngày; = **v2** ở Bài 22) |",
+    "ly_do": "[THAM CHIẾU] 31 718 184 là v2 trong Bài 22 §1.1."
+  },
+  {
+    "bai": "khoa-hoc/lab-p3-aircon",
+    "old": "| vượt v0 5 % |",
+    "new": "| vượt v1 5 % |",
+    "ly_do": "[THAM CHIẾU] 'v0' = lời giải 30 ngày = v1 theo Bài 22. Kiểm: 1,05 × 30 714 270 = 32 249 984 ≈ 32 250 000 (đúng 5,000 %)."
+  },
+  {
+    "bai": "khoa-hoc/lab-p3-aircon",
+    "old": "| vượt v0 7 % |",
+    "new": "| vượt v1 ≈ 7,1 % (mốc đúng 7 % là 32 864 269) |",
+    "ly_do": "[SỐ] 1,07 × 30 714 270 = 32 864 269, nhưng mốc ghi là 32 900 000 = 1,07116 × 30 714 270 = +7,12 %. Giữ số tròn 32 900 000 (lời giải cuối 32 915 840 vượt qua) và sửa nhãn cho đúng. Mục đã biết 41 (lab-p3-aircon): XÁC NHẬN."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "- P3: 300 test case, seed gốc 20260913",
+    "new": "- P3: 300 test case, seed gốc 20260913\n- TSP sandbox (đáp án Bài 2, 9–12, 14): `./bin/tsp <n> 42`, n = 200 / 400 / 600 / 1000",
+    "ly_do": "[NHỎ] Ghi chú mở đầu 'Mọi con số trong tài liệu này đo trên:' chỉ liệt kê P0–P3, nhưng các đáp án Bài 2, 9–12, 14 (14 656; 1 157 lần; TSP n = 600…) đo trên tsp-sandbox: lệnh `./bin/tsp 200 42`, `./bin/tsp 600 42`, `./bin/tsp 1000 42` trong Bài 2, 9, 10, 11, 12 — thiếu cấu hình này thì 'lệch > 5 % so với đáp án' không kiểm được."
+  }
+]

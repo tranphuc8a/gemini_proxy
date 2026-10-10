@@ -1,0 +1,80 @@
+[
+ {
+  "bai": "khoa-hoc/bai-16-beam-search",
+  "old": "| W=80, B=14 | 32 937 772 | 41 ms |",
+  "new": "| W=80, B=14 | 32 937 772 | 41 ms |\n\n> ⚠️ **Đọc bảng này cho đúng.** SCORE ở bảng là trung bình trên **300 test**, còn số ở §7.1(c) là trung bình trên **40 test** (phép quét riêng, [nguồn](../../expe/2607/research/03-de-xuat-cai-tien.md) §5) — vì vậy cùng cấu hình W = 32, B = 10 mới cho hai số khác nhau (32 979 370 và 32 907 685); đừng đặt chúng cạnh nhau như một phép so. Cột **thời gian** của bảng là số đo thô (máy / chế độ chạy giữa các dòng có thể khác nhau, chưa đối chiếu được nguồn), nên nó không đơn điệu theo W và lệch số của §7.1(c) (nguồn ghi W = 10, B = 6 là 3,4 ms, bảng ghi 40 ms) — chỉ dùng nó để đọc xu hướng thô. Số đáng tin cho W = 32, B = 10 là **14,5 ms** (§7.1c).",
+  "ly_do": "[QUYẾT ĐỊNH] X4#1. Bảng §7 (300 test) cột thời gian 31/40/56/27/40/41 ms không đơn điệu theo W và lệch §7.1(c) / 2607-03 §5 (W32/B10 = 14,5 ms; W10/B6 = 3,4 ms); cùng W=32,B=10 có SCORE 32 979 370 (300 test) và 32 907 685 (40 test, 2607-03 §5 ghi 'quét riêng trên 40 test case'). Giữ số, thêm chú thích nêu tập test và hạ mức cột thời gian; không có dữ liệu gốc để sửa số."
+ },
+ {
+  "bai": "khoa-hoc/bai-17-lns-alns",
+  "old": "Như Bài 7 §3. Thường tốt hơn 1–3 % nhưng đắt gấp đôi.",
+  "new": "Như Bài 7 §3. Theo Bài 7 §3.3, kỳ vọng tốt hơn chèn tham lam cỡ 2–5 % trên dữ liệu gom cụm, với chi phí cùng bậc $O(n \\cdot m)$ — cả hai con số đều **chưa có phép đo riêng** trong khoá (BT 7.3 yêu cầu bạn tự đo).",
+  "ly_do": "[QUYẾT ĐỊNH] X4#2. '1–3 %, đắt gấp đôi' mâu thuẫn Bài 7 §3.3 (bảng: 'thắng 2–5 %' trên dữ liệu gom cụm; chi phí cùng bậc O(n·m); chính Bài 7 ghi 2–5 % là chưa có bảng đo, BT 7.3 yêu cầu tự đo). Đồng bộ theo Bài 7, không nêu hệ số chi phí vì Bài 7 cũng chưa đo."
+ },
+ {
+  "bai": "khoa-hoc/bai-17-lns-alns",
+  "old": "  chèn tiếc nuối  +1–3 %, đắt gấp đôi, hợp với phá-theo-quan-hệ",
+  "new": "  chèn tiếc nuối  kỳ vọng +2–5 % (Bài 7 §3.3, chưa đo), cùng bậc chi phí, hợp với phá-theo-quan-hệ",
+  "ly_do": "[QUYẾT ĐỊNH] X4#2. Dòng tóm tắt §11 nhắc lại '+1–3 %, đắt gấp đôi' của §5.2; đồng bộ với bản vá ở §5.2 và với Bài 7 §3.3."
+ },
+ {
+  "bai": "khoa-hoc/bai-17-lns-alns",
+  "old": "> Đây là toán tử **mạnh nhất** trong phần lớn bài toán định tuyến, theo Ropke & Pisinger (2006).",
+  "new": "> Đây là toán tử phá **được dùng nhiều nhất** trong họ ALNS (Ropke & Pisinger 2006); thứ hạng thật giữa các toán tử phá phụ thuộc bài toán — hãy đo trên bài của bạn.",
+  "ly_do": "[QUYẾT ĐỊNH] X4#3. Khẳng định 'mạnh nhất theo Ropke & Pisinger (2006)' không kiểm chứng được; hạ thành 'thường được dùng nhiều nhất trong họ ALNS' và nêu thứ hạng phụ thuộc bài toán."
+ },
+ {
+  "bai": "khoa-hoc/bai-17-lns-alns",
+  "old": "theo QUAN HỆ    bỏ các phần tử GIỐNG NHAU  ← mạnh nhất (Shaw/Ropke-Pisinger)",
+  "new": "theo QUAN HỆ    bỏ các phần tử GIỐNG NHAU  ← hay dùng nhất (Shaw/Ropke-Pisinger); thứ hạng tuỳ bài",
+  "ly_do": "[QUYẾT ĐỊNH] X4#3. Dòng tóm tắt §11 nhắc lại 'mạnh nhất (Shaw/Ropke-Pisinger)'; đồng bộ với bản vá ở §4.3."
+ },
+ {
+  "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+  "old": "bộ não nó có chừng 250 000 nơron, ít hơn một con ruồi.",
+  "new": "bộ não nó chỉ có cỡ $10^5$ nơron.",
+  "ly_do": "[QUYẾT ĐỊNH] X4#4. '250 000 nơron, ít hơn con ruồi' không nhất quán với nguồn g7 tìm được (kiến 50–150 nghìn nơron; ruồi giấm cỡ 100–250 nghìn, nên so sánh với ruồi không đứng vững) → 'cỡ 10^5 nơron', bỏ so sánh với ruồi."
+ },
+ {
+  "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+  "old": "- Khoá `samsung/metaheuristic`, [Chương 15 — Ant Colony](../../metaheuristic/chapter-15.md) và [Chương 16 — Evolutionary](../../metaheuristic/chapter-16.md).",
+  "new": "- Khoá `samsung/metaheuristic`: các chương về Ant Colony và Evolutionary (xem bảng ở [Tài liệu tham khảo](../tai-lieu/tai-lieu-tham-khao.md)).",
+  "ly_do": "[QUYẾT ĐỊNH] X4#4. Số chương '15 — Ant Colony', '16 — Evolutionary' mâu thuẫn bảng ở Tài liệu tham khảo (chapter-16 = Hybrid / Matheuristics; bảng không liệt kê chapter-15) → bỏ số chương, chỉ nêu chủ đề."
+ },
+ {
+  "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+  "old": "- Dorigo, M. & Stützle, T. (2004), *Ant Colony Optimization*, MIT Press — sách chuẩn, chương 3 có đúng ví dụ bằng tay ở §1.",
+  "new": "- Dorigo, M. & Stützle, T. (2004), *Ant Colony Optimization*, MIT Press — sách chuẩn về ACO; đối chiếu với ví dụ bằng tay ở §1.",
+  "ly_do": "[QUYẾT ĐỊNH] X4#3. 'chương 3 có đúng ví dụ bằng tay ở §1' không kiểm chứng được → bỏ số chương và bỏ khẳng định 'đúng ví dụ này'."
+ },
+ {
+  "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+  "old": "Bay hơi chính là cơ chế *quên* để có thể học lại.",
+  "new": "Bay hơi chính là cơ chế *quên* để có thể học lại. Nói cho chính xác: với cập nhật elitist *có* bay hơi ($\\rho = 0{,}5$, số liệu §1.5), xác suất chọn A–C xuống dưới $10^{-3}$ chỉ sau **10 vòng** (so với ≈ 1 400 vòng khi không bay hơi), vì mùi trên cạnh ngoài tuyến dẫn đầu giảm theo cấp số nhân — bay hơi làm đàn tập trung *nhanh hơn*, không chậm hơn. Cái nó giữ lại là khả năng đổi hướng: mùi trên cạnh dẫn đầu bị chặn ở mức hữu hạn $Q/(\\rho L) \\approx 0{,}18$ thay vì chất thành núi, nên một tuyến tốt hơn xuất hiện sau đó đuổi kịp chỉ sau vài vòng (thay vì cỡ chính số vòng đã khoá khi không bay hơi); vì vậy bay hơi vẫn có ích để tránh khoá sớm ở bài nhiều tối ưu cục bộ.",
+  "ly_do": "[QUYẾT ĐỊNH] X4#5. Tự mô phỏng lại (mạng 4 thành phố §1.1, elitist, tuyến tốt nhất A–B–C–D–A dài 11, Q=1): có bay hơi rho=0,5 → P(A–C) = 9,8 % (vòng 1) … 0,068 % ở vòng 10 (<10^-3 lần đầu ở k=10; k=9 còn 0,136 %); không bay hơi → P(A–C)<10^-3 lần đầu ở k=1396–1397 (khớp 'cỡ 10^3' của đoạn gốc). tau trên cạnh dẫn đầu hội tụ về Q/(rho*L)=0,1818 (mô phỏng 0,1826 ở k=10). Thêm: tuyến mới ngắn hơn 10 % vượt mùi cạnh cũ sau 1 vòng (rho=0,5), 6–7 vòng (rho=0,1), nhưng cỡ 0,9·N vòng nếu rho=0 đã khoá N vòng (N=30/100/1000 → 27/91/901). Câu thêm nói rõ bay hơi làm khoá nhanh hơn chứ không chậm hơn, và nêu lý do bay hơi vẫn có ích."
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "| **Tối ưu Frank–Wolfe** | **0,6502** | **189 431** | **98 430** |",
+  "new": "| **Tối ưu Frank–Wolfe** | **0,6502** | **189 431** | **98 430** |\n\n*(κ của hình vuông ở đây là số đo trên lưới; giá trị chính xác của hình vuông liên tục là $2/3 \\approx 0{,}6667$.)*",
+  "ly_do": "[QUYẾT ĐỊNH] X4#7. Bảng ghi κ(vuông) = 0,6668 trong khi giá trị chính xác là 2/3 = 0,6667 (E|X−Y| = 1/3 mỗi trục, hai trục → 2/3; tính lại bằng python = 0,66667). Giữ 0,6668 (số đo), chỉ thêm chú thích."
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "Đo được: chi phí thực / cận dưới = **1,205** trung bình. Nhờ con số đó ta biết ngay **dư địa còn lại của việc tối ưu số nước đi chỉ là 0,24 % điểm** — và quyết định **không làm**. Đó là một quyết định *không tối ưu thêm*, có căn cứ bằng số, đúng tinh thần Bài 18 §6.",
+  "new": "Đo được: chi phí thực / cận dưới = **1,205** trung bình (đây là tỉ lệ về **số nước đi**). Từ đó bài kết luận phần điểm còn thu thêm được nhờ tối ưu số nước đi chỉ cỡ **0,24 %** (khoảng cách tới trần **điểm**) — và quyết định **không làm**. ⚠️ Hai con số này đo hai thứ khác nhau: 1,205 là tỉ lệ số nước đi, 0,24 % là khoảng cách tới trần điểm; bước suy luận nối chúng không kiểm lại được từ mã, nên hãy đọc 0,24 % là kết luận của tác giả đồ án chứ không phải hệ quả suy ra trực tiếp từ 1,205. Đó là một quyết định *không tối ưu thêm*, có căn cứ bằng số, đúng tinh thần Bài 18 §6.",
+  "ly_do": "[QUYẾT ĐỊNH] X4#7. '1,205 ⇒ dư địa 0,24 % điểm': 1,205 là tỉ lệ số nước đi, 0,24 % là khoảng cách tới trần điểm; chuỗi suy luận nối hai số không nêu và không kiểm lại được (không có mã). Hạ mức, tách rõ hai đại lượng; bỏ từ 'dư địa' (tránh lẫn với 'độ hở' / 'dư địa' đã định nghĩa ở Bài 18)."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "Khi chỉ cần $K$ phần tử tốt nhất trong $n$ ứng viên ($K \\ll n$), **chèn vào mảng đã sắp xếp** nhanh hơn sort:",
+  "new": "Khi chỉ cần $K$ phần tử tốt nhất trong $n$ ứng viên ($K \\ll n$), ta không cần sắp xếp cả $n$ phần tử: **chèn vào mảng $K$ ô luôn sắp xếp** là cách không cần header và đủ gọn khi $K$ nhỏ:",
+  "ly_do": "[QUYẾT ĐỊNH] X4#6. Câu mở 'K ≪ n … nhanh hơn sort' mâu thuẫn §1.1 ('Điểm mấu chốt không phải là nó nhanh hơn sắp xếp'; n=400, K=24 thì sắp xếp ít phép hơn) và câu cuối đoạn. Bỏ khẳng định 'nhanh hơn sort'."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "$O(nK)$ thay vì $O(n\\log n)$ — nhanh hơn khi $K < \\log n$, và **không cần header**.",
+  "new": "Mỗi lần `push` tốn $O(K)$ (heap chỉ tốn $O(\\log K)$), nên tổng là $O(nK)$: cách này chỉ lợi nhờ hằng số nhỏ khi $K$ nhỏ, và **không cần header**. Khi $K$ lớn thì nó thua (§1.1: $n = 400$, $K = 24$ thì sắp xếp ít phép hơn).",
+  "ly_do": "[QUYẾT ĐỊNH] X4#6. 'nhanh hơn khi K < log n' không đo trong bài và mâu thuẫn câu mở; thay bằng chi phí O(K) mỗi push (vòng for q = 0..K-1 luôn quét tới K ô khi v không lọt) so với heap O(log K), không nêu ngưỡng số; dẫn lại §1.1 (n = 400, K = 24)."
+ }
+]

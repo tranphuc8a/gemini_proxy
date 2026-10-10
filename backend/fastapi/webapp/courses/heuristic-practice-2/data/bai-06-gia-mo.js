@@ -62,8 +62,8 @@ TH.dangKy({
     "λ* chính là tỉ số p/c của **món biên** — món đầu tiên không còn vừa khi nhặt theo tỉ số giảm dần. Tỉ số cho **thứ tự**, giá mờ cho **ngưỡng cắt**: hai thứ bổ sung nhau, không thay nhau.",
     "L(λ) = λ·B + Σ max(0, p_j − λ·c_j) là **cận trên** của tối ưu với **mọi** λ ≥ 0, kể cả chọn bừa; λ* cho cận chặt nhất. Ví dụ B = 100: L(120) = 16 740, còn nghiệm 0/1 tốt nhất là 14 700.",
     "Ba cách ước lượng λ: công thức LP (nhanh, nhưng thường lệch cao — 142,2 so với 80 tốt nhất cho chèn), tìm kiếm nhị phân, và **quét thực nghiệm** (bền nhất, dùng để chốt).",
-    "λ-greedy **không** thắng tỉ số-greedy (60 616 so với 61 420) vì greedy luôn lấp đầy ngày, không bao giờ dùng đến ngưỡng. λ toả sáng ở chèn và local search, nơi chi phí là Δt có thể gần 0: chèn với λ = 0 chỉ được 40 220, với λ = 80 được 63 920.",
-    "Một phút bỏ phí không đáng 200 điểm thưởng OT mà đáng λ ≈ 1 420 điểm (chênh 7,1 lần): thêm số hạng phạt −λ·w (w = phút chết) vào hàm mục tiêu ép lời giải lấp đầy ngày — bài giảng ghi nhận khoảng +5 % điểm.",
+    "λ-greedy **không** thắng tỉ số-greedy (60 616 so với 61 420) vì greedy luôn lấp đầy ngày, không bao giờ dùng đến ngưỡng. λ toả sáng ở chèn và local search, nơi chi phí là Δt có thể gần 0: chèn với λ = 0 chỉ được 40 220, với λ = 80 được 63 920 (số đo riêng của Bài 6; số 65 425 ở Bài 7 dùng λ đã hiệu chuẩn lại ≈ 88 — cùng bộ 60 test, kết quả nhạy với λ, đừng so trực tiếp).",
+    "Một phút bỏ phí không đáng 200 điểm thưởng OT mà đáng λ ≈ 1 420 điểm (chênh 7,1 lần): thêm số hạng phạt −λ·w (w = phút chết) vào hàm mục tiêu ép lời giải lấp đầy ngày — bài giảng ghi nhận +2,43 % điểm (ablation riêng số hạng phạt trên bản đầy đủ).",
     "Đừng dùng λ làm ngưỡng cứng khi ngân sách còn dư (vẫn nhận ứng viên có v lớn nhất trong số còn vừa); mỗi thuật toán và mỗi test có λ tốt riêng (khan hiếm → λ cao). Dùng dạng phạt để **tìm kiếm**, dạng ràng buộc để **nghiệm thu**."
   ],
 
@@ -90,7 +90,7 @@ TH.dangKy({
       id: "q3", loai: "so", doKho: 1, ref: "§7.2", donVi: "(điểm)",
       hoi: "Cuối ngày bạn còn dư 70 phút mà không ngôi nhà nào vừa. Thưởng làm thêm (OT) là 200 điểm/phút, còn giá mờ của một phút trong bài là λ ≈ 1 420 điểm. Thiệt hại thật của 70 phút bỏ phí, tính theo giá mờ, là bao nhiêu điểm?",
       dapAn: 99400, saiSo: 0,
-      giaiThich: "70 × 1 420 = 99 400 điểm. Cách nghĩ của người mới (chỉ tính tiền thưởng OT) cho 70 × 200 = 14 000 — thấp hơn 7,1 lần, vì phần lớn giá trị một phút nằm ở tiền công vệ sinh (khoảng 1 220 mỗi phút) chứ không ở thưởng OT (200). Phút bỏ phí vẫn có giá, đúng bằng λ."
+      giaiThich: "70 × 1 420 = 99 400 điểm. Cách nghĩ của người mới (chỉ tính tiền thưởng OT) cho 70 × 200 = 14 000 — thấp hơn 7,1 lần, vì phần lớn giá trị một phút nằm ở tiền công vệ sinh chứ không ở thưởng OT (200). λ ≈ 1 420 là giá trị thực nghiệm (loại máy biên theo lý thuyết ≈ 1 367, chưa tính thưởng OT); cách tách “1 220 + 200” chỉ là cách nhớ trực giác. Phút bỏ phí vẫn có giá, đúng bằng λ."
     },
     {
       id: "q4", loai: "so", doKho: 2, ref: "§3.2 (3), §4",
@@ -121,7 +121,7 @@ TH.dangKy({
         "Cần một cận trên cho bài toán"
       ],
       dung: [0, 1, 2, 4],
-      giaiThich: "Tỉ số chỉ cho thứ tự và rất ổn khi chi phí ổn định (greedy nối cuối: c = d + s luôn dương và khá lớn) — đó là đất của tỉ số, nên ý còn lại sai. Giá mờ hơn ở bốn chỗ: chi phí delta gần 0 làm p/Δt bùng nổ; giá trị ròng **cộng được**; định giá được thời gian chết (tỉ số không có gì để nói về việc KHÔNG chọn gì); và cho cận trên L(λ) (Bài 18)."
+      giaiThich: "Tỉ số chỉ cho thứ tự và rất ổn khi chi phí ổn định (greedy nối cuối: c = d + s luôn dương và khá lớn) — đó là đất của tỉ số, nên ý còn lại sai. Giá mờ hơn ở bốn chỗ: chi phí delta có thể rất nhỏ (ở P1 vẫn ≥ s_j nên chưa bùng nổ, nhưng bài không có thời gian phục vụ thì p/Δt → ∞); giá trị ròng **cộng được**; định giá được thời gian chết (tỉ số không có gì để nói về việc KHÔNG chọn gì); và cho cận trên L(λ) (Bài 18)."
     },
     {
       id: "q7", loai: "mot", doKho: 2, ref: "§6.2 (d), §6.3",
@@ -199,7 +199,7 @@ TH.dangKy({
       id: "l4", doKho: 3, ref: "§7, §8",
       hoi: "An nói: “70 phút dư cuối ngày chỉ làm mất tiền thưởng OT 200 điểm/phút”. Bình nói: “mất λ ≈ 1 420 điểm/phút”. Ai đúng và vì sao? Sau đó nêu cách bạn dùng dạng phạt (có −λ·w) và dạng ràng buộc (Σ c·x ≤ B) trong một bài làm thật: cái nào để tìm kiếm, cái nào để nghiệm thu?",
       goiY: ["70 phút ấy lẽ ra làm được việc gì, và việc đó đáng bao nhiêu?", "Nghiệm tối ưu của dạng phạt có chắc tuân thủ ngân sách không?"],
-      mau: "Bình đúng. Thiệt hại của một phút bỏ phí là **chi phí cơ hội**: giá trị của thứ tốt nhất lẽ ra làm được trong phút đó. 70 phút ấy lẽ ra dùng để vệ sinh máy; giá mờ gồm khoảng 1 220 điểm tiền công vệ sinh cộng 200 điểm thưởng OT ≈ 1 420 điểm/phút. Thiệt hại = 70 × 1 420 = 99 400 điểm chứ không phải 70 × 200 = 14 000 (chênh 7,1 lần). Tỉ số không làm được việc này vì nó chỉ so các lựa chọn với nhau, không định giá việc “không chọn gì”.\n\nDạng phạt (max Σ (p − λ·c)·x, không ràng buộc) dễ hơn vì các biến độc lập, giá trị cộng được và nghiệm vượt ngân sách chỉ bị trừ điểm — local search được phép đi qua vùng vi phạm. Vì vậy dùng nó để **tìm kiếm**. Nhưng dạng phạt chỉ tương đương dạng ràng buộc ở đúng λ*, và với bài nguyên vẫn còn khe hở đối ngẫu, nên nghiệm tối ưu của nó **có thể vi phạm ngân sách**. Do đó luôn dùng dạng ràng buộc ở bộ chấm để **nghiệm thu**.",
+      mau: "Bình đúng. Thiệt hại của một phút bỏ phí là **chi phí cơ hội**: giá trị của thứ tốt nhất lẽ ra làm được trong phút đó. 70 phút ấy lẽ ra dùng để vệ sinh máy; giá mờ λ ≈ 1 420 điểm/phút (giá trị thực nghiệm; loại máy biên theo lý thuyết ≈ 1 367, chưa tính thưởng OT) — phần lớn là tiền công vệ sinh chứ không phải 200 điểm thưởng OT (cách tách “1 220 + 200” chỉ là cách nhớ trực giác). Thiệt hại = 70 × 1 420 = 99 400 điểm chứ không phải 70 × 200 = 14 000 (chênh 7,1 lần). Tỉ số không làm được việc này vì nó chỉ so các lựa chọn với nhau, không định giá việc “không chọn gì”.\n\nDạng phạt (max Σ (p − λ·c)·x, không ràng buộc) dễ hơn vì các biến độc lập, giá trị cộng được và nghiệm vượt ngân sách chỉ bị trừ điểm — local search được phép đi qua vùng vi phạm. Vì vậy dùng nó để **tìm kiếm**. Nhưng dạng phạt chỉ tương đương dạng ràng buộc ở đúng λ*, và với bài nguyên vẫn còn khe hở đối ngẫu, nên nghiệm tối ưu của nó **có thể vi phạm ngân sách**. Do đó luôn dùng dạng ràng buộc ở bộ chấm để **nghiệm thu**.",
       tieuChi: ["Chọn đúng Bình và gọi tên chi phí cơ hội (giá của thứ tốt nhất bị bỏ lỡ)", "Tính được 70 × 1 420 = 99 400 và so với 14 000 (khoảng 7,1 lần)", "Nêu dạng phạt dùng để tìm kiếm (biến độc lập, cộng được, vi phạm chỉ bị trừ điểm)", "Nêu dạng ràng buộc dùng để nghiệm thu vì nghiệm dạng phạt có thể vượt ngân sách"]
     }
   ],

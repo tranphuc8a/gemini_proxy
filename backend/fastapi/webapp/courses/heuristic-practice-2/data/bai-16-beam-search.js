@@ -57,12 +57,12 @@ TH.dangKy({
 
   tomTat: [
     "Beam search = **BFS + cắt tỉa**: mỗi tầng mở rộng mọi trạng thái đang giữ, chấm điểm các trạng thái con, giữ lại **W** cái tốt nhất, vứt phần còn lại. **W = 1 là greedy**, W = ∞ là vét cạn; bộ nhớ luôn cố định cỡ W dù cây có 10²⁸ đường.",
-    "Greedy sai không phải vì công thức chấm điểm mà vì **chỉ giữ một phương án**: ở ví dụ làm tay greedy thu 260 nghìn, beam W = 2 thu 300 nghìn (hơn 13 %) nhờ không vứt vĩnh viễn nhà B và C ở bước đầu.",
+    "Greedy sai không phải vì công thức chấm điểm mà vì **chỉ giữ một phương án**: ở ví dụ làm tay greedy thu 260 nghìn, beam W = 2 thu 300 nghìn (hơn 15 %) nhờ không vứt vĩnh viễn nhà B và C ở bước đầu.",
     "Phần khó nhất là chấm điểm **nghiệm dở dang**: rank(s) = f(s) + ρ·R(s) — đã thu **cộng** tiềm năng còn lại. Chỉ so bằng quá khứ thì trạng thái sắp hết giờ (thu nhiều) thắng trạng thái còn nhiều thời gian (thu ít hơn).",
-    "ρ **chính là giá mờ λ** của Bài 6 (“một phút còn lại hứa hẹn bao nhiêu đồng?”). Quên số hạng tiềm năng thì beam thoái hoá thành greedy dù W lớn: ρ = 0,3 chỉ được 58 103, thua cả greedy tỉ số 61 420; ρ = λ lên 64 273.",
+    "Khi f là điểm **gộp**, ρ **chính là giá mờ λ** của Bài 6 (“một phút còn lại hứa hẹn bao nhiêu đồng?”). Với f gộp mà quên số hạng tiềm năng thì beam thoái hoá thành greedy dù W lớn: ρ = 0,3 chỉ được 58 103, thua cả greedy tỉ số 61 420; ρ = λ lên 64 273. Nếu f đã là giá trị **ròng** như ở đề thi thật thì λ đã nằm sẵn trong f, ρ ≠ λ (ρ = 90 còn λ ≈ 1 420) và bỏ hẳn ρ chỉ mất ≈ 0,15 %.",
     "Trong bài chọn lọc **mọi trạng thái ở mọi tầng** đều là một nghiệm hợp lệ: đánh giá ngay khi sinh ra, đừng chỉ nhìn tầng cuối (nghiệm tốt nhất có thể ở tầng 7 khi beam chạy tới tầng 12).",
     "Chọn W: W ≈ 10–30, B ≈ 5–10. Lợi ích giảm dần rất nhanh (W 1 → 8: +2,3 %; W 8 → 32: chỉ +0,36 %) và bão hoà ở W ≈ 30 vì các trạng thái trở nên giống nhau (mất đa dạng); chữa bằng beam ngẫu nhiên, phạt giống nhau, hoặc local search sau beam.",
-    "Beam mạnh khi **thứ tự xây dựng trùng thứ tự trong nghiệm** và cần nhìn xa vài bước: trên đề thi thật bỏ beam mất 2,43 %; nhưng ở P1 beam W = 30 (64 273) thua chèn rẻ nhất (65 425) vì beam chỉ nối vào cuối còn chèn đặt được vào giữa.",
+    "Beam mạnh khi **thứ tự xây dựng trùng thứ tự trong nghiệm** và cần nhìn xa vài bước: trên đề thi thật bỏ beam mất 2,43 %; nhưng ở P1 beam W = 30 (64 273) thua chèn rẻ nhất (65 425), một lý do hợp lý là beam chỉ nối vào cuối còn chèn đặt được vào giữa (số đo gắn với dữ liệu và ρ của lab — hãy tự đo).",
     "Một beam rộng hiệu quả hơn đa khởi động: 1 preset với W = 32 cho cùng chất lượng 10 preset với W = 12 nhưng nhanh hơn 2,6 lần."
   ],
 
@@ -88,9 +88,9 @@ TH.dangKy({
     },
     {
       id: "q3", loai: "so", doKho: 1, ref: "Bài tập 16.1", donVi: "(trạng thái)",
-      hoi: "Với W = 3, B = 4 (mỗi trạng thái sinh tối đa 4 nhánh) và độ sâu 10, beam search sinh ra tối đa bao nhiêu trạng thái con tất cả?",
+      hoi: "Với W = 3, B = 4 (mỗi trạng thái sinh tối đa 4 nhánh) và độ sâu 10, dùng công thức cận trên độ sâu × W × B: beam search sinh ra tối đa bao nhiêu trạng thái con tất cả?",
       dapAn: 120, saiSo: 0,
-      giaiThich: "Mỗi tầng chỉ mở rộng W = 3 trạng thái, mỗi trạng thái cho tối đa B = 4 con, qua 10 tầng: 10 × 3 × 4 = 120. Vét cạn phải duyệt 4¹⁰ = 1 048 576 trạng thái — tỉ lệ 1 : 8 738. Chi phí của beam tuyến tính theo độ sâu và theo W, không mũ."
+      giaiThich: "Mỗi tầng chỉ mở rộng W = 3 trạng thái, mỗi trạng thái cho tối đa B = 4 con, qua 10 tầng: 10 × 3 × 4 = 120 (cận trên; chính xác là 4 + 9 × 12 = 112, vì tầng 1 chỉ mở rộng đúng một trạng thái gốc). Vét cạn phải duyệt 4¹⁰ = 1 048 576 lá — tỉ lệ cỡ 1 : 8 700 (1 : 9 400 nếu tính 112). Chi phí của beam tuyến tính theo độ sâu và theo W, không mũ."
     },
     {
       id: "q4", loai: "so", doKho: 2, ref: "§4.1–4.2", donVi: "(đồng)",
@@ -117,14 +117,14 @@ TH.dangKy({
         "ρ chính là bề rộng beam W",
         "ρ là xác suất cắt tỉa một trạng thái",
         "ρ hoàn toàn mới, buộc phải dò từ đầu bằng lưới tham số",
-        "ρ chính là giá mờ λ của Bài 6 — cùng câu hỏi “một phút đáng bao nhiêu đồng”, nên dùng lại λ đã tính"
+        "Khi f là điểm gộp, ρ chính là giá mờ λ của Bài 6 — cùng câu hỏi “một phút đáng bao nhiêu đồng”, nên dùng lại λ đã tính"
       ],
       dung: 3,
-      giaiThich: "Giá mờ λ trả lời “một phút đáng bao nhiêu đồng?”, ρ trả lời “một phút CÒN LẠI hứa hẹn bao nhiêu đồng?” — cùng một câu hỏi, nên không phải dò từ đầu. W là số trạng thái giữ lại (một tham số khác hẳn), ρ không phải xác suất, và vì đã có λ nên cũng không cần quét lưới mù (dù vẫn nên quét quanh λ để xác nhận)."
+      giaiThich: "Giá mờ λ trả lời “một phút đáng bao nhiêu đồng?”, ρ trả lời “một phút CÒN LẠI hứa hẹn bao nhiêu đồng?” — cùng một câu hỏi khi f là điểm gộp (chưa trừ λ·c): f + λR xếp hạng giống hệt giá trị ròng, nên không phải dò từ đầu. W là số trạng thái giữ lại (một tham số khác hẳn), ρ không phải xác suất, và vì đã có λ nên cũng không cần quét lưới mù (dù vẫn nên quét quanh λ để xác nhận). Nếu f đã là tổng giá trị ròng như ở đề thi thật thì λ đã nằm sẵn trong f và ρ ≠ λ (ρ tối ưu = 90, còn λ ≈ 1 420)."
     },
     {
       id: "q7", loai: "mot", doKho: 3, ref: "§4.4",
-      hoi: "Một bản beam cài đặt với ρ = 0,3 (quá nhỏ so với giá trị đơn cỡ 4 000) chỉ đạt 58 103, thua cả greedy tỉ số (61 420); sửa ρ = λ thì lên 64 273. Hiện tượng này tên là gì?",
+      hoi: "Một bản beam cài đặt với f là điểm gộp và ρ = 0,3 (quá nhỏ so với giá trị đơn cỡ 4 000) chỉ đạt 58 103, thua cả greedy tỉ số (61 420); sửa ρ = λ thì lên 64 273. Hiện tượng này tên là gì?",
       chon: [
         "W quá nhỏ nên beam cắt tỉa nhầm",
         "Thiếu số hạng tiềm năng: beam thoái hoá thành greedy — chộp phần tử giá trị cao ngay từ đầu rồi cạn tài nguyên, dù W lớn đến đâu",
@@ -132,7 +132,7 @@ TH.dangKy({
         "Beam luôn thua greedy tỉ số khi ρ nhỏ do sai số làm tròn"
       ],
       dung: 1,
-      giaiThich: "Với ρ ≈ 0, rank ≈ f(s): mọi trạng thái được giữ lại đều là loại “tham lam sớm”, nên tăng W cũng không cứu được — đó là lỗi nghiêm trọng nhất của beam (cạm bẫy 1). Nguyên nhân không phải W nhỏ, bộ nhớ hay làm tròn: chỉ cần thay ρ = 0,3 bằng ρ = λ là điểm nhảy từ 58 103 lên 64 273."
+      giaiThich: "Với ρ ≈ 0, rank ≈ f(s): mọi trạng thái được giữ lại đều là loại “tham lam sớm”, nên tăng W cũng không cứu được — đó là lỗi nghiêm trọng nhất của beam (cạm bẫy 1; đúng với f gộp, còn với f ròng như đề thi thật bỏ hẳn ρ chỉ mất ≈ 0,15 %). Nguyên nhân không phải W nhỏ, bộ nhớ hay làm tròn: chỉ cần thay ρ = 0,3 bằng ρ = λ là điểm nhảy từ 58 103 lên 64 273."
     },
     {
       id: "q8", loai: "nhieu", doKho: 3, ref: "§7",
@@ -145,7 +145,7 @@ TH.dangKy({
         "Quy tắc bỏ túi là W ≈ 200–500 và B ≈ 50"
       ],
       dung: [1, 2, 3],
-      giaiThich: "Bảng §7: W = 1 → 8 cho +2,3 %, 8 → 32 chỉ +0,36 %, và W = 80 (32 937 772) không vượt W = 32 (32 979 370) vì các trạng thái giống nhau. Cái giá của beam tỉ lệ với W. Hai phát biểu còn lại sai: W lớn không phải lúc nào cũng tốt hơn (bão hoà), và quy tắc bỏ túi là W ≈ 10–30, B ≈ 5–10."
+      giaiThich: "Bảng §7: W = 1 → 8 cho +2,3 %, 8 → 32 chỉ +0,36 %, và W = 80 (32 937 772) không vượt W = 32 (32 979 370) vì các trạng thái giống nhau. Cái giá của beam tỉ lệ với W (cột thời gian trong bảng §7 là số đo thô, không đơn điệu theo W — chỉ đọc xu hướng; số đáng tin cho W = 32, B = 10 là 14,5 ms ở §7.1c, và SCORE ở §7.1c tính trên 40 test nên không so trực tiếp với 300 test của bảng). Hai phát biểu còn lại sai: W lớn không phải lúc nào cũng tốt hơn (bão hoà), và quy tắc bỏ túi là W ≈ 10–30, B ≈ 5–10."
     },
     {
       id: "q9", loai: "mot", doKho: 2, ref: "§5.5, §9 (cạm bẫy 3)",
@@ -169,7 +169,7 @@ TH.dangKy({
         "Ở P1 beam chỉ nối vào cuối tuyến còn chèn đặt được vào giữa; đề thi thật nhiều kỳ và đòi nhìn xa vài bước (lịch kết thúc sát 720 phút) — đúng thứ beam giỏi mà chèn không mô hình hoá được"
       ],
       dung: 3,
-      giaiThich: "Beam mạnh khi thứ tự xây dựng trùng thứ tự trong nghiệm và cần nhìn xa; chèn linh hoạt hơn khi được phép đặt phần tử vào giữa. Hai kết quả không mâu thuẫn. Các phương án còn lại bịa ra lý do: không có dấu hiệu số liệu sai, ρ = 0 chính là lỗi ở §4.4, và bão hoà xảy ra quanh W ≈ 30 chứ không phải W > 100."
+      giaiThich: "Beam mạnh khi thứ tự xây dựng trùng thứ tự trong nghiệm và cần nhìn xa; chèn linh hoạt hơn khi được phép đặt phần tử vào giữa. Hai kết quả không mâu thuẫn (đây là lý do hợp lý của bài, không phải phép đo tách riêng; dấu của hiệu beam − chèn còn phụ thuộc dữ liệu và ρ). Các phương án còn lại bịa ra lý do: không có dấu hiệu số liệu sai, ρ = 0 chính là lỗi ở §4.4, và bão hoà xảy ra quanh W ≈ 30 chứ không phải W > 100."
     }
   ],
 
@@ -178,11 +178,11 @@ TH.dangKy({
       id: "l1", doKho: 2, ref: "Bài tập 16.2, §4.4",
       hoi: "Đặt ρ = 0 trong beam search và đo lại. Điểm giảm bao nhiêu? Giải thích bằng §4.4. (Lab bên dưới có sẵn biến thể ρ = 0.)",
       goiY: ["Khi ρ = 0, rank(s) còn lại gì?", "Các trạng thái được giữ lại thuộc loại nào, và tăng W có cứu được không?"],
-      mau: "Điểm giảm mạnh: đáp án 16.2 nêu cỡ **8–10 %**, số liệu thật của khoá là ρ quá nhỏ làm beam rơi từ 64 273 xuống 58 103 — thấp hơn cả greedy tỉ số (61 420). Trong lab ship1 của trang này, biến thể “K = 30, ρ = 0” chỉ đạt khoảng hai phần ba điểm của greedy tỉ số (và chưa tới 60 % điểm của bản ρ = 20) — con số cụ thể bạn tự đo.\n\nGiải thích: rank(s) = f(s) + ρ·R(s). Với ρ = 0 chỉ còn f(s) — beam so sánh các trạng thái **chỉ bằng quá khứ**. Nó ưu tiên các trạng thái “tham lam sớm”: chộp những đơn giá trị cao ngay từ đầu rồi cạn thời gian. Mọi trạng thái được giữ lại đều thuộc loại đó nên tăng W cũng không cứu được; beam thoái hoá thành greedy theo giá trị. Chữa: dùng ρ ≈ λ (giá mờ của Bài 6) rồi quét quanh nó.",
+      mau: "Điểm giảm mạnh: đáp án 16.2 nêu cỡ **8–10 %**, số liệu thật của khoá là ρ quá nhỏ làm beam rơi từ 64 273 xuống 58 103 — thấp hơn cả greedy tỉ số (61 420) — đo ở ρ = 0,3 với f là điểm gộp (với f ròng như đề thi thật, bỏ hẳn ρ chỉ mất ≈ 0,15 %). Trong lab ship1 của trang này, biến thể “K = 30, ρ = 0” chỉ đạt khoảng hai phần ba điểm của greedy tỉ số (và chưa tới 60 % điểm của bản ρ = 20) — con số cụ thể bạn tự đo.\n\nGiải thích: rank(s) = f(s) + ρ·R(s). Với ρ = 0 chỉ còn f(s) — beam so sánh các trạng thái **chỉ bằng quá khứ**. Nó ưu tiên các trạng thái “tham lam sớm”: chộp những đơn giá trị cao ngay từ đầu rồi cạn thời gian. Mọi trạng thái được giữ lại đều thuộc loại đó nên tăng W cũng không cứu được; beam thoái hoá thành greedy theo giá trị. Chữa: với f gộp, dùng ρ ≈ λ (giá mờ của Bài 6) rồi quét quanh nó.",
       tieuChi: [
         "Nêu rank = f + ρ·R và ρ = 0 chỉ còn lại quá khứ (f)",
         "Nêu hệ quả: giữ các trạng thái tham lam sớm, cạn tài nguyên, thoái hoá thành greedy; tăng W không cứu được",
-        "Nêu cách chữa: ρ chính là giá mờ λ của Bài 6"
+        "Nêu cách chữa: ρ chính là giá mờ λ của Bài 6 (khi f là điểm gộp)"
       ]
     },
     {
@@ -198,9 +198,9 @@ TH.dangKy({
     },
     {
       id: "l3", doKho: 3, ref: "§6.1–6.2, §3",
-      hoi: "Vì sao beam thua chèn rẻ nhất ở P1 nhưng lại là thành phần mạnh (bỏ đi mất 2,43 %) ở đề thi thật? Từ đó nêu quy tắc “khi nào beam thắng, khi nào thua”.",
+      hoi: "Vì sao beam thua chèn rẻ nhất ở P1 nhưng lại là một trong những thành phần mạnh nhất (bỏ đi mất 2,43 %) ở đề thi thật? Từ đó nêu quy tắc “khi nào beam thắng, khi nào thua”.",
       goiY: ["So sánh thứ tự xây dựng của beam với của chèn.", "Đề thi thật có ràng buộc gì mà P1 không có?"],
-      mau: "Beam xây nghiệm theo **thứ tự mở rộng = thứ tự trong nghiệm**: ở P1 mỗi tầng chỉ nối thêm một đơn vào **cuối** tuyến, còn heuristic chèn có thể đặt đơn vào **giữa** tuyến nên linh hoạt hơn — beam W = 30 được 64 273 < chèn rẻ nhất 65 425 (dù vẫn hơn greedy tỉ số 4,65 %).\n\nTrên đề thi thật có ràng buộc **nhiều kỳ**: phải chọn ngôi nhà cuối ngày sao cho lịch kết thúc sát 720 phút. Đó là quyết định nhìn xa vài bước — đúng thứ beam giỏi — còn chèn không mô hình hoá được ranh giới ngày. Bỏ beam (W → 1) mất 2,43 %.\n\n**Quy tắc**: beam thắng khi thứ tự xây dựng trùng thứ tự trong nghiệm và cần nhìn xa vài bước; beam thua khi có thể chèn vào giữa. Hai kết quả không mâu thuẫn mà bổ sung nhau (có thể chạy beam rồi local search để đánh bóng, §8.3).\n\nLưu ý trung thực: bảng “beam thua chèn” là số liệu của P1 trong khoá, phụ thuộc dữ liệu và ρ. Ở lab ship1 của trang này, beam K = 30 với ρ = 20 lại đạt cao hơn cả `tot` (LNS tham chiếu). Hãy tự đo trên dữ liệu của bạn trước khi kết luận (Bài 4).",
+      mau: "Một lý do hợp lý: beam xây nghiệm theo **thứ tự mở rộng = thứ tự trong nghiệm**: ở P1 mỗi tầng chỉ nối thêm một đơn vào **cuối** tuyến, còn heuristic chèn có thể đặt đơn vào **giữa** tuyến nên linh hoạt hơn — beam W = 30 được 64 273 < chèn rẻ nhất 65 425 (dù vẫn hơn greedy tỉ số 4,65 %).\n\nTrên đề thi thật có ràng buộc **nhiều kỳ**: phải chọn ngôi nhà cuối ngày sao cho lịch kết thúc sát 720 phút. Đó là quyết định nhìn xa vài bước — đúng thứ beam giỏi — còn chèn không mô hình hoá được ranh giới ngày. Bỏ beam (W → 1) mất 2,43 % (trong bảng ablation đầy đủ, khung ngày thứ 31 còn lớn hơn: −3,08 %).\n\n**Quy tắc**: beam thắng khi thứ tự xây dựng trùng thứ tự trong nghiệm và cần nhìn xa vài bước; beam thua khi có thể chèn vào giữa. Hai kết quả không mâu thuẫn mà bổ sung nhau (có thể chạy beam rồi local search để đánh bóng, §8.3).\n\nLưu ý trung thực: bảng “beam thua chèn” là số liệu của P1 trong khoá, phụ thuộc dữ liệu và ρ. Ở lab ship1 của trang này, beam K = 30 với ρ = 20 lại đạt cao hơn cả `tot` (LNS tham chiếu). Hãy tự đo trên dữ liệu của bạn trước khi kết luận (Bài 4).",
       tieuChi: [
         "Nêu beam ở P1 chỉ nối vào cuối còn chèn đặt được vào giữa",
         "Nêu đặc điểm đề thi thật: nhiều kỳ, cần nhìn xa vài bước",
@@ -211,11 +211,11 @@ TH.dangKy({
       id: "l4", doKho: 3, ref: "Bài tập 16.5, §8.4",
       hoi: "Mô tả **beam lặp** (iterative widening): vòng lặp, ưu điểm, chi phí, và nói khi nào bạn dùng nó thay cho beam cố định W = 30.",
       goiY: ["Bắt đầu từ W = 4; làm gì với W khi còn thời gian?", "Bạn có phải biết trước W tối ưu không?"],
-      mau: "**Vòng lặp**: W = 4; lặp — chạy beam với W; nếu còn thời gian thì W ← 2W; luôn giữ nghiệm tốt nhất qua các lần chạy.\n\n**Ưu điểm** (đáp án 16.5): đạt chất lượng tương đương beam cố định tối ưu mà **không cần biết trước W**, và tự thích nghi khi ngân sách thời gian thay đổi (máy chậm/nhanh, đề lớn/nhỏ) — dùng hết ngân sách mà không phải dò W.\n\n**Chi phí**: khoảng 30 % thời gian bị “lãng phí” vào các lần chạy W nhỏ.\n\n**Khi nào dùng**: khi ngân sách thời gian chưa biết chắc hoặc thay đổi theo test; nếu đã quét và biết W ≈ 30 là điểm ngọt cho bài toán thì beam cố định rẻ hơn. Nhớ rằng bão hoà quanh W ≈ 30: sau đó nên đầu tư vào đa dạng hoá hoặc local search thay vì nhân đôi W mãi.",
+      mau: "**Vòng lặp**: W = 4; lặp — chạy beam với W; nếu còn thời gian thì W ← 2W; luôn giữ nghiệm tốt nhất qua các lần chạy.\n\n**Ưu điểm** (đáp án 16.5): đạt chất lượng tương đương beam cố định tối ưu mà **không cần biết trước W**, và tự thích nghi khi ngân sách thời gian thay đổi (máy chậm/nhanh, đề lớn/nhỏ) — dùng hết ngân sách mà không phải dò W.\n\n**Chi phí**: cỡ 50 % thời gian bị “lãng phí” vào các lần chạy W nhỏ (chi phí tỉ lệ với W mà W nhân đôi mỗi lần nên 4 + 8 + … xấp xỉ bằng đúng lần chạy cuối).\n\n**Khi nào dùng**: khi ngân sách thời gian chưa biết chắc hoặc thay đổi theo test; nếu đã quét và biết W ≈ 30 là điểm ngọt cho bài toán thì beam cố định rẻ hơn. Nhớ rằng bão hoà quanh W ≈ 30: sau đó nên đầu tư vào đa dạng hoá hoặc local search thay vì nhân đôi W mãi.",
       tieuChi: [
         "Mô tả đúng: bắt đầu W nhỏ, nhân đôi khi còn thời gian, giữ nghiệm tốt nhất",
         "Nêu ưu điểm: không cần biết trước W tối ưu, tự thích nghi với ngân sách",
-        "Nêu chi phí (~30 % thời gian cho các lần W nhỏ) và khi nào chọn beam cố định"
+        "Nêu chi phí (cỡ 50 % thời gian cho các lần W nhỏ) và khi nào chọn beam cố định"
       ]
     }
   ],

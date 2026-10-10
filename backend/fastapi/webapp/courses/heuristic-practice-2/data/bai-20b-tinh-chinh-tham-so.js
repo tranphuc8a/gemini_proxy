@@ -67,11 +67,11 @@
 
     tomTat: [
       "Thử **K** cấu hình trên **N** test rồi giữ cái tốt nhất luôn tạo ra một mức cải thiện **giả**, kể cả khi mọi cấu hình y hệt nhau: ảo giác ≈ (σ/√N)·√(2 ln K). Con số tinh chỉnh ra là một **kỷ lục**, không phải một phép đo.",
-      "Với σ = 10, N = 30, K = 100: SE = 10/√30 = 1,83 và ảo giác ≤ 1,83 × 3,04 = 5,5 điểm trên nền 100. Công thức là **cận trên** (các cấu hình gặp cùng test khó nên bảng đo thật chỉ ra ~3 %), và cận trên là thứ ta cần khi ra quyết định.",
-      "Quy tắc Bài 4 phải nhân thêm ln K: **N ≳ 8(σ/Δ)² ln K**. Với σ/x̄ = 10 % và Δ = 2 %: K = 20 cần 600 test, K = 100 cần 920, K = 500 cần 1 240. Tinh chỉnh đắt hơn mọi người tưởng.",
+      "Với σ = 10, N = 30, K = 100: SE = 10/√30 = 1,83 và ảo giác ≤ 1,83 × 3,04 = 5,5 điểm trên nền 100. Công thức là **cận trên** (√(2 ln K) là xấp xỉ tiệm cận, hơi cao hơn kỳ vọng chính xác của giá trị lớn nhất — bảng đo ở K = 100 cho 4,6 % — và các cấu hình gặp cùng test khó còn làm ảo giác giảm thêm), và cận trên là thứ ta cần khi ra quyết định.",
+      "Quy tắc Bài 4 phải nhân thêm ln K: **N ≳ 8(σ/Δ)² ln K** (cho K ≥ 3; K = 1 thì dùng nguyên quy tắc Bài 4). Với σ/x̄ = 10 % và Δ = 2 %: K = 20 cần 600 test, K = 100 cần 920, K = 500 cần 1 240. Tinh chỉnh đắt hơn mọi người tưởng.",
       "Thuốc chữa là **tách dữ liệu**: seed huấn luyện (nhìn thoải mái), seed kiểm định (giữ kín, chạy **đúng một lần** cho cấu hình cuối). Nhìn kiểm định lần hai là nó thành huấn luyện. Báo cáo ghi cả hai con số: “+3,0 % huấn luyện, +2,7 % kiểm định”.",
       "Chiến lược theo số chiều: 1–2 tham số **quét lưới**, 3–5 **giảm dần theo toạ độ**, ≥ 6 **ngẫu nhiên** (lưới chỉ thử vài giá trị khác nhau cho mỗi tham số quan trọng). Tham số tỉ lệ (T₀, λ, tỉ lệ phá) quét theo **thang log**: 5, 10, 20, 40, 80.",
-      "**Ablation trước, tinh chỉnh sau**: |Δ ablation| của một thành phần là cận trên cho lợi ích tinh chỉnh tham số bên trong nó. Số hạng mật độ σ chỉ −0,01 % thì xoá luôn, đừng đốt K vào nó.",
+      "**Ablation trước, tinh chỉnh sau**: |Δ ablation| của một thành phần là cận trên thực dụng cho lợi ích tinh chỉnh tham số bên trong nó (đúng khi tham số đang ở mức tạm ổn; nghi thì quét thô một lần trước khi bỏ). Số hạng mật độ σ chỉ −0,01 % thì xoá luôn, đừng đốt K vào nó.",
       "Ablation một thành phần **dùng chung** trong portfolio phải làm ở cấu hình **một chiến lược**: “phân lớp kích thước” mất 0,03 % với 6 chiến lược nhưng 1,65 % với 1 chiến lược — sai 55 lần vì năm chiến lược còn lại tự bù.",
       "Ba bẫy phòng thi: tham số dạng “I vòng lặp” chỉnh trên máy nhanh (chừa biên an toàn ≥ 2×); chỉnh ở quy mô sai (kiểm ở cả nhỏ / điển hình / lớn); nộp thử để **chọn** (đúng ra chỉ để **xác nhận**). Và K cộng dồn qua cả tuần, không chỉ vòng lặp cuối."
     ],
@@ -148,7 +148,7 @@
           "Không tinh chỉnh; xoá luôn thành phần đó"
         ],
         dung: 3,
-        giaiThich: "|Δ ablation| là cận trên cho lợi ích của việc chỉnh tham số bên trong thành phần: tắt hẳn chỉ mất 0,01 % thì chỉnh số cũng chỉ được chừng ấy — nằm sâu trong nhiễu đo. Quét 50 giá trị chỉ làm K phình to, tức phóng to ảo giác, mà không đổi lại gì. Seed kiểm định chỉ giúp nhận ra ảo giác, không làm tham số vô nghĩa có nghĩa."
+        giaiThich: "|Δ ablation| là cận trên thực dụng cho lợi ích của việc chỉnh tham số bên trong thành phần (đúng khi tham số đang ở mức tạm ổn): tắt hẳn chỉ mất 0,01 % thì chỉnh số thường cũng chỉ được cỡ chừng ấy — nằm sâu trong nhiễu đo. Quét 50 giá trị chỉ làm K phình to, tức phóng to ảo giác, mà không đổi lại gì. Seed kiểm định chỉ giúp nhận ra ảo giác, không làm tham số vô nghĩa có nghĩa."
       },
       {
         id: "q8", loai: "mot", doKho: 3, ref: "§6.2",

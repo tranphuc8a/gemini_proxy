@@ -1,0 +1,170 @@
+[
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "Trong đồ án cuối khoá, tỉ lệ đo được là **1 157 lần**.",
+    "new": "Trong thí nghiệm TSP 200 điểm ở §1 (cùng 99 500 nước đi, cùng máy), tỉ lệ đo được là **1 157 lần**.",
+    "ly_do": "[MÂU THUẪN] Phần mở đầu gắn 1 157 lần với \"đồ án cuối khoá\", nhưng §1, §6 và tóm tắt §11 đều nói đó là số đo TSP n=200 (184 355 → 213 381 485 nước/giây, tỉ số 213 381 485 / 184 355 = 1 157,4; cùng 99 500 nước). Sửa mở đầu cho khớp thân bài."
+  },
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "⚠️ **Với chu trình kín (TSP)**, $q_{j+1}$ quay vòng về $q_0$ — không có trường hợp biên.",
+    "new": "⚠️ **Với chu trình kín (TSP)**, $q_{j+1}$ quay vòng về $q_0$ — không còn trường hợp biên \"không có $q_{j+1}$\". Chỉ phải **loại cặp $(i,j)=(0,m-1)$**: đảo cả chu trình thì chu trình không đổi, nhưng hai cạnh \"bị bỏ\" trùng nhau nên công thức cho $\\Delta = -2\\,d(q_{m-1},q_0)$ (sai) — để lọt thì leo đồi sẽ \"cải thiện\" mãi không dừng.",
+    "ly_do": "[LOGIC] Khẳng định \"không có trường hợp biên\" sai với cặp (i,j)=(0,m-1) trên chu trình kín. Đã cài công thức §3.1 (q_{i-1} và q_{j+1} lấy vòng) rồi so với tính lại độ dài từ đầu trên 3 000 chu trình ngẫu nhiên, mọi cặp i<j: 0 sai lệch trên 54 911 cặp khác, nhưng 3 000/3 000 cặp (0,m-1) sai (công thức cho −2·d(q_{m-1},q_0) trong khi Δ thật = 0). Nước đi này mà lọt vào vòng lặp sẽ được \"áp dụng\" lặp đi lặp lại vì Δ<0."
+  },
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "$$\\boxed{\\Delta = \\Delta_{\\text{tháo}} + \\Delta_{\\text{gắn}}}$$",
+    "new": "$$\\boxed{\\Delta = \\Delta_{\\text{tháo}} + \\Delta_{\\text{gắn}}}$$\n\n(Công thức đúng khi $k<i$ hoặc $k>i+L$, tức vị trí đích nằm ngoài đoạn và không phải chỗ cũ của nó; với $k\\in[i,i+L]$ nước đi là vô nghĩa và công thức cho giá trị sai.)",
+    "ly_do": "[LOGIC] Công thức Or-opt thiếu giả thiết về k. Đã cài Δ_tháo+Δ_gắn (đường mở có kho, 40 000 phép thử ngẫu nhiên L=1..3): với k<i hoặc k>i+L luôn khớp tính lại (0 sai); với k ∈ [i, i+L] không có nghĩa (k=i, k=i+L là không đổi gì; k nằm trong đoạn thì q_{k-1}/q_k thuộc chính đoạn) và công thức sai ở mọi trường hợp thử."
+  },
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "| [3] delta + ứng viên | **845** | 0,03 ms | 23 M/s | 14 800 |",
+    "new": "| [3] delta + ứng viên | **845** | 0,04 ms | 23 M/s | 14 800 |",
+    "ly_do": "[SỐ] Thời gian suy ra từ log: 845 nước / 23 150 051 nước/giây = 0,0365 ms, làm tròn 0,04 ms (không phải 0,03)."
+  },
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "Vì tổng thời gian quá nhỏ (0,03 ms)",
+    "new": "Vì tổng thời gian quá nhỏ (0,04 ms)",
+    "ly_do": "[SỐ] Cùng số ở bảng §6.1: 845 / 23 150 051 = 0,0365 ms ≈ 0,04 ms."
+  },
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "> Đây là lý do khoá học chọn khoảng cách Manhattan thay vì Euclid ở mọi bài toán.",
+    "new": "> Đây là một lý do khiến các bài toán trên lưới của khoá dùng khoảng cách Manhattan (số nguyên) thay vì Euclid (căn bậc hai, số thực).",
+    "ly_do": "[LOGIC] \"Khoá chọn Manhattan ở mọi bài toán\" vượt quá bằng chứng: Manhattan là khoảng cách do đề của các bài toán trên lưới (P1–P3) quy định; các bài khác (vd Bài 18 §4 so cả hằng số Euclid 0,7124 với Manhattan 0,92) không dùng một khoảng cách duy nhất. Hạ cho đúng mức: số nguyên là một lý do tiện, không phải lý do chọn ở mọi bài."
+  },
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "  ① dùng SỐ NGUYÊN (đây là lý do khoá dùng Manhattan, không dùng Euclid)",
+    "new": "  ① dùng SỐ NGUYÊN (một lý do để bài toán trên lưới dùng Manhattan thay vì Euclid)",
+    "ly_do": "[LOGIC] Đồng bộ với bản vá ở §5.3: bỏ cách nói \"khoá dùng Manhattan, không dùng Euclid\" như một quy tắc chung."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "Năm cách. Bạn vừa tự nghĩ ra toàn bộ nội dung kỹ thuật của bài này — chúng lần lượt là **swap, relocate, 2-opt, xoá, chèn**, năm toán tử kinh điển của local search.",
+    "new": "Năm cách. Bạn vừa tự nghĩ ra gần như toàn bộ nội dung kỹ thuật của bài này — chúng lần lượt là **swap, relocate, 2-opt, xoá, chèn**. Ở §2, bộ năm toán tử kinh điển của local search được gọi tên hơi khác: thêm **Or-opt** (mở rộng của relocate) và gộp xoá + chèn thành một nước **exchange**.",
+    "ly_do": "[MÂU THUẪN] Mở đầu liệt kê \"năm toán tử\" = swap, relocate, 2-opt, xoá, chèn, còn §1, §2.6 và tóm tắt §9 liệt kê \"năm toán tử\" = 2-opt, Or-opt, relocate, swap, exchange (exchange = bỏ một phần tử + thêm một phần tử, §2.5). Hai bộ khác nhau (Or-opt vs xoá/chèn rời). Thêm một câu nối hai bộ; không đổi cấu trúc bài."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "**Định lý.** Trên đồ thị **đối xứng** thoả bất đẳng thức tam giác, nếu hai cạnh của chu trình cắt nhau (theo nghĩa hình học) thì luôn tồn tại một nước 2-opt cải thiện.",
+    "new": "**Định lý.** Trên mặt phẳng, với khoảng cách theo một chuẩn (Euclid hay Manhattan; mỗi cạnh là đoạn thẳng nối hai điểm), nếu hai cạnh của chu trình cắt nhau thật sự thì có một nước 2-opt **không làm tuyến dài thêm** ($\\Delta \\le 0$); nước đó làm tuyến **ngắn đi hẳn** khi ít nhất một bất đẳng thức tam giác dưới đây xảy ra chặt (ví dụ Euclid, các điểm không thẳng hàng).",
+    "ly_do": "[LOGIC] Chứng minh chỉ cho \"≤\" nhưng định lý viết \"cải thiện\" (<). Phản ví dụ với Manhattan: a=(0,0), b=(4,4), c=(4,3), d=(0,1); đoạn ab và cd cắt nhau tại P=(2,2) nhưng d(a,c)+d(b,d)=7+7=14=d(a,b)+d(c,d)=8+6, tức Δ=0 (đã tính lại). \"Đối xứng + tam giác\" cũng chưa đủ để nói \"cắt nhau theo nghĩa hình học\" — cần mặt phẳng và cạnh là đoạn thẳng. Sửa phát biểu cho khớp phép chứng minh (chuẩn bất kỳ, kể cả Manhattan mà khoá dùng)."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "Cộng lại: $d(a,c)+d(b,d) \\le d(a,b)+d(c,d)$. $\\blacksquare$",
+    "new": "Cộng lại, rồi dùng $d(a,P)+d(P,b)=d(a,b)$ và $d(c,P)+d(P,d)=d(c,d)$ (vì $P$ nằm trên cả hai đoạn): $d(a,c)+d(b,d) \\le d(a,b)+d(c,d)$. $\\blacksquare$",
+    "ly_do": "[LOGIC] Bước \"cộng lại\" thiếu lý do vì sao vế phải bằng d(a,b)+d(c,d): cần P nằm trên cả hai đoạn nên d(a,P)+d(P,b)=d(a,b) và d(c,P)+d(P,d)=d(c,d). Bổ sung đúng một mệnh đề."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "Lập luận phản chứng: nếu **cả hai** cạnh mới đều dài hơn **cả hai** cạnh cũ thì tổng chắc chắn tăng. Vậy điều kiện cần là **ít nhất một** cạnh mới ngắn hơn một cạnh cũ — tức $d(a,c) < d(a,b)$ hoặc $d(b,d) < d(c,d)$.",
+    "new": "Lập luận phản chứng: nếu $d(a,c) \\ge d(a,b)$ **và** $d(b,d) \\ge d(c,d)$ thì cộng hai bất đẳng thức, tổng hai cạnh mới $\\ge$ tổng hai cạnh cũ — nước đi không cải thiện. Vậy điều kiện cần là $d(a,c) < d(a,b)$ **hoặc** $d(b,d) < d(c,d)$ — ít nhất một cạnh mới ngắn hơn cạnh cũ chung đầu mút với nó.",
+    "ly_do": "[LOGIC] Suy luận cũ nhảy từ \"cả hai cạnh mới dài hơn cả hai cạnh cũ\" sang điều kiện có cặp cụ thể (a,c)<(a,b) hoặc (b,d)<(c,d); \"tức\" không đúng vì điều kiện cần yếu (có cạnh mới ngắn hơn cạnh cũ nào đó) không suy ra cặp chung đầu mút. Viết lại phản chứng trực tiếp đúng cặp: nếu cả hai bất đẳng thức ≥ thì tổng không giảm."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "Do tính đối xứng của cách đánh số, ta chỉ cần quét trường hợp đầu: với mỗi $a$, xét các $c$ **gần $a$ hơn là $b$**.",
+    "new": "Trường hợp sau chính là trường hợp đầu khi đi dọc chu trình theo chiều ngược lại, nên chỉ cần quét trường hợp đầu **ở cả hai chiều**: với mỗi $a$, lấy $b$ lần lượt là phần tử đứng sau rồi đứng trước $a$, và xét các $c$ **gần $a$ hơn là $b$**.",
+    "ly_do": "[LOGIC] \"Đối xứng của cách đánh số\" chỉ đúng nếu quét cả hai chiều chu trình. Kiểm chứng bằng code (Manhattan, n=200, 5 bộ dữ liệu, K=n−1, khởi tạo láng giềng gần nhất): quét chỉ theo chiều thuận (đúng như mã ở §3.3) vẫn để sót nước 2-opt cải thiện ở 3/5 bộ; quét cả hai chiều thì 0/5 bộ còn nước cải thiện. Do đó câu \"không bỏ sót nước nào nếu K=n−1\" ở ★ phía dưới chỉ đúng khi quét hai chiều."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "> **Chi tiết quan trọng:** dòng `if (D[a][c] >= D[a][b]) break;` là nơi tiết kiệm thật sự. Vì danh sách đã sắp xếp tăng dần, khi gặp đỉnh xa hơn $b$ ta biết mọi đỉnh sau cũng xa hơn → dừng ngay.",
+    "new": "> **Chi tiết quan trọng:** dòng `if (D[a][c] >= D[a][b]) break;` là nơi tiết kiệm thật sự. Vì danh sách đã sắp xếp tăng dần, khi gặp đỉnh xa hơn $b$ ta biết mọi đỉnh sau cũng xa hơn → dừng ngay.\n>\n> ⚠️ Mã trên chỉ xét $b$ là phần tử đứng **sau** $a$ cho gọn. Để đúng với §3.2 phải quét thêm một lượt với $b$ là phần tử đứng **trước** $a$; nếu chỉ quét một chiều thì ngay cả khi $K=n-1$ vẫn có thể còn nước 2-opt cải thiện bị bỏ sót.",
+    "ly_do": "[MÃ] Mã §3.3 bước 2 chỉ quét b = t[(i+1)%n] (chiều thuận), không khớp lập luận §3.2 (cần hai chiều). Bằng chứng như bản vá liền trước (3/5 bộ dữ liệu còn nước cải thiện khi K=n−1, một chiều; 0/5 khi hai chiều). Thêm đúng một ghi chú thay vì viết lại mã."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "**Đây là toán tử duy nhất thay đổi TẬP được chọn.** Không có nó, local search chỉ tối ưu thứ tự của một tập cố định.",
+    "new": "**Trong bộ năm toán tử này, đây là toán tử duy nhất thay đổi TẬP được chọn** (xoá và chèn đơn lẻ ở phần mở đầu cũng đổi tập — exchange chính là một nước xoá + chèn gộp lại). Không có nó (hoặc xoá/chèn), local search chỉ tối ưu thứ tự của một tập cố định.",
+    "ly_do": "[MÂU THUẪN] \"Duy nhất\" mâu thuẫn với phần mở đầu và bảng thuật ngữ §8 (xoá/chèn cũng đổi tập). Hạ cho đúng: duy nhất trong bộ năm toán tử của §2, và exchange = xoá + chèn gộp."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "  EXCHANGE   trong ↔ ngoài   toán tử DUY NHẤT đổi TẬP được chọn",
+    "new": "  EXCHANGE   trong ↔ ngoài   (= xoá + chèn) toán tử DUY NHẤT của bộ này đổi TẬP được chọn",
+    "ly_do": "[MÂU THUẪN] Đồng bộ tóm tắt §9 với bản vá §2.5 (\"duy nhất\" chỉ trong bộ năm toán tử của bài)."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "Đây đúng là cạm bẫy 1 ở Bài 9 §9, nhìn từ phía toán tử.",
+    "new": "Đây đúng là cạm bẫy 1 ở Bài 9 §8, nhìn từ phía toán tử.",
+    "ly_do": "[THAM CHIẾU] Cạm bẫy 1 (\"Lân cận không liên thông\": không có chèn/bỏ thì tập đơn không đổi) nằm ở Bài 9 §8 \"Cạm bẫy thường gặp\"; §9 của Bài 9 là Tóm tắt."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "**Quy tắc 2 — giải phóng trước, tiêu thụ sau.** Đã nói ở Bài 9 §7.2.",
+    "new": "**Quy tắc 2 — giải phóng trước, tiêu thụ sau.** Đã nói ở Bài 9 §5.2.",
+    "ly_do": "[THAM CHIẾU] Quy tắc \"giải phóng tài nguyên trước, tiêu tài nguyên sau\" nằm ở Bài 9 §5.2 (Thứ tự bốn toán tử không phải ngẫu nhiên); Bài 9 §7.2 là \"Đo độ gồ ghề bằng thí nghiệm\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "- bài toán **một kỳ** (P1) — đo được: `leo doi` với 2-opt cho +7,0 %;",
+    "new": "- bài toán **một kỳ** (P1) — đo được (Bài 9 §6.2): leo đồi (có 2-opt) vẫn **tăng** điểm P1: +4,5 % khi xuất phát từ greedy tỉ số, +0,45 % khi xuất phát từ chèn rẻ nhất; tính cả chuỗi chèn rẻ nhất → leo đồi thì hơn greedy tỉ số +7,0 %;",
+    "ly_do": "[MÂU THUẪN] \"+7,0 %\" là 65 718 / 61 420 (leo đồi sau chèn rẻ nhất, so với greedy tỉ số; bảng cheatsheet) — không phải mức tăng do leo đồi/2-opt. Bài 9 §6.2 đo: 61 420 → ~64 200 = +4,5 %; 65 425 → 65 718 = +0,45 %. Tính lại: 65 718/61 420 = 1,0700; 65 718/65 425 = 1,0045; 64 200/61 420 = 1,0453. Ghi rõ cơ sở so sánh."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "| Swap | swap / exchange | Đổi chỗ hai phần tử cho nhau. |",
+    "new": "| Swap | swap (≠ exchange ở §2.5) | Đổi chỗ hai phần tử cho nhau. |",
+    "ly_do": "[NHỎ] Bảng thuật ngữ gọi swap là \"swap / exchange\" trong khi §2.5–§2.6 dùng Exchange cho toán tử trong ↔ ngoài (khác swap). Tránh dùng một tên cho hai toán tử."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "**11.2 (Dễ).** Với ví dụ §6, tìm một nước Or-opt $L=2$ có delta âm.",
+    "new": "**11.2 (Dễ).** Với ví dụ §6, tìm một nước Or-opt $L=3$ có delta âm.",
+    "ly_do": "[SỐ] Trong ví dụ §6 không tồn tại nước Or-opt L=2 nào có Δ<0: liệt kê toàn bộ 24 nước L=2 (thuận và đảo chiều, loại đảo tại chỗ vốn là 2-opt) → Δ nhỏ nhất = 0 (bảng §6 cũng cho Δ=0). Chỉ L=3 chuyển [C,D,E] lên sau A cho kho→A→C→D→E→B dài 70, Δ=−10. Đổi đề sang L=3 (đáp án sửa tương ứng)."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "Nếu bạn có cận trên (Bài 18) và đang cách nó > 10 %, còn nhiều chỗ để cải thiện.",
+    "new": "Nếu bạn có cận trên (Bài 18) và đang cách nó > 5 %, còn nhiều chỗ để cải thiện.",
+    "ly_do": "[MÂU THUẪN] §3.3 nói ngưỡng 10 %, bảng ngay dưới có hàng \"5–20 % → cần metaheuristic\" và tóm tắt §10 ③ dùng \"> 5 %\"; Bài 18 §6 (chuẩn) đặt \"5–15 % thiếu tìm kiếm → thêm local search/metaheuristic\". Thống nhất 5 %."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "| > 20 % | mô hình hoặc heuristic xây dựng có vấn đề |",
+    "new": "| > 15 % | mô hình hoặc heuristic xây dựng có vấn đề (Bài 18 §6 tách: > 30 % mô hình/cận có vấn đề, 15–30 % heuristic xây dựng yếu) |",
+    "ly_do": "[MÂU THUẪN] Đồng bộ với Bài 18 §6 (chuẩn): các mốc là 30 % / 15 % / 5 % / 2 %. Bài 12 viết 20 % và 5–20 %. Hàng \"> 15 %\" gộp hai hàng \"> 30 %\" và \"15–30 %\" của Bài 18 để giữ bảng bốn hàng."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "| 5–20 % | cần metaheuristic |",
+    "new": "| 5–15 % | cần metaheuristic |",
+    "ly_do": "[MÂU THUẪN] Bài 18 §6: \"5–15 % | thiếu tìm kiếm | thêm local search / metaheuristic\". Đồng bộ mốc trên 15 %."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "Sau:    P1 ─ P3 ─ P2 ─ P4",
+    "new": "Sau:    P1 ─ P4 ─ P3 ─ P2",
+    "ly_do": "[MÂU THUẪN] Mã doubleBridge ngay dưới ghép u = P1 + P4 + P3 + P2 (t[0,p1) + t[p3,n) + t[p2,p3) + t[p1,p2)), không phải P1 P3 P2 P4. Kiểm chứng trên 2 000 bộ (p1,p2,p3) ngẫu nhiên, n=24: P1P4P3P2 đổi đủ 4 cạnh ở 1 946/2 000 bộ (54 bộ còn lại suy biến: có đoạn chỉ một phần tử hoặc P4 rỗng nên ít hơn); P1P3P2P4 chỉ đổi 3 cạnh (1 979/2 000 bộ, 21 bộ suy biến còn 2; cạnh nối đuôi P4 về đầu P1 giữ nguyên) — là nước 3-opt chuyển đoạn, không phải \"4-opt\" như lời bài; P1P4P3P2 có hai chu trình xen kẽ (không tuần tự) đúng là double-bridge. Sửa sơ đồ theo mã và theo lời \"nước 4-opt\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "**Vì sao double-bridge?** Vì nó là nước **4-opt** mà **2-opt và Or-opt không thể hoàn tác** — đảm bảo thoát khỏi lưu vực hiện tại.",
+    "new": "**Vì sao double-bridge?** Vì nó là nước **4-opt** (đổi 4 cạnh) mà **một nước 2-opt hay Or-opt đơn lẻ không thể hoàn tác** — nên cú đá không bị xoá ngay và thường đưa leo đồi sang lưu vực khác (không có gì bảo đảm tuyệt đối: leo đồi vẫn có thể rơi về cực trị cũ sau vài nước).",
+    "ly_do": "[LOGIC] \"Không thể hoàn tác\" chỉ đúng với MỘT nước 2-opt/Or-opt; \"đảm bảo thoát khỏi lưu vực\" vượt quá bằng chứng. Chạy ILS (TSP n=200, Manhattan, 2-opt đầy đủ sau mỗi cú đá, 4 bộ dữ liệu × 1 000 vòng): với double-bridge P1P4P3P2 vẫn có 3–39 / 1 000 vòng kết thúc lại đúng độ dài cũ (rơi về cực trị cũ). Hạ mức khẳng định, giữ ý chính."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "và lúc đó bạn buộc phải dùng ① hoặc ④.",
+    "new": "và lúc đó bạn buộc phải dùng ①, ② hoặc ④.",
+    "ly_do": "[LOGIC] Cùng đoạn nói \"SA và tabu đều chấp nhận đi xuống\": tabu (②) cũng thoát được cực trị của hợp mọi lân cận, nên \"① hoặc ④\" bỏ sót ②."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "swap, xoá/chèn — mỗi cái sửa một loại lỗi khác nhau.",
+    "new": "swap, exchange (= xoá + chèn) — mỗi cái sửa một loại lỗi khác nhau.",
+    "ly_do": "[MÂU THUẪN] Bài 11 §2/§2.6/§9 có bộ năm toán tử = 2-opt, Or-opt, relocate, swap, exchange; \"xoá/chèn\" rời là cách nói ở phần mở đầu Bài 11. Ghi theo bộ chính của Bài 11 (xem bản vá Bài 11 mở đầu)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**11.2** Chuyển đoạn $[C,D]$ (vị trí 3–4) lên sau A: tuyến `kho→A→C→D→B→E`, độ dài $10+10+30+10+10 = 70 < 80$. $\\Delta = -10$.",
+    "new": "**11.2** Với $L=3$: chuyển đoạn $[C,D,E]$ lên sau A cho tuyến `kho→A→C→D→E→B`, độ dài $10+10+30+10+10 = 70 < 80$, $\\Delta = -10$. (Trong ví dụ §6 **không** có nước $L=2$ nào cho $\\Delta<0$, kể cả đảo chiều đoạn: nhỏ nhất bằng 0. Chẳng hạn chuyển $[C,D]$ lên sau A cho `kho→A→C→D→B→E` dài $10+10+30+20+10 = 80$, $\\Delta=0$ — vì $D\\to B$ dài 20 chứ không phải 10.)",
+    "ly_do": "[SỐ] Đáp án cũ tính D→B = 10; toạ độ D=50, B=30 nên D→B = 20, tuyến kho→A→C→D→B→E dài 10+10+30+20+10 = 80, Δ=0 (không phải 70/−10). Đã liệt kê mọi nước Or-opt L=2 của ví dụ §6: không có nước nào Δ<0; chỉ L=3 [C,D,E] → sau A cho 70 (Δ=−10). Khớp với đề 11.2 đã đổi sang L=3."
+  }
+]

@@ -1,0 +1,152 @@
+[
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "- Với $\\lambda$ đúng, chèn **vượt greedy tỉ số 4,1 %**.",
+    "new": "- Với $\\lambda$ đúng, chèn **vượt greedy tỉ số 4,1 %**.\n\n> ⚠️ **Đừng so trực tiếp với các số ở bài sau.** Số đo ở đây (chèn rẻ nhất 63 920, +4,1 %, $\\lambda = 80$; leo đồi 64 490) và số đo ở Bài 7 §1, Bài 8 §4.1, Bài 9 §6.2 (chèn rẻ nhất 65 425, +6,5 %; leo đồi từ greedy tỉ số ≈ 64 200) là **hai số đo của cùng bộ 60 test** (seed 777, $n = 120$): bài này dùng $\\lambda = 80$, Bài 7 dùng $\\lambda$ đã hiệu chuẩn lại (≈ 88, xem nhật ký mẫu: hạ $\\lambda$ 142 → 88). Kết quả nhạy với $\\lambda$; chưa đối chiếu được với mã gốc.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #2: hai số đo của cùng bộ 60 test (seed 777, n = 120) lệch nhau (chèn 63 920 ở λ = 80 so với 65 425 ở Bài 7/8/9; leo đồi 64 490 so với ≈ 64 200). Giữ mọi số, thêm câu cảnh báo. Đã kiểm nhật ký mẫu (tai-lieu/mau-nhat-ky, Ví dụ 1, 2026-09-16): \"hạ lambda từ 142 xuống 88 … chèn rẻ nhất 61 001 → 65 425\" — khớp với \"λ đã hiệu chuẩn lại ≈ 88\"; mã gốc không còn trong repo nên không phân định thêm được."
+  },
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "Vì tiền thưởng OT (200 đ/phút) chỉ là **một phần nhỏ** của giá trị một phút. Phần lớn giá trị đến từ **tiền công vệ sinh**:\n\n$$\\lambda = \\underbrace{\\frac{\\text{tiền công}}{\\text{thời gian vệ sinh}}}_{\\approx 1\\,220} + \\underbrace{\\text{thưởng OT}}_{200} \\approx 1\\,420$$",
+    "new": "Vì tiền thưởng OT (200 đ/phút) chỉ là **một phần nhỏ** của giá trị một phút. Phần lớn giá trị đến từ **tiền công vệ sinh** mà phút đó có thể kiếm được.\n\nCon số có nguồn là: $\\lambda$ **thực nghiệm** $\\approx 1\\,420$ (quét $\\lambda$ ở ca 2607, tài liệu 03 §2.3), còn giá/phút của loại máy biên theo lý thuyết $\\approx 1\\,367$ (chưa tính thưởng OT). Cách tách \"$\\approx 1\\,220$ tiền công + $200$ thưởng OT $\\approx 1\\,420$\" chỉ là **cách nhớ trực giác**, không phải một phép tính có nguồn — đừng trích nó như số đo.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #3: phân rã \"λ ≈ 1 220 + 200\" không truy được nguồn. Đã đối chiếu 2607/03 §2.3: bảng cho p/(s+τ) của loại máy biên (loại 6) = 1 366,7 (≈ 1 367, thưởng OT nằm ở tử số nên chưa có trong số này) và quét thực nghiệm cho tối ưu λ = 1 420 (SCORE 32 849 395). Thay phân rã bằng hai số có nguồn đó và nói rõ cách tách chỉ là cách nhớ."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "**+6,5 % chỉ bằng cách cho phép chèn vào giữa.** Đây là cải tiến rẻ nhất trong toàn khoá học.",
+    "new": "**+6,5 % chỉ bằng cách cho phép chèn vào giữa.** Đây là cải tiến rẻ nhất trong toàn khoá học.\n\n> ⚠️ **65 425 và 63 920 là hai số đo khác nhau.** Chúng là hai số đo của cùng bộ 60 test (seed 777, $n = 120$): Bài 6 §6.3 ghi chèn rẻ nhất 63 920 (+4,1 %) với $\\lambda = 80$; bài này dùng $\\lambda$ đã hiệu chuẩn lại (≈ 88, xem nhật ký mẫu: hạ $\\lambda$ 142 → 88 cho 65 425). Kết quả nhạy với $\\lambda$; chưa đối chiếu được với mã gốc, nên đừng so trực tiếp hai số này.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #2 (nửa Bài 7 §1): thêm câu giải thích vì sao 65 425 (Bài 7/8/9) khác 63 920 (Bài 6 §6.3). Nhật ký mẫu Ví dụ 1 (2026-09-16) ghi đúng \"hạ lambda 142 → 88 … chèn rẻ nhất 61 001 → 65 425 (+7,3 %)\" nên bám nhật ký; không đổi số nào."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "| Dữ liệu **gom cụm**, có đơn \"lẻ loi\" | ✗ để sót đơn lẻ | **✓ thắng 2–5 %** |",
+    "new": "| Dữ liệu **gom cụm**, có đơn \"lẻ loi\" | ✗ để sót đơn lẻ | **✓ kỳ vọng thắng 2–5 %** (chưa đo) |",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #5: \"2–5 %\" giữ ở mức \"kỳ vọng, chưa có bảng đo trong bài\". Ô bảng còn khẳng định \"✓ thắng 2–5 %\" trong khi đoạn chú ý ngay dưới (đã vá ở g4) và §10 đã nói \"chưa đo\"; không có bảng đo regret nào trong bài — hạ ô bảng cho khớp."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "| Số ứng viên rất lớn | ✓ nhanh hơn | ✗ đắt hơn (~1,5 lần) |",
+    "new": "| Số ứng viên rất lớn | ✓ nhanh hơn | ✗ đắt hơn (cùng bậc; cỡ 1–1,5 lần, chưa đo) |",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #5: \"~1,5 lần\" không có phép đo; chi phí regret là O(n·m) giống chèn rẻ nhất (cùng bậc) nên hệ số chỉ cỡ 1–1,5 lần. Hạ thành \"cùng bậc, cỡ 1–1,5 lần, chưa đo\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "> **Chi phí:** regret cần biết **hai** vị trí tốt nhất thay vì một → chi phí tính toán gấp ~1,5 lần, vẫn $O(n \\cdot m)$.",
+    "new": "> **Chi phí:** regret cần biết **hai** vị trí tốt nhất thay vì một, nhưng vẫn $O(n \\cdot m)$ mỗi vòng — cùng bậc với chèn rẻ nhất, cỡ 1–1,5 lần (chưa đo).",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #5: cùng lý do với ô bảng ngay trên — bỏ hệ số \"gấp ~1,5 lần\" chưa đo, giữ \"vẫn O(n·m)\"."
+  },
+  {
+    "bai": "khoa-hoc/bai-08-grasp",
+    "old": "**quan trọng hơn**, và Bài 12 §3 sẽ quay lại: nó nói rằng",
+    "new": "**quan trọng hơn**: nó nói rằng",
+    "ly_do": "[THAM CHIẾU] (ngoài danh sách quyết định; g5 đã ghi \"tham chiếu treo\") Bài 12 §3 là \"Ba chỉ dấu tôi đang kẹt\" (đường cong hội tụ, phân tán, khoảng cách tới cận trên) — không có σ·E[max_N Z]. Công thức này chỉ được nhắc lại ở Bài 15 §5 (đối chiếu đa khởi động với ILS) theo nghĩa lợi ích giảm dần, không phải nghĩa \"báo cáo cái tốt nhất đã bị thổi lên\". Bỏ lời hứa treo, không đổi nội dung."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "  do phan tan (te nhat / tot nhat) = 1.277\n```\n\n**Đọc con số 1,277:**",
+    "new": "  do phan tan (te nhat / tot nhat) = 1.277\n```\n\n> ⚠️ **Cơ sở của số đo này.** Các số 18 980 / 24 240 / 20 723 và 1,277 là số đo từ mã gốc, hiện không còn trong repo nên chưa kiểm lại trực tiếp được. Dựng lại độc lập bằng 2-opt quét tới hội tụ trên bộ sinh Manhattan (toạ độ nguyên 0–999, 100 bộ $n = 200$) cho độ phân tán nhỏ hơn (tệ nhất/tốt nhất ≈ 1,06–1,11) và nghiệm láng giềng gần nhất + 2-opt tốt hơn trung bình các lần ngẫu nhiên cỡ 3–5 % (ở $n = 200$ chỉ ngang lần tốt nhất trong 20 lần; ở $n = 600$–1 000 thì thường tốt hơn cả lần tốt nhất, cỡ 2–3 %). Kết luận định tính — khởi tạo tốt thắng đa khởi động ngẫu nhiên khi $n$ lớn — giữ nguyên; độ lớn phụ thuộc cách cài đặt.\n\n**Đọc con số 1,277:**",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1(a): giữ số đo, thêm câu nêu cơ sở ở chỗ số xuất hiện đầu tiên của bài. Đã tự dựng lại bằng C++ (2-opt quét mọi cặp tới hội tụ, chu trình kín, Manhattan, toạ độ 0–999, 20 lần từ hoán vị ngẫu nhiên): n = 200, 100 bộ toạ độ → tệ nhất/tốt nhất p10–p90 = 1,062–1,112 (trung vị 1,084); trung bình ngẫu nhiên / NN+2-opt = 1,010–1,062 (trung vị 1,034); tốt nhất ngẫu nhiên / NN+2-opt trung vị 0,996. n = 600 (10 bộ, min–max): 1,035–1,069; trung bình ngẫu nhiên / NN+2-opt 1,001–1,063; tốt nhất ngẫu nhiên / NN+2-opt trung vị 1,025 (một bộ 0,976). n = 1 000 (4 bộ, min–max): 1,029–1,054; 1,036–1,062; 1,015–1,035. Ghi số của bản dựng lại (hơi khác khoảng 1,07–1,11 / 2–8 % trong quyết định) vì đó là số đã kiểm."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "| Nhưng khởi tạo **tốt** rồi leo đồi cho **14 656** — thấp hơn cả cái tốt nhất trong 20 lần ngẫu nhiên | **điểm xuất phát quan trọng hơn số lần thử** |",
+    "new": "| Nhưng khởi tạo **tốt** rồi leo đồi cho **14 656** — thấp hơn trung bình các lần ngẫu nhiên (trong số đo gốc: thấp hơn cả cái tốt nhất trong 20 lần) | **điểm xuất phát quan trọng hơn số lần thử** (khi $n$ đủ lớn) |",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1(b): \"thắng cả 20 lần ngẫu nhiên\" → \"thắng trung bình các lần ngẫu nhiên (trong số đo gốc: cả 20 lần)\". Thêm \"(khi n đủ lớn)\" vì bản dựng lại ở n = 200 chỉ ngang lần tốt nhất trong 20 lần (trung vị 0,996), còn n = 600–1 000 thì khởi tạo tốt thắng cả lần tốt nhất."
+  },
+  {
+    "bai": "khoa-hoc/bai-10-delta-evaluation",
+    "old": "**10.1 (Dễ).** Dãy `[5, 2, 8, 1, 9]` với khoảng cách $d(a,b) = |a-b|$, kho = 0. Tính bằng tay delta của 2-opt đảo đoạn $[1..3]$, rồi kiểm chứng bằng cách tính lại tổng từ đầu.",
+    "new": "**10.1 (Dễ).** Dãy `[5, 2, 8, 1, 9]` với khoảng cách $d(a,b) = |a-b|$, kho = 0. Tính bằng tay delta của 2-opt đảo đoạn $[2..3]$ (các phần tử `8, 1`; vị trí đếm từ 0), rồi kiểm chứng bằng cách tính lại tổng từ đầu.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #6: đề cũ (đảo [1..3]) cho Δ = 0 nên kiểm chứng yếu. Đổi sang đảo [2..3]. Đã kiểm bằng code với số liệu của đề (q = [5,2,8,1,9], d = |a−b|, kho 0, tuyến mở, vị trí đếm từ 0): tổng cũ 29; đảo [2..3] → [5,2,1,8,9] dài 17; Δ công thức = d(2,1)+d(8,9)−d(2,8)−d(1,9) = 1+1−6−8 = −12 = 17 − 29 ✓. Độ nhạy: các biến thể công thức sai (đảo dấu cả bốn số hạng, thiếu một cặp, dùng công thức biên ở giữa, cộng thay vì trừ) cho +12 / −13 / −5 / +16 — đều khác −12; ở đề cũ [1..3] thì đảo dấu cả bốn số hạng vẫn ra 0."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "→ 14,0 ms → min(28 mẫu) ≈ 25 200  ← tốt hơn\n```",
+    "new": "→ 14,0 ms → min(28 mẫu) ≈ 25 200  ← tốt hơn\n```\n\n> ⚠️ Con số 25 200 không có trong log §3.4; dựng lại cho chiều \"B tốt hơn A\" đúng, độ lớn chưa kiểm.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #7: \"min(28 mẫu) ≈ 25 200\" không có trong log §3.4 (log chỉ có 25 630 và 26 818). g5 dựng lại (NN từ 28 thành phố khởi đầu + ứng viên K = 10) cho min thấp hơn 2-opt đầy đủ cỡ 3 % — chiều đúng, độ lớn chưa kiểm. Thêm lời hạ mức, không đổi số."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "$$\\text{Tỉ giá: đóng gói ngày thắng rút ngắn đường đi} \\approx \\mathbf{6 : 1}$$",
+    "new": "$$\\text{Tỉ giá ước tính: đóng gói ngày thắng rút ngắn đường đi} \\approx \\mathbf{6{,}5 : 1}$$\n\n(3,1 / 0,48 ≈ 6,5; nếu tính theo ~330 phút × 1 420 ≈ 0,47 triệu thì ≈ 6,6–6,7. Lấy hiệu hai số này được ≈ −2,6 triệu, còn §4.1 đo được −2,11 triệu ở preset 1 — chênh vì ~2 200 phút chết là **ước lượng**, không phải số đo từng phút.)",
+    "ly_do": "[SỐ] Quyết định X2 #7: \"≈ 6 : 1\" là số suy ra từ 3,1 triệu / 0,48 triệu = 6,46 (3,124 / 0,48 = 6,51; 3,124 / 0,4686 = 6,67) → ≈ 6,5 : 1. Kèm lời nêu: 0,48 − 3,1 = −2,62 triệu so với −2,11 triệu đo ở preset 1 (32 876 400 → 30 761 800 = −2 114 600); 2 200 phút chết là ước lượng. 0,48 triệu giữ nguyên (làm tròn của \"~330 phút\" × 1 420 = 0,4686)."
+  },
+  {
+    "bai": "khoa-hoc/bai-11-toan-tu-kinh-dien",
+    "old": "  Tỉ giá đo được: đóng gói kỳ thắng rút ngắn đường đi  ≈ 6 : 1",
+    "new": "  Tỉ giá ước tính: đóng gói kỳ thắng rút ngắn đường đi  ≈ 6,5 : 1",
+    "ly_do": "[SỐ] Quyết định X2 #7: đồng bộ dòng tóm tắt §9 với §4.2 (≈ 6,5 : 1; số suy ra từ các ước lượng nên gọi là \"ước tính\", không phải \"đo được\")."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "Và từ nghiệm khởi tạo tốt (láng giềng gần nhất), 2-opt cho 14 656 — **tốt hơn cả 20 lần chạy ngẫu nhiên**.",
+    "new": "Và từ nghiệm khởi tạo tốt (láng giềng gần nhất), 2-opt cho 14 656 — **tốt hơn trung bình các lần chạy ngẫu nhiên** (trong số đo gốc: tốt hơn cả 20 lần).\n\n> ⚠️ **Cơ sở của số đo này.** Các số 18 980 / 24 240 / 20 723 và 1,277 là số đo từ mã gốc, hiện không còn trong repo nên chưa kiểm lại trực tiếp được. Dựng lại độc lập bằng 2-opt quét tới hội tụ trên bộ sinh Manhattan (toạ độ nguyên 0–999, 100 bộ $n = 200$) cho độ phân tán nhỏ hơn (tệ nhất/tốt nhất ≈ 1,06–1,11) và nghiệm láng giềng gần nhất + 2-opt tốt hơn trung bình các lần ngẫu nhiên cỡ 3–5 % (ở $n = 200$ chỉ ngang lần tốt nhất trong 20 lần; ở $n = 600$–1 000 thì thường tốt hơn cả lần tốt nhất, cỡ 2–3 %). Kết luận định tính — khởi tạo tốt thắng đa khởi động ngẫu nhiên khi $n$ lớn — giữ nguyên; độ lớn phụ thuộc cách cài đặt.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1 (a)+(b) cho Bài 12 §1: nêu cơ sở ở chỗ số xuất hiện đầu tiên và hạ \"tốt hơn cả 20 lần ngẫu nhiên\" → \"tốt hơn trung bình các lần ngẫu nhiên (trong số đo gốc: cả 20 lần)\". Số của câu cơ sở là số đã tự dựng lại bằng C++ (cùng bản dựng với bản vá Bài 9 §7.2: n = 200, 100 bộ toạ độ: tệ nhất/tốt nhất p10–p90 = 1,062–1,112; trung bình ngẫu nhiên / NN+2-opt 1,010–1,062; tốt nhất ngẫu nhiên / NN+2-opt trung vị 0,996; n = 600, 1 000 như bản vá Bài 9)."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "| Khởi tạo tốt cho 14 656, **thấp hơn cả cái tốt nhất trong 20 lần** | **điểm xuất phát quan trọng hơn số lần thử** |",
+    "new": "| Khởi tạo tốt cho 14 656, **thấp hơn trung bình các lần ngẫu nhiên** (số đo gốc: thấp hơn cả cái tốt nhất trong 20 lần) | **điểm xuất phát quan trọng hơn số lần thử** (khi $n$ đủ lớn) |",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1(b): cùng chỉnh với bảng ở Bài 9 §7.3 — hạ \"thấp hơn cả cái tốt nhất trong 20 lần\" thành \"thấp hơn trung bình các lần ngẫu nhiên (số đo gốc: cả 20 lần)\"; thêm \"(khi n đủ lớn)\" vì ở n = 200 bản dựng lại chỉ ngang lần tốt nhất."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "| 600 | 32 954 | 38 154 | 35 378 | 1,158 |",
+    "new": "| 600 | 32 954 | 38 154 | 35 378 | 1,158 |\n\n(Cơ sở của các số đo: xem ⚠️ ở §1. Hàng $n = 1500$ không có trong bảng — lệnh thứ ba để bạn tự đo thêm.)",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #8: lệnh chạy cả n = 1500 nhưng bảng chỉ có n = 200 và 600. Chọn cách \"ghi chú, giữ lệnh\" vì bài ủng hộ việc đo xu hướng theo n (đáp án 12.1 dùng n = 1000, Bài 12 §6.2 nói phân tán giảm khi n tăng) — bỏ 1500 khỏi lệnh sẽ mất điểm dữ liệu thứ ba để đối chiếu xu hướng. Kèm trỏ về câu nêu cơ sở ở §1 (#1a)."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "**(b) Nghiệm khởi tạo tốt thắng 20 lần chạy ngẫu nhiên.** Với $n=200$: khởi tạo láng giềng gần nhất + 2-opt cho **14 656**, trong khi tốt nhất của 20 lần ngẫu nhiên chỉ là **18 980** (tệ hơn 29,5 %).\n\n*Hệ quả:* **đừng bao giờ khởi động metaheuristic từ nghiệm ngẫu nhiên** nếu bạn có heuristic xây dựng tốt.",
+    "new": "**(b) Nghiệm khởi tạo tốt thắng đa khởi động ngẫu nhiên.** Với $n=200$: khởi tạo láng giềng gần nhất + 2-opt cho **14 656**, trong khi tốt nhất của 20 lần ngẫu nhiên chỉ là **18 980** (tệ hơn 29,5 %) — đó là số đo gốc. Dựng lại độc lập (xem ⚠️ ở §1) thì nghiệm khởi tạo tốt thắng *trung bình* các lần ngẫu nhiên, và khi $n$ lớn thường còn thắng cả lần tốt nhất, nhưng khoảng cách nhỏ hơn nhiều.\n\n*Hệ quả:* **thường không nên khởi động metaheuristic từ nghiệm ngẫu nhiên** nếu bạn có heuristic xây dựng tốt.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1(b) cho §6.2(b). \"Đừng bao giờ\" → \"thường không nên\": bản dựng lại độc lập (n = 200) cho tốt nhất-trong-20-lần ngẫu nhiên ≈ ngang NN+2-opt (trung vị 0,996), nên lời cấm tuyệt đối quá tay; chiều định tính (khởi tạo tốt rẻ hơn nhiều và thắng trung bình, thắng cả lần tốt nhất ở n ≥ 600) giữ nguyên."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "Đã đo ở §6.2(b): nghiệm khởi tạo tốt thắng 20 lần chạy ngẫu nhiên. **Đầu tư Phần 2 trước.**",
+    "new": "Đã đo ở §6.2(b): nghiệm khởi tạo tốt thắng đa khởi động ngẫu nhiên (độ lớn: xem ⚠️ ở §1). **Đầu tư Phần 2 trước.**",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1(b): cạm bẫy 2 không còn khẳng định \"thắng 20 lần chạy ngẫu nhiên\"; trỏ về §6.2(b) và câu cơ sở ở §1."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "  tốt nhất của 20 lần NGẪU NHIÊN + 2-opt = 18 980  (tệ hơn 29,5 %)\n  → ĐỪNG khởi động metaheuristic từ nghiệm ngẫu nhiên",
+    "new": "  tốt nhất của 20 lần NGẪU NHIÊN + 2-opt = 18 980  (tệ hơn 29,5 % — số đo gốc, xem ⚠️ ở §1)\n  → THƯỜNG không nên khởi động metaheuristic từ nghiệm ngẫu nhiên",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1 cho Bài 12 §10: đồng bộ tóm tắt với §1/§6.2(b) (số đo gốc + hạ \"ĐỪNG\" thành \"THƯỜNG không nên\")."
+  },
+  {
+    "bai": "khoa-hoc/bai-12-cuc-tri-cuc-bo",
+    "old": "| < 2 % | gần hết dư địa; cân nhắc dừng |",
+    "new": "| < 2 % | gần hết độ hở; cân nhắc dừng |",
+    "ly_do": "[QUYẾT ĐỊNH] Định nghĩa dùng chung: \"dư địa\" khi chỉ phần trăm còn lại tới cận trên → \"độ hở\" (đại lượng mà ngưỡng ở Bài 18 §6 dùng; bảng này cũng trích Bài 18 §6). Bài 12 không có trong danh sách cụm nhưng nằm trong cụm X2 và hàng này đúng nghĩa đó; không đụng \"dư địa\" của Bài 18 §1.4 (khái niệm khác)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**7.3** Kỳ vọng: regret-2 thắng chèn thuần cỡ **+0,5–1,5 %** trên dữ liệu rải đều và **+2–4 %** trên dữ liệu gom cụm (nằm trong khoảng 2–5 % của §3.3) — hãy tự đo để xác nhận.",
+    "new": "**7.3** Kỳ vọng (chưa có bảng đo trong bài): regret-2 thắng chèn thuần cỡ **+0,5–1,5 %** trên dữ liệu rải đều và **+2–4 %** trên dữ liệu gom cụm (nằm trong khoảng 2–5 % của §3.3) — đây là dự đoán để đối chiếu, hãy tự đo để xác nhận.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #5 cho đáp án 7.3: đã mở bằng \"Kỳ vọng\" và kết bằng \"hãy tự đo\" (g4); bổ sung rõ \"chưa có bảng đo trong bài\" / \"dự đoán\" để không còn đọc được như số đo."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**8.4** Histogram của 200 lần chạy `graspChenMotLan` trên một test case: phân bố xấp xỉ chuẩn, trung bình **thấp hơn** `chenReNhat` tất định ~1–2 %, nhưng **cực đại của 200 mẫu cao hơn ~3–4 %**. Đây chính là cơ chế của GRASP.",
+    "new": "**8.4** Histogram của 200 lần chạy `graspChenMotLan` trên một test case: phân bố xấp xỉ chuẩn; trung bình một lần chạy **thấp hơn** `chenReNhat` tất định cỡ 1–2 % (ước lượng, không phải số đo), còn **cực đại của 200 mẫu cao hơn tất định ≈ 1,5–1,8 % theo công thức (không phải số đo)**.\n\n*Cách tính* theo đúng công thức §5.1, $\\mathbb{E}[\\max_N] = \\mu + \\sigma\\,\\mathbb{E}[\\max_N Z]$, với $\\mathbb{E}[\\max_{40} Z] = 2{,}16$, $\\mathbb{E}[\\max_{200} Z] = 2{,}75$ và mốc +0,99 % của §4.1 (cực đại của 40 lần so với chèn tất định $c$). Gọi $m$ là mức trung bình một lần chạy thấp hơn $c$ ($\\mu = (1-m)\\,c$). Từ $\\mu + 2{,}16\\,\\sigma = 1{,}0099\\,c$ suy ra $\\sigma = (0{,}0099 + m)\\,c / 2{,}16$, nên cực đại của 200 mẫu $= \\mu + 2{,}75\\,\\sigma \\approx c\\,[\\,1 + 1{,}27 \\times 0{,}0099 + 0{,}27\\,m\\,]$: ≈ +1,3 % nếu $m = 0$, ≈ +1,5 % nếu $m = 1$ %, ≈ +1,8 % nếu $m = 2$ % (giả định phân bố chuẩn, $\\mu$ và $\\sigma$ của test này cỡ mức trung bình của §4.1). Hãy tự đo và so với con số tính theo công thức này. Đây chính là cơ chế của GRASP.",
+    "ly_do": "[SỐ] Quyết định X2 #4: \"cực đại của 200 mẫu cao hơn 3–4 %\" không khớp công thức của chính bài. Tính lại bằng code (tích phân số): E[max_40 Z] = 2,1608, E[max_200 Z] = 2,7460 (bài làm tròn 2,16 / 2,75); tỉ số 2,746/2,1608 = 1,271. Từ best-of-40 = +0,99 % (66 074,3 / 65 424,9 = +0,9926 %) và μ = (1−m)c: max_200 = c·[1 + 1,27·0,0099 + 0,27·m] → +1,26 % (m = 0), +1,53 % (m = 1 %), +1,80 % (m = 2 %). Vậy \"≈ +1,5–1,8 % theo công thức (không phải đo)\" khi m = 1–2 % như đáp án vốn ước; nêu thêm cận m = 0 (≈ +1,3 %) và cách tính. Mức \"trung bình thấp hơn 1–2 %\" vốn cũng là ước lượng, nay ghi rõ."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**10.1** Dãy `[5,2,8,1,9]`, $d(a,b)=|a-b|$, kho = 0.\n- Ban đầu: $5 + 3 + 6 + 7 + 8 = 29$.\n- 2-opt đảo $[1..3]$ → `[5,1,8,2,9]`: $\\Delta = d(5,1) + d(2,9) - d(5,2) - d(1,9) = 4 + 7 - 3 - 8 = 0$.\n- Kiểm chứng: $5+4+7+6+7 = 29$ ✓.",
+    "new": "**10.1** Dãy `[5,2,8,1,9]`, $d(a,b)=|a-b|$, kho = 0, vị trí đếm từ 0.\n- Ban đầu: $5 + 3 + 6 + 7 + 8 = 29$.\n- 2-opt đảo $[2..3]$ (các phần tử `8, 1`) → `[5,2,1,8,9]`: $\\Delta = d(2,1) + d(8,9) - d(2,8) - d(1,9) = 1 + 1 - 6 - 8 = -12$.\n- Kiểm chứng: $5+3+1+7+1 = 17 = 29 - 12$ ✓.\n- Vì sao chọn đoạn này: $\\Delta \\ne 0$ nên công thức sai khó \"trúng may\". Thử bằng code các biến thể sai thường gặp: đảo dấu cả bốn số hạng ra $+12$, thiếu một số hạng ra $-13$, dùng công thức biên (bỏ hai số hạng chứa $q_{j+1}$) ở giữa tuyến ra $-5$, cộng thay vì trừ ra $+16$ — đều khác $-12$. (Đoạn $[1..3]$ cho $\\Delta = 0$ là ví dụ kém: đảo dấu cả bốn số hạng vẫn ra 0.)",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #6: đồng bộ đáp án với đề 10.1 mới (đảo [2..3]). Số liệu đã kiểm bằng code (xem ly_do của bản vá đề): 29 → 17, Δ = −12 = 17 − 29; các biến thể công thức sai cho +12 / −13 / −5 / +16, khác −12. Ghi cả lý do chọn để người học hiểu vì sao không dùng ví dụ Δ = 0."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**12.1** $n=1000$: phân tán tiếp tục giảm, thường quanh **1,10–1,13**. Xu hướng tự trung bình hoá được xác nhận.",
+    "new": "**12.1** $n=1000$: phân tán tiếp tục giảm, thường quanh **1,10–1,13** (theo thang số đo gốc của bài: 1,277 ở $n=200$, 1,158 ở $n=600$). Xu hướng tự trung bình hoá được xác nhận. *Cơ sở:* các số này là số đo từ mã gốc, không còn trong repo; dựng lại độc lập bằng 2-opt quét tới hội tụ trên bộ sinh Manhattan cho độ phân tán nhỏ hơn (≈ 1,03–1,05 ở $n=1000$) nhưng vẫn giảm khi $n$ tăng — nên chấm theo *xu hướng*, đừng chấm theo con số tuyệt đối.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1 cho đáp án 12.1: giữ số 1,10–1,13, nêu cơ sở. Bản dựng lại C++ (n = 1 000, 4 bộ, Manhattan, 0–999): tệ nhất/tốt nhất 1,029–1,054; cùng chiều giảm khi n tăng (n = 200: 1,06–1,11; n = 600: 1,035–1,069)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**12.2** $n=50$: số cực trị phân biệt trong 1 000 lần chạy thường ~200–400 (nhiều lưu vực lớn). $n=200$: gần **1 000** (mỗi lần một cực trị khác) → bề mặt cực kỳ gồ ghề.",
+    "new": "**12.2** $n=50$: số cực trị phân biệt trong 1 000 lần chạy thường ~200–400 (nhiều lưu vực lớn). $n=200$: gần **1 000** (mỗi lần một cực trị khác) → bề mặt cực kỳ gồ ghề. *Cơ sở:* số đo gốc, mã không còn trong repo. Dựng lại độc lập (toạ độ 0–999): đếm theo **độ dài** cho ≈ 450 ($n=50$) và ≈ 500 ($n=200$) giá trị khác nhau, nhưng con số này phụ thuộc thang toạ độ (chỉ ≈ 70–95 nếu toạ độ 0–99) vì độ dài nguyên hay trùng nhau — đúng như lưu ý \"chặn dưới\" ở §6.3; băm cả dãy đỉnh thì cả hai cỡ đều cho ≈ 900–1 000 cực trị khác nhau trên 1 000 lần. Hãy chấm theo việc nêu được xu hướng và tính chặn dưới, không theo con số tuyệt đối.",
+    "ly_do": "[QUYẾT ĐỊNH] Quyết định X2 #1 cho đáp án 12.2: giữ số đo, nêu cơ sở. Bản dựng lại C++ (2-opt quét tới hội tụ, 1 000 lần từ hoán vị ngẫu nhiên, Manhattan): toạ độ 0–999 → số độ dài phân biệt n = 50: 435–466, n = 200: 500–518; toạ độ 0–99 → n = 50: 73–79, n = 200: 83–93; băm cả dãy đỉnh (chuẩn hoá chu trình) → n = 50: 910–998 / 1 000, n = 200: 1 000 / 1 000. Nghĩa là \"gần 1 000\" ở n = 200 đúng với số tuyến phân biệt, còn đếm theo độ dài thì phụ thuộc thang toạ độ; \"n = 50 chỉ ~200–400 (lưu vực lớn)\" không tái lập (cả hai cỡ đều gần như mọi lần một cực trị khác)."
+  }
+]
