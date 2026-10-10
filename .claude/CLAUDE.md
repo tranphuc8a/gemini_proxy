@@ -31,6 +31,7 @@ trước khi sửa một ứng dụng nào đó (ứng dụng làm gì, mã ngu�
 | App viết tay có `kiem.js` | `node backend/fastapi/webapp/tranphuc8a/<app>/kiem.js`; tất cả: `node backend/fastapi/webapp/tranphuc8a/kiem-tat.js` |
 | Kiểm hình/bố cục (Playwright) | `backend/fastapi/.venv/Scripts/python.exe backend/fastapi/webapp/tranphuc8a/kiem-hinh.py <app> [--anh]` |
 | Trang khoá học | `python backend/fastapi/webapp/courses/<trang>/check.py` (`--tinh` chỉ kiểm tĩnh) |
+| Thực hành heuristic + IDE C++ | `node backend/fastapi/webapp/courses/heuristic-practice-2/kiem.js [--cpp]` (logic + nội dung + mọi lab); `…/.venv/Scripts/python.exe …/heuristic-practice-2/check.py [--cpp]` (Edge thật) |
 | Quản lý chi tiêu (đủ tầng) | `backend/fastapi/.venv/Scripts/python.exe quan-ly-chi-tieu/selftest/run.py` |
 | App React | `cd <thư-mục-nguồn> && npm test && npm run type-check && npm run lint && npm run build` |
 | Xuất bản app React | `node scripts/build-webapps.mjs --only <tên>` rồi `--check` |

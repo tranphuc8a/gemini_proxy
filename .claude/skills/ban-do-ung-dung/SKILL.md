@@ -3,7 +3,7 @@ name: ban-do-ung-dung
 description: Bản đồ mọi ứng dụng web của dự án gemini_proxy — mỗi app làm gì, viết tay hay bản build, mã nguồn nằm đâu, dùng API nào, kiểm bằng gì, đã có AI gì, đang ở trạng thái nào. Đọc trước khi sửa, thêm tính năng hay tìm hiểu bất kỳ app nào (chi tiêu, khoá học, OPIc, markdown, JSON, SQL/Mongo, Postman, chat, đấu trường, lab…).
 ---
 
-# Bản đồ ứng dụng (cập nhật 2026-10-08)
+# Bản đồ ứng dụng (cập nhật 2026-10-10)
 
 Gốc phục vụ: `backend/fastapi/webapp/` → URL `/webapp/<đường dẫn>/`. `/webapp/` chuyển về cổng `_portal/portal.html`.
 **V** = viết tay (nguồn = bản phục vụ, không build). **B** = bản build React/Vite (nguồn ở thư mục gốc repo, xuất bản bằng
@@ -35,6 +35,7 @@ Gốc phục vụ: `backend/fastapi/webapp/` → URL `/webapp/<đường dẫn>/
 | `courses/{ai-everything,heuristic,heuristic-2,system-design}-course` | Mỗi khoá một trang (slug `ai-everything`, `heuristic`, `heuristic-2`, `system-design`) | V · engine | như trên | `check.py` | như trên |
 | `courses/opic-course` | Luyện nói OPIc: 185 script, thẻ Leitner, thi thử, ghi âm | V · app riêng (không dùng engine) | `/courses/opic/bundle`, `/ai/opic`, `/ai/opic/script` | `check.py`, `kiem-nhanh.js` | Nhận xét bản ghi; **nhận xét script viết** |
 | `courses/quan-ly-khoa-hoc` | CMS khoá học (quản trị) + soạn khoá bằng AI + tab AI | V | `/courses` (admin), `/ai/draft/*`, `/ai/usage`, `/ai/models` | `check.py` | Soạn khoá (dàn ý → bài), **trợ lý đoạn chọn** (viết lại/mở rộng/dịch/câu hỏi/bài tập), chọn model |
+| `courses/heuristic-practice-2` | **Thực hành song song** khoá heuristic-2: 32 trang (đầu vào, 28 bài, 3 ca) × trắc nghiệm / tự luận tự chấm / lab chấm tự động (JS hoặc C++) / ghi chú; **IDE C/C++ online** (Clang→WebAssembly trong trình duyệt, nạp `@yowasp/clang` từ jsDelivr lần đầu ≈ 25 MB); PWA | V · app riêng, không build, không API | không (tĩnh) | `kiem.js` (logic + nội dung + mọi lab), `check.py [--cpp]` | không (tự luận tự chấm) | Xong 10/10. Nội dung `data/<id>.js` (soạn theo `data/HUONG-DAN-SOAN.md`); liên kết hai chiều với `heuristic-course-2` (module `engine/mo-lien-ket.js`) và `heuristic-visual-2`. Bàn giao `tasks/2610/261010/heuristic-thuc-hanh/ban-giao.md` |
 | `courses/lab-visual` + `*-visual` | 39 lab canvas nhúng trong bài | V (vis-core v2; 3 trang *-visual ở engine v1, cố ý không đồng bộ) | không | `check.py`, `kiem-so.js` | không (chỗ còn trống: giải thích lab theo trạng thái) |
 | `dau-truong-thuat-toan` | Đấu trường thuật toán (TSP heuristic), bảng xếp hạng | V | `/arena/*` | `check.py` | không (chỗ còn trống: nhận xét mã, giải thích điểm) |
 

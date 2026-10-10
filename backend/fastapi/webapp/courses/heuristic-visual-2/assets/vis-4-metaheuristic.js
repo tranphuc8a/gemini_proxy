@@ -49,7 +49,7 @@
     ten: "Simulated annealing — nhiệt độ làm gì?",
     moTa: "Tiêu chuẩn Metropolis chạy thật trên TSP. " +
           "Kéo T₀ tới cực trị để thấy <b>hai chế độ hỏng đối xứng</b>.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-13-simulated-annealing">B13 — Simulated annealing</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-13-simulated-annealing">B13 — Simulated annealing</a> · <a href="../heuristic-practice-2/#/bai/bai-13-simulated-annealing">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 300, W2 = 560, H2 = 250;
       var cv = V.veBang(W, H), g = cv.g;
@@ -236,7 +236,7 @@
     ten: "Tabu search — cấm quay lại chỗ vừa đi",
     moTa: "Luôn đi nước tốt nhất, kể cả nước xấu — nhưng <b>cấm đảo ngược</b> " +
           "trong t vòng. Kéo tenure để thấy cả hai chế độ hỏng.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-14-tabu-search">B14 — Tabu search</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-14-tabu-search">B14 — Tabu search</a> · <a href="../heuristic-practice-2/#/bai/bai-14-tabu-search">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 300, W2 = 560, H2 = 230;
       var cv = V.veBang(W, H), g = cv.g;
@@ -399,7 +399,7 @@
     ten: "Beam search — giữ lại k nghiệm dở dang tốt nhất",
     moTa: "Giữa greedy (k=1) và vét cạn (k=∞). Phần khó nhất là " +
           "<b>đánh giá một nghiệm còn dở dang</b> — xem nó hỏng khi đánh giá thiển cận.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-16-beam-search">B16 — Beam search</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-16-beam-search">B16 — Beam search</a> · <a href="../heuristic-practice-2/#/bai/bai-16-beam-search">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 320, W2 = 560, H2 = 210;
       var cv = V.veBang(W, H), g = cv.g;
@@ -551,7 +551,7 @@
     ten: "LNS & ALNS — sửa nhà, không sửa gạch",
     moTa: "Phá bỏ 15–40 % nghiệm rồi xây lại tối ưu. " +
           "Và <b>ALNS tự học</b> toán tử phá nào đang hiệu quả.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-17-lns-alns">B17 — LNS & ALNS</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-17-lns-alns">B17 — LNS & ALNS</a> · <a href="../heuristic-practice-2/#/bai/bai-17-lns-alns">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 300, W2 = 560, H2 = 250;
       var cv = V.veBang(W, H), g = cv.g;

@@ -517,6 +517,7 @@ def tang_2(thu_muc, info, B, chup):
                 pg.screenshot(path=os.path.join(anh, "db-trang-chu-toi.png"))
                 B.ok("anh chup trong _shots/")
             kiem_lab_nhung(pg, bundle, B)
+            kiem_lien_ket(pg, bundle, thu_muc, B)
             kiem_offline(br, may, url, bundle, B)            # truoc ca_bien: ca bien xoa muc luc
             kiem_tro_giang(br, may, url, bundle, B)
             kiem_chay_ma(br, may, info, url, B)
@@ -531,6 +532,53 @@ def tang_2(thu_muc, info, B, chup):
             B.ok("khong co loi console / pageerror")
     finally:
         may.__exit__(None, None, None)
+
+
+def kiem_lien_ket(pg, bundle, thu_muc, B):
+    """Trang khai bao `lienKet` (engine/mo-lien-ket.js): bai giang co nut sang trang thuc hanh / mo phong,
+    trang chu co khung "Hoc song song", va moi dich den la mot thu muc co that canh trang nay."""
+    try:
+        with open(os.path.join(thu_muc, "assets", "cau-hinh.js"), encoding="utf-8") as f:
+            if "lienKet" not in f.read():
+                return
+    except OSError:
+        return
+    slugs = [d["slug"] for d in bundle["docs"].values()]
+    ket = pg.evaluate(
+        "slugs => { const g = KhoaHoc.cauHinh('lienKet', []), out = {};"
+        " slugs.forEach(s => { const h = [];"
+        "   g.forEach(x => { let r = null; try { r = x.url(s); } catch (e) { r = null; }"
+        "     (Array.isArray(r) ? r : [r]).forEach(y => { const u = y && (typeof y === 'string' ? y : y.href); if (u) h.push(u); }); });"
+        "   if (h.length) out[s] = h; }); return out; }", slugs)
+    if not ket:
+        B.sai("lienKet khai bao nhung khong bai nao co dich den")
+        return
+    cha = os.path.dirname(thu_muc)
+    hong = set()
+    for hs in ket.values():
+        for u in hs:
+            thu = os.path.normpath(os.path.join(thu_muc, u.split("#")[0]))
+            if os.path.dirname(thu) != cha and not os.path.isdir(thu):
+                hong.add(u)
+            elif not os.path.isdir(thu):
+                hong.add(u)
+    (B.sai if hong else B.ok)("lienKet: %d bai giang co lien ket, %s" % (
+        len(ket), ("DICH KHONG CO THAT: " + ", ".join(sorted(hong)[:4])) if hong else "moi dich la mot trang co that"))
+    slug = sorted(ket, key=lambda s: -len(ket[s]))[0]
+    pg.evaluate("h => { location.hash = h; }", "#/" + slug)
+    try:
+        pg.wait_for_selector(".lk-ngoai a", timeout=10000)
+        hrefs = pg.evaluate("() => [...document.querySelectorAll('.lk-ngoai a')].map(a => a.getAttribute('href'))")
+        (B.ok if sorted(hrefs) == sorted(ket[slug]) else B.sai)("bai '%s' hien %d nut hoc song song: %s" % (slug, len(hrefs), ", ".join(hrefs)[:120]))
+    except Exception:
+        B.sai("bai '%s' khong hien .lk-ngoai (mo-lien-ket.js chua nap?)" % slug)
+        return
+    pg.evaluate("() => { location.hash = '#/'; }")
+    try:
+        pg.wait_for_selector(".lk-home a", timeout=8000)
+        B.ok("trang chu co khung 'Hoc song song'")
+    except Exception:
+        B.sai("trang chu khong co .lk-home")
 
 
 def kiem_lab_nhung(pg, bundle, B):

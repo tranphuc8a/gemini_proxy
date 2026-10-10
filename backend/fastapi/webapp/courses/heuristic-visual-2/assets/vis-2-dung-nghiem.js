@@ -36,7 +36,7 @@
     ten: "Greedy — bốn họ chỉ số, bốn kết quả khác nhau",
     moTa: "Greedy là <b>một cỗ máy có đúng một chỗ cắm</b>: chỉ số. " +
           "Đổi chỉ số, đổi hoàn toàn nghiệm. Xem chỉ số nào thắng trên dữ liệu nào.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-05-greedy">B05 — Greedy</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-05-greedy">B05 — Greedy</a> · <a href="../heuristic-practice-2/#/bai/bai-05-greedy">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 300, W2 = 560, H2 = 240;
       var cv = V.veBang(W, H), g = cv.g;
@@ -220,7 +220,7 @@
     ten: "Giá mờ λ — tỉ giá quy đổi giữa hai tài nguyên",
     moTa: "Khi lợi ích và chi phí <b>khác đơn vị</b>, λ là tỉ giá. " +
           "Quét λ và nhìn thấy đường cong — cùng chỗ nó gãy.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-06-gia-mo">B06 — Giá mờ</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-06-gia-mo">B06 — Giá mờ</a> · <a href="../heuristic-practice-2/#/bai/bai-06-gia-mo">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 300, W2 = 560, H2 = 170;
       var cv = V.veBang(W, H), g = cv.g;
@@ -405,7 +405,7 @@
     ten: "Chèn · tiếc nuối · tiết kiệm Clarke–Wright",
     moTa: "Ba họ heuristic dựng tuyến, chạy thật trên cùng bộ điểm. " +
           "Dữ liệu <b>đều</b> hay <b>gom cụm</b> đổi hẳn thứ hạng.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-07-chen-gom-cum">B07 — Chèn & gom cụm</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-07-chen-gom-cum">B07 — Chèn & gom cụm</a> · <a href="../heuristic-practice-2/#/bai/bai-07-chen-gom-cum">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 330, W2 = 560, H2 = 150;
       var cv = V.veBang(W, H), g = cv.g;
@@ -612,7 +612,7 @@
     ten: "GRASP — ngẫu nhiên hoá có kiểm soát (và cách nó hỏng)",
     moTa: "Vì sao \"chọn hơi tệ\" lại tốt hơn. Hai kiểu RCL — và " +
           "<b>tái hiện được lỗi khiến GRASP thua cả greedy</b>.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-08-grasp">B08 — GRASP</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-08-grasp">B08 — GRASP</a> · <a href="../heuristic-practice-2/#/bai/bai-08-grasp">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 290, W2 = 560, H2 = 210;
       var cv = V.veBang(W, H), g = cv.g;

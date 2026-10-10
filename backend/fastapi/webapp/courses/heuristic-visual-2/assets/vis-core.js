@@ -450,7 +450,7 @@
       })));
     });
     main.appendChild(el("div", { class: "chan", html:
-      'Thuộc <a href="../web/index.html">' + ch("tenKhoa", "khoá học") + "</a> · " +
+      'Thuộc <a href="../heuristic-course-2/">' + ch("tenKhoa", "khoá học") + '</a> · <a href="../heuristic-practice-2/">Thực hành &amp; IDE C/C++</a> · ' +
       DEMOS.length + " demo · không dùng thư viện ngoài" }));
   }
 

@@ -49,7 +49,7 @@
     moTa: "Entropy Manhattan <b>chỉ phụ thuộc số hạt mỗi hàng và mỗi cột</b>. " +
           "Bấm xáo trộn: hình thay đổi hoàn toàn, điểm <b>không nhúc nhích</b>. " +
           "Rồi so bốn hình đích — ★ <b>đĩa tròn thắng cả hình vuông lẫn kim cương</b>.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-18b-cau-truc-ham-muc-tieu">B18B — Cấu trúc hàm mục tiêu</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-18b-cau-truc-ham-muc-tieu">B18B — Cấu trúc hàm mục tiêu</a> · <a href="../heuristic-practice-2/#/bai/bai-18b-cau-truc-ham-muc-tieu">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var H = 26, W = 26, O = 11;               /* O = canh o ve */
       var WV = W * O + 46, HV = H * O + 84;
@@ -265,7 +265,7 @@
     moTa: "Mọi cấu hình ở đây <b>tốt như nhau</b> — không cái nào hơn cái nào. " +
           "Vậy mà chọn cái điểm cao nhất vẫn cho “cải thiện” dương. " +
           "★ Kéo <b>K</b> lên và xem ảo giác lớn dần.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-20b-tinh-chinh-tham-so">B20B — Tinh chỉnh tham số</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-20b-tinh-chinh-tham-so">B20B — Tinh chỉnh tham số</a> · <a href="../heuristic-practice-2/#/bai/bai-20b-tinh-chinh-tham-so">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 620, H = 330;
       var cv = V.veBang(W, H), g = cv.g;
@@ -404,7 +404,7 @@
     ten: "Bốn triệu chứng, bốn nguyên nhân",
     moTa: "Cấy một bug vào solver và xem nó <b>biểu hiện ra triệu chứng nào</b>. " +
           "★ Bug nguy hiểm nhất không crash, không vi phạm — nó chỉ làm điểm thấp đi.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-19b-go-loi-heuristic">B19B — Gỡ lỗi heuristic</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-19b-go-loi-heuristic">B19B — Gỡ lỗi heuristic</a> · <a href="../heuristic-practice-2/#/bai/bai-19b-go-loi-heuristic">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 640, H = 386;
       var cv = V.veBang(W, H), g = cv.g;
@@ -545,7 +545,7 @@
     ten: "Tiền nằm ở đâu: phân bổ 4 giờ",
     moTa: "Số liệu ablation <b>thật</b> từ đề thi 2607. Kéo thanh phân bổ giờ và xem " +
           "điểm kỳ vọng thay đổi. ★ Đọc mã grader sinh lợi <b>gấp 56 lần</b> tinh chỉnh.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-04b-phan-bo-cong-suc">B4B — Phân bổ công sức</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-04b-phan-bo-cong-suc">B4B — Phân bổ công sức</a> · <a href="../heuristic-practice-2/#/bai/bai-04b-phan-bo-cong-suc">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 620, H = 396;
       var cv = V.veBang(W, H), g = cv.g;

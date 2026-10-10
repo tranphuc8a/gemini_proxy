@@ -39,7 +39,7 @@
     ten: "Leo đồi — nước đi đầu tiên hay nước đi tốt nhất?",
     moTa: "2-opt trên TSP, chạy thật từng bước. Hai biến thể leo đồi cho " +
           "<b>cùng chất lượng nhưng khác hẳn số lần đánh giá</b>.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-09-lan-can-leo-doi">B09 — Lân cận & leo đồi</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-09-lan-can-leo-doi">B09 — Lân cận & leo đồi</a> · <a href="../heuristic-practice-2/#/bai/bai-09-lan-can-leo-doi">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 330, W2 = 560, H2 = 200;
       var cv = V.veBang(W, H), g = cv.g;
@@ -210,7 +210,7 @@
     ten: "Năm toán tử kinh điển — mỗi cái sửa một lỗi khác nhau",
     moTa: "2-opt · Or-opt · swap · relocate · đảo đoạn. Xem <b>từng toán tử " +
           "sửa được loại lỗi nào</b>, và cái nào gỡ được nút thắt.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-11-toan-tu-kinh-dien">B11 — Toán tử kinh điển</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-11-toan-tu-kinh-dien">B11 — Toán tử kinh điển</a> · <a href="../heuristic-practice-2/#/bai/bai-11-toan-tu-kinh-dien">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 340, W2 = 560, H2 = 210;
       var cv = V.veBang(W, H), g = cv.g;
@@ -404,7 +404,7 @@
     ten: "Đánh giá delta — vì sao đừng đếm lại cả siêu thị",
     moTa: "Cùng một thuật toán, hai cách tính điểm: <code>O(n)</code> tính lại toàn bộ " +
           "hay <code>O(1)</code> tính delta. Chênh lệch <b>nước đi/giây</b> là bao nhiêu lần?",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-10-delta-evaluation">B10 — Đánh giá delta</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-10-delta-evaluation">B10 — Đánh giá delta</a> · <a href="../heuristic-practice-2/#/bai/bai-10-delta-evaluation">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 270, W2 = 560, H2 = 230;
       var cv = V.veBang(W, H), g = cv.g;
