@@ -1,0 +1,20 @@
+[
+ {
+  "bai": "khoa-hoc/bai-06-gia-mo",
+  "old": "Giá trị này có thể **rất nhỏ** (nếu $j$ nằm gần đúng trên đường từ $a$ tới $b$). Khi đó $p_j/\\Delta t_j$ **bùng nổ** và trở nên vô nghĩa. Còn $p_j - \\lambda \\Delta t_j$ vẫn ổn định và có đơn vị đúng.",
+  "new": "Phần đi vòng $d(a, j) + d(j, b) - d(a, b)$ có thể **rất nhỏ** (nếu $j$ nằm gần đúng trên đường từ $a$ tới $b$), nên $\\Delta t_j$ có thể nhỏ hơn nhiều so với chi phí $c_j$ của greedy. Ở P1, $s_j$ là thời gian giao (số dương không nhỏ) nên $\\Delta t_j \\ge s_j$ và tỉ số $p_j/\\Delta t_j$ chưa bùng nổ; nhưng với bài không có thời gian phục vụ thì $\\Delta t_j \\to 0$, $p_j/\\Delta t_j \\to \\infty$ và tỉ số trở nên vô nghĩa (xem Bài 7 §2.3). Còn $p_j - \\lambda \\Delta t_j$ vẫn ổn định và có đơn vị đúng.",
+  "ly_do": "[LOGIC] Δt_j = đi vòng + s_j ≥ s_j > 0 ở P1 nên p/Δt không bùng nổ (g4 dựng lại trên ship1: chèn theo p/Δt 14 265 ≈ p/(Δt+1) 14 321 ≈ λ=16 14 291, chỉ λ=0 sụp 7 270). Bài 7 §2.3 đã vá theo hướng này; Bài 6 §6.4 phải khớp (g3 và g4 đều báo, ngoài phạm vi nhóm của họ)."
+ },
+ {
+  "bai": "khoa-hoc/bai-06-gia-mo",
+  "old": "| Chi phí là **delta** (có thể rất nhỏ hoặc ~0) | **giá mờ** $p - \\lambda c$ |",
+  "new": "| Chi phí là **delta** (có thể rất nhỏ; ~0 nếu bài không có thời gian phục vụ) | **giá mờ** $p - \\lambda c$ |",
+  "ly_do": "[LOGIC] Cùng chỗ trên: ở P1 delta ≥ s_j > 0; chỉ khi không có thời gian phục vụ mới ~0."
+ },
+ {
+  "bai": "khoa-hoc/bai-06-gia-mo",
+  "old": "← λ là ĐIỀU KIỆN CẦN cho chèn",
+  "new": "← λ = 0 làm chèn sụp (Bài 7 §2.3)",
+  "ly_do": "[LOGIC] 'ĐIỀU KIỆN CẦN' nói quá: dựng lại trên ship1 chèn theo tỉ số p/Δt vẫn dùng được (14 265 so với 14 291 của λ = 16); chỉ λ = 0 (bỏ giá của thời gian) mới sụp. Khớp Bài 7 §2.3."
+ }
+]

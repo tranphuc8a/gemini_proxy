@@ -56,9 +56,9 @@ TH.dangKy({
     "Một phút chết không đáng 200 điểm mà đáng giá mờ λ ≈ 1 420 (gấp ~7 lần), vì lẽ ra có thể dùng để vệ sinh. λ* lý thuyết ≈ 1 367 (nới lỏng LP), thực nghiệm 1 420, đường cong rất phẳng. Hàm mục tiêu một ngày: F = Σ(p + OT − λc) − λ·w, w là thời gian chết thật.",
     "Lõi thuật toán là beam search theo ngày (bề rộng 24, 10 nhánh, sâu ≤ 13) xếp hạng bằng rank = f + ρ·(720 − t) với ρ = 90 ≈ thặng dư trung bình ~81 điểm/phút. Trạng thái gọn (vị trí, thời gian đã dùng, danh sách nhà trong ngày) nên beam hợp bài này.",
     "Kết quả: 30 714 270 (greedy tỉ số) → 32 915 840 điểm (+7,17 %), 27,4 ms trên giới hạn 100 ms, 0 vi phạm / 1 000 test. Ablation: khung ngày thứ 31 −3,08 %, beam −2,43 %, phạt thời gian chết −2,43 %, di chuyển chết −0,45 %, multi-start λ −0,22 %.",
-    "2-opt/Or-opt rút ngắn quãng đường 20–30 % nhưng làm điểm giảm 6–10 %: đóng gói ngày thắng rút ngắn đường đi, tỉ lệ khoảng 6 : 1. Cùng kỹ thuật LNS lại cho +3,0 % ở đây nhưng −9 % ở 2605 — vì nghiệm là tuyến đường (cấu trúc cục bộ) chứ không phải một thứ tự toàn cục.",
+    "2-opt/Or-opt rút ngắn quãng đường 20–30 % nhưng làm điểm giảm 6–10 %: đóng gói ngày thắng rút ngắn đường đi, tỉ lệ khoảng 6 : 1. Cùng kỹ thuật LNS thì ở bài P2 của khoá cho +3,0 % so với chèn toàn cục (đề 2607 thật không thử LNS vì quá chậm cho 100 ms) nhưng làm xấu đi cỡ 9 % ở 2605 — vì nghiệm tuyến đường có cấu trúc cục bộ, còn ở 2605 chất lượng đến từ một thứ tự toàn cục.",
     "An toàn: SCORE tích luỹ xuyên test nên một vi phạm xoá hết; evaluate() là nguồn sự thật duy nhất; cờ USE_31_DAYS (bản bảo thủ vẫn hơn baseline +3,86 % / +2,33 %); cấu hình dự phòng 1 preset chỉ 8,6 ms, mất 0,22 %. Bài học: mô hình hoá đúng + tìm kiếm vừa phải thắng metaheuristic mạnh hơn.",
-    "Còn ~3 % tới cận trên τ = 7 (khoảng 360 phút di chuyển dư), nhưng chỉ cận τ = 0 là nới lỏng chắc chắn đúng; cận τ = 7 và 9,5 dựa trên ước lượng quãng đường nên là mốc tham chiếu. Hướng mở: beam nhìn xa 2 ngày, phân vùng theo luồng công việc, λ thích nghi theo từng test."
+    "Còn ~3 % tới mức tham chiếu τ = 7 (khoảng một nửa, ≈ 1,5 %, là ~360 phút di chuyển dư), nhưng chỉ cận τ = 0 là nới lỏng chắc chắn đúng (lời giải đạt 92,5 % cận này); mức τ = 7 và 9,5 dựa trên ước lượng quãng đường nên chỉ là mốc tham chiếu. Hướng mở: beam nhìn xa 2 ngày, phân vùng theo luồng công việc, λ thích nghi theo từng test."
   ],
 
   trac: [
@@ -126,7 +126,7 @@ TH.dangKy({
       id: "q7", loai: "so", doKho: 2, ref: "02 §1.4 · 03 §2.1", donVi: "(điểm)",
       hoi: "Với λ = 1 420 điểm/phút, nhà loại 1 (p = 80 000, s = 60) nằm cách vị trí hiện tại 2 phút. Bỏ qua thưởng OT, giá trị ròng v = p − λ·(d + s) của nhà này bằng bao nhiêu?",
       dapAn: -8040, saiSo: 0,
-      giaiThich: "v = 80 000 − 1 420 × (2 + 60) = 80 000 − 88 040 = −8 040 < 0. Nghĩa là dù nhà ở rất gần (tỉ số p/(d+s) = 1 290, trông không tệ so với 1 500 của một nhà loại 4 cách 10 phút), nó vẫn làm tụt giá trị ròng — greedy theo tỉ số hay “gặm” những nhà nhỏ như vậy quanh mình rồi để lại thời gian chết cuối ngày. Đối chiếu: nhà loại 4 cách 10 phút có v = 240 000 − 1 420 × 160 = +12 800 > 0."
+      giaiThich: "v = 80 000 − 1 420 × (2 + 60) = 80 000 − 88 040 = −8 040 < 0. Nghĩa là dù nhà ở rất gần (tỉ số p/(d+s) = 1 290, trông không tệ so với 1 500 của một nhà loại 4 cách 10 phút — chỉ hơn ~16 %), nó vẫn làm tụt giá trị ròng — chỉ cần nhà loại 4 xa thêm cỡ 26 phút (240 000 / 186 ≈ 1 290) là greedy theo tỉ số bỏ nó và “gặm” những nhà nhỏ như vậy quanh mình rồi để lại thời gian chết cuối ngày. Đối chiếu: nhà loại 4 cách 10 phút có v = 240 000 − 1 420 × 160 = +12 800 > 0."
     },
     {
       id: "q8", loai: "mot", doKho: 3, ref: "03 §3.1–3.2 · 2605 Bài 16",
@@ -134,11 +134,11 @@ TH.dangKy({
       chon: [
         "Beam chỉ chạy được khi bài toán có ràng buộc ngân sách; 2605 thì không có",
         "Beam cần ngân sách thời gian rất ngắn; 2605 có 1 000 ms nên không cần dùng",
-        "Trạng thái phải tóm tắt được: ở 2607 trạng thái gọn (vị trí, thời gian đã dùng, vài chục nhà đã nhận trong ngày — một ngày chỉ chứa tối đa khoảng 12 nhà) nên sao chép và so sánh rẻ; ở 2605 trạng thái là toàn bộ hình dạng các vùng nhớ đã chiếm, không nén được và sao chép tốn O(k)",
+        "Trạng thái phải gọn (Bài 16 §5.1): ở 2607 trạng thái gọn (vị trí, thời gian đã dùng, danh sách các nhà đã nhận trong ngày — một ngày chỉ chứa tối đa 11 nhà) nên sao chép và so sánh rẻ; ở 2605 trạng thái là toàn bộ hình dạng các vùng nhớ đã chiếm, không nén được và sao chép tốn O(k)",
         "Beam chỉ dùng được cho bài cực đại hoá, không dùng được cho bài cực tiểu hoá như 2605"
       ],
       dung: 2,
-      giaiThich: "Điều kiện áp dụng của Bài 16: trạng thái phải tóm tắt được. Ở 2607 một ngày chỉ có vài chục nhà tối đa nên mảng take[] nằm gọn trong 26 byte và chiều sâu nông (≤ 13), nơi beam phát huy tốt nhất. Ở 2605 beam bề rộng B tốn O(B·N) bộ nhớ và O(B·N·K) thời gian. Cực đại hay cực tiểu không phải điều kiện (đổi dấu hàm mục tiêu là xong), và việc có ràng buộc ngân sách hay không liên quan tới giá mờ (Bài 6) chứ không phải beam."
+      giaiThich: "Điều kiện áp dụng của Bài 16: trạng thái phải gọn (§5.1). Ở 2607 một ngày chỉ có tối đa 11 nhà (12 nhà loại 1 đã tốn đủ 720 phút dọn, chưa kể đi giữa các ô) nên mảng take[] 13 phần tử nằm gọn trong 26 byte và chiều sâu nông (≤ 13), nơi beam phát huy tốt nhất. Ở 2605 beam bề rộng B tốn O(B·N) bộ nhớ và O(B·N·K) thời gian. Cực đại hay cực tiểu không phải điều kiện (đổi dấu hàm mục tiêu là xong), và việc có ràng buộc ngân sách hay không liên quan tới giá mờ (Bài 6) chứ không phải beam."
     },
     {
       id: "q9", loai: "nhieu", doKho: 3, ref: "03 §4.1",
@@ -199,12 +199,12 @@ TH.dangKy({
     },
     {
       id: "l3", doKho: 3, ref: "01 §6 · Bài 18 §8–9",
-      hoi: "Tài liệu viết: “lời giải đạt 97 % cận trên (τ = 7) và 98,6 % cận τ = 9,5, nên chỉ còn khoảng 3 % dư địa.” Hãy phản biện: các cận này có phải cận trên chứng minh được không? Con số 97 % đáng tin đến đâu, và một người làm tử tế sẽ báo cáo ra sao?",
+      hoi: "Một bản tóm tắt viết: “lời giải đạt 97 % cận trên (τ = 7) và 98,6 % cận τ = 9,5, nên chỉ còn khoảng 3 % độ hở.” Hãy phản biện: các cận này có phải cận trên chứng minh được không? Con số 97 % đáng tin đến đâu, và một người làm tử tế sẽ báo cáo ra sao?",
       goiY: [
         "Bài 18 §9, cạm bẫy 1: cận trên phải đến từ một nới lỏng chứng minh được; một ước lượng thì không.",
         "τ = 9,5 là quãng đường thực tế của chính lời giải; τ = 7 xuất phát từ hằng số BHH (kỳ vọng) cho TSP-Manhattan."
       ],
-      mau: "**Chỉ cận τ = 0 là cận trên chứng minh được** (bỏ hẳn chi phí di chuyển, giải cái túi phân số, cộng trần thưởng OT 31 × 48 000): 35 571 464, tức nghiệm đạt 92,5 %. Cận τ = 9,5 lấy τ từ quãng đường thực của chính lời giải — đó là lập luận vòng quanh, không phải nới lỏng, và có thể bị vượt bởi một lịch trình đi ít hơn. Cận τ = 7 dựa vào hằng số BHH (0,92·√(An)), là **kỳ vọng** quãng đường TSP của một tập nhà ngẫu nhiên; trong khi bài này được chọn tập nhà — có thể chọn một tập dày đặc đi ít hơn — nên nó cũng chỉ là ước lượng, không phải trần.\n\nVì vậy “còn ~3 %” là mốc **tham chiếu**, không phải bằng chứng rằng ta cách tối ưu 3 %; dư địa thật nằm đâu đó giữa vài phần trăm và 7,5 %. Báo cáo tử tế: nêu rõ đang dùng cận nào và nó có chứng minh được không; trình bày cả ba mốc; kiểm độ chặt của cận bằng bài nhỏ giải tối ưu được (Bài 18 §8.2); và nếu cần ra quyết định dừng thì dựng một cận chặt hơn mà vẫn chứng minh được cho phần di chuyển.",
+      mau: "**Chỉ cận τ = 0 là cận trên chứng minh được** (bỏ hẳn chi phí di chuyển, giải cái túi phân số, cộng trần thưởng OT 31 × 48 000): 35 571 464, tức nghiệm đạt 92,5 %. Cận τ = 9,5 lấy τ từ quãng đường thực của chính lời giải — đó là lập luận vòng quanh, không phải nới lỏng, và có thể bị vượt bởi một lịch trình đi ít hơn. Cận τ = 7 dựa vào hằng số BHH (0,92·√(An)), là **kỳ vọng** quãng đường TSP của một tập nhà ngẫu nhiên; trong khi bài này được chọn tập nhà — có thể chọn một tập dày đặc đi ít hơn — nên nó cũng chỉ là ước lượng, không phải trần.\n\nVì vậy “còn ~3 %” là mốc **tham chiếu**, không phải bằng chứng rằng ta cách tối ưu 3 %; độ hở thật nằm đâu đó giữa vài phần trăm và tối đa ≈ 8,1 % (= 35 571 464 / 32 915 840 − 1; tính theo cận τ = 0 thì là 7,5 %). Báo cáo tử tế: nêu rõ đang dùng cận nào và nó có chứng minh được không; trình bày cả ba mốc; kiểm độ chặt của cận bằng bài nhỏ giải tối ưu được (Bài 18 §8.2); và nếu cần ra quyết định dừng thì dựng một cận chặt hơn mà vẫn chứng minh được cho phần di chuyển.",
       tieuChi: [
         "Chỉ ra cận τ = 0 là cận chứng minh được (nhưng lỏng, 92,5 %), còn τ = 7 và 9,5 là ước lượng",
         "Nêu được lý do τ = 9,5 là lập luận vòng quanh (lấy quãng đường từ chính lời giải)",
@@ -222,7 +222,7 @@ TH.dangKy({
       de: "Một trong ba hướng chưa khai thác của 2607 (03 §10) là tính **giá mờ λ riêng cho từng test** bằng nới lỏng LP cái túi — O(n), gần như miễn phí. Hãy cài nó.\n\n" +
           "Mỗi nhà có loại máy `m` ∈ {1…6}: giá `p` = 80 000, 140 000, 180 000, 240 000, 250 000, 300 000 (đồng) theo `m`; thời gian vệ sinh `s = 30m + 30` phút. Mỗi nhà tiêu `c = s + τ` phút (`τ` là số phút di chuyển phân bổ cho mỗi nhà). LP: chọn phân số `xᵢ ∈ [0, 1]` để cực đại Σ pᵢxᵢ với Σ cᵢxᵢ ≤ B, B = 22 320 phút.\n\n" +
           "Đầu vào: dòng 1 `n`; dòng 2 `τ B`; rồi `n` dòng, mỗi dòng là loại `m` của một nhà (dữ liệu tránh trường hợp ngân sách vừa khít). Đầu ra: **một dòng `m* λ* LP`** — `m*` là loại biên (loại của món bị cắt dở khi xếp theo p/c giảm dần), `λ* = p/c` của loại biên (điểm/phút), `LP` là tổng giá trị của nghiệm LP (có phần phân số). In `λ*` và `LP` với ít nhất 2 chữ số thập phân; sai số cho phép 0,01.\n\n" +
-          "Cộng thêm trần thưởng OT 31 × 48 000 = 1 488 000 vào `LP` là ra cận trên mà tài liệu dùng (trung bình 300 test: 35,57 / 33,94 / 33,39 triệu cho τ = 0 / 7 / 9,5). Sau khi qua, đổi các biến thể τ và quan sát: `λ*` và loại biên thay đổi thế nào? Chỉ τ = 0 là nới lỏng chắc chắn đúng — hãy nhớ điều đó khi đọc cận ở các biến thể còn lại.",
+          "Cộng thêm trần thưởng OT 31 × 48 000 = 1 488 000 vào `LP` là ra cận trên (τ = 0) hoặc mức tham chiếu (τ = 7, 9,5) mà tài liệu dùng (trung bình 300 test: 35,57 / 33,94 / 33,39 triệu cho τ = 0 / 7 / 9,5). Sau khi qua, đổi các biến thể τ và quan sát: `λ*` và loại biên thay đổi thế nào? Chỉ τ = 0 là nới lỏng chắc chắn đúng — hãy nhớ điều đó khi đọc cận ở các biến thể còn lại.",
       vanDe: "ca2607-gia-mo-lp",
       tham: { tau: 9.5 },
       bienThe: [

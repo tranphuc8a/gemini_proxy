@@ -1,0 +1,80 @@
+[
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "— **chỗ tệ nhất kém chỗ tốt nhất 28 %**. Đó là mức thiệt hại mà bài này tìm cách gỡ lại.",
+  "new": "— **chỗ tệ nhất kém chỗ tốt nhất 28 %**. (Đây là số đo từ mã gốc, không còn trong repo; dựng lại độc lập bằng 2-opt quét tới hội tụ cho độ phân tán nhỏ hơn nhiều — tệ nhất/tốt nhất ≈ 1,07–1,11 — nên hãy đọc 28 % là mức tham khảo. Kết luận định tính \"điểm xuất phát khác nhau cho chỗ dừng chênh nhau đáng kể\" giữ nguyên, độ lớn phụ thuộc cách cài đặt.) Đó là loại thiệt hại mà bài này tìm cách gỡ lại.",
+  "ly_do": "[QUYẾT ĐỊNH] Mở rộng quyết định số 1 của cụm X2 (và nguyên tắc chung số 2: số xuất hiện nhiều nơi thì sửa mọi nơi trong bài mình sở hữu) cho Bài 13 ③: mục này nhắc lại số đo 18 980–24 240 (28 %) của Bài 9/12 như 'đo thực tế'. Mã gốc không còn trong repo; g4/g5 dựng lại bằng 2-opt hội tụ (Manhattan, n = 100–200) cho tệ nhất/tốt nhất chỉ ≈ 1,07–1,11 (g5: 1,08–1,12 ở n = 200). Giữ số đo, thêm câu nêu cơ sở và hạ mức thành 'mức tham khảo'; 'mức thiệt hại' → 'loại thiệt hại' vì câu trước đã nói con số chỉ là tham khảo."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "| **Đảo** | đảo một khúc (2-opt) | $0$ điểm, chỉ đổi thời gian | đánh giá qua $\\lambda$ |",
+  "new": "| **Đảo** | đảo một khúc (2-opt) | $0$ điểm, chỉ đổi thời gian | cần số hạng thời gian $\\lambda$ để phân biệt tốt/xấu — xem chú thích dưới bảng |\n\n> 📌 **Hàm $\\Delta$ dùng cho từng loại nước.** Thêm, Bỏ, Đổi chấm bằng **tiền thuần** ($+p_j$, $-p_j$, $p_{\\text{mới}} - p_{\\text{cũ}}$) — đúng hàm mục tiêu thật, không có $\\lambda$ (đó chính là chỗ Lỗi 2 ở §4.2 sửa). Nước Đảo không đổi tiền ($\\Delta_{\\text{tiền}} = 0$), nên nếu chấm bằng tiền thuần thì nó luôn được nhận (khi còn hợp lệ); muốn phân biệt đảo có lợi với đảo có hại thì phải cộng thêm số hạng thời gian $-\\lambda \\cdot dt$ cho riêng nước này. Đó là một hàm thay thế, nên áp dụng nguyên tắc ở cuối §4.2: chỉ dùng khi hiểu hệ quả. Tham số `lambda` của hàm mặc định bằng 0, tức là không có số hạng đó.",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 2 cụm X3 (g6 'Cần tác giả quyết định' #2). §4.1 ghi nước Đảo 'đánh giá qua λ' trong khi §4.2 (Lỗi 2) nói hàm mục tiêu của SA là tiền thuần ('đúng hàm mục tiêu thật') và chữ ký hàm có `lambda = 0.0`. Cách nhỏ nhất đúng, suy ra chỉ từ chính bài: Thêm/Bỏ/Đổi có cột 'Δ điểm' toàn tiền; nước Đảo có Δ tiền = 0 ⇒ theo §2.1 (Δ ≥ 0 thì P = 1) luôn được nhận nếu chấm bằng tiền; số hạng −λ·dt (dấu theo quy ước của Lỗi 2) chỉ là hàm thay thế dành riêng cho nước này. Không khẳng định điều gì về mã C++ gốc (không có trong repo)."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "Điểm tụt xuống 42 483.",
+  "new": "Điểm tụt xuống 42 483. (λ = 164 là giá trị dùng trong thí nghiệm này — mỗi bài dùng λ, $T_{\\text{end}}$ của lần hiệu chuẩn riêng, không phải hằng của đồ án; xem ghi chú cuối §7.)",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 3 cụm X3. λ = 164 ở §4.2 so với các bài khác: Bài 9 ghi 'khoảng 80–100', Bài 6 ví dụ λ = 120 và lab chèn λ = 80, Bài 4 nhật ký hạ λ 142 → 88 (đã đối chiếu từng chỗ trong bản bài hiện tại). Hạ mức thay vì thống nhất: không có mã gốc để biết hiệu chuẩn nào ra 164; chỉ nêu cho người đọc đừng so trực tiếp."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "Lợi ích tăng theo $\\log$(số bước) — chậm, nhưng **không bão hoà**.",
+  "new": "Lợi ích tăng **chậm dần** theo $\\log$(số bước), chưa bão hoà trong khoảng đã đo. Tính từ chính bảng trên: mỗi bậc 10× số bước mang thêm khoảng 1 320 điểm ở đoạn 10 000 → 60 000 (+1 029 trên $\\log_{10} 6 \\approx 0{,}78$ bậc), khoảng 670 ở đoạn 60 000 → 300 000 (+471 trên $\\log_{10} 5 \\approx 0{,}70$ bậc) và khoảng 570 ở đoạn 300 000 → 1 000 000 (+300 trên $\\log_{10} (10/3) \\approx 0{,}52$ bậc) — độ dốc gần như giảm một nửa từ đoạn đầu sang đoạn hai, rồi giảm nhẹ thêm. (Các điểm \"~\" trong bảng là số làm tròn, nên độ dốc chỉ có nghĩa là cỡ.)",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 1 cụm X3 (g6 'Cần tác giả quyết định' #1) — [SỐ] tính lại bằng code (node) từ chính bảng §5.2: 1 029/log10(6) = 1 322,4; 471/log10(5) = 673,8; 300/log10(10/3) = 573,7 điểm mỗi bậc 10× ⇒ làm tròn tới chục (bảng chỉ có số '~'): 1 320 → 670 → 570. Độ dốc giảm, nên 'không bão hoà / gần tuyến tính' nói quá; sửa thành 'tăng chậm dần theo log, chưa bão hoà trong khoảng đã đo'. (Quyết định ghi 1 319/673/577; code cho 1 322/674/574 — cùng cỡ, dùng số của code.)"
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "Cột `f(tốt nhất)` mới là cột chỉ được phép tăng.",
+  "new": "Cột `f(tốt nhất)` mới là cột chỉ được phép tăng.\n\n> ⚠️ **Các tham số trong bài là của từng lần hiệu chuẩn, không phải hằng.** $T_{\\text{end}} = 1$ ở dòng cuối nhật ký chỉ là tham số của lần chạy minh hoạ này: theo công thức §3.1, $T_{\\text{end}} = |\\Delta|_{\\min} / \\ln 1000$, tức $|\\Delta|_{\\min} = 1 \\times \\ln 1000 \\approx 6{,}9$ điểm. Còn $\\lambda = 164$ ở §4.2 khác các giá trị ở bài khác (Bài 9: khoảng 80–100; Bài 6: 120 trong ví dụ, 80 ở lab chèn; Bài 4: nhật ký hạ 142 → 88). Mỗi bài dùng $\\lambda$, $T_{\\text{end}}$ của lần hiệu chuẩn riêng — đừng so trực tiếp giữa các bài.",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 3 cụm X3. Đường cong §7 dùng T_end = 1 (dòng cuối), trong khi công thức hiệu chuẩn §3.1 là T_end = |Δ|min/ln(1/p_end), p_end = 0,001 ⇒ |Δ|min = 1·ln 1000 = 6,908 (tính bằng code). Đó không phải sai (T_end của lần chạy minh hoạ), nên chỉ thêm ghi chú: tham số là của từng lần hiệu chuẩn; liệt kê các λ khác ở Bài 9/6/4 (đã đối chiếu từng chỗ) và dặn đừng so trực tiếp."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "(lợi ích tăng theo log số bước, KHÔNG bão hoà)",
+  "new": "(lợi ích tăng CHẬM DẦN theo log số bước: ≈ 1 320 → 670 → 570 điểm mỗi bậc 10×; chưa bão hoà trong khoảng đã đo)",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 1 cụm X3: đồng bộ dòng tóm tắt §9 với §5.2 đã sửa (số tính lại bằng code, xem bản vá §5.2)."
+ },
+ {
+  "bai": "khoa-hoc/bai-13-simulated-annealing",
+  "old": "Xác nhận lợi ích tăng theo $\\log$. Ở ngân sách nào SA mới vượt GRASP+chèn?",
+  "new": "Xác nhận lợi ích tăng theo $\\log$ và đo xem mỗi bậc 10× mang thêm bao nhiêu điểm (có chậm dần không?). Ở ngân sách nào SA mới vượt GRASP+chèn?",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 1 cụm X3: đề 13.4 chỉ bảo 'xác nhận lợi ích tăng theo log' — đáp án mới nói đường cong chậm dần, nên đề hỏi thêm số điểm mỗi bậc 10× để người làm tự thấy độ dốc giảm."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "Trên TSP 200 điểm, cực trị cục bộ tệ nhất kém cái tốt nhất tới 28 %.",
+  "new": "Trên TSP 200 điểm, cực trị cục bộ tệ nhất kém cái tốt nhất tới 28 % (số đo từ mã gốc, không còn trong repo; dựng lại độc lập cho độ phân tán nhỏ hơn, tệ nhất/tốt nhất ≈ 1,07–1,11 — hãy đọc 28 % là mức tham khảo).",
+  "ly_do": "[QUYẾT ĐỊNH] Mở rộng quyết định số 1 của cụm X2 / nguyên tắc chung số 2 cho Bài 14 ③ (nhắc lại cùng số đo 28 % của Bài 9/12 không kèm cơ sở). Cơ sở: g4/g5 dựng lại bằng 2-opt hội tụ cho tệ nhất/tốt nhất ≈ 1,07–1,11; giữ số đo, thêm câu nêu cơ sở."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "| **vừa ($\\sqrt{n}$ đến $n/10$)** | tốt |",
+  "new": "| **vừa (khoảng giữa $\\sqrt{n}$ và $n/10$; với $n \\ge 100$ thì $\\sqrt{n} \\le n/10$)** | tốt |",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 4 cụm X3 (g6 #4). [LOGIC] '√n đến n/10' hiểu như đoạn [√n, n/10] bị ngược khi n < 100: √n ≤ n/10 ⇔ √n ≥ 10 ⇔ n ≥ 100 (đã kiểm: n = 50 → 7,07 > 5; n = 64 → 8,0 > 6,4; n = 99 → 9,95 > 9,9; n = 100 → 10 = 10). Sửa thành 'khoảng giữa hai mốc' và nêu điều kiện n ≥ 100."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "if (phatHienLap()) TT = std::min(TTmax, (int)(TT * 1.2));",
+  "new": "if (phatHienLap()) TT = std::min(TTmax, std::max(TT + 1, (int)(TT * 1.2)));",
+  "ly_do": "[MÃ] Quyết định số 4 cụm X3 (g6 #4). `(int)(TT * 1.2)` cắt phần thập phân nên == TT với TT = 1…4 (1,2→1; 2,4→2; 3,6→3; 4,8→4) ⇒ thời hạn nhỏ không bao giờ tăng được dù liên tục phát hiện lặp. Mã mới giữ nguyên trần TTmax và thêm chặn dưới +1. Khác bản điều phối ghi (`TT = max(TT + 1, …)` không có min) ở chỗ vẫn bọc `std::min(TTmax, …)`: bỏ min thì TT có thể vượt TTmax. Kiểm bằng code: node (mô phỏng cắt số nguyên) và g++ 14 (mã C++ đúng như trong bài, phatHienLap() điều khiển từ ngoài): cũ kẹt ở 1, 2, 3, 4 sau 100 lần phát hiện lặp, mới đi 1→2→…→10→12→14→15 (TTmax = 15) từ mọi TT khởi đầu 1…6; quét vét cạn TTmax ≤ 300, TT ≤ TTmax: mới không vượt TTmax và tăng nghiêm ngặt khi TT < TTmax; nhánh giảm `max(TTmin, (int)(TT * 0.9))` không dưới TTmin và giảm nghiêm ngặt khi TT > TTmin (15 → 2 với TTmin = 2)."
+ },
+ {
+  "bai": "khoa-hoc/bai-14-tabu-search",
+  "old": "Ý tưởng: để thuật toán **tự dò** tham số thay vì bắt bạn dò.",
+  "new": "⚠️ Vì sao có `std::max(TT + 1, …)`: `(int)(TT * 1.2)` cắt phần thập phân nên với $TT \\le 4$ nó **bằng đúng $TT$** (1→1, 2→2, 3→3, 4→4). Viết `TT = std::min(TTmax, (int)(TT * 1.2))` thì thời hạn nhỏ như vậy không bao giờ tăng được dù liên tục phát hiện lặp; chặn dưới $+1$ khắc phục điều đó, còn `std::min(TTmax, …)` vẫn giữ trần. (Nhánh giảm `(int)(TT * 0.9)` thì luôn giảm ít nhất 1, nên không cần chặn tương tự.)\n\nÝ tưởng: để thuật toán **tự dò** tham số thay vì bắt bạn dò.",
+  "ly_do": "[MÃ] Quyết định số 4 cụm X3: mô tả đi kèm bản vá mã reactive ngay phía trên — giải thích vì sao có `max(TT + 1, …)`. Các giá trị (1→1, 2→2, 3→3, 4→4; nhánh giảm luôn giảm ≥ 1) đã kiểm bằng node và g++ (xem bản vá mã)."
+ },
+ {
+  "bai": "khoa-hoc/bai-15-ils-vns",
+  "old": "Bài 12 báo cáo khởi tạo tốt thắng cả 20 lần chạy từ điểm ngẫu nhiên, nhưng mức hơn phụ thuộc cách cài 2-opt (đo lại với 2-opt hội tụ trên TSP n = 100–200: ngang nhau, có khi đảo chiều) — hãy tự đo trước khi tin",
+  "new": "Bài 12 báo cáo khởi tạo tốt thắng cả 20 lần chạy từ điểm ngẫu nhiên, nhưng đó là số đo từ mã gốc (không còn trong repo). Dựng lại độc lập bằng 2-opt quét tới hội tụ cho độ phân tán nhỏ hơn: nghiệm khởi tạo tốt (láng giềng gần nhất + 2-opt) vẫn **thường** thắng *trung bình* các lần ngẫu nhiên (≈ 2–8 %), còn so với lần *tốt nhất* trong 20 thì mức hơn phụ thuộc cách cài 2-opt (TSP n = 100–200: ngang nhau, có khi đảo chiều). Kết luận định tính — khởi tạo tốt thường thắng đa khởi động ngẫu nhiên, nhất là khi n lớn — giữ nguyên, độ lớn thì không: hãy tự đo trước khi tin",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 5 cụm X3, đồng bộ với quyết định số 1 cụm X2 (Bài 9/12). Giữ số đo của Bài 12 nhưng nêu cơ sở: mã gốc không còn trong repo; g4/g5 dựng lại bằng 2-opt hội tụ trên bộ sinh Manhattan cho NN+2-opt tốt hơn trung bình ngẫu nhiên ≈ 2–8 %; g6 đo riêng lần tốt nhất trong 20: n = 100 ngẫu nhiên hơn NN+2-opt 3,3 % (gặp-là-đổi) / 2,0 % (chọn nước tốt nhất), n = 200 gần ngang (−0,4 % / +0,6 %) — khớp ghi chú đã có 'ngang nhau, có khi đảo chiều'. 'Thắng' → 'thường thắng' (trung bình), phân biệt với lần tốt nhất."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**13.4** Đường cong (log số bước, điểm) gần **tuyến tính** → xác nhận lợi ích $\\propto \\log N$.",
+  "new": "**13.4** Đường cong (log số bước, điểm) đi lên nhưng **cong dần, không phải đường thẳng**: từ bảng §5.2, mỗi bậc 10× số bước mang thêm khoảng 1 320 điểm (10 000 → 60 000), khoảng 670 (60 000 → 300 000) và khoảng 570 (300 000 → $10^6$) — tính bằng chênh điểm chia log₁₀ của tỉ số số bước: 1 029 / log₁₀ 6 ≈ 1 322, 471 / log₁₀ 5 ≈ 674, 300 / log₁₀ (10/3) ≈ 574 (các điểm \"~\" của bảng là làm tròn nên đây chỉ là cỡ). Vậy lợi ích tăng theo log nhưng **chậm dần** (độ dốc gần như giảm một nửa sau bậc đầu), chưa bão hoà trong khoảng đã đo (tới $10^6$ bước).",
+  "ly_do": "[QUYẾT ĐỊNH] Quyết định số 1 cụm X3 — [SỐ] đáp án 13.4 ghi 'gần tuyến tính → ∝ log N' trái chính bảng §5.2 (+1 029 → +471 → +300 cho các đoạn log 0,78 → 0,70 → 0,52 bậc). Tính lại bằng code: 1 322,4 / 673,8 / 573,7 điểm mỗi bậc 10×. Đồng bộ với bản vá §5.2 của Bài 13."
+ }
+]

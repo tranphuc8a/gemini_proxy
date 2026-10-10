@@ -1,0 +1,266 @@
+[
+ {
+  "bai": "khoa-hoc/01-kiem-tra-dau-vao",
+  "old": "| Giới hạn | Số phép toán \"an toàn\" |\n|---|---|\n| 100 ms | ~10⁷ |\n| 1 giây | ~10⁸ |\n| 10 giây | ~10⁹ |",
+  "new": "| Giới hạn | Trần lý thuyết (≈ 10⁹ phép/giây, cùng mốc với Bài 2) | Số phép toán \"an toàn\" |\n|---|---|---|\n| 100 ms | ~10⁸ | ~10⁷ |\n| 1 giây | ~10⁹ | ~10⁸ |\n| 10 giây | ~10¹⁰ | ~10⁹ |\n\nHai cột lệch nhau đúng một hệ số an toàn cỡ 10: một \"phép\" thật thường tốn vài lệnh máy, và máy chấm có thể chậm hơn máy bạn. Khi **ước lượng thời gian** (như ở Bài 2) dùng cột giữa; khi **quyết định có dám chạy không** (như ở Bài 19 §5) dùng cột phải.",
+  "ly_do": "[MÂU THUẪN] (mục 2, Quyết định 4) Bảng A2 ghi 100 ms ≈ 10⁷ phép (tức 10⁸ phép/giây) trong khi câu trả lời (c) nêu 10⁸–10⁹, Bài 2 §2.1 chuẩn là 10⁹ phép/giây (100 ms ≈ 10⁸), và chính phần bổ túc B-1 đổi 6×10⁷ phép = ~60 ms (tức 10⁹/s). Giữ số cũ như cột \"an toàn\" (chừa lề ~10 lần; Bài 19 §5 dùng ngân sách 3×10⁷ cho 100 ms) và thêm cột trần lý thuyết theo Bài 2 kèm lời giải thích."
+ },
+ {
+  "bai": "khoa-hoc/01-kiem-tra-dau-vao",
+  "old": "- $n = 20$: $2^{20} \\approx 10^6$ → chạy trong ~10 ms. **Vét cạn được.**",
+  "new": "- $n = 20$: $2^{20} \\approx 10^6$ lần lặp → cỡ 1–20 ms ở $10^9$ phép/giây (tuỳ mỗi lần lặp tốn 1 hay 20 phép). **Vét cạn được.**",
+  "ly_do": "[SỐ] (mục 2) 2²⁰ ≈ 10⁶ lần lặp ở 10⁹ phép/giây là ~1 ms (đúng bảng Bài 2 §2.1: 10⁶ → 1 mili giây); \"~10 ms\" chỉ đúng với 10⁸ phép/giây, trong khi dòng ngay dưới (2⁶⁰ ≈ 1,15×10¹⁸ → ~36 năm; tính lại 1,15×10⁹ s / 3,156×10⁷ = 36,5 năm) dùng 10⁹ phép/giây. Nêu khoảng 1–20 ms theo chi phí mỗi lần lặp."
+ },
+ {
+  "bai": "khoa-hoc/01-kiem-tra-dau-vao",
+  "old": "Trong khoá: dùng để chọn ứng viên tốt nhất trong heuristic chèn (Bài 7) và để giữ top-K trạng thái trong Beam Search (Bài 16).",
+  "new": "Trong khoá: bài toán \"giữ K phần tử tốt nhất\" (top-K trạng thái của Beam Search ở Bài 16, chọn ứng viên tốt nhất ở Bài 7) chính là đất của heap. Vì đề thi hay cấm header, khoá cài bản thủ công — chèn vào mảng đã sắp xếp (Bài 16 §5, Bài 19 §3.2) — nhưng ý tưởng giống hệt.",
+  "ly_do": "[THAM CHIẾU] Bài 16 §5.2/§5.4 và Bài 19 §3.2 chọn top-K bằng chèn vào mảng đã sắp xếp / selection sort từng phần (\"không cần sort\", \"cấm <algorithm>\"); Bài 7 chỉ quét tìm ứng viên tốt nhất. Không bài nào trong khoá dùng heap (tìm \"heap\"/\"priority_queue\" trong cả khoá: không có). Câu cũ nói heap \"được dùng\" ở Bài 7 và Bài 16 là sai chỗ."
+ },
+ {
+  "bai": "khoa-hoc/01-kiem-tra-dau-vao",
+  "old": "- **Tối ưu:** chọn B + C (50+40 = 90, hết 10 kg) → **90 điểm**.\n\nTham lam theo giá trị **sai 33 %**.",
+  "new": "- **Tối ưu:** chọn B + D + E (5+3+2 = 10 kg; 50+30+20 = 100) → **100 điểm** (kiểm bằng cách liệt kê đủ 32 tập con; B + C và C + D + E cũng vừa đúng 10 kg nhưng chỉ được 90).\n\nTham lam theo giá trị **kém tối ưu 40 %** ((100 − 60)/100), khớp Bài 1 §3.4(a).",
+  "ly_do": "[SỐ] (mục 1) Liệt kê 32 tập con bằng code: 14 tập hợp lệ, lớn nhất là {B,D,E} = 100 (cân 10); {B,C} = {C,D,E} = 90. Tham lam theo giá trị (A = 60) kém (100−60)/100 = 40 %, không phải 33 % (33 % = (90−60)/90 tính trên \"tối ưu\" sai). Khớp Bài 1 §3.4(a) \"kém 40 %\"."
+ },
+ {
+  "bai": "khoa-hoc/01-kiem-tra-dau-vao",
+  "old": "→ Chọn B(5kg) + D(3kg) + E(2kg) = 50+30+20 = **100**? Khoan — tổng cân nặng 5+3+2 = 10 ✓. Vậy được **100 điểm**, còn tốt hơn cả phương án B+C!\n\nThực ra **100 chính là tối ưu**. Bài học:",
+  "new": "→ Chọn B (5 kg) + D (3 kg) + E (2 kg): tổng cân nặng 5+3+2 = 10 ✓, được 50+30+20 = **100 điểm** — chính là tối ưu.\n\nBài học:",
+  "ly_do": "[MÂU THUẪN] (mục 1) Đoạn cũ tự sửa giữa chừng (\"Khoan…\", \"Thực ra 100 chính là tối ưu\") sau khi đã khẳng định tối ưu = 90. Viết lại liền mạch theo kết quả đúng (tối ưu = 100); giữ nguyên bài học và liên kết Bài 5."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Bài 2 sẽ cho bạn thấy số lời giải có thể là khoảng $10^{181}$. Kể cả toàn bộ",
+  "new": "Bài 2 sẽ cho bạn thấy ngay phiên bản thu nhỏ của đề này (260 đơn, 5 ngày) đã có hơn $10^{181}$ lời giải; bản 300 nhà × 31 ngày còn lớn hơn nhiều. Kể cả toàn bộ",
+  "ly_do": "[SỐ] (mục 7) Bài 2 §3.4 tính 5²⁶⁰ ≈ 10¹⁸¹ (log₁₀ = 260×0,699 = 181,7) cho P2 = 260 đơn × 5 ngày, không phải cho 300 nhà × 31 ngày. Chỉ riêng việc gán mỗi nhà cho 1 trong 31 ngày hoặc bỏ qua đã cho 32³⁰⁰ ≈ 10⁴⁵¹ (tính lại: 300×log₁₀32 = 451,5), và 300! ≈ 10⁶¹⁴ — nên \"khoảng 10¹⁸¹\" sai cho đề 300 nhà. Sửa để nêu đúng nguồn của 10¹⁸¹."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Vì $|S| = 32$, ta có thể liệt kê hết. Hãy làm có phương pháp: đi theo **tổng cân nặng giảm dần**, vì ta đã đoán trước rằng nghiệm tốt sẽ dùng gần hết 10 kg.",
+  "new": "Vì $|S| = 32$, ta có thể liệt kê hết (có 14 tập hợp lệ). Bảng dưới chỉ ghi những tập đáng chú ý — trước hết các tập dùng đúng 10 kg, vì ta đã đoán trước rằng nghiệm tốt sẽ dùng gần hết 10 kg, cùng vài tập vượt cân tiêu biểu. Chín tập hợp lệ còn lại ({B}, {C}, {D}, {E}, {B,D}, {B,E}, {C,D}, {C,E}, {D,E}) đều chỉ được tối đa 80 điểm.",
+  "ly_do": "[MÂU THUẪN] Câu cũ hứa \"liệt kê hết\" 32 tập và \"đi theo tổng cân nặng giảm dần\", nhưng bảng §3.3 chỉ có 8 dòng (5 hợp lệ + 3 vượt cân) và không xếp theo cân nặng (0, 10, 10, 10, 13, 15, 10, 12). Liệt kê bằng code: 14 tập hợp lệ; 9 tập hợp lệ không có trong bảng có điểm 20–80 (lớn nhất {B,D} = 80), nên kết luận \"tốt nhất là {B,D,E} = 100\" vẫn đúng."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "bạn **biết chắc** nó chưa tối ưu, mà không cần biết tối ưu là bao nhiêu.",
+  "new": "bạn **gần như chắc chắn** nó chưa tối ưu (chắc chắn hẳn nếu còn món nào chưa lấy mà nhét vừa phần dư), mà không cần biết tối ưu là bao nhiêu.",
+  "ly_do": "[LOGIC] Lập luận (b) ngay phía trên thừa nhận trường hợp (ii): nghiệm tối ưu vẫn có thể còn dư chỗ khi mọi món chưa lấy đều nặng hơn phần dư. Vậy \"biết chắc\" chỉ đúng khi còn món nhét vừa; hạ cho đúng mức."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "**(c) Nghiệm {B,C} và {C,D,E} đều cho 90 điểm và không thể cải thiện bằng cách đổi một món.**",
+  "new": "**(c) Nghiệm {B,C} và {C,D,E} đều cho 90 điểm và không thể cải thiện bằng cách thêm hoặc bớt một món.**",
+  "ly_do": "[MÂU THUẪN] (liên quan mục 3) Phần thân chỉ kiểm nước đi \"thêm hoặc bớt một món\". Nếu \"đổi một món\" hiểu là đổi chỗ 1–1 thì {C,D,E} cải thiện được (đổi C ↔ B → {B,D,E} = 100; kiểm bằng code: lân cận thêm/bớt + đổi chỗ 1–1 chỉ còn {A}, {B,C}, {B,D,E} là cực trị cục bộ). Sửa tiêu đề cho khớp thân bài."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Kiểm chứng ngay trên ví dụ §4, cùng một nghiệm {B,C}, hai lân cận khác nhau:",
+  "new": "Kiểm chứng ngay trên ví dụ §3, cùng một nghiệm {B,C}, hai lân cận khác nhau:",
+  "ly_do": "[THAM CHIẾU] (mục 5) Ví dụ 5 món nằm ở §3 (§4 chỉ đặt tên khái niệm)."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "| mọi nước đi đều tệ hơn hoặc vượt cân (đã kiểm ở §4.4c) |",
+  "new": "| mọi nước đi đều tệ hơn hoặc vượt cân (đã kiểm ở §3.4c) |",
+  "ly_do": "[THAM CHIẾU] (mục 5) Không có §4.4; phần kiểm {B,C} là §3.4(c)."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "| \"đổi **2** món\" | **Không** | từ {B,C} bỏ C, thêm D và E → {B,D,E} = 100 > 90 |",
+  "new": "| \"đổi tối đa **3** món\" (mỗi món đổi trạng thái lấy ↔ bỏ; kể cả \"bỏ 1 món rồi thêm 2 món\") | **Không** | từ {B,C} bỏ C, thêm D và E (đổi 3 món) → {B,D,E} = 100 > 90; chỉ cho đổi tối đa 2 món thì {B,C} vẫn kẹt |",
+  "ly_do": "[SỐ] (mục 3) {B,C} → {B,D,E} bỏ C và thêm D, E tức đổi 3 ô, không phải 2. Kiểm bằng code mọi nghiệm hợp lệ: với lân cận đổi tối đa 2 ô, cực trị cục bộ là {A}=60, {B,C}=90, {B,D,E}=100 (tức {B,C} vẫn kẹt, mâu thuẫn với \"Không\"); với tối đa 3 ô chỉ còn {B,D,E}. Sửa nhãn lân cận cho đúng để kết luận \"đảo ngược\" thành đúng (khớp lab N₃ của bài thực hành)."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Một mẹo mạnh (dùng ở Bài 13, 17):",
+  "new": "Một mẹo mạnh (gặp lại ở Bài 6 §8.1):",
+  "ly_do": "[THAM CHIẾU] Bài 13 và Bài 17 không dùng kỹ thuật phạt-vi-phạm này (Bài 13 §4.2 còn nhấn mạnh hàm mục tiêu của SA là tiền, \"không phải hàm có phạt\"; tìm \"phạt\"/\"vi phạm\" trong Bài 17: không có). Bài 6 §8.1 điểm 3 mới là chỗ nhắc lại kỹ thuật và dẫn ngược về Bài 1 §6.3."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Ở P0 đó là $\\max_i (p_i / w_i)$. Rồi tinh chỉnh bằng đo đạc.",
+  "new": "Ở P0 (cân nặng và $W$ nguyên, mỗi món lấy trọn hoặc không), chỉ vượt cân **1 đơn vị** cũng có thể mang trọn một món về, nên lợi ích lớn nhất đó là $\\max_i p_i$: đặt $M > \\max_i p_i$ thì bỏ bất kỳ món nào khỏi một nghiệm đang vượt cân đều giảm phạt ít nhất $M$, nhiều hơn điểm $p_i$ mất đi, nên nghiệm tối ưu của $f_{\\text{mở rộng}}$ luôn hợp lệ. (Ngưỡng $\\max_i p_i / w_i$ chỉ đủ khi được cắt nhỏ món — cái túi phân số; với 0/1 nó có thể sai: món $w=100$, $p=100$, $W=99$, $M=1{,}1$ vẫn cho $100 - 1{,}1 \\times 1 = 98{,}9 > 0$, tức nghiệm tối ưu \"mở rộng\" vẫn lấy món vi phạm.) Rồi tinh chỉnh bằng đo đạc.",
+  "ly_do": "[LOGIC] (mục 4) Phản ví dụ: w=100, p=100, W=99, M=1,1 > max p/w = 1 nhưng f_mở rộng(lấy) = 100 − 1,1×1 = 98,9 > 0 = f_mở rộng(không lấy) → nghiệm tối ưu vi phạm. Với cân nặng nguyên, vượt cân tối thiểu 1 đơn vị nên M > max pᵢ đủ (bỏ một món khỏi nghiệm vượt cân giảm phạt ≥ M > pᵢ). Kiểm bằng code trên 5 món P0: M = 7 → tối ưu mở rộng {B,C,D,E} (vượt cân), M ≥ 10 và M = 61 (> max p = 60) → {B,D,E}."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Bài 5 sẽ giải thích vì sao (có một định lý đứng sau), và Bài 2 sẽ cho bạn thấy trường hợp nó hỏng.",
+  "new": "Bài 5 sẽ giải thích vì sao (có một định lý đứng sau) và cho bạn thấy cả trường hợp nó hỏng (Bài 5 §4.3, §6.1).",
+  "ly_do": "[THAM CHIẾU] Bài 2 không nói gì về greedy/tỉ số (tìm \"greedy\", \"tham lam\", \"tỉ số\" trong Bài 2: không có). Chỗ chỉ ra chỉ số tỉ số hỏng nằm ở Bài 5 §4.3 (chứng minh hỏng với 0/1) và §6.1 (dữ liệu subset-sum, thứ hạng đảo ngược)."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "⇒ còn dư nhiều = biết chắc chưa tối ưu (phép kiểm miễn phí)",
+  "new": "⇒ còn dư nhiều mà vẫn nhét vừa món nào đó = chắc chắn chưa tối ưu (phép kiểm miễn phí)",
+  "ly_do": "[LOGIC] Đồng bộ với sửa ở §3.4(b): \"còn dư nhiều\" một mình chưa đủ để chắc chắn (trường hợp (ii) mọi món chưa lấy đều quá nặng)."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Bài này thuộc lớp nào trong ba lớp ở §3.2, và",
+  "new": "Bài này thuộc lớp nào trong ba lớp ở §4.3, và",
+  "ly_do": "[THAM CHIẾU] (mục 5) \"Ba lớp bài toán\" là §4.3; §3.2 là phần mô hình hoá P0."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Với ví dụ 5 món ở §4, hãy liệt kê **tất cả** các nghiệm hợp lệ có $f \\ge 90$. Trong đó cái nào là cực trị cục bộ với lân cận \"thêm/bớt 1 món\"? Cái nào vẫn còn là cực trị cục bộ nếu đổi sang lân cận \"đổi 2 món\"?",
+  "new": "Với ví dụ 5 món ở §3, hãy liệt kê **tất cả** các nghiệm hợp lệ có $f \\ge 90$. Trong đó cái nào là cực trị cục bộ với lân cận \"thêm/bớt 1 món\"? Cái nào vẫn còn là cực trị cục bộ nếu đổi sang lân cận \"đổi tối đa 3 món\" (như §5.3)?",
+  "ly_do": "[THAM CHIẾU] (mục 3, 5) Ví dụ 5 món ở §3, không phải §4. Đổi nhãn lân cận cho khớp §5.3 đã sửa (đổi 2 ô không đủ để thoát khỏi {B,C})."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Hàm `evaluate` hiện **bỏ qua** (dùng `continue`) khi gặp chỉ số đơn hàng lặp lại, và **dừng** (dùng `break`) khi hết giờ.",
+  "new": "Hàm `evaluate` (xem §7.2) **dừng** (dùng `break`) ngay khi một đơn không còn vừa thời gian, bỏ luôn phần đuôi còn lại của `seq`.",
+  "ly_do": "[MÂU THUẪN] (mục 6) Đoạn mã `evaluate` ở §7.2 (được mô tả là cài đặt nguyên văn) và bảng đối chiếu từng dòng không có phép kiểm đơn lặp nào và không có `continue` nào; bài tập lại nói hàm \"hiện bỏ qua (continue) khi gặp đơn lặp\". Không có p1.h trong repo để kiểm; sửa theo đúng đoạn mã mà bài giảng đưa ra. (Nếu p1.h thật có kiểm đơn lặp thì tác giả có thể thêm vào đoạn trích ở §7.2.)"
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Bài 21 sẽ kể một trường hợp thật: một mô hình sai làm mất ~5 % điểm ngay từ dòng code đầu tiên, và không một kỹ thuật nào ở Phần 4 lấy lại được.",
+  "new": "Bài 21 sẽ kể một trường hợp thật: một mô hình sai (hiểu nhầm cách các ngày nối nhau) làm lệch cả bài toán ngay từ dòng code đầu tiên, và không một kỹ thuật nào ở Phần 4 lấy lại được.",
+  "ly_do": "[SỐ] (điều phối chuyển) Con số \"~5 %\" không có nguồn: Bài 21 §4.1 (ngày nối tiếp, vị trí không reset) không kèm số đo; ablation đề thi thật (Bài 22 §8.1) không có dòng nào đo lỗi mô hình hoá này (khung ngày 31 −3,08 %, beam −2,43 %, phạt thời gian chết −2,43 %, di chuyển chết −0,45 %…). Bỏ con số, giữ ý chính (lỗi mô hình hoá, không phải lỗi tìm kiếm); cùng cách xử lý như nhóm Bài 3 đã làm ở Bài 3 (nhắc lại chi tiết `viTri` không reset)."
+ },
+ {
+  "bai": "khoa-hoc/bai-01-mo-hinh-hoa",
+  "old": "Mô hình sai này làm mất khoảng 5 % điểm ngay từ đầu, và không thuật toán nào ở Phần 4 cứu được — vì nó không phải lỗi tìm kiếm, nó là lỗi **định nghĩa cái đang được tìm**.",
+  "new": "Mô hình sai này làm lệch cả bài toán ngay từ đầu, và không thuật toán nào ở Phần 4 cứu được — vì nó không phải lỗi tìm kiếm, nó là lỗi **định nghĩa cái đang được tìm**. (Khoá học không có số đo riêng cho lỗi này; con số gần nhất là một chi tiết khác trong cùng mã grader — bỏ phí khung ngày thứ 31 — mất 3,08 % điểm, Bài 22 §8.1.)",
+  "ly_do": "[SỐ] (điều phối chuyển) Cùng lý do với bản vá §1.3: \"khoảng 5 %\" không có nguồn. Bài 21 §4.5 (~3 % cho khung ngày 31) và Bài 22 §8.1 (bỏ khung ngày thứ 31: 31 900 896 so với 32 915 840 = −3,08 %) là số đo gần nhất, nên nêu rõ đó là chi tiết khác, không gán cho lỗi \"ngày nối tiếp\"."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "- Đây **chính là bài toán cái túi**. Nếu cho phép học một phần",
+  "new": "- Đây **chính là bài toán cái túi** — lớp \"tối ưu có giới hạn tài nguyên\" (§4.3); ngân sách bị bão hoà là **số giờ ôn (8 giờ)**. Nếu cho phép học một phần",
+  "ly_do": "[NHỎ] Đề 1.1 hỏi thêm \"thuộc lớp nào trong ba lớp\" và \"ngân sách bị bão hoà là gì\" nhưng đáp án bỏ ngỏ hai ý này. Bổ sung (lớp thứ ba của §4.3; ngân sách = 8 giờ)."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "- {B,D,E}: **cực trị toàn cục**.",
+  "new": "- {B,D,E}: **cực trị toàn cục**.\n- Với lân cận \"đổi tối đa 3 món\" (§5.3): {B,C} → {B,D,E} (bỏ C, thêm D, E) = 100 > 90, và {C,D,E} → {B,D,E} (đổi chỗ C ↔ B) = 100 > 90, nên **cả hai không còn** là cực trị cục bộ; chỉ {B,D,E} còn. (Nếu chỉ thêm nước \"đổi chỗ 1–1\" thì {C,D,E} thoát được còn {B,C} vẫn kẹt; muốn thoát khỏi {B,C} phải cho đổi 3 món, chẳng hạn bỏ 1 thêm 2.)",
+  "ly_do": "[NHỎ] (mục 3) Đáp án 1.2 bỏ ngỏ câu hỏi thứ hai (\"cái nào vẫn còn là cực trị cục bộ nếu đổi lân cận\"). Điền bằng kết quả kiểm bằng code: lân cận đổi tối đa 3 ô → chỉ {B,D,E}; đổi chỗ 1–1 → {C,D,E} thoát, {B,C} kẹt."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "$$f(x) = \\text{doanh thu}(x) - 200\\,000 \\cdot \\#\\{\\text{tài xế nghỉ} < 30 \\text{ phút}\\}$$",
+  "new": "$$f(x) = \\text{doanh thu}(x) - 200\\,000 \\cdot \\#\\{\\text{tài xế nghỉ} < 30 \\text{ phút}\\}$$\nNếu đề đổi thành \"kết quả bị huỷ\" thì đó là ràng buộc **cứng**: bỏ khoản phạt khỏi $f$, đưa điều kiện \"mọi tài xế nghỉ ≥ 30 phút\" vào $C$ — nghiệm vi phạm bị loại, nên không bao giờ được sinh ra hay nộp.",
+  "ly_do": "[NHỎ] Đề 1.3 có câu hỏi thứ hai (\"nếu đề đổi thành kết quả bị huỷ thì phải đổi gì?\") mà đáp án không trả lời. Bổ sung theo Bài 1 §6.1 (trả về 0 / bị huỷ = ràng buộc cứng)."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "- Mô hình: dãy không còn là \"tuyến đường\" mà là một **danh sách ưu tiên**, bộ chấm tự lọc.",
+  "new": "- Mô hình: dãy không còn là \"tuyến đường\" mà là một **danh sách ưu tiên**, bộ chấm tự lọc.\n- Về $(S, C, f)$: $S$ và $C$ giữ nguyên (vẫn là các dãy đơn, tuyến thực giao vẫn phải ≤ 480 phút); cái đổi là **$f$** — điểm của $\\pi$ không còn là tổng $p$ của một *tiền tố* mà của một *dãy con* do bộ chấm lọc ra theo luật tham lam (bỏ đơn không vừa, thử đơn kế).",
+  "ly_do": "[NHỎ] (mục 6) Đề 1.5 hỏi rõ \"nó đổi S, C hay f?\" nhưng đáp án không trả lời. Với break: f(π) = tổng p của tiền tố dài nhất còn vừa 480 phút; với continue: tổng p của dãy con còn vừa sau khi lọc — tập dãy S và ngưỡng 480 (C) không đổi, chỉ cách chấm f đổi."
+ },
+ {
+  "bai": "khoa-hoc/02-cach-hoc",
+  "old": "Thực tế đo được trên đề thi thật (Bài 22): **80 % điểm số đến từ Phần 2–3**, metaheuristic chỉ thêm 20 % cuối.",
+  "new": "Thực tế đo được trên đề thi thật (bảng ablation ở Bài 22 §8.1, phân loại theo Bài 4B §1): **gần 70 % mức cải thiện đến từ đọc mã grader, mô hình hoá và giá mờ** (Phần 1–2); tìm kiếm mạnh (beam) góp thêm khoảng 28 %, tinh chỉnh tham số chỉ ≈ 4 %.",
+  "ly_do": "[MÂU THUẪN] Bảng ablation Bài 22 §8.1 (tổng 8,72 %) và cách phân loại Bài 4B §1: đọc mã grader 3,08 + mô hình hoá/giá mờ 2,88 = 5,96 → 68,4 %; beam 2,43 → 27,9 %; tinh chỉnh 0,22+0,10+0,01 = 0,33 → 3,8 %. Câu cũ (\"80 % từ Phần 2–3, metaheuristic 20 %\") không khớp số nào, và còn mâu thuẫn với Bản đồ kiến thức §4 (\"70 % ở Phần 1–2\"). Lưu ý các dòng ablation chồng lấn (Bài 22 §8.3) nên chỉ là tỉ trọng định hướng."
+ },
+ {
+  "bai": "khoa-hoc/02-cach-hoc",
+  "old": "| 🔴 Bắt buộc | 5, 6 | Greedy + giá mờ cho 70 % điểm số |",
+  "new": "| 🔴 Bắt buộc | 5, 6 | Greedy + giá mờ: nền của phần lớn mức cải thiện (Bài 22 §8.1) |",
+  "ly_do": "[SỐ] \"Greedy + giá mờ cho 70 % điểm số\" không có nguồn: theo Bài 22 §8.1/Bài 4B §1, phần định giá (phạt thời gian chết + ρ + σ) chỉ chiếm ≈ 2,54/8,72 = 29 % tổng ablation; ~70 % là của cả đọc mã grader + mô hình hoá + giá mờ. Bỏ con số, giữ ý ưu tiên."
+ },
+ {
+  "bai": "khoa-hoc/02-cach-hoc",
+  "old": "| 🟠 Rất nên | 9, 11 | Local search cơ bản |",
+  "new": "| 🟠 Rất nên | 7, 9, 11 | Heuristic chèn + local search cơ bản |",
+  "ly_do": "[THAM CHIẾU] Lộ trình rút gọn liệt kê 1–6, 8–20 nhưng bỏ sót Bài 7 (chèn, gom cụm — +6,5 % trên P1 theo Bài 7/Bài 20). Xếp vào nhóm \"rất nên\" (mức xếp hạng là đề xuất, tác giả có thể đổi)."
+ },
+ {
+  "bai": "khoa-hoc/03-ban-do-kien-thuc",
+  "old": "| Heap | Hàng đợi ưu tiên cho heuristic chèn (Bài 7) |",
+  "new": "| Heap | Ý tưởng \"giữ K phần tử tốt nhất\" của beam (Bài 16); khoá cài bằng chèn vào mảng đã sắp xếp vì đề cấm header (Bài 19 §3.2) |",
+  "ly_do": "[THAM CHIẾU] Bài 7 không dùng heap/hàng đợi ưu tiên (quét tìm ứng viên tốt nhất); cả khoá không có heap (Bài 16 §5, Bài 19 §3.2 chọn top-K bằng chèn vào mảng đã sắp xếp). Đồng bộ với sửa ở câu B1 bài kiểm tra đầu vào."
+ },
+ {
+  "bai": "khoa-hoc/03-ban-do-kien-thuc",
+  "old": "Giá mờ nói **1 420 điểm** — sai gấp 7 lần, và đó chính là nguồn gốc của 5 % điểm số.",
+  "new": "Giá mờ nói **1 420 điểm** — sai gấp 7 lần, và đó chính là nguồn gốc của **+2,43 %** điểm số (ablation riêng số hạng phạt thời gian chết, Bài 22 §8.1).",
+  "ly_do": "[SỐ] (điều phối chuyển) Ablation đề thi thật (Bài 22 §8.1): bỏ phạt thời gian chết còn 32 116 796 so với bản đầy đủ 32 915 840, mất 2,43 % (tính lại 799 044 / 32 915 840 = 2,428 %). Nhóm Bài 6 đã đổi \"~5 %\" thành +2,43 % ở Bài 6; đồng bộ Bản đồ kiến thức."
+ },
+ {
+  "bai": "khoa-hoc/03-ban-do-kien-thuc",
+  "old": "Bài 5–8    ────► Đây là nơi 70 % điểm số đến từ.",
+  "new": "Bài 5–8    ────► Cùng Bài 1–4, đây là nơi gần 70 % mức cải thiện đến từ.",
+  "ly_do": "[SỐ] Theo Bài 22 §8.1/Bài 4B §1 ~68 % mức cải thiện là của đọc mã grader + mô hình hoá + giá mờ (Bài 1–4, 6, 20–21...), riêng Bài 5–8 không thể gánh 70 %. Đồng bộ với bảng tỉ trọng bên dưới."
+ },
+ {
+  "bai": "khoa-hoc/03-ban-do-kien-thuc",
+  "old": "> **Một cách nhìn khác về tỉ trọng đóng góp** (đo trên đề thi thật ở Bài 22):",
+  "new": "> **Một cách nhìn khác về tỉ trọng đóng góp** (tính từ bảng ablation của đề thi thật, Bài 22 §8.1, phân loại theo Bài 4B §1; các dòng ablation chồng lấn nên chỉ dùng để định hướng):",
+  "ly_do": "[SỐ] Nêu đúng nguồn/giới hạn của tỉ trọng (Bài 22 §8.3: các dòng ablation không cộng chính xác)."
+ },
+ {
+  "bai": "khoa-hoc/03-ban-do-kien-thuc",
+  "old": "> | Mô hình hoá đúng + đọc kỹ đề/mã grader | ~35 % |\n> | Heuristic xây dựng tốt + giá mờ | ~35 % |\n> | Local search + delta evaluation | ~15 % |\n> | Metaheuristic | ~15 % |",
+  "new": "> | Đọc kỹ mã grader (khung ngày thứ 31) | ~35 % |\n> | Mô hình hoá + giá mờ (phạt thời gian chết, di chuyển chết cuối ngày) | ~33 % |\n> | Tìm kiếm mạnh (beam search, Phần 4) | ~28 % |\n> | Tinh chỉnh tham số (multi-start λ, ρ, σ) | ~4 % |\n> | Local search + delta evaluation | 0 % — ở ca này 2-opt còn làm điểm **giảm** (Bài 11 §4) |",
+  "ly_do": "[SỐ] Tính lại từ Bài 22 §8.1 (mất khi bỏ: khung ngày 31 = 3,08; phạt thời gian chết 2,43 + di chuyển chết 0,45 = 2,88; beam 2,43; multi-start 0,22 + ρ 0,10 + σ 0,01 = 0,33; tổng 8,72): 35,3 % / 33,0 % / 27,9 % / 3,8 %. Hai dòng đầu cũ (35 %, 35 %) khớp gần đúng; hai dòng \"Local search 15 %\" và \"Metaheuristic 15 %\" không có trong số liệu: ở đề này không có local search nào góp điểm (2-opt giảm 6–10 %, Bài 11 §4, Bài 22 §8.4) và beam một mình chiếm ~28 %."
+ },
+ {
+  "bai": "khoa-hoc/03-ban-do-kien-thuc",
+  "old": "> Nghĩa là: **70 % giá trị nằm ở Phần 1–2**, phần mà nhiều người vội vàng bỏ qua.",
+  "new": "> Nghĩa là: **gần 70 % giá trị nằm ở Phần 1–2** (đọc đề, mô hình hoá, giá mờ), phần mà nhiều người vội vàng bỏ qua.",
+  "ly_do": "[SỐ] 35,3 % + 33,0 % = 68,3 % (xem bản vá trên) → \"gần 70 %\", không phải đúng 70 %."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "                      │  Bài 4  Đo lường              │",
+  "new": "                      │  Bài 4  Đo lường              │\n                      │  Bài 4B Phân bổ công sức      │",
+  "ly_do": "[THAM CHIẾU] Sơ đồ liệt kê bài mở rộng 18B, 19B, 20B nhưng thiếu 4B (có trong Phần 1 ở §7 và ở Giới thiệu). Thêm cho đủ (khung giữ đúng độ rộng)."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "                      │  Bài 17 LNS & ALNS            │",
+  "new": "                      │  Bài 17 LNS & ALNS            │\n                      │  Bài 17B Bầy đàn & tiến hoá   │",
+  "ly_do": "[THAM CHIẾU] Thiếu bài mở rộng 17B trong sơ đồ (xem bản vá về §7 Phần 4)."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "                      │  Bài 19B Gỡ lỗi heuristic     │\n                      │  Bài 20B Tinh chỉnh tham số   │\n                      │  Bài 19 Kỹ thuật C++          │\n                      │  Bài 20 Quy trình 8 bước      │",
+  "new": "                      │  Bài 19 Kỹ thuật C++          │\n                      │  Bài 19B Gỡ lỗi heuristic     │\n                      │  Bài 20 Quy trình 8 bước      │\n                      │  Bài 20B Tinh chỉnh tham số   │",
+  "ly_do": "[THAM CHIẾU] Thứ tự phụ thuộc: sơ đồ xếp 19B, 20B trước 19, 20, ngược với Giới thiệu và với điều hướng trước/sau của chính các bài (Bài 19 → 19B → Bài 20; Bài 19B trích \"Bài 19 §8\" và Bài 20 §10.1, Bài 20B trích Bài 19 §5 và Bài 4). Đổi lại thành 19, 19B, 20, 20B; nội dung khung giữ nguyên."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "| **P1** | Ship hàng 1 ngày | Bài 3 | + toạ độ, khoảng cách, định tuyến |",
+  "new": "| **P1** | Ship hàng 1 ngày | Bài 1 | + toạ độ, khoảng cách, định tuyến |",
+  "ly_do": "[MÂU THUẪN] Chính Đề cương ghi tuần 1 \"Mô hình hoá P0 & P1\" và Bài 1 \"Mô hình hoá P0 và P1\"; Bài 1 §7 mô hình hoá đầy đủ P1 (480 phút, d Manhattan). Cột \"Xuất hiện từ\" ghi Bài 3 là sai."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "| **P2** | Ship hàng 5 ngày | Bài 9 | + phân bổ nhiều kỳ |",
+  "new": "| **P2** | Ship hàng 5 ngày | Bài 3 | + phân bổ nhiều kỳ |",
+  "ly_do": "[MÂU THUẪN] Bài 3 có lab `code/p2-multiday` và bài tập \"thiết kế 2 biểu diễn cho P2\" (chính Đề cương §7 ghi ở Bài 3); Bài 3 (mục Nhắc lại ④) giới thiệu P2 (260 đơn, 5 ngày). Bài 9 không phải nơi P2 xuất hiện."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "<summary><b>PHẦN 4 — METAHEURISTIC (5 bài · 16 h)</b></summary>",
+  "new": "<summary><b>PHẦN 4 — METAHEURISTIC (5 bài + 1 mở rộng · 16 h)</b></summary>",
+  "ly_do": "[MÂU THUẪN] Giới thiệu ghi \"5 bài + 1 mở rộng\" cho Phần 4 (13–17 và 17B), Đề cương đầu trang ghi \"+13 giờ cho 5 bài mở rộng\" nhưng chỉ liệt kê 4 (4B, 18B, 19B, 20B). Tiêu đề lệch với Giới thiệu; thêm 17B ở bản vá kế."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "**Bài 17 — LNS & ALNS** — Destroy/repair, các toán tử phá kinh điển, cơ chế chấm điểm thích nghi, roulette wheel.",
+  "new": "**Bài 17 — LNS & ALNS** — Destroy/repair, các toán tử phá kinh điển, cơ chế chấm điểm thích nghi, roulette wheel.\n**Bài 17B — Bầy đàn & tiến hoá** ℹ️ *bài mở rộng* — Đàn kiến (ACO), di truyền (GA), tiến hoá vi phân (DE), bầy hạt (PSO) trên một khuôn quần thể chung; theo dõi độ đa dạng; vì sao cả bốn **không** có mặt trong lời giải đồ án (ngân sách nhỏ, nghiệm ngắn, ràng buộc chặt).",
+  "ly_do": "[MÂU THUẪN] Bài 17B có thật (Phần 4 · Bài mở rộng · 3 giờ; mục tiêu/§8 như mô tả) và Giới thiệu liệt kê nó, nhưng Đề cương không có mục nào cho 17B dù nói có 5 bài mở rộng (+13 h = 2 + 3 + 3 + 2,5 + 2,5 cộng đúng từ các bài 4B, 17B, 18B, 19B, 20B). Bổ sung mô tả theo đúng nội dung bài."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "v1 greedy → v2 greedy+λ → v3 +lấp đầy ngày → v4 +beam → v5 +tái định vị → v6 +đa khởi động → v7 chốt an toàn",
+  "new": "v1 greedy tỉ số (lời giải tham khảo) → v2 +khung ngày thứ 31 → v3 +giá mờ λ & phạt thời gian chết → v4 +beam → v5 +di chuyển chết cuối ngày → v6 +đa khởi động → v7 chốt an toàn",
+  "ly_do": "[MÂU THUẪN] (Quyết định 3: chuẩn là Bài 22) Bài 22 §1.1: v1 greedy tỉ số 30 714 270; v2 = khung ngày thứ 31 (+3,27 %); v3 = giá mờ λ + phạt thời gian chết (−0,08 %); v4 = beam (+3,15 %); v5 = di chuyển chết cuối ngày (+0,47 %); v6 = đa khởi động 3 giá trị λ (+0,22 %); v7 = chốt an toàn. Dòng cũ gán sai v2, v3, v5."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "**Bài 18 — Cận trên & cận dưới** — Nới lỏng LP, nới lỏng ràng buộc, cận tổ hợp, hằng số BHH cho TSP. Cách dùng cận để quyết định \"còn đáng tối ưu tiếp không\".",
+  "new": "**Bài 18 — Cận trên & cận dưới** — Ba cách nới lỏng để chặn trên: bỏ hẳn một ràng buộc, nới lỏng LP (cái túi phân số), nới lỏng Lagrange; hằng số BHH cho TSP chỉ là *ước lượng* quãng đường (không phải cận chứng minh được); cận dưới là nghiệm đối chứng (nghiệm rỗng, greedy, lời giải tham khảo). Cách dùng cận để quyết định \"còn đáng tối ưu tiếp không\".",
+  "ly_do": "[MÂU THUẪN] (điều phối chuyển từ nhóm Bài 18) Bài 18 (mục tiêu M2/M3, §2.1, §3–§5, §7): ba kỹ thuật cận trên là bỏ hẳn một ràng buộc, nới lỏng LP và nới lỏng Lagrange; BHH được nêu rõ là \"ước lượng, không phải cận\" (tiêu đề §4 \"không phải cận dưới\"); cận dưới là nghiệm cụ thể làm đối chứng. Không có mục \"cận tổ hợp\" nào. Mô tả cũ gọi BHH như một loại cận và thêm \"cận tổ hợp\"."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "| **S6** | Tính cận trên (LP relaxation / bound tổ hợp) để định vị chất lượng lời giải | Lab 6 |",
+  "new": "| **S6** | Tính cận trên (nới lỏng LP / bỏ ràng buộc / nới lỏng Lagrange) để định vị chất lượng lời giải | Lab 6 |",
+  "ly_do": "[MÂU THUẪN] Đồng bộ với mô tả Bài 18 vừa sửa: khoá không dạy \"bound tổ hợp\" nào; ba kỹ thuật cận trên của Bài 18 là nới lỏng LP, bỏ ràng buộc, nới lỏng Lagrange."
+ }
+]

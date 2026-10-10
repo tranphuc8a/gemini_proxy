@@ -43,12 +43,12 @@ TH.dangKy({
 
   tomTat: [
     "**Một nước đi là thao tác trên biểu diễn, không phải trên khái niệm.** Biểu diễn định nghĩa tập nước đi, tập nước đi định nghĩa lân cận, lân cận định nghĩa cực trị cục bộ: chọn biểu diễn là chọn hình dạng bề mặt tối ưu bạn sẽ leo.",
-    "Ba họ cơ bản: **tập con** {0,1}ⁿ (lật bit; cái túi), **hoán vị/dãy** (đảo đoạn, dời đoạn, đổi chỗ; TSP, P1), **gán nhãn** (đổi nhãn; phân nhóm). Tập con và gán nhãn đóng miễn phí; hoán vị thì chỉ các phép hoán chuyển vị trí mới giữ được “đôi một khác nhau”.",
+    "Ba họ cơ bản: **tập con** {0,1}ⁿ (lật bit; cái túi), **hoán vị/dãy** (đảo đoạn, dời đoạn, đổi chỗ; TSP, P1), **gán nhãn** (đổi nhãn; phân nhóm). Tập con và gán nhãn đóng miễn phí về mặt cấu trúc (riêng gán nhãn mà mỗi nhóm phải đúng k người thì phải hoán đổi nhãn của hai phần tử, không đổi một nhãn); hoán vị thì chỉ các phép hoán chuyển vị trí mới giữ được “đôi một khác nhau”.",
     "**Trực tiếp** lưu chính nghiệm (nhanh, phải tự giữ hợp lệ); **gián tiếp** lưu mã + bộ giải mã (luôn hợp lệ, tái dùng toán tử, nhưng không gian mã nhỏ hơn và **mất tính địa phương**: đổi hai đơn đầu chuỗi làm dịch ranh giới ngày phía sau).",
     "Năm tiêu chí: ① đầy đủ ② hợp lệ ③ địa phương ④ chi phí đánh giá ⑤ phong phú toán tử. Cả năm đều đo được trong một buổi chiều; ① nghiêm trọng nhất vì vi phạm nó khiến bạn **không bao giờ tới đích** mà không có cảnh báo.",
     "Bảng tiêu chí chỉ để loại phương án tệ và biết mình đang đánh đổi gì — **không thay được thực nghiệm**: chuỗi phẳng thua hai tiêu chí, thắng hai tiêu chí, nên phải đo.",
-    "Bộ giải mã chuỗi phẳng cho P2: nhồi tuần tự, sang ngày mới khi không vừa, hết ngày thì dừng và **cắt đuôi im lặng**; vị trí **không** reset khi sang ngày. Một hàm vừa chấm điểm vừa sinh hành động để điểm mô phỏng và điểm thật không trôi xa nhau.",
-    "Nguyên tắc “không ràng buộc sớm hơn mức cần thiết”: trên P2, quyết định ngày sớm (A = 338 673) thua chèn toàn cục (B = 357 940, +5,7 %) và chèn + LNS (C = 368 696, +8,9 %).",
+    "Bộ giải mã chuỗi phẳng cho P2: nhồi tuần tự, sang ngày mới khi không vừa, hết ngày thì dừng và **cắt đuôi im lặng** (điều kiện dừng `soNgayDaSang + 1 >= SO_NGAY_TOI_DA` tương đương `soNgayDaSang >= MAX_NEXTDAY` của mã thật, với `MAX_NEXTDAY = SO_NGAY_TOI_DA − 1`); vị trí **không** reset khi sang ngày. Một hàm vừa chấm điểm vừa sinh hành động để điểm mô phỏng và điểm thật không trôi xa nhau.",
+    "Nguyên tắc “không ràng buộc sớm hơn mức cần thiết”: trên P2, quyết định ngày sớm (A = 338 673) thua chèn toàn cục (B = 357 940, +5,7 %) và chèn + LNS (C = 368 696, +8,9 %). Đó là bằng chứng gợi ý chứ không phải thí nghiệm tách riêng một yếu tố: ba chiến lược còn khác nhau ở độ tinh vi của thủ tục dựng (B tốn thời gian gấp ~70 lần A), và phép đo này không đặt các biểu diễn A/B/C/D cạnh nhau.",
     "Bốn cạm bẫy: thiếu đầy đủ (điểm chạm trần), dư thừa (TSP: n → 2n mã cho một chu trình), đánh giá không tăng dần được, đổi biểu diễn giữa chừng. Hai mảng phải khớp nhau (seq và pos) là cơ hội để bug — đóng gói mọi thay đổi vào hàm."
   ],
 

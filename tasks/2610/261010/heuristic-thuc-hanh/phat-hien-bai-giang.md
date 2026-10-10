@@ -1,7 +1,8 @@
 # Chỗ bài giảng / đáp án có vẻ sai hoặc mâu thuẫn (phát hiện khi soạn bài thực hành)
 
 > Nguồn: các tác tử soạn nội dung đọc kỹ từng bài giảng + `dap-an.md` của khoá `heuristic-2` rồi đối chiếu bằng code.
-> **Chưa sửa gì ở bài giảng.** Nội dung thực hành đã dùng giá trị đúng. Mức tin cậy: các con số đều đã được tính lại bằng code; phần diễn giải do tác tử đánh giá — nên người soạn khoá xem lại từng mục.
+> **Cập nhật cuối 10/10:** danh sách này là bản phát hiện ban đầu. Việc rà soát độc lập + sửa bài giảng đã làm xong — xem `sua-bai-giang.md` (cùng thư mục): hầu hết mục dưới đây đã được kiểm chứng lại và **đã sửa trong bundle**; vài mục không xác nhận / chưa phân định được ghi ở đó.
+> ~~Chưa sửa gì ở bài giảng.~~ Nội dung thực hành đã dùng giá trị đúng. Mức tin cậy: các con số đều đã được tính lại bằng code; phần diễn giải do tác tử đánh giá — nên người soạn khoá xem lại từng mục.
 > Cách dùng: sửa ở nguồn `backend/course-content/heuristic-2/` (hoặc qua trang Quản lý khoá học), rồi nạp lại bundle.
 
 ## Kiểm tra đầu vào, Bài 1, Bài 2

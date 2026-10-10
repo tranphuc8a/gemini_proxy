@@ -1,0 +1,272 @@
+[
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "- **M2.** Tính được cận trên bằng ba kỹ thuật: nới lỏng LP, bỏ ràng buộc, cận tổ hợp.",
+  "new": "- **M2.** Tính được cận trên bằng ba kỹ thuật: nới lỏng LP, bỏ ràng buộc, nới lỏng Lagrange.",
+  "ly_do": "[MÂU THUẪN] M2 nêu 'cận tổ hợp' nhưng bài không có kỹ thuật nào tên đó; §2.1 (bảng 'Ba cách nới lỏng'), §5 và §11 ('BA KỸ THUẬT ① bỏ hẳn ràng buộc ② nới lỏng LP ③ nới lỏng Lagrange') đều liệt kê Lagrange."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "- **M3.** Dùng hằng số BHH để ước lượng cận dưới cho quãng đường.",
+  "new": "- **M3.** Dùng hằng số BHH để *ước lượng* quãng đường làm mức tham chiếu (không phải cận chứng minh được).",
+  "ly_do": "[LOGIC] Mục 18. BHH là kỳ vọng tiệm cận cho điểm rải đều ngẫu nhiên, không phải cận dưới chứng minh được: chính BT 18.4 (đáp án) cho BHH = 344 phút nhưng tuyến đo được 119,8 phút (< BHH), và §9 cạm bẫy 1 nói cận phải đến từ nới lỏng chứng minh được. Đồng bộ với g12 (2607/05 §3.5)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "Bài này dạy cách **tính ra cái trần đó** — dù bạn không biết lời giải tối ưu là gì, và không có cách nào tìm ra nó.",
+  "new": "> ℹ️ Ở sơ đồ trên, 33,9 M là *mức tham chiếu* $\\tau{=}7$ của §3.3 — một ước lượng, chưa phải cận chứng minh được. Cận chứng minh được của cùng ví dụ là 35,6 M (còn tối đa 8,1 %); chênh lệch giữa hai loại \"trần\" này là chủ đề của §3.3 và §9.\n\nBài này dạy cách **tính ra cái trần đó** — dù bạn không biết lời giải tối ưu là gì, và không có cách nào tìm ra nó.",
+  "ly_do": "[LOGIC] Mục 18/26. Sơ đồ mở đầu gọi 33,9 M (= 33 943 173, τ=7) là 'trần' và kết luận 'còn 3,0 %, sắp hết dư địa', nhưng τ=7 là kỳ vọng BHH, không chứng minh được; cận chứng minh được là 35 571 464 ⇒ (35 571 464 − 32 915 840)/32 915 840 = 8,07 % ≈ 8,1 %. Thêm một câu làm rõ (đồng bộ với bản sửa §3.3)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "📌 Độ hở là thứ **duy nhất** bạn đo được mà không cần biết OPT. Và nó là **giới hạn trên của phần bạn còn thiếu** — nên nó đủ để ra quyết định (§6).",
+  "new": "📌 Độ hở là thứ **duy nhất** bạn đo được mà không cần biết OPT. Và nó là **giới hạn trên của phần bạn còn thiếu** — nên nó đủ để ra quyết định (§6).\n\n> ℹ️ Cùng một khoảng cách 2 040 nhưng hai mẫu số: §1.4 chia cho $UB$ (2 040 / 16 740 = 12,2 %, tức \"dư địa nhiều nhất 12,2 % của tối ưu\"), còn công thức độ hở ở đây chia cho $LB$ (2 040 / 14 700 = 13,9 %). Cả hai đều là giới hạn trên hợp lệ của phần còn thiếu; từ đây bài dùng $(UB - LB)/LB$ (bảng §6 và §8).",
+  "ly_do": "[MÂU THUẪN] Mục 18. Cùng ví dụ 5 đơn: §1.4/§1.5 nói 'dư địa 12,2 %' (= 1 − 14 700/16 740 = 2 040/16 740 = 12,19 %) còn §2 và §8 nói 'độ hở 13,9 %' (= 2 040/14 700 = 13,88 %). Hai con số đúng nhưng khác mẫu số mà bài không nói; thêm một câu làm rõ, không đổi số."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "| $\\tau$ | Ý nghĩa | Cận trên |",
+  "new": "| $\\tau$ | Ý nghĩa | Cận trên / mức tham chiếu |",
+  "ly_do": "[LOGIC] Mục 18/26. Chỉ τ=0 là cận trên chứng minh được; τ=7 và τ=9,5 là mức tham chiếu (xem bản vá kế tiếp). Đổi tiêu đề cột cho đúng (đồng bộ với 2607/01 §6 do g12 sửa)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "| 7,0 | di chuyển tối ưu cỡ TSP-Manhattan | 33 943 173 |",
+  "new": "| 7,0 | *ước lượng* di chuyển cỡ TSP-Manhattan (BHH, §4) | 33 943 173 |",
+  "ly_do": "[LOGIC] Mục 18/26. 7,0 ≈ 1 156,4/158 = 7,32 là kỳ vọng BHH cho điểm rải đều, không phải 'di chuyển tối ưu' của 158 nhà đã chọn lọc nên 33 943 173 không chứng minh được là cận trên."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "Lời giải đạt **32 915 840** = **98,6 %** cận $\\tau{=}9{,}5$ và **97,0 %** cận $\\tau{=}7$.",
+  "new": "Lời giải đạt **32 915 840** = **92,5 %** cận $\\tau{=}0$, **97,0 %** mức tham chiếu $\\tau{=}7$ và **98,6 %** mức tham chiếu $\\tau{=}9{,}5$.\n\n⚠️ Chỉ dòng $\\tau{=}0$ là cận trên **chứng minh được**. $\\tau{=}9{,}5$ chính là mức di chuyển trung bình của lời giải đang xét (1 510 / 158 ≈ 9,56), còn $\\tau{=}7$ là kỳ vọng BHH (§4): một lời giải khác có thể đi ít hơn và vượt cả hai con số ấy. Vì vậy hai dòng này chỉ là **mức tham chiếu**, không phải cận (§9, cạm bẫy 1).",
+  "ly_do": "[LOGIC] Mục 18/26 (g12 chuyển sang). Tính lại: 32 915 840/35 571 464 = 92,53 %; /33 943 173 = 96,97 %; /33 388 769 = 98,58 %. Bài gọi cả ba là 'cận trên' trong khi §9 cạm bẫy 1 nói cận phải đến từ nới lỏng chứng minh được; τ=9,5 lấy từ quãng đường thật của chính lời giải (1 510/158 = 9,56) nên lời giải khác có thể vượt. Chỉ τ=0 hợp lệ."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "> **Cách đọc:** \"98,6 % cận $\\tau{=}9{,}5$\" nghĩa là:",
+  "new": "> **Cách đọc:** \"98,6 % mức tham chiếu $\\tau{=}9{,}5$\" nghĩa là:",
+  "ly_do": "[NHỎ] Đồng bộ cách gọi với bản vá trên (mức tham chiếu, không phải cận)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "## 4. Kỹ thuật 2 — Cận dưới cho quãng đường (hằng số BHH)",
+  "new": "## 4. Kỹ thuật 2 — Ước lượng quãng đường (hằng số BHH, không phải cận dưới)",
+  "ly_do": "[LOGIC] Mục 18. BHH (β√(An)) là giá trị kỳ vọng tiệm cận của tour tối ưu cho n điểm rải đều ngẫu nhiên — một ước lượng, không phải cận dưới: với 14 điểm đã chọn, BHH = 0,92·√(10⁴·14) = 344,2 phút nhưng tuyến đo được 119,8 phút (đáp án 18.4). Đồng bộ với tiêu đề 2607/05 §3.5 do g12 sửa."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "| **Manhattan ($L_1$)** | **≈ 0,92** |",
+  "new": "| **Manhattan ($L_1$)** | **≈ 0,92** |\n\n> ⚠️ **Đây là ước lượng, không phải cận.** Định lý nói về *kỳ vọng tiệm cận* của $n$ điểm **rải đều ngẫu nhiên**. Với một bộ điểm cụ thể — nhất là điểm đã được *chọn* để gần nhau — tuyến tối ưu có thể ngắn hơn hẳn: ở BT 18.4, BHH cho 344 phút nhưng tuyến đo được chỉ 119,8 phút. Chỉ dùng làm mức tham chiếu và nghi ngờ nó khi dữ liệu không rải đều.",
+  "ly_do": "[LOGIC] Mục 18. Thêm điều kiện áp dụng/giới hạn của BHH; bằng chứng là chính số liệu của đáp án 18.4 (344 so với 119,8) và §9 cạm bẫy 1."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "$$L^\\star \\approx 0{,}92\\sqrt{10\\,000 \\times 158} \\approx 1\\,157 \\text{ phút}$$",
+  "new": "$$L^\\star \\approx 0{,}92\\sqrt{10\\,000 \\times 158} \\approx 1\\,156 \\text{ phút}$$",
+  "ly_do": "[SỐ] Mục 18. 0,92 × √(10 000 × 158) = 0,92 × 1 256,98 = 1 156,4 (không phải 1 157). Đồng bộ với g12 (2607/05 §3.5: 1 157 → 1 156)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "Lời giải đi **1 510 phút** → cao hơn cận TSP **31 %**.",
+  "new": "Lời giải đi **1 510 phút** → cao hơn ước lượng BHH **31 %**.",
+  "ly_do": "[LOGIC] Mục 18. 1 156 là ước lượng BHH, không phải cận TSP (1 510/1 156,4 = 1,306 nên '31 %' vẫn đúng)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "Dư địa còn lại: $1510 - 1157 = 353$ phút. Với giá mờ $\\lambda = 1420$:",
+  "new": "Chênh so với ước lượng BHH: $1510 - 1156 = 354$ phút. Với giá mờ $\\lambda = 1420$:",
+  "ly_do": "[SỐ] Mục 18. 1 510 − 1 156 = 354 (theo 1 156,4: 353,6). Gọi là 'chênh so với ước lượng' thay vì 'dư địa' vì 1 156 không phải cận."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "$$353 \\times 1420 \\approx 501\\,000 \\text{ điểm} = 1{,}5\\%$$",
+  "new": "$$354 \\times 1420 \\approx 503\\,000 \\text{ điểm} = 1{,}5\\%$$",
+  "ly_do": "[SỐ] 354 × 1 420 = 502 680 ≈ 503 000; 503 000/32 915 840 = 1,53 % (vẫn 1,5 %)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "> **Vậy toàn bộ dư địa còn lại của bài toán là ~1,5 % từ đường đi + ~1,5 % từ chọn lọc ≈ 3 %.**",
+  "new": "> **Vậy, nếu hai mức tham chiếu ở §3.3 và §4 đáng tin, dư địa còn lại ước chừng ~1,5 % từ đường đi + ~1,5 % từ chọn lọc ≈ 3 %.**",
+  "ly_do": "[LOGIC] Mục 18. 'Toàn bộ dư địa còn lại' là khẳng định chắc chắn nhưng dựa trên hai mức không chứng minh được (τ=9,5 là quãng đường thực của chính lời giải; BHH áp cho 158 nhà đã chọn lọc). Hạ xuống 'ước chừng, nếu các mức tham chiếu đáng tin'. Cận chứng minh được (τ=0) cho khoảng cách 8,1 %."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "> Biết con số này, bạn biết ngay: **không đáng bỏ thêm một tuần**. Đó là giá trị của cận trên.",
+  "new": "> Biết con số này, bạn biết ngay: ≈ 3 % nằm ở dải 2–5 % của bảng §6 (**cần tinh chỉnh**, sát ngưỡng \"cân nhắc dừng\" 2 %) — quét tham số thì đáng, còn viết thêm thuật toán mới thì **không đáng bỏ thêm một tuần**. Đó là giá trị của việc biết trần.",
+  "ly_do": "[MÂU THUẪN] Mục 18/quyết định thống nhất số 1. §6 (chuẩn): 2–5 % = 'cần tinh chỉnh', chỉ < 2 % mới 'cân nhắc DỪNG'; nhưng §4.3 kết luận thẳng 'không đáng bỏ thêm một tuần' cho ≈ 3 %. Viết lại cho khớp bảng §6 (không đổi ngưỡng bảng)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "- Với $n = 5$, mỗi món đáng trung bình ~3 600 trên tổng 14 700 → một món dở chiếm **cỡ 14 %** tổng điểm.",
+  "new": "- Với $n = 5$, mỗi món đáng trung bình ~3 600, tức cỡ 24 % tổng 14 700 → phần dở dang của một món có thể chiếm cỡ **14 %** (ở đây: 2 040 / 14 700 = 13,9 %).",
+  "ly_do": "[SỐ] Mục 18. Trung bình món = (6 000+4 500+4 200+2 400+1 000)/5 = 3 620; 3 600/14 700 = 24,5 %, không phải 14 %. Con số 14 % là phần CẮT DỞ của D (2 040/14 700 = 13,9 %), không phải cả một món."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "### ❌ Cạm bẫy 4 — Ngừng tối ưu chỉ vì cận trên gần\n\nNếu cận **lỏng**, khoảng cách nhỏ chưa chắc nghĩa là bạn gần tối ưu. Hãy kiểm tra độ chặt của cận trước (bằng cách so với nghiệm tối ưu trên bài nhỏ).",
+  "new": "### ❌ Cạm bẫy 4 — Đọc khoảng cách lớn thành \"còn xa tối ưu\"\n\nNếu cận **lỏng**, khoảng cách lớn chưa chắc nghĩa là bạn còn xa tối ưu — phần hở có thể toàn là do cận. Hãy kiểm tra độ chặt của cận trước (bằng cách so với nghiệm tối ưu trên bài nhỏ). Chiều ngược lại thì chắc: với một cận trên **hợp lệ**, khoảng cách nhỏ luôn nghĩa là gần tối ưu (vì $OPT \\le UB$). Điều đáng ngại là con số *tưởng* là cận mà không chứng minh được (như hai mức tham chiếu ở §3.3, hay ước lượng BHH ở §4) — quyết định dừng dựa trên chúng là liều.",
+  "ly_do": "[LOGIC] Mục 18. Với UB hợp lệ: OPT − LB ≤ UB − LB, nên khoảng cách NHỎ luôn kéo theo gần tối ưu; cận lỏng chỉ làm khoảng cách PHÌNH ra (đúng chiều §8.2: 'cận đã lỏng 30 % … con số còn cách 25 % chẳng nói lên điều gì'). Câu cũ nói ngược. Đảo lại cho đúng; đưa vào chỗ nguy hiểm thật (mức không chứng minh được)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "CẬN DƯỚI CHO QUÃNG ĐƯỜNG — hằng số BHH",
+  "new": "ƯỚC LƯỢNG QUÃNG ĐƯỜNG (không phải cận dưới) — hằng số BHH",
+  "ly_do": "[LOGIC] Mục 18. Đồng bộ với tiêu đề §4 đã sửa."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "  cận trên τ=7   : 33 943 173      (di chuyển tối ưu)",
+  "new": "  tham chiếu τ=7 : 33 943 173      (ước lượng BHH, không phải cận)",
+  "ly_do": "[LOGIC] Mục 18/26. Đồng bộ với §3.3: τ=7 không chứng minh được là cận trên."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "  cận trên τ=9,5 : 33 388 769      (di chuyển thực tế)",
+  "new": "  tham chiếu τ=9,5: 33 388 769     (di chuyển thực của chính lời giải, không phải cận)",
+  "ly_do": "[LOGIC] Mục 18/26. Đồng bộ với §3.3: τ=9,5 là quãng đường thực của lời giải."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "  lời giải       : 32 915 840  = 98,6 % / 97,0 %",
+  "new": "  lời giải       : 32 915 840  = 92,5 % cận τ=0 (cận thật) · 97,0 % τ=7 · 98,6 % τ=9,5",
+  "ly_do": "[SỐ] 32 915 840/35 571 464 = 92,53 % (τ=0, cận chứng minh được); 97,0 % và 98,6 % chỉ là so với mức tham chiếu."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "  quãng đường thực tế 1 510 vs cận BHH 1 157 → dư địa 353 phút ≈ 1,5 %",
+  "new": "  quãng đường thực tế 1 510 vs ước lượng BHH 1 156 → chênh 354 phút ≈ 1,5 %",
+  "ly_do": "[SỐ] 1 156 (không phải 1 157); 354 (không phải 353); BHH là ước lượng, không phải cận."
+ },
+ {
+  "bai": "khoa-hoc/bai-18-can-tren-can-duoi",
+  "old": "  → TỔNG dư địa còn lại ≈ 3 %  → quyết định: KHÔNG đáng đầu tư thêm tuần nữa",
+  "new": "  → TỔNG dư địa còn lại ước chừng ≈ 3 % (dải 2–5 %: tinh chỉnh) → KHÔNG đáng đầu tư thêm một tuần cho thuật toán mới",
+  "ly_do": "[MÂU THUẪN] Đồng bộ với §4.3 và bảng §6 (2–5 % = cần tinh chỉnh)."
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "             ●   ●           ●               ●   ●           ●",
+  "new": "             ●   ●           ●           ●   ●           ●",
+  "ly_do": "[NHỎ] Sơ đồ §1: hạt phải ở vị trí 1, 2, 5, 8, 9, 12 nhưng dòng ● có khoảng cách 4·12·16·4·12 (cột 13·17·29·45·49·61) so với nhãn 0..12 cách đều 4 cột (cột nhãn = 9+4k; từ '10' lệch +1) — nên ● thứ tư..sáu nằm dưới 9, 10 và (ngoài) 12. Sửa khoảng giữa hạt 3 và hạt 4 từ 15 xuống 11 khoảng trắng: ● ở cột 13·17·29·41·45·57 = vị trí 1·2·5·8·9·12."
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "| Số biến của bài toán sau khi rút gọn | **358** (hai dãy, mỗi dãy ≤ 180 số) |",
+  "new": "| Số biến của bài toán sau khi rút gọn | **358** (hai dãy, mỗi dãy ≤ 180 số; $H+W=358$ ở test lớn nhất đo được, seed 1015 — lưới đủ $180\\times180$ sẽ là 360) |",
+  "ly_do": "[MÂU THUẪN] Mục 19. Dòng trên tính C(32 400, 15 905) cho lưới ĐỦ 180×180 (log10 = 9 748,7 ≈ 9749 ✓) nhưng '358' lấy từ test lớn nhất (case-2609/01 §3: seed 1015, N=15 905, H+W=358); lưới 180×180 đầy đủ có 2·180 = 360 phần tử hai dãy. Làm rõ nguồn con số, không đổi số."
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "Lưới $180 \\times 180$, 15 905 hạt:",
+  "new": "Lưới tới $180 \\times 180$, 15 905 hạt (số cấu hình bên dưới tính cho lưới đủ $180 \\times 180$):",
+  "ly_do": "[MÂU THUẪN] Đi kèm bản vá '358': test có 15 905 hạt là test H+W=358 (case-2609/01 §2.3/§3), không phải lưới đủ 180×180."
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "Đo thực tế: **hội tụ sau ≤ 5 vòng**; chạy từ 4 điểm xuất phát có cấu trúc và 12 điểm xuất phát ngẫu nhiên đều ra cùng một giá trị, sai khác < **0,001 %**.",
+  "new": "Đo thực tế: **hội tụ sau ≤ 5 vòng**; chạy từ 4 điểm xuất phát có cấu trúc và 12 điểm xuất phát ngẫu nhiên đều ra cùng một giá trị, sai khác < **0,001 %**.\n\n> ⚠️ Với hàm lõm, Frank–Wolfe chỉ bảo đảm dừng ở một **đỉnh** (cực trị cục bộ), không bảo đảm đó là cực tiểu toàn cục: \"chính xác\" ở đây là bằng chứng thực nghiệm (16 điểm xuất phát cho cùng giá trị), chưa phải chứng minh.",
+  "ly_do": "[LOGIC] Mục tự tìm. Cực tiểu hoá hàm lõm trên đa diện nói chung không giải chính xác được bằng tuyến tính hoá lặp (mỗi điểm dừng là một đỉnh, có thể là cực tiểu cục bộ); 'nới lỏng là chặt' chỉ nói đáp án nguyên tồn tại ở đỉnh, không nói FW tìm được đỉnh tốt nhất. Bài đã có bằng chứng thực nghiệm nên chỉ hạ mức khẳng định, không xoá. (Đồng bộ với g12: 'FW toàn cục' ở case-2609.)"
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "giải chính xác bằng Frank–Wolfe trong ≤ 5 vòng.",
+  "new": "giải bằng Frank–Wolfe trong ≤ 5 vòng (hàm lõm: thực nghiệm ra cùng một giá trị từ mọi điểm xuất phát, chưa chứng minh là toàn cục).",
+  "ly_do": "[LOGIC] Đồng bộ với chú thích ở §6.2: 'giải chính xác' vượt quá bằng chứng cho cực tiểu hoá hàm lõm."
+ },
+ {
+  "bai": "khoa-hoc/bai-18b-cau-truc-ham-muc-tieu",
+  "old": "**Câu 1 (⭐).** Sáu hạt ở $\\{0, 3, 4, 10\\}$ trên trục số.",
+  "new": "**Câu 1 (⭐).** Bốn hạt ở $\\{0, 3, 4, 10\\}$ trên trục số.",
+  "ly_do": "[NHỎ] Mục 19. Đề nói 'sáu hạt' nhưng chỉ liệt kê bốn vị trí. Với bốn hạt: cách 1 (6 cặp) = 3+4+10+1+7+6 = 31; cách 2 (10 khe, S_t = 1,1,1,2,3,3,3,3,3,3; ΣS_t(4−S_t) = 3+3+3+4+3·6) = 31 — khớp, đúng tinh thần câu hỏi."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "struct Rng {\n    uint64_t s;\n    explicit Rng(uint64_t seed = 88172645463325252ULL) {",
+  "new": "/* Không có #include <cstdint> nên tự đặt tên kiểu (đừng đặt trùng uint64_t nếu file có include) */\ntypedef unsigned long long u64;\ntypedef unsigned int       u32;\n\nstruct Rng {\n    u64 s;\n    explicit Rng(u64 seed = 88172645463325252ULL) {",
+  "ly_do": "[MÃ] Mục 20. g++ -std=c++17 -Wall -Wextra trên đoạn gốc (không include): \"error: 'uint64_t' does not name a type\" (+ 'uint32_t'); §9 lại nói 'KHÔNG CÓ #include NÀO'. Đổi sang typedef tự đặt u64/u32; đã biên dịch sạch với -Wall -Wextra -Wshadow -Wconversion."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "    uint64_t next() {",
+  "new": "    u64 next() {",
+  "ly_do": "[MÃ] Đi kèm bản vá typedef u64."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "    uint32_t below(uint32_t n) { return (uint32_t)(next() % n); }",
+  "new": "    u32 below(u32 n) { return (u32)(next() % n); }",
+  "ly_do": "[MÃ] Đi kèm bản vá typedef u32."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "OpBudget nganSach(30000000);         /* hieu chuan mot lan tren may dev */",
+  "new": "OpBudget nganSach{30000000};         /* hieu chuan mot lan tren may dev; dung {} vi OpBudget la aggregate (C++17); 30 000 000 / 100 = dung 300 000 vong */",
+  "ly_do": "[MÃ] Mục 20. g++ -std=c++17: \"no matching function for call to 'OpBudget::OpBudget(int)'\" (khởi tạo aggregate bằng ngoặc tròn chỉ hợp lệ từ C++20; g++ 14 -std=c++20 biên dịch được). Dùng {}: biên dịch sạch với C++17 và -Wall -Wextra -Wshadow -Wconversion."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "    bool spend(long long cost = 1) { left -= cost; return left > 0; }",
+  "new": "    bool spend(long long cost = 1) { left -= cost; return left >= 0; }",
+  "ly_do": "[MÃ] Mục 20. Chạy thật: với left = 30 000 000 và spend(100), bản `left > 0` chạy 299 999 vòng (vòng thứ 300 000 làm left = 0 bị từ chối dù ngân sách vừa đủ); `left >= 0` chạy đúng 300 000 vòng (left kết thúc −100)."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "static int    topIdx[K];\nstatic double topVal[K];",
+  "new": "static int    topIdx[K];\nstatic double topVal[K];   /* giam dan; v LON hon = TOT hon. Truoc moi luot phai gan topVal[q] = -1e300.\n                              Muon K NHO nhat (nhu K nha gan nhat o §1.1): push(j, -khoang_cach) */",
+  "ly_do": "[MÃ] Mục 20. Chạy thật với 8 khoảng cách của §1.1 (17 4 23 9 4 31 12 6, K=3): push(j, dist) giữ 3 giá trị LỚN nhất = 31, 23, 17 (xa nhất, ngược §1.1); push(j, −dist) với mảng static khởi tạo 0 không nhận phần tử nào (v > 0 sai). Với topVal = −1e300 trước và push(j, −dist) ra 4, 4, 6 (nhà ②, ⑤, ⑧) đúng §1.1. Ghi rõ chiều và khởi tạo trong chú thích."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "| `exp` | `<cmath>` | Threshold Accepting (Bài 13 §7.3) |",
+  "new": "| `exp` | `<cmath>` | Threshold Accepting (Bài 13 §6.3) |",
+  "ly_do": "[THAM CHIẾU] Bài 13 §6.3 là 'Chấp nhận theo ngưỡng (Threshold Accepting)'; §7 là 'Ba dấu hiệu SA đang hỏng'."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "Kỹ thuật này dùng cả trong bảng tabu (Bài 14 §3.3).",
+  "new": "Kỹ thuật này dùng cả trong bảng tabu (Bài 14 §3.2).",
+  "ly_do": "[THAM CHIẾU] Dấu thời gian `tabuUntil[]` (+ cái bẫy reset `buoc`) nằm ở Bài 14 §3.2 'Cài đặt bảng cấm O(1)'; §3.3 là 'Thời hạn cấm (tabu tenure)'."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "Stack chỉ có **1 024 KB**. Một bảng thì vừa.",
+  "new": "Stack chỉ có **1 024 KB** (ở đây 1 KB = 1 024 byte nên 640 000 byte là 625 KB; ở §6 các mảng ghi theo 1 KB = 1 000 byte cho tròn — cùng mảng ấy là \"640 KB\"). Một bảng thì vừa.",
+  "ly_do": "[MÂU THUẪN] Mục 20 (KB vs KiB). §1.2 ghi 625 KB/156 KB (640 000/1 024 = 625; 160 000/1 024 = 156,25) còn §6.1–6.2 ghi 640 KB/160 KB (khớp 2607/03: 160 000 B, 19 200 B, tổng ≈ 0,22 MB thập phân). Cả hai đều đúng theo quy ước riêng; thêm một câu nói rõ, không đổi số."
+ },
+ {
+  "bai": "khoa-hoc/bai-19-ky-thuat-cpp",
+  "old": "3. Chừa hệ số an toàn ≥ 2                                 → mục tiêu ≤ 40 ms trên dev",
+  "new": "3. Chừa hệ số an toàn ≥ 2 (= giới hạn ÷ thời gian dev)    → mục tiêu ≤ 40 ms trên dev (100 ÷ 40 = 2,5)\n   ⚠️ Đây CÙNG là lề \"chậm 2–3 lần\" của bước 2, không nhân thêm lề thứ hai.",
+  "ly_do": "[LOGIC] Mục 20. Nếu nhân chồng 'chậm 2–3 lần' với 'an toàn ≥ 2' thì dev phải ≤ 100/(3·2) ≈ 17 ms, không phải 40 ms; còn 100/40 = 2,5 và số liệu thật 100/37,8 = 2,6× (Bài 22: 'hệ số an toàn = giới hạn ÷ thời gian thật, 2,6×') chỉ khớp khi hai hệ số là một lề. Ghi rõ."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "$UB = 10\\,500 + 0{,}179 \\times 4\\,200 = \\mathbf{11\\,250}$",
+  "new": "$UB = 10\\,500 + \\tfrac{5}{28} \\times 4\\,200 = 10\\,500 + 750 = \\mathbf{11\\,250}$",
+  "ly_do": "[SỐ] 5/28 × 4 200 = 750 đúng; 0,179 × 4 200 = 751,8 ⇒ 10 500 + 751,8 = 11 251,8 ≠ 11 250 ghi bên cạnh. LP (mã canTrenLP chạy thật) = 11 250,0; nghiệm nguyên tốt nhất (duyệt 32 tập) = 10 500; độ hở = 750/10 500 = 7,14 % ✓."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "$n=300$ ~0,04 %.",
+  "new": "$n=300$ ~0,02 %.",
+  "ly_do": "[SỐ] Mục 18. Mô phỏng lại bằng bộ sinh `tui` (w∈[5,60], p∈[5,100], B=40 %Σw; DP tối ưu; khớp 0,113 % ≈ 0,1135 % của Bài 18 §3.2 ở n=100): n=10 → 4,8 %; n=30 → 0,87 %; n=100 → 0,113 %; n=300 → 0,016 % (4 000/3 000/1 500/1 500 bộ). 0,04 % là ngoại suy 1/n từ 0,11 % (0,11/3 = 0,037), thực tế giảm nhanh hơn 1/n."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "→ tỉ lệ giảm như $O(1/n)$.",
+  "new": "→ tỉ lệ giảm *ít nhất* như $O(1/n)$ (đo thực tế còn nhanh hơn: từ $n=100$ lên $n=300$ giảm cỡ 7 lần, không chỉ 3).",
+  "ly_do": "[LOGIC] 'Bị chặn bởi giá trị một món' chỉ cho cận trên O(1/n); số đo cho giảm nhanh hơn (0,113 % → 0,016 % khi n ×3)."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**Kết luận:** tuyến đã rất chặt; dư địa nằm ở **chọn lọc**, không phải ở định tuyến.",
+  "new": "**Kết luận:** BHH ở đây **không phải cận dưới** (119,8 ≪ 344), nên phép so này *không* chứng minh tuyến đã chặt; nó chỉ cho thấy độ ngắn của tuyến chủ yếu đến từ việc **chọn lọc** những điểm gần nhau. Muốn biết còn rút được bao nhiêu ở định tuyến, phải so tuyến với TSP tối ưu của chính 14 điểm đã chọn (14 điểm giải chính xác được bằng quy hoạch động bitmask, cỡ $14^2 \\cdot 2^{14} \\approx 3{,}2$ triệu phép) — trước đó chưa đủ dữ kiện để chọn giữa tối ưu tuyến và tối ưu chọn lọc.",
+  "ly_do": "[LOGIC] Mục 18. Đáp án tự nói BHH giả định phân bố đều và đo được (119,8) thấp hơn BHH (344) nhiều lần ⇒ BHH không phải cận dưới; kết luận 'tuyến đã rất chặt' không suy ra được từ việc BHH (mốc sai) lớn hơn đo được. Cần mốc đúng (TSP tối ưu của 14 điểm). Tính lại: 0,92·√140 000 = 344,2; ×13/14 = 319,6 ✓."
+ },
+ {
+  "bai": "khoa-hoc/dap-an",
+  "old": "**19.4** `OpBudget` cho SA: sau hiệu chuẩn, thời gian **ổn định hơn nhiều** khi máy có tải nền (vì số phép tính cố định, chỉ tốc độ thay đổi). Nhưng thời gian **thực** vẫn dao động",
+  "new": "**19.4** `OpBudget` cho SA: sau hiệu chuẩn, thời gian **ít phụ thuộc vào dữ liệu** hơn (số phép tính cố định, chỉ tốc độ máy thay đổi). Nhưng khi máy có tải nền hay khi đổi máy, thời gian **thực** vẫn dao động",
+  "ly_do": "[LOGIC] Câu cũ tự mâu thuẫn: nói thời gian 'ổn định hơn nhiều khi máy có tải nền' rồi ngay sau đó 'vẫn dao động'. Khối lượng phép tính cố định thì thời gian tỉ lệ với tốc độ máy: tải nền làm nó dao động; điều ổn định hơn là sự phụ thuộc vào dữ liệu."
+ }
+]

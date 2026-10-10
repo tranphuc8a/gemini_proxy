@@ -1,0 +1,176 @@
+[
+ {
+  "bai": "khoa-hoc/gioi-thieu",
+  "old": "| Phần | Nội dung | Số bài | Thời lượng |\n|:--:|---|:--:|:--:|\n| **0** | [Tổng quan & chuẩn bị](00-tong-quan/) | 4 tài liệu | 2 h |\n| **1** | [Tư duy tối ưu tổ hợp](phan-1-tu-duy-toi-uu/) | 4 bài + 1 mở rộng | 10 h |\n| **2** | [Xây dựng nghiệm](phan-2-xay-dung-nghiem/) | 4 bài | 12 h |\n| **3** | [Cải thiện nghiệm — Local Search](phan-3-cai-thien-nghiem/) | 4 bài | 12 h |\n| **4** | [Metaheuristic](phan-4-metaheuristic/) | 5 bài + 1 mở rộng | 16 h |\n| **5** | [Kỹ năng thực chiến](phan-5-ky-nang-thuc-chien/) | 3 bài + 3 mở rộng | 8 h |\n| **6** | [Đồ án cuối khoá](phan-6-capstone/) | 3 bài | 12 h |\n| | **Tổng** | **23 bài + 5 mở rộng** | **~72 h** (mở rộng: +13 h) |\n\nHọc đều 6 h/tuần → **12 tuần**. Học dồn 20 h/tuần → **4 tuần**.",
+  "new": "| Phần | Nội dung | Số bài | Thời lượng (bài lõi) |\n|:--:|---|:--:|:--:|\n| **0** | [Tổng quan & chuẩn bị](00-tong-quan/) | 4 tài liệu | 2 h |\n| **1** | [Tư duy tối ưu tổ hợp](phan-1-tu-duy-toi-uu/) | 4 bài + 1 mở rộng | 10 h |\n| **2** | [Xây dựng nghiệm](phan-2-xay-dung-nghiem/) | 4 bài | 12 h |\n| **3** | [Cải thiện nghiệm — Local Search](phan-3-cai-thien-nghiem/) | 4 bài | 11 h |\n| **4** | [Metaheuristic](phan-4-metaheuristic/) | 5 bài + 1 mở rộng | 14 h |\n| **5** | [Kỹ năng thực chiến](phan-5-ky-nang-thuc-chien/) | 3 bài + 3 mở rộng | 8 h |\n| **6** | [Đồ án cuối khoá](phan-6-capstone/) | 3 bài | 11 h |\n| | **Tổng** | **23 bài + 5 mở rộng** | **~68 h** (= 2 h Phần 0 + 66 h bài lõi) · mở rộng: +13 h → ≈ 81 h nếu làm cả |\n\n*Cách tính:* mỗi số ở cột cuối là tổng thời lượng ghi ở tiêu đề các bài **lõi** của phần đó (Phần 3: 2,5 + 3 + 3 + 2,5 = 11 h; Phần 4: 3 + 2,5 + 2,5 + 3 + 3 = 14 h; Phần 6: 3 + 6 + 2 = 11 h). Năm bài mở rộng tính riêng: 4B 2 h + 17B 3 h + 18B 3 h + 19B 2,5 h + 20B 2,5 h = 13 h.\n\nHọc đều ~6 h/tuần → khoảng **12 tuần** (68 ÷ 6 ≈ 11,3; làm cả bài mở rộng: 81 ÷ 6 ≈ 13,5 → khoảng 14 tuần). Học dồn 20 h/tuần → khoảng **4 tuần** (68 ÷ 20 = 3,4; kể cả bài mở rộng ≈ 4,1).",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #1) [SỐ] Tổng giờ phải bằng tổng giờ ghi ở tiêu đề các bài. Cộng lại từ tiêu đề: lõi Phần 1 = 2,5+2+2,5+3 = 10; Phần 2 = 3+3,5+3+2,5 = 12; Phần 3 = 2,5+3+3+2,5 = 11 (bảng ghi 12); Phần 4 = 3+2,5+2,5+3+3 = 14 (bảng ghi 16); Phần 5 = 2,5+2,5+3 = 8; Phần 6 = 3+6+2 = 11 (bảng ghi 12) → 66 h lõi + 2 h Phần 0 = 68 h (bảng ghi 72). Bài mở rộng 2+3+3+2,5+2,5 = 13 h (khớp '+13 h') → 81 h nếu làm cả. Thời gian: 68/6 = 11,3 tuần (≈ 12 tuần, giữ), 81/6 = 13,5, 68/20 = 3,4 (≈ 4 tuần, giữ). Không đổi giờ từng bài; nêu rõ cách tính (lõi / +Phần 0 / +mở rộng)."
+ },
+ {
+  "bai": "khoa-hoc/gioi-thieu",
+  "old": "1. **Không có con số nào là ước lượng.** Mọi tuyên bố",
+  "new": "1. **Mọi con số là số đo hoặc tính được từ số đo; chỗ nào là ước lượng (Bài 2) đều được nói rõ là ước lượng.** Mọi tuyên bố",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #3) Nguyên tắc 1 nói 'không có con số nào là ước lượng' quá mức: Bài 2 chủ ý dùng ước lượng bậc độ lớn (10⁹ phép/giây, tuổi vũ trụ…). Thay đúng câu điều phối chốt; phần còn lại của câu giữ nguyên."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "> **Thời lượng:** ~72 giờ (23 bài giảng + 6 lab lớn + 1 đồ án) · **+13 giờ** cho 5 bài mở rộng",
+  "new": "> **Thời lượng:** ~68 giờ (23 bài giảng + 6 lab lớn + 1 đồ án; = 2 h Phần 0 + 66 h tổng thời lượng ghi ở tiêu đề 23 bài lõi) · **+13 giờ** cho 5 bài mở rộng (≈ 81 giờ nếu làm cả)",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #1) [SỐ] Tổng giờ ở đầu Đề cương phải khớp tiêu đề các bài: lõi 10/12/11/14/8/11 = 66 h, + 2 h Phần 0 = 68 h (không phải 72); mở rộng 2+3+3+2,5+2,5 = 13 h → 81 h nếu làm cả. Cách tính nêu rõ trong dòng."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "| Tuần | Bài | Chủ đề | Lab / Sản phẩm | Giờ |\n|:--:|:--:|---|---|:--:|\n| 1 | 1–2 | Mô hình hoá · Vì sao khó | Mô hình hoá P0 & P1 bằng văn bản + code kiểm tra tính hợp lệ | 6 |\n| 2 | 3–4 | Biểu diễn nghiệm · Đo lường | **Lab 1+2:** bộ sinh dữ liệu + bộ chấm cho P1 | 6 |\n| 3 | 5 | Greedy & chỉ số tham lam | **Lab 3a:** 4 biến thể greedy cho P0, P1 | 6 |\n| 4 | 6 | **Giá mờ (shadow price)** | **Lab 3b:** greedy Lagrange, đối chiếu cận LP | 6 |\n| 5 | 7–8 | Chèn / gom cụm · GRASP | **Lab 3c:** cheapest-insertion + GRASP đa khởi động | 6 |\n| 6 | 9–10 | Lân cận · Delta evaluation | **Lab 4a:** leo đồi cho TSP, đo nước đi/giây | 6 |\n| 7 | 11–12 | Toán tử kinh điển · Cực trị cục bộ | **Lab 4b:** 2-opt + Or-opt + candidate list | 6 |\n| 8 | 13–14 | Simulated Annealing · Tabu | **Lab 5a:** SA cho P1, quét lịch nhiệt độ | 6 |\n| 9 | 15–16 | ILS & VNS · Beam Search | **Lab 5b:** beam search cho P2 | 6 |\n| 10 | 17–18 | LNS/ALNS · Cận trên | **Lab 5c + Lab 6:** ALNS cho P2 + cận LP | 6 |\n| 11 | 19–21 | Kỹ thuật C++ · Quy trình · Mổ xẻ đề | Khởi động đồ án | 6 |\n| 12 | 22–23 | Bảy phiên bản · Tự đánh giá | **Đồ án cuối khoá** | 12 |",
+  "new": "| Tuần | Bài | Chủ đề | Lab / Sản phẩm | Giờ |\n|:--:|:--:|---|---|:--:|\n| 1 | 1–2 | Mô hình hoá · Vì sao khó | Mô hình hoá P0 & P1 bằng văn bản + code kiểm tra tính hợp lệ | 6,5 |\n| 2 | 3–4 | Biểu diễn nghiệm · Đo lường | **Lab 1+2:** bộ sinh dữ liệu + bộ chấm cho P1 | 5,5 |\n| 3 | 5 | Greedy & chỉ số tham lam | **Lab 3a:** 4 biến thể greedy cho P0, P1 | 3 |\n| 4 | 6 | **Giá mờ (shadow price)** | **Lab 3b:** greedy Lagrange, đối chiếu cận LP | 3,5 |\n| 5 | 7–8 | Chèn / gom cụm · GRASP | **Lab 3c:** cheapest-insertion + GRASP đa khởi động | 5,5 |\n| 6 | 9–10 | Lân cận · Delta evaluation | **Lab 4a:** leo đồi cho TSP, đo nước đi/giây | 5,5 |\n| 7 | 11–12 | Toán tử kinh điển · Cực trị cục bộ | **Lab 4b:** 2-opt + Or-opt + candidate list | 5,5 |\n| 8 | 13–14 | Simulated Annealing · Tabu | **Lab 5a:** SA cho P1, quét lịch nhiệt độ | 5,5 |\n| 9 | 15–16 | ILS & VNS · Beam Search | **Lab 5b:** beam search cho P2 | 5,5 |\n| 10 | 17–18 | LNS/ALNS · Cận trên | **Lab 5c + Lab 6:** ALNS cho P2 + cận LP | 5,5 |\n| 11 | 19–21 | Kỹ thuật C++ · Quy trình · Mổ xẻ đề | Khởi động đồ án | 8,5 |\n| 12 | 22–23 | Bảy phiên bản · Tự đánh giá | **Đồ án cuối khoá** | 8 |\n\n*Cột Giờ = tổng thời lượng ghi ở tiêu đề các bài trong tuần (tuần 1 cộng thêm 2 h Phần 0). Tổng = 68 h (2 h Phần 0 + 66 h bài lõi), trung bình ≈ 5,7 h/tuần; nhịp học đều ≈ 6 h/tuần, riêng tuần 11–12 nặng hơn (8,5 và 8 h) vì có đồ án. Bài mở rộng (+13 h) không nằm trong bảng.*",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #1) [SỐ] Bảng tuần ghi 11×6 + 12 = 78 h, lệch cả '~72 h' lẫn '6 h/tuần × 12 tuần'. Tính lại từ tiêu đề các bài: tuần 1 = Bài 1–2 (2,5+2) + 2 h Phần 0 = 6,5; tuần 2 = Bài 3–4 (2,5+3) = 5,5; tuần 3 = Bài 5 = 3; tuần 4 = Bài 6 = 3,5; tuần 5 = Bài 7–8 = 5,5; tuần 6 = Bài 9–10 = 5,5; tuần 7 = Bài 11–12 = 5,5; tuần 8 = Bài 13–14 = 5,5; tuần 9 = Bài 15–16 = 5,5; tuần 10 = Bài 17–18 = 5,5; tuần 11 = Bài 19–21 (2,5+3+3) = 8,5; tuần 12 = Bài 22–23 (6+2) = 8 → tổng 68 h = 66 h lõi + 2 h Phần 0. Chỉ đổi cột Giờ, không đổi giờ từng bài."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "<summary><b>PHẦN 3 — CẢI THIỆN NGHIỆM (4 bài · 12 h)</b></summary>",
+  "new": "<summary><b>PHẦN 3 — CẢI THIỆN NGHIỆM (4 bài · 11 h)</b></summary>",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #1) [SỐ] Bài 9–12 = 2,5 + 3 + 3 + 2,5 = 11 h theo tiêu đề các bài (ghi 12)."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "<summary><b>PHẦN 4 — METAHEURISTIC (5 bài + 1 mở rộng · 16 h)</b></summary>",
+  "new": "<summary><b>PHẦN 4 — METAHEURISTIC (5 bài + 1 mở rộng · 14 h)</b></summary>",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #1) [SỐ] Bài 13–17 = 3 + 2,5 + 2,5 + 3 + 3 = 14 h lõi theo tiêu đề (ghi 16; nếu cộng cả Bài 17B 3 h thì 17 h, cũng không phải 16). Quy ước của các phần: số giờ ở tiêu đề phần = bài lõi, mở rộng tính riêng."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "<summary><b>PHẦN 6 — ĐỒ ÁN (3 bài · 12 h)</b></summary>",
+  "new": "<summary><b>PHẦN 6 — ĐỒ ÁN (3 bài · 11 h)</b></summary>",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #1) [SỐ] Bài 21–23 = 3 + 6 + 2 = 11 h theo tiêu đề (ghi 12)."
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "code build sạch `-Wall -Wextra` |",
+  "new": "code build sạch `-Wall -Wextra -Wshadow -Wconversion` |",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #2) [MÂU THUẪN] Rubric 'Xuất sắc' ghi build sạch `-Wall -Wextra`, còn bộ cờ chuẩn của khoá là `-Wall -Wextra -Wshadow -Wconversion` (Bài 19 §8, checklist Bài 20 §10.1, 19B §6.1). Đồng bộ theo Bài 19. (Cách học không có rubric nên không có chỗ tương ứng để vá.)"
+ },
+ {
+  "bai": "khoa-hoc/00-de-cuong",
+  "old": "1. **Không có con số nào được viết ra mà không kèm cách tái lập.** Nếu bài giảng nói",
+  "new": "1. **Mọi con số là số đo hoặc tính được từ số đo; chỗ nào là ước lượng (Bài 2) đều được nói rõ là ước lượng.** Nếu bài giảng nói",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #3) Chính sách 1 viết tuyệt đối ('không có con số nào … mà không kèm cách tái lập') nhưng Bài 2 chủ ý dùng ước lượng bậc độ lớn, và một số số đo gốc không còn mã trong repo. Thay đúng câu điều phối chốt; câu sau ('Nếu bài giảng nói \"cải thiện 5,6 %\", bạn phải chạy được đúng lệnh…') giữ nguyên."
+ },
+ {
+  "bai": "khoa-hoc/02-cach-hoc",
+  "old": "│   ├── timer.h            đo thời gian\n│   └── util.h             tiện ích chung",
+  "new": "│   ├── timer.h            đo thời gian\n│   ├── stats.h            thống kê, dòng báo cáo (Stats, reportLine, compareLine — Bài 4)\n│   └── util.h             tiện ích chung",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #4) [THAM CHIẾU] Cây `common/` ở §3 thiếu `stats.h`, trong khi Bài 4 (đầu bài, §6, §10, bài tập 4.3) dùng `code/common/stats.h` với `Stats`, `reportLine`, `compareLine`. Thêm một dòng."
+ },
+ {
+  "bai": "khoa-hoc/02-cach-hoc",
+  "old": "// 4. Tên biến tiếng Anh, chú thích tiếng Việt không dấu\n//    (để tránh lỗi mã hoá khi nộp bài thi)",
+  "new": "// 4. Tên biến: mã trong bài dùng tên tiếng Việt không dấu cho ví dụ\n//    (chiPhi, viTri...); bạn có thể dùng tiếng Anh, miễn nhất quán.\n//    Chú thích viết tiếng Việt không dấu (để tránh lỗi mã hoá khi nộp bài thi)",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #4) [MÂU THUẪN] Quy ước 4 nói 'tên biến tiếng Anh' nhưng mã trong các bài dùng tên tiếng Việt không dấu (`chiPhi`, `viTri`, `giaiMa`, `soNgayDaSang`…; Bài 3 §8). Sửa quy ước cho khớp thực tế theo câu điều phối chốt; phần chú thích không dấu giữ nguyên."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "| 4. Đánh giá | $O(n)$ | $O(n)$ | $O(n\\log n)$ | $O(n)$ |",
+  "new": "| 4. Đánh giá | $O(n)$ | $O(n)$ | $O(n)$ | $O(n)$ |",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #5) [MÂU THUẪN] Bảng §5 ghi tiêu chí 4 của cách C là O(n log n), còn §2 mô tả C là 'Đánh giá tốn O(n) để nhóm lại' và chỉ nói 'phải chuẩn hoá order sau mỗi thay đổi' (giữ order là thứ hạng trong ngày nên nhóm lại chỉ là đặt đơn vào ô day/order, không có bước sắp xếp). §2 không có sắp xếp ⇒ theo quyết định thống nhất thành O(n)."
+ },
+ {
+  "bai": "khoa-hoc/bai-03-bieu-dien-nghiem",
+  "old": "(`soNgayDaSang` đếm số lần *đã sang* ngày mới nên ngày hiện tại là `soNgayDaSang + 1`) |",
+  "new": "(`soNgayDaSang` đếm số lần *đã sang* ngày mới nên ngày hiện tại là `soNgayDaSang + 1`). Ở mã thật (Bài 19 §9.1, Bài 22 §3.1) hằng là `MAX_NEXTDAY = SO_NGAY_TOI_DA − 1` (số lần được sang ngày mới, 30 với 31 ngày) và so sánh viết `soNgayDaSang >= MAX_NEXTDAY` — hai cách viết tương đương |",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #6) [THAM CHIẾU] Giữ nguyên điều kiện `soNgayDaSang + 1 >= SO_NGAY_TOI_DA` (hằng = tổng số ngày); chỉ thêm chú thích: mã thật ở Bài 19 §9.1 (`if (daSangNgay >= MAX_NEXTDAY) break;`) và Bài 22 §3.1 (`#define MAX_NEXTDAY 30 /* goi duoc DUNG 30 lan -> 31 khung ngay */`, `if (soNgayDaSang >= MAX_NEXTDAY) break;`) dùng hằng là số lần sang ngày = SO_NGAY_TOI_DA − 1 với `>=`; x + 1 >= N ⇔ x >= N − 1."
+ },
+ {
+  "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+  "old": "| 0,15 | 30 % | 0,5 | **9,0** |",
+  "new": "| 0,15 | 30 % *(giả định minh hoạ)* | 0,5 | **9,0** |",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #8) [MÂU THUẪN] Δ = 30 % của dòng 'Hỏi 6 câu' không phải số đo: số đo thật của ca 2609 là +6,67 % (tổng quan 2609: 161 205 so với 151 123 của v3). Gắn nhãn 'giả định minh hoạ' ngay trong ô; giữ nguyên cấu trúc bảng EV và các số P, giờ, EV."
+ },
+ {
+  "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+  "old": "vì không cần bộ chấm và cho chính thông tin để dựng nó.)",
+  "new": "vì không cần bộ chấm và cho chính thông tin để dựng nó.) Cột giờ của bảng là mức đầy đủ khi làm riêng từng việc (bộ chấm 1,0 giờ, cận trên 0,5 giờ); lịch 4 giờ ở §7 nén hai việc này xuống 30 phút (cùng nghiệm cơ sở) và 15 phút vì cả quy trình chỉ có 240 phút — đừng cộng thẳng cột giờ của §2 với §7.",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #9) [MÂU THUẪN] Bảng §2 ghi dựng bộ chấm 1,0 giờ và tính cận trên 0,5 giờ, còn §7 xếp 'bộ chấm + nghiệm cơ sở' 55–85 (30 phút) và 'cận trên' 85–100 (15 phút). Không đổi số nào (đều là số mồi/lịch mẫu); thêm một câu giải thích cột giờ của §2 là mức đầy đủ, §7 là bản nén trong 240 phút."
+ },
+ {
+  "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+  "old": "### 2.1 Vì sao dòng \"hàm mục tiêu\" lại đứng đầu dù $P$ chỉ 0,15\n\nVì $\\Delta$ của nó lớn bất thường. Đa số đề **không** có cấu trúc khai thác được — nên $P$ thấp. Nhưng khi có, phần thưởng không phải 2–3 % mà là *cả bài toán*: ở đề 2609 nó cho +6,67 % **và** gỡ luôn 17 % test vượt giờ.",
+  "new": "### 2.1 Vì sao dòng \"hàm mục tiêu\" đứng đầu — với các giả định này — dù $P$ chỉ 0,15\n\nVì $\\Delta$ của nó **được giả định** lớn bất thường (30 %, một số minh hoạ chứ không phải số đo). Đa số đề **không** có cấu trúc khai thác được — nên $P$ thấp. Nhưng khi có, phần thưởng có thể không phải 2–3 % mà là *cả bài toán*: ở đề 2609 nó cho +6,67 % **và** gỡ luôn 17 % test vượt giờ (34/200 test của lời giải cũ vượt 1 000 ms; lời giải mới: 0).\n\n⚠️ **Số đo thật nhỏ hơn giả định.** Ở 2609, $\\Delta$ đo được chỉ ≈ +6,67 % (200 test), không phải 30 %. Với $\\Delta = 6{,}67$ % thì EV = 0,15 × 6,67 / 0,5 ≈ **2,0 %/giờ** — vẫn cao hơn định giá bằng giá mờ (1,0) nhưng **thấp hơn đọc mã grader (3,0)**. Nghĩa là \"đứng đầu\" chỉ đúng với các giả định ở bảng; thứ hạng thực tế đổi theo điểm xuất phát của bạn (bạn đang ở đoạn nào của đường cong §3) và theo số liệu của chính bạn. Điều cần nhớ là **quy tắc dùng EV**, không phải con số 9,0.",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #8) [LOGIC] §2.1 khẳng định 'đứng đầu' dựa trên Δ = 30 %. Số đo 2609 (tổng quan 2609: 161 205/151 123 = +6,67 %; TC vượt 1 000 ms: v3 34/200 = 17 %, đề xuất 0): EV = 0,15 × 6,67 / 0,5 = 2,001 ≈ 2,0 < 3,0 của đọc mã grader. Sửa thành 'đứng đầu với các giả định này', nêu số đo thật và rút ra quy tắc dùng EV (đúng ý điều phối chốt)."
+ },
+ {
+  "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+  "old": "Quy tắc cho 45 phút cuối:\n\n| Thời điểm | Việc |\n|---|---|\n| T−45 phút | **đóng băng** bản tốt nhất đã kiểm chứng, lưu riêng |\n| T−30 phút | chạy kiểm định: 300 test, đếm vi phạm, đo thời gian xấu nhất |\n| T−15 phút | chạy quy trình chẩn đoán ([19B §7](../phan-5-ky-nang-thuc-chien/bai-19b-go-loi-heuristic.md)) |\n| T−5 phút | nộp bản **đã kiểm chứng**, không phải bản mới nhất |",
+  "new": "Quy tắc cho 50 phút cuối (khớp lịch tuyệt đối của đề 240 phút ở §7; T = giờ nộp):\n\n| Thời điểm | Việc |\n|---|---|\n| T−50 … T−35 phút (phút 190–205) | chạy quy trình chẩn đoán ([19B §7](../phan-5-ky-nang-thuc-chien/bai-19b-go-loi-heuristic.md)) |\n| T−35 … T−20 phút (phút 205–220) | ablation, tinh chỉnh 2–3 tham số đầu bảng ([20B](../phan-5-ky-nang-thuc-chien/bai-20b-tinh-chinh-tham-so.md)) |\n| T−20 phút (phút 220) | **đóng băng** bản tốt nhất đã kiểm chứng, lưu riêng |\n| T−20 … T−5 phút | chạy kiểm định: 300 test, đếm vi phạm, đo thời gian xấu nhất |\n| T−5 phút | nộp bản **đã kiểm chứng**, không phải bản mới nhất |",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #9) [MÂU THUẪN] §6 (đóng băng T−45, kiểm định T−30, chẩn đoán T−15) ngược thứ tự và lệch mốc so với §7 (chẩn đoán 190–205 = T−50…T−35; ablation/tinh chỉnh 205–220; đóng băng, kiểm định, nộp 220–240, tức đóng băng ≈ T−20) và không thể chạy quy trình chẩn đoán 15–20 phút sau khi đã đóng băng. Thống nhất theo lịch tuyệt đối ở §7 như điều phối chốt; giữ T−5 cho bước nộp."
+ },
+ {
+  "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+  "old": "§6. Đóng băng ở T−45, và nộp bản đã qua kiểm định.",
+  "new": "§6. Đóng băng ở T−20 (phút 220 của đề 240 phút), và nộp bản đã qua kiểm định.",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #9) [MÂU THUẪN] Cạm bẫy 6 nhắc mốc 'T−45' của §6 cũ; đồng bộ với lịch §6/§7 mới (đóng băng ≈ T−20)."
+ },
+ {
+  "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+  "old": "| 190–205 | **chẩn đoán** (19B §7) | loại bug trước khi đổ lỗi thuật toán |",
+  "new": "| 190–205 | **chẩn đoán** (19B §7; 15 phút — bỏ bước ⑤) | loại bug trước khi đổ lỗi thuật toán |",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #9) [MÂU THUẪN] 19B §7 là quy trình 20 phút (2+2+5+3+5+3) nhưng ô chẩn đoán ở §7 chỉ có 15 phút (190–205). Ghi rõ ở đây là bản 15 phút (bỏ bước ⑤ = 5 phút; 2+2+5+3+3 = 15); 19B §7 được thêm câu tương ứng."
+ },
+ {
+  "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+  "old": "Điểm 7 369 chính là điểm của một hàm `process()` rỗng.",
+  "new": "Điểm 7 369 chính là điểm của một hàm `process()` rỗng. (Đó là **số đo của bản dựng gốc**; vì là hành vi không xác định, kết quả cụ thể tuỳ trình biên dịch và phiên bản — xem §6.)",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #11) [LOGIC] 'Chạy êm, 0 nước đi, điểm 7 369' là số đo của bản dựng gốc (2609/02 §3, 10 seed). Vì là UB nên không phải hành vi chung của mọi trình biên dịch: g9/g12 thử mã tối thiểu với g++ 14.0.1 cho -O0 = Illegal instruction, -O2 = Segmentation fault. Giữ số đo nhưng nêu rõ nguồn và tính phụ thuộc."
+ },
+ {
+  "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+  "old": "Không rải khắp nơi. Ba chỗ bắt được ~90 % bug:",
+  "new": "Không rải khắp nơi. Ba chỗ bắt được phần lớn bug:",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #10) [SỐ] '~90 %' không có nguồn nào trong khoá (không có số đo nào về tỉ lệ bug bắt được theo vị trí `KIEM`). Hạ thành 'phần lớn bug'."
+ },
+ {
+  "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+  "old": "Trung bình 619 ms trông an toàn; xấu nhất 3 331 ms là trượt.",
+  "new": "Trung bình 619 ms trông an toàn; xấu nhất 3 331 ms là trượt. (Hai số \"xấu nhất\" này là hai mẫu khác nhau, không mâu thuẫn: 3 331 ms là xấu nhất trong 200 test của bộ chấm, còn 7 183 ms là seed xấu nhất trong 3 000 seed quét ở trên — xem 2609/02 §4.1.)",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #10) [MÂU THUẪN] §5 đặt cạnh nhau 'quét 3 000 seed … xấu nhất H=178, W=180, N=15 905' và 'xấu nhất 3 331 ms'. Theo 2609/02 §3 (seed 1..200: xấu nhất 3 331 ms) và §4.1 B2 (seed 1015 trong 3 000 seed: 7 183 ms) đó là hai mẫu khác nhau. Thêm một câu nêu rõ; không đổi số."
+ },
+ {
+  "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+  "old": "Hai hành vi trái ngược từ **cùng một mã nguồn**.",
+  "new": "Hai hành vi trái ngược từ **cùng một mã nguồn**. Bảng trên là số đo của bản dựng gốc; vì là *hành vi không xác định*, kết quả tuỳ trình biên dịch và phiên bản — mã tối thiểu với g++ 14 cho `-O0` ra Illegal instruction (khớp bảng) nhưng `-O2` ra Segmentation fault chứ không phải \"chạy êm, 0 nước đi\". Đừng dựa vào một kiểu hỏng cụ thể; chỉ cần nhớ rằng hai mức tối ưu cho kết quả khác nhau là dấu hiệu UB.",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #11) [LOGIC] Thêm đúng ý điều phối chốt: hành vi là UB, tuỳ trình biên dịch/phiên bản; mã tối thiểu g++ 14 → -O0: Illegal instruction (ud2, exit 132), -O2: Segmentation fault (g9/g12 đã thử). Giữ nguyên hai dòng của bảng như số đo của bản dựng gốc."
+ },
+ {
+  "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+  "old": "| v3 (đã sửa thành `void`) | 151 123 | 151 123 |",
+  "new": "| v3 (đã sửa thành `void`) | 151 123 | 151 123 |\n\n(Số của bản dựng gốc; hành vi cụ thể phụ thuộc trình biên dịch/phiên bản — xem §6. Nếu máy bạn cho `-O2` segfault thay vì chạy êm thì vẫn là cùng một UB.)",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #11) [LOGIC] Bảng 'cần tái lập' ở §8 là số đo của bản dựng gốc (bench 2609, không còn trong repo); người học tái lập bằng g++ khác có thể thấy segfault ở -O2. Thêm chú thích, không đổi số."
+ },
+ {
+  "bai": "khoa-hoc/bai-19b-go-loi-heuristic",
+  "old": "> ★ Giá trị lớn nhất của quy trình này **không phải** là tìm ra bug.",
+  "new": "Đủ cả 6 bước là **20 phút** (2 + 2 + 5 + 3 + 5 + 3). Trong ngân sách 4 giờ của [Bài 4B §7](../phan-1-tu-duy-toi-uu/bai-04b-phan-bo-cong-suc.md) ô chẩn đoán chỉ có **15 phút** (phút 190–205): khi đó bỏ bước ⑤ — đối chiếu vét cạn kiểm tra hạ tầng chấm điểm/mô phỏng, nên làm một lần ngay sau khi dựng bộ chấm — còn năm bước kia (2 + 2 + 5 + 3 + 3) vừa đúng 15 phút.\n\n> ★ Giá trị lớn nhất của quy trình này **không phải** là tìm ra bug.",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #9) [MÂU THUẪN] §7 ghi 'quy trình chẩn đoán 20 phút' (tổng các bước 2+2+5+3+5+3 = 20) nhưng 4B §7 (lịch tuyệt đối được chọn làm chuẩn) chỉ dành 190–205 = 15 phút cho chẩn đoán. Giữ 20 phút làm bản đầy đủ (các chỗ khác trong bài nhắc '20 phút' vẫn đúng) và thêm câu nêu bản 15 phút: bỏ bước ⑤ (5 phút, kiểm tra hạ tầng nên làm sớm — 19B §4.1) còn lại đúng 15 phút. Chọn bước ⑤ vì 19B §4.1 mô tả nó là kiểm tra tính đúng của hạ tầng, không phụ thuộc vào thuật toán đang gỡ."
+ },
+ {
+  "bai": "case-2609/tong-quan",
+  "old": "thưởng. Trình biên dịch có báo (g++ bật `-Wreturn-type` mặc định ở C++ và trong `-Wall`), nhưng nếu không ai đọc cảnh báo thì lỗi hoàn toàn im lặng.",
+  "new": "thưởng. Trình biên dịch có báo (g++ bật `-Wreturn-type` mặc định ở C++ và trong `-Wall`), nhưng nếu không ai đọc cảnh báo thì lỗi hoàn toàn im lặng.\n\n(Hai hành vi trên là số đo của bản dựng gốc. Vì là hành vi không xác định nên kết quả tuỳ trình biên dịch/phiên bản: mã tối thiểu với g++ 14 cho `-O0` ra Illegal instruction, `-O2` ra Segmentation fault.)",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #11) [LOGIC] Giữ mô tả 'chạy bình thường, không di chuyển hạt nào, điểm chỉ còn tiền thưởng' như số đo của bản dựng gốc; thêm tính phụ thuộc trình biên dịch (g9/g12: mã tối thiểu g++ 14.0.1 → -O0 Illegal instruction, -O2 Segmentation fault)."
+ },
+ {
+  "bai": "case-2609/02-giai-phap-hien-tai",
+  "old": "Đây chính là lý do v1 và v2 về 0 điểm entropy.",
+  "new": "(Hai dòng trên là số đo của bản dựng gốc. Vì là hành vi không xác định, kết quả tuỳ trình biên dịch/phiên bản: mã tối thiểu với g++ 14 cho `-O0` ra Illegal instruction, `-O2` ra Segmentation fault.)\n\nĐây chính là lý do v1 và v2 về 0 điểm entropy.",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #11) [LOGIC] B1 bảng '-O2 → xoá vòng lặp → 0 nước đi, ρ = 0' là số đo của bản dựng gốc (v1/v2, 10 seed). Thêm câu: là UB nên tuỳ trình biên dịch/phiên bản; mã tối thiểu g++ 14.0.1 → -O0 Illegal instruction, -O2 Segmentation fault (g12 đã thử). Không đổi số."
+ },
+ {
+  "bai": "case-2609/03-de-xuat-cai-tien",
+  "old": "tròn 1,4 %. Lý do là ta cực tiểu",
+  "new": "tròn 1,4 % **về $\\kappa$** (0,6598 so với 0,6504; quy ra điểm số, kim cương kém đĩa tròn 3,6 % ở seed 1 và 6,4 % ở seed 1015, xem bảng trên). Lý do là ta cực tiểu",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #12) [SỐ] '1,4 %' là chênh lệch κ: (0,6598 − 0,6504)/0,6504 = 1,445 %. Chênh lệch điểm ở bảng §2.4: seed 1: (189 273 − 182 480)/189 273 = 3,59 %; seed 1015: (98 326 − 91 990)/98 326 = 6,44 %. Nêu rõ 1,4 % là κ, kèm điểm kém 3,6 %/6,4 %."
+ },
+ {
+  "bai": "case-2609/03-de-xuat-cai-tien",
+  "old": "Tồn tại theo **định lý Gale–Ryser**. Xây bằng tham lam chuẩn:",
+  "new": "Tồn tại theo **định lý Gale–Ryser** (chỉ khi $(R, c)$ thoả điều kiện — xem §6.1). Xây bằng tham lam chuẩn:",
+  "ly_do": "[QUYẾT ĐỊNH] (X1 #12) [LOGIC] 'Tồn tại theo định lý Gale–Ryser' chỉ đúng khi cặp (R, c) thoả điều kiện Gale–Ryser; §6.1 nêu trường hợp lưới dẹt sát ngưỡng (3/300 TC) khiến tham lam không xếp được 1–3 hạt. Thêm điều kiện và liên kết tới §6.1."
+ }
+]

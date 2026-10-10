@@ -5,11 +5,11 @@ TH.dangKy({
   tomTat: [
     "Bài cuối phân biệt hai loại “biết lái xe”: thuộc lý thuyết và thật sự làm được. Từ bên trong chúng giống hệt nhau, nên bài đưa ra bốn câu hỏi 30 giây chọn đúng bốn chỗ kinh nghiệm lộ ra: giá mờ λ (Bài 6), delta evaluation (Bài 10), hàm xếp hạng của beam (Bài 16) và ablation trên bản hoàn chỉnh (Bài 22).",
     "Câu 1 — nhận hay bỏ việc 100 nghìn / 40 phút? Chưa trả lời được nếu chưa biết một phút của bạn đáng bao nhiêu: giá trị ròng = 100 − λ × 40, nên λ = 2 thì +20 (nhận), λ = 3 thì −20 (bỏ). Trả lời ngay “nhận, vì 100 nghìn là tiền tươi” là bỏ qua chi phí cơ hội — sai lầm phổ biến nhất của cả khoá.",
-    "Câu 2 — một nước 2-opt trên tuyến 200 điểm chỉ cần bốn phép tra bảng và ba phép cộng trừ: Δ = d(u₁,u₂) + d(v₁,v₂) − d(u₁,v₁) − d(u₂,v₂), không phải 200. Đó là delta evaluation, nhanh hơn 1 157 lần trong đồ án; thiếu nó thì mọi metaheuristic đều không kịp chạy.",
-    "Câu 3 — beam search xếp hạng kế hoạch dở dang bằng rank(s) = f(s) + ρ·(tài nguyên còn lại), ρ cùng loại với λ. Kế hoạch A (thu 20 000, còn 180 phút) có rank 38 000, thắng B (thu 22 000, còn 60 phút) có rank 28 000. Xếp hạng chỉ bằng điểm đã thu thì beam thoái hoá thành greedy, dù bề rộng W lớn đến đâu.",
+    "Câu 2 — một nước 2-opt trên tuyến 200 điểm chỉ cần bốn phép tra bảng và ba phép cộng trừ: Δ = d(u₁,u₂) + d(v₁,v₂) − d(u₁,v₁) − d(u₂,v₂), không phải 200. Đó là delta evaluation (Bài 10), nhanh hơn 1 157 lần mỗi nước đi trong thí nghiệm 2-opt trên TSP 200 điểm của Bài 10 (lab tsp-sandbox); thiếu nó thì mọi metaheuristic đều không kịp chạy.",
+    "Câu 3 — beam search xếp hạng kế hoạch dở dang bằng rank(s) = f(s) + ρ·(tài nguyên còn lại); khi f là điểm gộp (đã thu, chưa trừ chi phí thời gian) thì ρ chính là λ, còn nếu f đã là giá trị ròng (đã trừ λc) thì ρ ≠ λ (ở đồ án ρ ≈ 90, λ ≈ 1 420). Với ρ = 100, kế hoạch A (thu 20 000, còn 180 phút) có rank 38 000, thắng B (thu 22 000, còn 60 phút) có rank 28 000. Xếp hạng chỉ bằng điểm đã thu thì beam thoái hoá thành greedy, dù bề rộng W lớn đến đâu.",
     "Câu 4 — một thành phần đo ra −0,08 % thì chưa vội xoá: hãy hỏi “nó còn thiếu gì để phát huy?”. λ cần beam search mới có chỗ hành động và trong hệ đầy đủ đo được +2,43 %. Phán quyết cuối thuộc về ablation trên bản hoàn chỉnh, và các dòng ablation không cộng được với nhau (bảy dòng ra 8,72 % trong khi tổng cải thiện thật chỉ 7,17 %).",
     "Bảng tự chấm 23 năng lực × 0–3 điểm = 69: dưới 25 cần học lại Phần 1–2; 25–40 dùng được cho bài đơn giản; 41–55 đủ năng lực đi thi; 56–69 có thể hướng dẫn người khác. Bốn mục in đậm (7, 11, 17, 22) phân biệt người mới với người có kinh nghiệm. Bảng chỉ chính xác đúng bằng mức trung thực bạn dùng khi điền.",
-    "Thói quen mang đi: đọc kỹ → mô hình hoá → ĐO → thử một thứ → ĐO → giữ hoặc bỏ; không tin trực giác cho tới khi có số liệu. Đi tiếp bằng khoá metaheuristic, AtCoder Heuristic Contest, OR-Tools / HiGHS và matheuristic; còn ~3 % tới cận trên của đồ án dành cho beam nhìn xa 2 ngày, Held–Karp theo ngày, λ thích nghi."
+    "Thói quen mang đi: đọc kỹ → mô hình hoá → ĐO → thử một thứ → ĐO → giữ hoặc bỏ; không tin trực giác cho tới khi có số liệu. Đi tiếp bằng khoá metaheuristic, AtCoder Heuristic Contest, OR-Tools / HiGHS và matheuristic; độ hở còn ~3 % tới cận tham chiếu (τ = 7) của đồ án dành cho beam nhìn xa 2 ngày, Held–Karp theo ngày, λ thích nghi."
   ],
 
   trac: [
@@ -29,7 +29,7 @@ TH.dangKy({
         "Không thể biết trước; phải thực hiện nước đi rồi đo lại toàn bộ tuyến"
       ],
       dung: 2,
-      giaiThich: "Đảo một đoạn chỉ thay hai cạnh; mọi cạnh khác giữ nguyên, kể cả các cạnh nằm trong đoạn bị đảo (đổi chiều nhưng độ dài không đổi). Vì vậy Δ chỉ cần bốn phép tra bảng khoảng cách và ba phép cộng trừ. Cộng lại cả 200 cạnh cho kết quả đúng nhưng chậm hàng trăm lần; cộng chênh lệch các cạnh trong đoạn đảo là sai vì chúng chênh bằng 0; “phải đo lại” bỏ qua ý tưởng delta evaluation (nhanh hơn 1 157 lần trong đồ án)."
+      giaiThich: "Đảo một đoạn chỉ thay hai cạnh; mọi cạnh khác giữ nguyên, kể cả các cạnh nằm trong đoạn bị đảo (đổi chiều nhưng độ dài không đổi). Vì vậy Δ chỉ cần bốn phép tra bảng khoảng cách và ba phép cộng trừ. Cộng lại cả 200 cạnh cho kết quả đúng nhưng chậm hàng trăm lần; cộng chênh lệch các cạnh trong đoạn đảo là sai vì chúng chênh bằng 0; “phải đo lại” bỏ qua ý tưởng delta evaluation (nhanh hơn 1 157 lần mỗi nước đi ở thí nghiệm 2-opt trên TSP 200 điểm của Bài 10)."
     },
     {
       id: "q3", loai: "so", doKho: 2, ref: "Bài 16 · §4", donVi: "(đồng)",
@@ -43,12 +43,12 @@ TH.dangKy({
       chon: [
         "Mỗi dòng trả lời câu hỏi “bỏ riêng thành phần này khỏi bản hoàn chỉnh thì điểm tụt bao nhiêu” — dùng để quyết định có đáng giữ nó không",
         "8,72 % > 7,17 % chứng tỏ có ít nhất một phép đo bị sai nên phải chạy lại toàn bộ thực nghiệm",
-        "Khi hai thành phần cùng phục vụ một mục tiêu (như beam search và phạt thời gian chết cùng lo việc lấp đầy ngày), công của chúng chồng lên nhau nên cộng riêng sẽ đếm trùng",
+        "Khi hai thành phần bổ trợ nhau (như beam search và phạt thời gian chết cùng lo việc lấp đầy ngày, thiếu một cái thì cái kia vô dụng), phần công chung nằm trong cả hai dòng ablation nên cộng riêng sẽ đếm trùng",
         "Các dòng ablation không cộng được với nhau; báo cáo cộng chúng lại để tuyên bố tổng cải thiện là sai",
         "Muốn có tổng cải thiện đáng tin, cách đúng là cộng các dòng ablation lại với nhau"
       ],
       dung: [0, 2, 3],
-      giaiThich: "Ablation hỏi mỗi thành phần đúng một câu: “nếu bỏ mình mày, bản hoàn chỉnh tụt bao nhiêu?”. Khi bỏ beam, các thành phần còn lại vẫn gánh đỡ một phần việc; khi bỏ số hạng phạt thì beam gánh đỡ — nên phần chồng nhau bị đếm hai lần. Không ai tính sai: đó là bản chất của “che khuất”. Các dòng trả lời tốt câu “có đáng giữ không” nhưng không cộng được; vì thế hai phát biểu còn lại (có phép đo sai; cộng các dòng để lấy tổng) đều là hiểu lầm."
+      giaiThich: "Ablation hỏi mỗi thành phần đúng một câu: “nếu bỏ mình mày, bản hoàn chỉnh tụt bao nhiêu?”. Khi bỏ beam, số hạng phạt vẫn còn nhưng không còn ai hành động theo nó; khi bỏ số hạng phạt, beam vẫn còn nhưng không còn mục tiêu để theo đuổi — hai thành phần này bổ trợ nhau nên mỗi dòng ablation đều tính trọn phần công chung và phần ấy bị đếm hai lần. Không ai tính sai: đó là bản chất của tính bổ trợ (còn “che khuất” — thành phần này gánh đỡ việc của thành phần kia — thì ngược lại làm tổng ablation nhỏ hơn lợi ích thật). Các dòng trả lời tốt câu “có đáng giữ không” nhưng không cộng được; vì thế hai phát biểu còn lại (có phép đo sai; cộng các dòng để lấy tổng) đều là hiểu lầm."
     },
     {
       id: "q5", loai: "mot", doKho: 2, ref: "Bài 11 · §4, Bài 22 · §9.3",
@@ -76,7 +76,7 @@ TH.dangKy({
     },
     {
       id: "q7", loai: "mot", doKho: 3, ref: "Bài 18 · §6, §9",
-      hoi: "Một nghiệm đạt 32 915 840 điểm. Ba cận trên của cùng bài toán, ứng với mức di chuyển giả định τ = 0; 7 và 9,5 phút/nhà, là 35 571 464; 33 943 173 và 33 388 769. Một thành viên nói: “Còn cách trần 7,5 %, cần đầu tư thêm một tuần.” Nhận định nào hợp lý nhất theo Bài 18?",
+      hoi: "Một nghiệm đạt 32 915 840 điểm. Ba cận (bảng gọi chung là “cận trên”) của cùng bài toán, ứng với mức di chuyển giả định τ = 0; 7 và 9,5 phút/nhà, là 35 571 464; 33 943 173 và 33 388 769. Một thành viên nói: “Còn cách trần 7,5 %, cần đầu tư thêm một tuần.” Nhận định nào hợp lý nhất theo Bài 18?",
       chon: [
         "Đồng ý: cận lớn nhất là cận an toàn nhất nên dư địa thật là 7,5 %",
         "Cận τ = 0 chắc chắn đúng nhưng lỏng (nghiệm đạt 92,5 %); hai cận kia chặt hơn nhưng dựa vào ước lượng quãng đường nên “còn ~3 %” chỉ là mốc tham chiếu. Phải nêu rõ đang dùng cận nào và kiểm độ chặt của nó rồi mới quyết định dừng hay đầu tư",
@@ -136,7 +136,7 @@ TH.dangKy({
         "Khi không có mã chấm để đọc (bước ①), hãy đọc kỹ mọi quy định thực tế: điều nào làm phương án bị loại (ràng buộc cứng), điều nào chỉ bị trừ điểm.",
         "Cận thường đến từ nới lỏng: bỏ bớt một ràng buộc khó rồi giải bài dễ hơn (Bài 18)."
       ],
-      mau: "Ví dụ: xếp ca cho 20 nhân viên trong 28 ngày, mỗi ngày 3 ca (sáng, chiều, đêm).\n\n1. **Mô hình hoá (S, C, f).** S: mọi phép gán nhân viên → ca cho từng ngày (biểu diễn: bảng 20 × 28, mỗi ô là nghỉ / sáng / chiều / đêm). C (cứng): mỗi ca đủ số người tối thiểu; không làm ca đêm rồi ca sáng hôm sau; tối đa 6 ngày làm liên tiếp. f: tổng điểm phạt (vi phạm nguyện vọng, chênh lệch số ca giữa các người) — cực tiểu hoá; vi phạm ràng buộc cứng thì loại phương án.\n2. **Bộ chấm cục bộ (dựng trước thuật toán).** Chương trình tự sinh 100 bộ dữ liệu theo seed, nhận một bảng phân ca, báo từng vi phạm cứng và phân rã điểm phạt theo loại.\n3. **Nghiệm cơ sở.** Greedy đơn giản: duyệt từng ngày, từng ca, gán người đang có ít ca nhất còn hợp lệ. Có con số này để mọi cải tiến phải vượt.\n4. **Một cận.** Nới lỏng bằng cách bỏ “không đêm rồi sáng” và “tối đa 6 ngày liên tiếp”: còn lại bài cân bằng tải, phạt tối thiểu tính được bằng cách chia đều số ca cần phủ cho 20 người. So phạt của nghiệm cơ sở với cận này cho biết còn dư địa bao nhiêu (bảng quyết định Bài 18 §6).\n\nSau đó mới sang bước ⑥: mỗi lần **một** thay đổi, đo bằng bộ chấm, ghi nhật ký; hoàn tác ngay nếu không cải thiện.",
+      mau: "Ví dụ: xếp ca cho 20 nhân viên trong 28 ngày, mỗi ngày 3 ca (sáng, chiều, đêm).\n\n1. **Mô hình hoá (S, C, f).** S: mọi phép gán nhân viên → ca cho từng ngày (biểu diễn: bảng 20 × 28, mỗi ô là nghỉ / sáng / chiều / đêm). C (cứng): mỗi ca đủ số người tối thiểu; không làm ca đêm rồi ca sáng hôm sau; tối đa 6 ngày làm liên tiếp. f: tổng điểm phạt (vi phạm nguyện vọng, chênh lệch số ca giữa các người) — cực tiểu hoá; vi phạm ràng buộc cứng thì loại phương án.\n2. **Bộ chấm cục bộ (dựng trước thuật toán).** Chương trình tự sinh 100 bộ dữ liệu theo seed, nhận một bảng phân ca, báo từng vi phạm cứng và phân rã điểm phạt theo loại.\n3. **Nghiệm cơ sở.** Greedy đơn giản: duyệt từng ngày, từng ca, gán người đang có ít ca nhất còn hợp lệ. Có con số này để mọi cải tiến phải vượt.\n4. **Một cận.** Nới lỏng bằng cách bỏ “không đêm rồi sáng” và “tối đa 6 ngày liên tiếp”: còn lại bài cân bằng tải, phạt tối thiểu tính được bằng cách chia đều số ca cần phủ cho 20 người. So phạt của nghiệm cơ sở với cận này cho biết độ hở còn bao nhiêu (bảng quyết định Bài 18 §6).\n\nSau đó mới sang bước ⑥: mỗi lần **một** thay đổi, đo bằng bộ chấm, ghi nhật ký; hoàn tác ngay nếu không cải thiện.",
       tieuChi: [
         "Viết được (S, C, f) với ràng buộc cứng tách khỏi phần chỉ bị trừ điểm",
         "Mô tả bộ chấm cục bộ: tự sinh dữ liệu, báo vi phạm, phân rã điểm — và nó được dựng trước khi viết thuật toán",

@@ -1,0 +1,164 @@
+[
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "Chúng là **điều kiện cần**: không có bộ chấm thì mọi dòng khác không đo được, và không có cận trên thì bạn không biết lúc nào nên dừng. Làm chúng trước, không tranh luận.",
+    "new": "Chúng là **điều kiện cần**: không có bộ chấm thì mọi *cải tiến* khác không đo được, và không có cận trên thì bạn không biết lúc nào nên dừng. Làm chúng trước mọi việc cải tiến, không tranh luận. (Hai việc chỉ cần đọc — đọc mã grader và hỏi 6 câu cấu trúc — vẫn đứng trước chúng ở §7, vì không cần bộ chấm và cho chính thông tin để dựng nó.)",
+    "ly_do": "[MÂU THUẪN] §2 nói bộ chấm và cận trên 'làm trước' mọi dòng khác, nhưng ngân sách §7 xếp đọc grader (0–25) và 6 câu cấu trúc (25–55) trước bộ chấm (55–85) và cận trên (85–100). Hai việc đứng trước chỉ là việc đọc, không cần bộ chấm; đổi 'mọi dòng khác' thành 'mọi cải tiến khác' và ghi rõ ngoại lệ để §2 và §7 khớp nhau (mục 16 của danh sách đã biết, ý 1: xác nhận)."
+  },
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "| 0–25 | đọc **mã grader**, ghi quan sát | EV cao nhất (§1) |",
+    "new": "| 0–25 | đọc **mã grader**, ghi quan sát | năng suất đo được cao nhất (§1); chỉ cần đọc, chưa cần bộ chấm |",
+    "ly_do": "[MÂU THUẪN] Ô 'EV cao nhất (§1)' mâu thuẫn với bảng §2, nơi dòng 'hỏi 6 câu về cấu trúc' có EV 9,0 > 3,0 của đọc grader. Số §1 là năng suất ĐO ĐƯỢC (6,2 %/giờ, cao nhất bảng §1), không phải EV kỳ vọng; sửa nhãn cho đúng và nêu luôn lý do đứng trước bộ chấm."
+  },
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "Đây là bước ⑧ của [Bài 20](../phan-5-ky-nang-thuc-chien/bai-20-quy-trinh-8-buoc.md) quy ra phút, có thêm hai ô mới của Phần 5 mở rộng:",
+    "new": "Đây là quy trình 8 bước của [Bài 20](../phan-5-ky-nang-thuc-chien/bai-20-quy-trinh-8-buoc.md) quy ra phút, có thêm ba ô mới của Phần 5 mở rộng (18B, 19B, 20B):",
+    "ly_do": "[THAM CHIẾU] (a) Trong Bài 20, ⑧ chỉ là bước 'chốt an toàn' (5 % thời gian), không phải cả ngân sách 4 giờ; ý đúng là 'quy trình 8 bước' (§12 của chính bài này: 'Bài 20 — quy trình 8 bước; §7 là bản quy ra phút'). (b) Bảng §7 có ba ô mới (6 câu hỏi 18B, chẩn đoán 19B §7, tinh chỉnh 20B) và §12 ghi 'ba ô mới', không phải hai."
+  },
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "Tổng: **35 %** ngân sách cho hiểu bài toán, **37 %** cho cải tiến, **28 %** cho kiểm chứng và chốt an toàn.",
+    "new": "Tổng: **35 %** (85 phút đầu: đọc grader, mô hình hoá, bộ chấm + nghiệm cơ sở) ngân sách cho hiểu bài toán, **37,5 %** (90 phút) cho cải tiến, **27 %** (65 phút: cận trên, chẩn đoán, tinh chỉnh, chốt) cho kiểm chứng và chốt an toàn.",
+    "ly_do": "[SỐ] Cộng phút trong bảng §7: 25+30+30 = 85 phút = 35,4 %; 90 phút = 37,5 %; 15+15+15+20 = 65 phút = 27,1 %; tổng 240. Bài ghi 35/37/28 (làm tròn gượng cho đủ 100). Ghi lại số phút và % đúng, kèm cách nhóm (mục 16 ý 2: xác nhận)."
+  },
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "và mất khoảng một nửa số điểm đáng ra lấy được.",
+    "new": "và đang bỏ lỡ phần lớn số điểm dễ lấy nhất (đoạn ① có năng suất cao gấp hàng chục lần đoạn ③).",
+    "ly_do": "[LOGIC] 'mất khoảng một nửa số điểm' không được bảng nào trong bài tính ra (bảng §1 chỉ cho năng suất 6,2 so với 0,11 %/giờ, tức gấp 56 lần). Hạ khẳng định về đúng mức bằng chứng thay vì giữ con số không có căn cứ."
+  },
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "— gấp 56 lần, trên một đề thật.",
+    "new": "— 3,08 % so với 0,33 % (gấp hơn 9 lần về tổng, gấp 56 lần về năng suất mỗi giờ), trên một đề thật.",
+    "ly_do": "[SỐ] 'Nửa giờ … sinh lợi hơn ba giờ … gấp 56 lần' trộn hai cơ sở: 56 = 6,16/0,11 là tỉ số NĂNG SUẤT (%/giờ); về tổng thì hai bên là 3,08 % so với 0,33 % = 9,3 lần (tính lại bằng code)."
+  },
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "Bảng §1 cho thấy cái thứ hai sinh lợi gấp **56 lần**.",
+    "new": "Bảng §1 cho thấy cái thứ hai sinh lợi mỗi giờ gấp khoảng **7,6 lần** việc tìm kiếm mạnh hơn (6,2 so với 0,81 %/giờ) và **56 lần** việc tinh chỉnh tham số (0,11 %/giờ).",
+    "ly_do": "[LOGIC] Simulated Annealing là 'tìm kiếm', mà bảng §1 cho tìm kiếm 0,81 %/giờ; 6,16/0,81 = 7,6 lần. Con số 56 là so với dòng CUỐI bảng (tinh chỉnh tham số 0,11 %/giờ), không phải so với metaheuristic."
+  },
+  {
+    "bai": "khoa-hoc/bai-04b-phan-bo-cong-suc",
+    "old": "xếp hạng 8 việc theo EV. Nếu chỉ có 2 giờ, bạn làm những việc nào?",
+    "new": "xếp hạng 6 việc có EV (hai việc còn lại — dựng bộ chấm, tính cận trên — là điều kiện cần, luôn làm trước nên không xếp hạng). Nếu chỉ có 2 giờ, bạn làm những việc nào?",
+    "ly_do": "[SỐ] Bảng §2 có 8 dòng nhưng chỉ 6 dòng có EV (hai dòng 'dựng bộ chấm' và 'tính cận trên' để '—'), nên 'xếp hạng 8 việc theo EV' không làm được (mục 16 ý 3: xác nhận)."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "Hơn 30 %, và không cần suy nghĩ gì phức tạp",
+    "new": "Cao hơn đúng 30 %, và không cần suy nghĩ gì phức tạp",
+    "ly_do": "[NHỎ] 390/300 = 1,300 đúng 30,0 %, không phải 'hơn 30 %'."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "\"Lấy cái rẻ nhất trước.\" Trong bài định tuyến, đây chính là **nearest neighbour**.",
+    "new": "\"Lấy cái rẻ nhất trước.\" Trong bài định tuyến, khi $c_j$ chỉ tính quãng đường tới $j$ (không cộng $s_j$), đây chính là **nearest neighbour** — bản \"gần nhất\" ở §5.2.",
+    "ly_do": "[LOGIC] Chỉ số −c_j với c_j = d + s (định nghĩa ở đầu §3 và dùng ở §5) KHÔNG trùng nearest neighbour: ở ví dụ §5.2, tại bước đang đứng ở đơn 4 (t=40), −c chọn đơn 2 (c = 19+10 = 29) còn 'gần nhất' theo d chọn đơn 3 (d = 7, c = 37); tổng sẽ là 5 700 thay vì 9 200. Chỉ khi c_j là quãng đường thì hai thứ trùng nhau (tính lại bằng code)."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "= nearest neighbour trong định tuyến",
+    "new": "= nearest neighbour trong định tuyến (khi c_j chỉ là quãng đường)",
+    "ly_do": "[LOGIC] Đồng bộ với sửa ở §3.2: −c_j chỉ bằng nearest neighbour khi c_j là quãng đường."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "Đây là phản ví dụ nhỏ nhất:",
+    "new": "Đây là một phản ví dụ nhỏ:",
+    "ly_do": "[LOGIC] 'Nhỏ nhất' sai: có phản ví dụ chỉ 2 món. W=3, X(p=2,w=1), Y(p=3,w=3): tỉ số X = 2 > 1 nên greedy lấy X (còn 2 kg, Y cần 3 → không vừa) = 2, còn tối ưu là Y = 3 (kiểm bằng code)."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "phản ví dụ nhỏ nhất: X(7,6) Y(5,5) Z(5,5), W=10",
+    "new": "phản ví dụ nhỏ: X(7,6) Y(5,5) Z(5,5), W=10",
+    "ly_do": "[LOGIC] Đồng bộ với sửa ở §4.3 (không phải phản ví dụ 'nhỏ nhất')."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "## 6. Lab 1: bốn chỉ số trên P0",
+    "new": "## 6. Lab 1: ba chỉ số trên P0",
+    "ly_do": "[NHỎ] Kết quả lab chỉ in ba chỉ số (giá trị, cân nặng, tỉ số); chỉ số thứ tư (regret) chỉ có ở bài tập 5.5. Tiêu đề 'bốn' không khớp nội dung."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "## 7. Lab 2: bốn chỉ số trên P1",
+    "new": "## 7. Lab 2: ba chỉ số trên P1",
+    "ly_do": "[NHỎ] Như trên: bảng §7 và §7.1 ('ba bức chân dung') chỉ có tiền nhất / gần nhất / tỉ số."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "### ❌ Cạm bẫy 3 — So sánh số thực bằng `==` hoặc dùng `>` không ổn định",
+    "new": "### ❌ Cạm bẫy 3 — So sánh số thực bằng `==` hoặc dùng `>=` không ổn định",
+    "ly_do": "[MÂU THUẪN] Tiêu đề nói dùng `>` là không ổn định, nhưng khối mã ngay dưới ghi `if (v > bestV)  // OK` và `if (v >= bestV)  // se doi ung vien lien tuc khi bang nhau`. Cái gây bất ổn là `>=`."
+  },
+  {
+    "bai": "khoa-hoc/bai-05-greedy",
+    "old": "(ví dụ: chỉ số bé hơn thì thắng)",
+    "new": "(ví dụ: ứng viên có số thứ tự bé hơn thì thắng)",
+    "ly_do": "[NHỎ] Trong bài 'chỉ số' là giá trị chấm điểm (index); khi hai ứng viên hoà thì giá trị đó bằng nhau nên 'chỉ số bé hơn thì thắng' vô nghĩa. Ý đúng là số thứ tự (id) của ứng viên."
+  },
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "kỹ thuật cho +5 % trong đề thi thật.",
+    "new": "kỹ thuật cho +2,43 % trong đề thi thật.",
+    "ly_do": "[SỐ] Mục 32 xác nhận: Bài 6 ghi '~5 %' (§2, M5, §11) nhưng §7.4 ghi +2,43 %. Con số được số liệu ủng hộ là 2,43 % (ablation 2607: bỏ số hạng phạt thời gian chết 32 116 796 so với 32 915 840 = −2,43 %; cùng số ở Bài 4B §1, Bài 22 §4.3/§9.2, 2607/03 §7). '5 %' không có nguồn nào; cộng 2,43+2,43 của beam và phạt không hợp lệ vì ablation không cộng được (Bài 22 §8.3)."
+  },
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "Sửa lại cách định giá này mang về ~5 % điểm số.",
+    "new": "Sửa lại cách định giá này mang về **+2,43 %** điểm số (ablation riêng số hạng phạt trên bản đầy đủ, §7.4).",
+    "ly_do": "[SỐ] Như trên (mục 32, ý 1)."
+  },
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "chênh 7 lần  →  +5 % điểm",
+    "new": "chênh 7 lần  →  +2,43 % điểm",
+    "ly_do": "[SỐ] Như trên (mục 32, ý 1)."
+  },
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "Đây là nội dung mang lại nhiều điểm nhất trong toàn khoá học.",
+    "new": "Đây là một trong những nội dung mang lại nhiều điểm nhất của khoá học.",
+    "ly_do": "[LOGIC] Ablation 2607 cho số hạng phạt +2,43 %, ngang beam (2,43 %) và thấp hơn khung ngày thứ 31 (+3,08 %); 'nhiều điểm nhất' không đúng."
+  },
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "Ablation cho thấy riêng số hạng phạt đóng góp **+2,43 %**. Chi tiết: Bài 21–22.",
+    "new": "Lưu ý cơ sở so sánh: 1 561 phút chết của greedy gồm 720 phút là cả khung ngày thứ 31 bị bỏ không và 841 phút dư cuối ngày; cùng dùng 31 ngày thì greedy còn 863 phút chết (Bài 22 §3.2). Ablation cho thấy riêng số hạng phạt đóng góp **+2,43 %**. Chi tiết: Bài 21–22.",
+    "ly_do": "[LOGIC] Bảng so 1 561 phút (greedy, 30 ngày) với ~88 phút (bản đầy đủ, 31 ngày) làm người đọc quy cả mức giảm cho số hạng phạt; theo 2607/02 §1.4(a) 1 561 = 720 (khung ngày thứ 31 bị bỏ không) + 841, và Bài 22 §3.2 cho greedy 31 ngày chỉ còn waste = 863. Thêm một câu nêu cơ sở; số liệu gốc không đổi."
+  },
+  {
+    "bai": "khoa-hoc/bai-06-gia-mo",
+    "old": "(40 220 — thua cả greedy tiền nhất)",
+    "new": "(40 220 — chỉ nhỉnh hơn greedy tiền nhất, 37 876, và thua greedy tỉ số 34,5 %)",
+    "ly_do": "[MÂU THUẪN] Mục 30 (nửa đầu) xác nhận: §6.1 cho λ = 0 chính là greedy tiền nhất = 37 876 (bảng §6.1 dòng 0; Bài 5 §7 cùng số) < 40 220, nên chèn λ = 0 KHÔNG thua greedy tiền nhất mà hơn nó 6,2 %; so với greedy tỉ số 61 420 thì thấp hơn 34,5 % (tính lại bằng code)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**5.1** Bắt đầu bằng đơn 4 (chi phí $3+15=18$, $t=18$), rồi tỉ số từ đơn 4: đơn 1 cho $2000/(2+20)=90{,}9$ ← cao nhất → $t=40$; rồi đơn 3 từ đơn 1: $6000/(7+30)=162$ → $t=77$; đơn 2 cần $20+10=30$ → 107 > 100 ✗. **Tổng = 1200+2000+6000 = 9 200.** Bằng greedy gần nhất.",
+    "new": "**5.1** Bắt đầu bằng đơn 4 (chi phí $3+15=18$, $t=18$), rồi tính lại tỉ số từ đơn 4: đơn 1 cho $2000/(2+20)=90{,}9$; đơn 2 cho $2500/(19+10)=86{,}2$; đơn 3 cho $6000/(7+30)=162{,}2$ ← cao nhất → $t=55$. Từ đơn 3: đơn 1 cho $2000/(7+20)=74{,}1$; đơn 2 cho $2500/(20+10)=83{,}3$ ← cao nhất → $t=85$. Đơn 1 cần $21+20=41$ → 126 > 100 ✗. **Tổng = 1200+6000+2500 = 9 700.** Cao hơn 9 200 của greedy gần nhất (+5,4 %) và 8 500 của greedy tỉ số xuất phát từ kho (+14,1 %). Thử cả bốn đơn đầu: đơn 1 → 10 500 (cũng là tối ưu, kiểm bằng vét cạn), đơn 2 → 8 500, đơn 3 → 8 500, đơn 4 → 9 700 — chỉ đổi đơn đầu tiên mà điểm dao động từ 8 500 đến 10 500 (chênh 23,5 %): greedy rất nhạy với lựa chọn đầu tiên, vì chọn xong là chốt, không sửa lại.",
+    "ly_do": "[SỐ] Chạy lại bằng code: từ đơn 4 (t=18) tỉ số của đơn 3 là 6000/37 = 162,2, cao hơn đơn 1 (90,9) và đơn 2 (86,2), nên greedy chọn đơn 3 (không phải đơn 1 như đáp án cũ); tiếp theo chọn đơn 2 (83,3 > 74,1), t = 85. Tổng 9 700, không phải 9 200 và không 'bằng greedy gần nhất'. Đáp án cũng bỏ ngỏ câu hỏi về độ nhạy; bổ sung bằng kết quả bốn lần xuất phát (10 500 / 8 500 / 8 500 / 9 700)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**5.2** Ví dụ: $W=10$; X$(p=11,w=6)$, Y$(p=10,w=5)$, Z$(p=10,w=5)$. Tỉ số: X = 1,833; Y = Z = 2,0. Greedy tỉ số: Y+Z = **20** (đúng tối ưu). Đổi lại: X$(p=13,w=6)$ tỉ số 2,167 → greedy lấy X (còn 4 kg, không lấy được gì) = **13**; tối ưu Y+Z = 20. **Sai 35 %.**",
+    "new": "**5.2** Ví dụ: $W=100$; X$(p=52,w=51)$, Y$(p=50,w=50)$, Z$(p=50,w=50)$. Tỉ số: X = 1,0196; Y = Z = 1,0. Greedy tỉ số lấy X trước (51 kg), còn 49 kg — Y và Z đều cần 50 nên không vừa → **52**. Tối ưu: bỏ X, lấy Y+Z = 100 kg vừa khít → **100**. **Sai $(100-52)/100 = 48\\,\\%$** > 40 %. (Với $W=10$ và Y, Z nặng 5, món X muốn chặn cả hai phải nặng ≥ 6, tức chiếm ≥ 60 % túi, nên greedy đạt ≥ 60 % tối ưu: ví dụ X$(p=13,w=6)$, Y, Z$(p=10,w=5)$ chỉ sai 35 %, còn ví dụ ở §4.3 chỉ sai 30 %. Muốn sai hơn 40 % phải để X chiếm gần một nửa túi, nên cần $W$ lớn.)",
+    "ly_do": "[SỐ] Đề 5.2 yêu cầu sai HƠN 40 % nhưng đáp án cũ chỉ đạt 35 % ((20−13)/20). Ví dụ mới W=100, X(52,51), Y(50,50), Z(50,50): greedy 52, tối ưu 100 (vét cạn), sai 48 % (kiểm bằng code). Đoạn trong ngoặc giải thích vì sao W=10 không đủ."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "thứ hạng giữ nguyên nhưng **khoảng cách thu hẹp**: gần nhất 59 452 (−15,9 %) so với −12,9 % ở dữ liệu rải đều.",
+    "new": "thứ hạng giữ nguyên nhưng **khoảng cách nới rộng**: gần nhất 59 452 (−15,9 %) so với −12,9 % ở dữ liệu rải đều.",
+    "ly_do": "[MÂU THUẪN] −15,9 % thấp hơn tỉ số nhiều hơn −12,9 % (53 499/61 420 − 1 = −12,9 % ở §7 của bài), tức khoảng cách NỚI RỘNG, không phải thu hẹp; lời giải thích ngay sau ('ưu tiên gần ít mang lại lợi thế hơn') cũng đi theo chiều nới rộng."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "- Bài học: máy $m=5$ (250 000/180 = 1 389 đ/phút) nằm sát ngưỡng — nó là loại máy \"biên\".",
+    "new": "- Bài học: ngôi nhà này (máy loại 5 của đề 2607) hoà vốn ở $\\lambda = 250\\,000/192 \\approx 1\\,302$ (nếu bỏ phần đi lại: $250\\,000/180 \\approx 1\\,389$) — nằm giữa 1 250 và 1 420, nên là loại \"biên\": đáng hay không tuỳ $\\lambda$.",
+    "ly_do": "[SỐ] Đề 6.2 không có 'máy m=5' mà chỉ có ngôi nhà 250 000 / 180 phút / cách 12 phút; ngưỡng hoà vốn của đúng bài này là p/c = 250 000/192 = 1 302,1 (v = 0), đúng với các giá trị v tính ngay phía trên (−22 640 ở λ=1 420; +10 000 ở λ=1 250), chứ không phải 250 000/180 = 1 389."
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "**Ngân sách:** 100 ms ≈ $10^7$ phép · 1 s ≈ $10^8$ · 10 s ≈ $10^9$.",
+    "new": "**Ngân sách:** máy ≈ $10^9$ phép đơn giản/s (Bài 2) ⇒ 100 ms ≈ $10^8$ phép đơn giản; nhưng mỗi \"phép\" của heuristic (một lần đánh giá, một nước đi) tốn cỡ 10 lệnh, nên ngân sách **an toàn**: 100 ms ≈ $10^7$ phép · 1 s ≈ $10^8$ · 10 s ≈ $10^9$.",
+    "ly_do": "[MÂU THUẪN] Bài 2 (§3 bảng thời gian vét cạn, §11 tóm tắt, đáp án 2.x) chuẩn hoá 10^9 phép đơn giản/giây ⇒ 100 ms = 10^8; cheatsheet ghi '100 ms ≈ 10^7' không giải thích gì nên lệch một bậc so với Bài 2 (quyết định thống nhất số 4). 10^7 là 'ngân sách an toàn' (quy tắc bỏ túi ở Kiểm tra đầu vào A2) — nêu rõ cơ sở để hai con số không mâu thuẫn."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "| Cải thiện cần phát hiện | Số test |\n|---|---:|\n| 10 % | 30 |\n| 5 % | 100 |",
+    "new": "| Cải thiện cần phát hiện ($\\sigma/\\bar{x}=10\\,\\%$) | Số test |\n|---|---:|\n| 10 % | 8 (công thức) — dùng ≥ 30 |\n| 5 % | 32 |",
+    "ly_do": "[SỐ] Bảng thiếu điều kiện σ và hai ô không khớp công thức N ≳ 8(σ/Δ)² ngay phía trên. Với σ/x̄ = 10 % (cột khiến 1 % → 800 đúng): Δ=10 % ⇒ 8·(0,1/0,1)² = 8; Δ=5 % ⇒ 8·4 = 32; Δ=1 % ⇒ 8·100 = 800 — đúng bảng Bài 4 §3.3 (8 / 32 / 800). Ô '5 % → 100' không suy ra từ công thức nào (1 % → 800 và 5 % → 100 không thể cùng một σ). '30' là mức tối thiểu thực dụng Bài 4 §3.3 nêu cho giai đoạn đầu nên giữ làm khuyến nghị."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "$\\mathbb{E}[\\max_{1..N}] \\approx \\mu + \\sigma\\sqrt{2\\ln N}$ → $N = 20$–50 là điểm ngọt.",
+    "new": "$\\mathbb{E}[\\max_{1..N}] = \\mu + \\sigma\\,\\mathbb{E}[\\max_N Z]$, với $\\mathbb{E}[\\max_N Z]$ = 1,54 ($N=10$) · 2,16 ($N=40$) · 2,51 ($N=100$); $\\sqrt{2\\ln N}$ chỉ là *chặn trên* (2,15 · 2,72 · 3,03) → $N = 20$–50 là điểm ngọt.",
+    "ly_do": "[LOGIC] Bài 8 §5.1 nhấn mạnh '√(2 ln N) là CHẶN TRÊN, không phải giá trị' (N=10: 2,15 so với 1,54 đúng, lệch 39 %). Cheatsheet viết ≈ nên dùng đúng thứ bài cảnh báo. Đã tính lại bằng tích phân số E[max Z] = 1,539 (N=10), 2,161 (N=40), 2,508 (N=100), 3,241 (N=1000) — khớp bảng Bài 8; √(2 ln N) = 2,146 / 2,716 / 3,035."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "Với $\\lambda=0$: sụp đổ (−38 %).",
+    "new": "Với $\\lambda=0$: sụp đổ (40 220 = −34,5 % so với greedy tỉ số; −38,5 % so với chèn đã hiệu chuẩn 65 425).",
+    "ly_do": "[SỐ] '−38 %' trong Bài 6 §6.2(a) là của λ-greedy với λ=0 (= greedy tiền nhất 37 876, −38,33 % so với 61 420), còn chèn với λ=0 chỉ có 40 220 (Bài 6 §6.3, Bài 7 §2.3). 40 220/61 419,7 − 1 = −34,5 %; 40 220/65 424,9 − 1 = −38,5 %. Câu cheatsheet ngay sau '+6,5 % so với greedy' nên đọc là so với greedy tỉ số ⇒ phải là −34,5 %; ghi rõ cả hai cơ sở để khỏi nhầm."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "| beam W=30 | 64 273 | +4,7 % | 3,4 ms |",
+    "new": "| beam W=30 | 64 273 | +4,6 % | 3,4 ms |",
+    "ly_do": "[SỐ] 64 272,8 / 61 419,7 − 1 = +4,646 % ⇒ làm tròn một chữ số là +4,6 % (Bài 16 §6.1 ghi 4,65 %; làm tròn tiếp thành 4,7 là làm tròn hai lần). Mọi dòng khác trong bảng đã khớp lại đúng (−38,3 · −12,9 · −2,7 · −0,0 · +6,5 · +7,0 · +7,3 · +7,3 · +7,6)."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "$$\\text{rank}(s) = f(s) + \\rho\\cdot(\\text{tài nguyên còn lại}), \\qquad \\rho \\approx \\lambda$$",
+    "new": "$$\\text{rank}(s) = f(s) + \\rho\\cdot(\\text{tài nguyên còn lại}), \\qquad \\rho \\approx \\lambda \\ \\text{(khi } f \\text{ là điểm gộp)}$$",
+    "ly_do": "[LOGIC] Quyết định thống nhất số 5: 'ρ chính là λ' chỉ đúng khi f là điểm gộp (chưa trừ λ·c). Nếu f đã là giá trị ròng Σ(p − λc) thì ρ là phần tiềm năng cộng thêm, ≠ λ (ca 2607: ρ = 90, λ = 1 420 — Bài 16 §4.3 bảng quét ρ). Đã thêm điều kiện, giữ nguyên ý chính."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "⚠️ **Thiếu số hạng tiềm năng → beam thoái hoá thành greedy.**",
+    "new": "⚠️ **Thiếu số hạng tiềm năng → beam thoái hoá thành greedy.** $\\rho \\approx \\lambda$ chỉ khi $f$ là điểm *gộp*; nếu $f$ đã là giá trị ròng (đã trừ $\\lambda c$) thì $\\rho \\neq \\lambda$.",
+    "ly_do": "[LOGIC] Cùng lý do với bản vá ngay trên (quyết định thống nhất số 5): nêu rõ điều kiện của ρ ≈ λ ngay dưới công thức để người tra cứu không áp máy móc."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "**Phá:** ngẫu nhiên · tệ nhất ($p_j + \\lambda\\Delta t$) · **theo quan hệ (mạnh nhất)** · đoạn liên tiếp.",
+    "new": "**Phá:** ngẫu nhiên · tệ nhất ($p_j + \\lambda\\Delta t_{\\text{bỏ}}$ nhỏ nhất, $\\Delta t_{\\text{bỏ}} \\le 0$) · **theo quan hệ (mạnh nhất)** · đoạn liên tiếp.",
+    "ly_do": "[NHỎ] Ở trang 1 (Bài 7) cheatsheet định nghĩa Δt = d(a,j)+d(j,b)−d(a,b)+s_j ≥ 0 (chèn); đọc 'p_j + λΔt' theo nghĩa đó thành một khoản THƯỞNG chứ không phải giá trị ròng. Bài 17 §4.2 (mã `dt = deltaBo(...) /* <= 0 */; v = p + lambda*dt`) và tóm tắt dùng Δt_bỏ ≤ 0 (thời gian tiết kiệm được). Thêm chỉ số 'bỏ' và dấu để ký hiệu không đổi nghĩa giữa hai trang."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "| Cách cận trên | Hành động |",
+    "new": "| Khoảng cách tới cận trên | Hành động |",
+    "ly_do": "[NHỎ] Tiêu đề cột 'Cách cận trên' cụt chữ; Bài 18 §6 gọi là 'Khoảng cách' (độ hở = (UB − LB)/LB, Bài 18 §2) và checklist giai đoạn 4 gọi là 'khoảng cách'."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "| > 30 % | mô hình sai → Bài 1 |",
+    "new": "| > 30 % | mô hình sai hoặc cận quá lỏng → Bài 1 |",
+    "ly_do": "[LOGIC] Bài 18 §6 ghi '> 30 %: mô hình hoá sai HOẶC cận quá lỏng — kiểm tra lại Bài 1, thử cận chặt hơn' (và §9 cạm bẫy 2: cận lỏng làm độ hở phình ra). Cheatsheet chỉ nêu 'mô hình sai' nên kết luận mạnh hơn bằng chứng."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "| 1 | 200 |",
+    "new": "| 1 (quy tắc Bài 4, không nhân $\\ln K$) | 200 |",
+    "ly_do": "[MÂU THUẪN] Công thức ngay trên N ≳ 8(σ/Δ)² ln K cho 0 khi K=1 (ln 1 = 0), nhưng bảng ghi 200. 200 = 8·(0,1/0,02)² chính là quy tắc gốc Bài 4 (không có hệ số ln K). Các dòng còn lại tính lại đúng: K=20 ⇒ 200·ln 20 = 599 ≈ 600; K=100 ⇒ 921 ≈ 920. Chỉ thêm chú thích cho dòng K=1 (không đụng công thức)."
+  },
+  {
+    "bai": "tai-lieu/cheatsheet",
+    "old": "\\text{ảo giác} \\approx \\frac{\\sigma}{\\sqrt{N}}\\sqrt{2\\ln K}",
+    "new": "\\text{ảo giác} \\lesssim \\frac{\\sigma}{\\sqrt{N}}\\sqrt{2\\ln K}",
+    "ly_do": "[NHỎ] Bài 20B §1.1 tự kiểm: với σ=10, N=30, K=100 công thức cho 5,55 % trong khi bảng đo là 3,0 % — 'vậy công thức là cận trên'. Cheatsheet đổi ≈ thành ≲ cho khớp."
+  },
+  {
+    "bai": "tai-lieu/checklist-lam-bai",
+    "old": "> In ra, dùng trong kỳ thi hoặc dự án thật. Mỗi ô tick là một bước không được bỏ qua.",
+    "new": "> In ra, dùng trong kỳ thi hoặc dự án thật. Mỗi ô tick là một bước không được bỏ qua.\n> Lưu ý đánh số: checklist này có 7 giai đoạn vì gộp bước ④ (nghiệm cơ sở) và ⑤ (cận trên) của quy trình 8 bước (Bài 20) thành GIAI ĐOẠN 4; vậy GIAI ĐOẠN 5, 6, 7 = bước ⑥, ⑦, ⑧ của Bài 20 (tỉ lệ thời gian khớp: 5 % + 5 % = 10 %).",
+    "ly_do": "[THAM CHIẾU] Bài 20 §2 và §11 đánh số 8 bước (④ cơ sở 5 %, ⑤ cận trên 5 %); checklist dùng 7 'giai đoạn' (4 = cơ sở & cận 10 %) nên 'giai đoạn N' ≠ 'bước N' từ mục 4 trở đi và dễ trỏ nhầm khi đối chiếu 'bước ⑥ cải tiến' với 'giai đoạn 5'. Chỉ thêm ghi chú đối ứng; tỉ lệ 10/10/15/10/40/10/5 = 100 % và khớp Bài 20."
+  },
+  {
+    "bai": "tai-lieu/checklist-lam-bai",
+    "old": "    > 30 %    → mô hình sai, quay lại giai đoạn 2",
+    "new": "    > 30 %    → mô hình sai hoặc cận quá lỏng, quay lại giai đoạn 2",
+    "ly_do": "[LOGIC] Bài 18 §6: '> 30 %: mô hình hoá sai hoặc cận quá lỏng'. Giữ ngưỡng chuẩn của Bài 18 (quyết định thống nhất số 1), chỉ bổ sung vế còn thiếu."
+  },
+  {
+    "bai": "tai-lieu/checklist-lam-bai",
+    "old": "| 1 ngày (8 h) | 50 ph | 50 ph | 70 ph | 50 ph | 190 ph | 50 ph | 25 ph |",
+    "new": "| 1 ngày (8 h) | 48 ph | 48 ph | 72 ph | 48 ph | 192 ph | 48 ph | 24 ph |",
+    "ly_do": "[SỐ] Hàng '1 ngày (8 h)' cộng 50+50+70+50+190+50+25 = 485 phút ≠ 480 phút (8 h) do làm tròn từng ô lên. Theo tỉ lệ 10/10/15/10/40/10/5 % của 480 phút: 48/48/72/48/192/48/24 — tổng đúng 480. (Hàng 4 giờ: 25+25+35+25+95+25+10 = 240 ✓; hàng 1 tuần: 4+4+6+4+16+4+2 = 40 h ✓.)"
+  },
+  {
+    "bai": "tai-lieu/tu-dien-thuat-ngu",
+    "old": "| Hàm thay thế | surrogate function | Hàm mục tiêu phụ dùng để hướng dẫn tìm kiếm | 10 |",
+    "new": "| Hàm thay thế | surrogate function | Hàm / chỉ số trung gian dùng thay cho mục tiêu thật để hướng dẫn tìm kiếm; có thể đi ngược mục tiêu thật nên phải kiểm bằng điểm thật | 4B, 13 |",
+    "ly_do": "[THAM CHIẾU] Bài 10 không hề nhắc 'hàm thay thế'/surrogate (đã tìm cả bài). Thuật ngữ nằm ở Bài 4B (từ điển: 'đại lượng thay thế — surrogate metric: chỉ số trung gian, có thể đi ngược mục tiêu thật', §8 cạm bẫy 3) và Bài 13 §4.2 ('dùng hàm thay thế chỉ khi hiểu rõ hệ quả, kiểm bằng cách so với hàm thật'). Sửa cột Bài và giải thích cho khớp cách dùng đó (chỉ số 'phụ' bị tối ưu nhầm làm mục tiêu)."
+  },
+  {
+    "bai": "tai-lieu/tu-dien-thuat-ngu",
+    "old": "| Bài toán định hướng | orienteering problem | Chọn tập điểm + định tuyến dưới ràng buộc ngân sách, tối đa lợi ích | 1 |",
+    "new": "| Bài toán định hướng | orienteering problem | Chọn tập điểm + định tuyến dưới ràng buộc ngân sách, tối đa lợi ích | 1, 2 |",
+    "ly_do": "[THAM CHIẾU] Bài 1 mô hình hoá P1 (đúng dạng bài toán này) nhưng không gọi tên 'orienteering'; tên chỉ xuất hiện lần đầu ở Bài 2 (bảng NP-hard: 'Orienteering / Team Orienteering (P1, P2, P3)') và sau đó ở Bài 6 §8, Bài 11 §2.5. Trỏ cả Bài 1 (mô hình) và Bài 2 (tên)."
+  },
+  {
+    "bai": "tai-lieu/tu-dien-thuat-ngu",
+    "old": "| OP | Orienteering Problem | 1 |",
+    "new": "| OP | Orienteering Problem | 1, 2 |",
+    "ly_do": "[THAM CHIẾU] Cùng lý do: viết tắt/tên OP không có trong Bài 1; xuất hiện đầu tiên ở Bài 2 (bảng NP-hard)."
+  },
+  {
+    "bai": "tai-lieu/tu-dien-thuat-ngu",
+    "old": "| TOP | Team Orienteering Problem | 21 |",
+    "new": "| TOP | Team Orienteering Problem | 2 |",
+    "ly_do": "[THAM CHIẾU] Bài 21 không chứa 'TOP' hay 'Team Orienteering' (đã tìm cả bài). Tên xuất hiện đầu tiên ở Bài 2 (bảng NP-hard) rồi ở danh mục đọc thêm Bài 17 (Hammami, Rekik & Coelho 2020)."
+  }
+]

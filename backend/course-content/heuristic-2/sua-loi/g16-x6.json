@@ -1,0 +1,110 @@
+[
+ {
+  "bai": "2605/01-phat-bieu-de-bai",
+  "old": "  max_size =    64  →  1,551        ← ngoại lệ tệ nhất\n```",
+  "new": "  max_size =    64  →  1,551        ← ngoại lệ tệ nhất\n```\n\n> ℹ️ **Cơ sở số đo.** §3.1 nêu 1,551 cho test case tệ nhất; bảng ở `02` §5 (cùng thước đo `peak/LB`, 100 test case) cho test case tệ nhất của lời giải tham khảo là 1,5276 và của lời giải đề xuất là 1,3959 (≈ \"1,40\" ở §4.3 dưới đây và ở `03` §12). Chưa đối chiếu được nguồn của 1,551 — dùng số ở `02` §5.",
+  "ly_do": "[QUYẾT ĐỊNH] X6#1. 1,551 không khớp số nào ở 02 §5 (v0 tệ nhất 1,5276; đề xuất 1,3959 ≈ 1,40 ở 01 §4.3 và 03 §12); không có mã/log gốc để truy nguồn nên giữ số, thêm ghi chú cơ sở và chỉ dẫn dùng số ở 02 §5."
+ },
+ {
+  "bai": "2605/01-phat-bieu-de-bai",
+  "old": "| Dư địa còn lại | 18,6 % | **7,5 %** |",
+  "new": "| Độ hở tới cận trên (= `peak/LB` − 1) | 18,6 % | **7,5 %** |",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. 'Dư địa' ở đây là phần trăm còn lại tới cận trên ⇒ 'độ hở' theo định nghĩa chung (cận trên − cơ sở)/cơ sở; tính lại: 1,1863 − 1 = 18,6 %; 1,0752 − 1 = 7,5 % (điểm trần/điểm = peak/LB)."
+ },
+ {
+  "bai": "2605/tong-quan",
+  "old": "Log đầy đủ: [`04-implementation/bench/final_validation.txt`](04-implementation/bench/final_validation.txt)",
+  "new": "Log đầy đủ: [`04-implementation/bench/final_validation.txt`](04-implementation/bench/final_validation.txt) *(tệp này không có trong cây thư mục ở `04` §3; chưa kiểm được)*",
+  "ly_do": "[QUYẾT ĐỊNH] X6#2. Cây thư mục 04 §3 chỉ liệt kê bench/ladder.txt, không có final_validation.txt; không có repo mã nguồn để kiểm nên ghi rõ chưa kiểm được."
+ },
+ {
+  "bai": "2605/tong-quan",
+  "old": "⭐ **đối chiếu với cả 23 bài** của khoá heuristic",
+  "new": "⭐ **đối chiếu với cả 23 bài lõi** (chưa kể các bài mở rộng B) của khoá heuristic",
+  "ly_do": "[QUYẾT ĐỊNH] X6#3. Khoá còn các bài mở rộng 4B/17B/18B/19B/20B ngoài 23 bài lõi; câu tương ứng ở 06 mở đầu cũng được sửa."
+ },
+ {
+  "bai": "2605/00-huong-dan-doc",
+  "old": "Biết ngay \"còn ~18,5 % dư địa\" |",
+  "new": "Biết ngay \"độ hở còn ~18,5 %\" |",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. 'Dư địa' = % còn lại tới cận trên ⇒ 'độ hở' (định nghĩa chung, Bài 18 §6)."
+ },
+ {
+  "bai": "2605/00-huong-dan-doc",
+  "old": "**Cận trên** → biết còn bao nhiêu dư địa",
+  "new": "**Cận trên** → biết độ hở còn bao nhiêu",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. Cùng thuật ngữ 'độ hở' như dòng bước ③ ngay trên."
+ },
+ {
+  "bai": "2605/02-giai-phap-hien-tai",
+  "old": "Biết trần lý thuyết → biết còn bao nhiêu dư địa (Bài 18)",
+  "new": "Biết trần lý thuyết → biết độ hở còn bao nhiêu (Bài 18)",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. 'Dư địa' = % còn lại tới cận ⇒ 'độ hở' (Bài 18 §6)."
+ },
+ {
+  "bai": "2605/03-de-xuat-cai-tien",
+  "old": "| Bỏ kích thước hiệu dụng | 15 440 068 | 1,0831 | −0,16 % |",
+  "new": "| Bỏ kích thước hiệu dụng | 15 440 068 | 1,0831 | −0,16 % |\n\n> ⚠️ Cơ sở đo: dòng \"bỏ kích thước hiệu dụng\" (15 440 068, −0,16 %) không trùng v3 ở §1 (15 398 908, tức −0,43 % so với v4) dù v3 là v4 trừ `eff`: hai phép đo ở hai cấu hình khác nhau, chưa đối chiếu được mã gốc. Chỉ so sánh các dòng trong cùng một bảng; +0,43 % ở §1 và §4 là số theo thang phiên bản.",
+  "ly_do": "[QUYẾT ĐỊNH] X6#8 (kiểm lại ghi chú cơ sở). Điều phối nói g11 đã ghi chú cho ablation 'bỏ eff' ≠ v3, nhưng bản hiện tại KHÔNG có ghi chú này (chỉ có ghi chú ba giá trị peak/LB ở §2.3) nên thêm một ghi chú ngắn, không đổi số. Tính lại: 15 440 068/15 465 394 − 1 = −0,16 %; 15 398 908/15 465 394 − 1 = −0,43 %."
+ },
+ {
+  "bai": "2605/03-de-xuat-cai-tien",
+  "old": "Kỹ thuật kinh điển của strip packing, được dùng\n   trong MiniMalloc.",
+  "new": "Ý tưởng gần với các bộ giải bin-packing hai phía;\n   chưa kiểm chứng cụ thể ở MiniMalloc.",
+  "ly_do": "[QUYẾT ĐỊNH] X6#3. Khẳng định 'được dùng trong MiniMalloc' chưa kiểm chứng được (g11) ⇒ hạ mức theo quyết định."
+ },
+ {
+  "bai": "2605/03-de-xuat-cai-tien",
+  "old": "để biết dư địa thật.",
+  "new": "để biết độ hở thật.",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. Câu nói về khoảng còn lại tới một cận dưới có tính căn chỉnh ⇒ 'độ hở' (không phải 'dư địa' mang nghĩa chung như ở §9 mục 3, giữ nguyên)."
+ },
+ {
+  "bai": "2605/04-implementation",
+  "old": "| Hệ số an toàn | 2,2 × | **4,4 ×** |",
+  "new": "| Hệ số an toàn | 2,2 × | **4,4 ×** |\n\n> ⚠️ Các lệnh `-DNSTRAT=1` ở §5.1 (v4) và §5.2 (ablation) giả định dòng `#define NSTRAT` trong `solution.cpp` được bọc bằng `#ifndef NSTRAT … #endif`. Nếu dòng đó là `#define NSTRAT 6` trần, cờ dòng lệnh bị ghi đè (và `-Wall` báo `redefined`) — không có `solution.cpp` trong repo nên chưa kiểm được.",
+  "ly_do": "[QUYẾT ĐỊNH] X6#2. §5.1–5.2 dùng -DNSTRAT=1 còn §7 nói sửa một dòng `#define NSTRAT` ở dòng 45; nếu macro không bọc #ifndef thì cờ dòng lệnh bị ghi đè. Không có mã nguồn trong repo ⇒ nêu giả định, không khẳng định."
+ },
+ {
+  "bai": "2605/04-implementation",
+  "old": "*\"còn bao nhiêu dư địa\"*",
+  "new": "*\"độ hở còn bao nhiêu\"*",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. Cận dưới tải trọng cho biết % còn lại tới cận ⇒ 'độ hở' (Bài 18)."
+ },
+ {
+  "bai": "2605/06-lien-he-khoa-hoc",
+  "old": "Tài liệu này đi qua **cả 23 bài học**, và với mỗi bài",
+  "new": "Tài liệu này đi qua **cả 23 bài lõi (chưa kể các bài mở rộng B)**, và với mỗi bài",
+  "ly_do": "[QUYẾT ĐỊNH] X6#3. Khoá còn 4B/17B/18B/19B/20B ngoài 23 bài lõi (g11 ghi nhận)."
+ },
+ {
+  "bai": "2605/06-lien-he-khoa-hoc",
+  "old": "biết ngay còn bao nhiêu dư địa",
+  "new": "biết ngay độ hở còn bao nhiêu",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. 'Dư địa' = % còn lại tới cận ⇒ 'độ hở' (Bài 18 §6)."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "Nâng giá/phút từ ~1 450 lên ~1 530 | **+3…5 %** |",
+  "new": "Nâng giá/phút từ ~1 450 lên ~1 530 (ước tính; đo thật: greedy ≈ 1 512–1 514, lời giải đề xuất ≈ 1 519 — xem `02-…` §1.4, §6) | **+3…5 %** |",
+  "ly_do": "[QUYẾT ĐỊNH] X6#6. Đo thật ở 02: greedy A 1 512 (§1.4; (30 714 270 − 1 271 703)/19 452 ≈ 1 514), đề xuất C (32 915 840 − 1 434 274)/20 722 ≈ 1 519 (§6); không rõ '~1 450' là baseline nào nên gắn nhãn ước tính, không đổi số."
+ },
+ {
+  "bai": "2607/03-de-xuat-cai-tien",
+  "old": "| × 3 preset | | **~4,3 triệu** |",
+  "new": "| × 3 preset | | **≈ 4,6 triệu** (= 0,2 + 3 × (0,22 + 1,24); coi `nfCache` dựng riêng cho từng preset) |",
+  "ly_do": "[QUYẾT ĐỊNH] X6#4 ([SỐ]). Cộng các dòng bảng: 10 000 + 45 000 + 150 000 = 0,205 triệu (dựng một lần) + 3 × (223 000 + 1 240 000) = 4 389 000 ⇒ 4 594 000 ≈ 4,6 triệu, không phải 4,3. (nếu nfCache dùng chung cho ba preset thì ≈ 4,1; cả hai cách đều không ra 4,3.)"
+ },
+ {
+  "bai": "2607/03-de-xuat-cai-tien",
+  "old": "`act[]` dư 2,4× |",
+  "new": "`act[]` dư 2,4× (không khớp 461/528 ≈ 1,15× ở Bài 22 §8.5; chưa đối chiếu được log gốc) |",
+  "ly_do": "[QUYẾT ĐỊNH] X6#5. 528/461 = 1,145 ≠ 2,4; không có mã/log gốc nên không đổi số, chỉ ghi chú không khớp."
+ },
+ {
+  "bai": "2607/05-lien-he-bai-toan",
+  "old": "cho ta ước chừng dư địa còn lại (BHH",
+  "new": "cho ta ước chừng độ hở còn lại tới mức tham chiếu (BHH",
+  "ly_do": "[QUYẾT ĐỊNH] X6#7. 'Dư địa' = % điểm còn lại tới mức tham chiếu BHH (không phải cận) ⇒ 'độ hở … tới mức tham chiếu' cho khỏi nhầm với cận chứng minh được."
+ }
+]

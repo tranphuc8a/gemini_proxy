@@ -200,7 +200,7 @@
     saiSo: 0.0051,
     dinhDang: {
       vao: "Dòng 1: `τ` (số thực, phút di chuyển phân bổ cho mỗi nhà). Dòng 2: sáu số nguyên `c₁ … c₆` — số ngôi nhà phân biệt của từng loại máy. Dòng 3: `B` — điểm của nghiệm cơ sở.",
-      ra: "Bốn số: `tong` (số nguyên), `baoHoa` (≥ 3 chữ số thập phân), `canTren` (≥ 2 chữ số thập phân), `duDia` (%, ≥ 2 chữ số thập phân)."
+      ra: "Bốn số: `tong` (số nguyên), `baoHoa` (≥ 3 chữ số thập phân), `canTren` (≥ 2 chữ số thập phân), `duDia` (độ hở, %, ≥ 2 chữ số thập phân)."
     }
   }));
 
@@ -214,7 +214,7 @@
       "Đi vào ô **trống** thì `move()` trả về trước khi cộng thưởng OT: đi rỗng giữa ngày sau phút 480 mất 200 điểm/phút, còn đi rỗng **sau lần dọn cuối** thì miễn phí (ô đích phải trống và vẫn ≤ 720 phút). Đáp xuống ô **có nhà** là bắt buộc dọn — vượt 720 là `SCORE = 0`.",
       "`gCurrentDay` khởi tạo 0 và `nextDay()` chặn ở `>= 30` ⇒ gọi được **30 lần = 31 ngày làm việc**, ngân sách 31 × 720 = 22 320 phút chứ không phải 21 600 (+3,3 % quỹ thời gian, đo được +3,27 % điểm).",
       "`SCORE` **không reset** giữa các test case, nên một test vi phạm xoá sạch điểm mọi test trước đó: an toàn quan trọng hơn vài phần trăm điểm. Nhà có thể trùng ô, vị trí xuất phát có thể trúng nhà (27/1 000 test).",
-      "Định cỡ: dọn hết mọi nhà ≈ 293 × 135 ≈ 39 600 phút, gấp ~1,8 lần ngân sách ⇒ chỉ phục vụ ~155–160 nhà; một phút thừa đáng giá mờ λ ≈ 1 420 điểm, **không phải 200** (gấp 7 lần). Nghiệm cơ sở 31 718 184 so với cận trên (τ = 7) 33 943 173 còn ~7,0 % dư địa."
+      "Định cỡ: dọn hết mọi nhà ≈ 293 × 135 = 39 555 ≈ 39 600 phút, gấp ~1,8 lần ngân sách ⇒ chỉ phục vụ ~155–160 nhà; một phút thừa đáng giá mờ λ ≈ 1 420 điểm, **không phải 200** (gấp 7 lần). Nghiệm cơ sở v2 (greedy 31 ngày) 31 718 184 so với cận tham chiếu (τ = 7) 33 943 173, độ hở ~7,0 % (so với v1 = 30 714 270 là 10,5 %)."
     ],
 
     trac: [
@@ -341,22 +341,22 @@
         id: "l2", doKho: 2, ref: "M2, §5",
         hoi: "Hãy mô hình hoá P3 thành bộ ba (S, C, f) và chọn một cách biểu diễn lời giải. Giải thích vì sao ranh giới giữa các ngày có thể **suy ra** thay vì lưu.",
         goiY: ["Quan sát 1 (ngày nối tiếp) cho biết ràng buộc của một ngày bắt đầu từ đâu.", "Quan sát 2 cho biết thưởng OT của một ngày chỉ cần một con số nào."],
-        mau: "- **S** (không gian lời giải): dãy có thứ tự các ngôi nhà phân biệt π = (h₁, …, h_k), cắt thành ≤ 31 đoạn liên tiếp, mỗi đoạn là một ngày.\n- **C** (ràng buộc cứng): mỗi nhà dọn tối đa một lần; mỗi ngày d(vị trí cuối ngày trước, h_a) + Σ (d(h_{i−1}, h_i) + s_{h_i}) ≤ 720, với vị trí **không** về kho; tối đa 31 ngày. Vi phạm bất kỳ ràng buộc nào ⇒ SCORE = 0.\n- **f** (mục tiêu, cực đại): Σ p_i + 200 · Σ_d max(0, T_end,d − 480), với T_end,d là giờ kết thúc lần dọn cuối của ngày d.\n- **Biểu diễn**: chuỗi phẳng — một dãy duy nhất `seq[]`, việc mô phỏng tự cắt dãy thành ngày (gặp nhà không còn vừa 720 phút thì sang ngày mới). Ranh giới ngày suy ra được vì các ngày nối tiếp nhau và không có chi phí quay về kho, nên lưu sẵn 31 danh sách riêng là thừa và dễ sinh nghiệm không hợp lệ.",
+        mau: "- **S** (không gian lời giải): dãy có thứ tự các ngôi nhà phân biệt π = (h₁, …, h_k), cắt thành ≤ 31 đoạn liên tiếp, mỗi đoạn là một ngày.\n- **C** (ràng buộc cứng): mỗi nhà dọn tối đa một lần; mỗi ngày phục vụ các nhà h_a, …, h_b thì d(vị trí cuối ngày trước, h_a) + s_{h_a} + Σ_{i=a+1..b} (d(h_{i−1}, h_i) + s_{h_i}) ≤ 720, với vị trí **không** về kho; tối đa 31 ngày. Vi phạm bất kỳ ràng buộc nào ⇒ SCORE = 0.\n- **f** (mục tiêu, cực đại): Σ p_i + 200 · Σ_d max(0, T_end,d − 480), với T_end,d là giờ kết thúc lần dọn cuối của ngày d.\n- **Biểu diễn**: chuỗi phẳng — một dãy duy nhất `seq[]`, việc mô phỏng tự cắt dãy thành ngày (gặp nhà không còn vừa 720 phút thì sang ngày mới). Ranh giới ngày suy ra được vì các ngày nối tiếp nhau và không có chi phí quay về kho, nên lưu sẵn 31 danh sách riêng là thừa và dễ sinh nghiệm không hợp lệ.",
         tieuChi: ["Nêu đủ ba thành phần S, C, f; f gồm cả Σ p và thưởng OT", "Ràng buộc đúng: 720 phút/ngày, vị trí mang sang ngày sau, mỗi nhà một lần, tối đa 31 ngày", "Thưởng OT viết theo giờ kết thúc nhà cuối của từng ngày (dạng co rút)", "Giải thích chuỗi phẳng: ranh giới ngày suy ra khi mô phỏng"]
       },
       {
         id: "l3", doKho: 3, ref: "§6.3",
         hoi: "Trực giác nói mỗi phút thừa cuối ngày chỉ mất 200 điểm thưởng OT. Hãy giải thích vì sao thật ra nó đáng cỡ 1 420 điểm và hệ quả của điều đó với thuật toán.",
         goiY: ["Phút thừa ấy lẽ ra có thể dùng làm gì?", "Điều kiện nào của bài toán bảo đảm phút nào bỏ trống cũng lấp được?"],
-        mau: "Phút thừa cuối ngày không dọn và cũng không dùng để tiến tới chỗ dọn nên **không sinh điểm**: mất cả tiền công mà phút đó lẽ ra kiếm được chứ không chỉ 200 điểm thưởng OT.\n\nĐiều kiện để nói vậy là bài toán **bão hoà**: dọn hết mọi nhà cần ≈ 39 600 phút so với ngân sách 22 320 (gấp ~1,8 lần), nên mọi phút bỏ trống đều có thể lấp bằng việc dọn thêm. Chi phí cơ hội ấy là **giá mờ λ ≈ 1 420 điểm/phút** (cùng bậc với giá/phút trung bình ≈ 1 520 của việc dọn nhà), gấp 1 420 / 200 ≈ **7,1 lần** trực giác.\n\nHệ quả: triệt tiêu thời gian chết là đòn bẩy số 1 (+4…6 %), lớn hơn chọn loại máy hay rút ngắn quãng đường, và thuật toán phải được xây quanh λ (Bài 6, Bài 22).",
-        tieuChi: ["Giải thích phút thừa lẽ ra dùng để dọn nhà nên mất tiền công, không chỉ 200", "Nhắc bài toán bão hoà (gấp ~1,8 lần ngân sách) là điều kiện để phút nào bỏ trống cũng lấp được", "Nêu λ ≈ 1 420 và tỉ lệ ≈ 7 lần so với trực giác", "Nêu hệ quả: thời gian chết là đòn bẩy số 1, thuật toán xây quanh λ"]
+        mau: "Phút thừa cuối ngày không dọn và cũng không dùng để tiến tới chỗ dọn nên **không sinh điểm**: mất cả tiền công mà phút đó lẽ ra kiếm được chứ không chỉ 200 điểm thưởng OT.\n\nĐiều kiện để nói vậy là bài toán **bão hoà**: dọn hết mọi nhà cần ≈ 39 600 phút so với ngân sách 22 320 (gấp ~1,8 lần), nên mọi phút bỏ trống đều có thể lấp bằng việc dọn thêm. Chi phí cơ hội ấy là **giá mờ λ ≈ 1 420 điểm/phút** (cùng bậc với giá/phút trung bình ≈ 1 520 của việc dọn nhà), gấp 1 420 / 200 ≈ **7,1 lần** trực giác.\n\nHệ quả: triệt tiêu thời gian chết được *ước tính* là đòn bẩy số 1 (+4…6 %), lớn hơn chọn loại máy hay rút ngắn quãng đường, và thuật toán phải được xây quanh λ (Bài 6, Bài 22). Lưu ý con số +4…6 % là dự đoán trước khi đo, không phải kết quả đo: ablation ở Bài 22 §8.1 cho bỏ khung ngày thứ 31 mất 3,08 %, bỏ số hạng phạt thời gian chết mất 2,43 %; phát hiện “một phút chết đáng λ, không phải 200” vẫn đúng.",
+        tieuChi: ["Giải thích phút thừa lẽ ra dùng để dọn nhà nên mất tiền công, không chỉ 200", "Nhắc bài toán bão hoà (gấp ~1,8 lần ngân sách) là điều kiện để phút nào bỏ trống cũng lấp được", "Nêu λ ≈ 1 420 và tỉ lệ ≈ 7 lần so với trực giác", "Nêu hệ quả: thời gian chết là đòn bẩy số 1 theo ước tính trước khi đo (không phải kết quả đo), thuật toán xây quanh λ"]
       },
       {
         id: "l4", doKho: 2, ref: "Bài tập 21.2, §6.1, §7",
-        hoi: "Tính hệ số bão hoà cho một test điển hình (293 nhà, mỗi nhà dọn trung bình 135 phút) và dư địa của nghiệm cơ sở 31 718 184 so với cận trên (τ = 7) 33 943 173. Từ đó kết luận nên đầu tư vào đâu.",
-        goiY: ["Hệ số bão hoà = tổng thời gian dọn hết / 22 320.", "Dư địa = cận trên / nghiệm − 1; bảng Bài 18 gắn mỗi khoảng dư địa với một kết luận."],
-        mau: "- Tổng thời gian dọn hết ≈ 293 × 135 = 39 555 phút ⇒ 39 555 / 22 320 ≈ **1,77** lần ngân sách ⇒ chỉ phục vụ được ~155–160 nhà (~54 %). Ràng buộc thời gian bão hoà hoàn toàn.\n- Dư địa = 33 943 173 / 31 718 184 − 1 ≈ **7,0 %**.\n- Theo bảng Bài 18, dư địa 5–15 % nghĩa là *thiếu tìm kiếm* chứ chưa chạm trần ⇒ đầu tư vào Phần 3–4 (beam search, local search) **và** vào đòn bẩy số 1 (triệt tiêu thời gian chết). Lưu ý cận τ = 7 là cận khá chặt (di chuyển cỡ TSP-Manhattan); cận τ = 0 (35 571 464) lỏng hơn nhiều và cho dư địa ~12 %.",
-        tieuChi: ["Tính đúng hệ số bão hoà ≈ 1,77 và nêu ý nghĩa: ràng buộc thời gian chi phối", "Tính đúng dư địa ≈ 7,0 % (cận trên / nghiệm − 1)", "Kết luận dư địa 5–15 % là thiếu tìm kiếm và nêu hướng đầu tư cụ thể"]
+        hoi: "Tính hệ số bão hoà cho một test điển hình (293 nhà, mỗi nhà dọn trung bình 135 phút) và độ hở của nghiệm cơ sở v2 (greedy 31 ngày) 31 718 184 so với cận tham chiếu (τ = 7) 33 943 173. Từ đó kết luận nên đầu tư vào đâu.",
+        goiY: ["Hệ số bão hoà = tổng thời gian dọn hết / 22 320.", "Độ hở = cận trên / nghiệm − 1; bảng Bài 18 gắn mỗi khoảng độ hở với một kết luận."],
+        mau: "- Tổng thời gian dọn hết ≈ 293 × 135 = 39 555 phút ⇒ 39 555 / 22 320 ≈ **1,77** lần ngân sách ⇒ chỉ phục vụ được ~155–160 nhà (~54 %). Ràng buộc thời gian bão hoà hoàn toàn.\n- Độ hở = 33 943 173 / 31 718 184 − 1 ≈ **7,0 %** (so với v1 = 30 714 270 là 10,5 %; cả hai cùng nằm trong khoảng 5–15 %).\n- Theo bảng Bài 18, độ hở 5–15 % nghĩa là *thiếu tìm kiếm* chứ chưa chạm trần ⇒ đầu tư vào Phần 3–4 (beam search, local search) **và** vào đòn bẩy số 1 (triệt tiêu thời gian chết). Lưu ý chỉ cận τ = 0 (35 571 464, bỏ hẳn di chuyển) là cận trên chứng minh được, lỏng hơn nhiều và cho độ hở ~12 %; τ = 7 (di chuyển cỡ TSP-Manhattan) chặt hơn nhưng chỉ là cận tham chiếu (Bài 18 §3.3), đúng nếu τ thật sự là cận dưới của số phút di chuyển trung bình mỗi nhà.",
+        tieuChi: ["Tính đúng hệ số bão hoà ≈ 1,77 và nêu ý nghĩa: ràng buộc thời gian chi phối", "Tính đúng độ hở ≈ 7,0 % (cận trên / nghiệm − 1)", "Kết luận độ hở 5–15 % là thiếu tìm kiếm và nêu hướng đầu tư cụ thể"]
       }
     ],
 
@@ -553,7 +553,7 @@ int main() {
             "1. `tong` = Σ c_m · s_m — số phút nếu dọn **hết** mọi nhà (số nguyên).\n" +
             "2. `baoHoa` = `tong` / 22 320 — bao nhiêu lần ngân sách (§6.1).\n" +
             "3. `canTren` — nới lỏng thành **cái túi phân số** (Dantzig): mỗi nhà loại m tốn `s_m + τ` phút của ngân sách 22 320 (τ là số phút di chuyển phân bổ cho mỗi nhà); xếp loại máy theo `p_m / (s_m + τ)` giảm dần, lấy trọn từng loại rồi **lấy một phần** loại cuối cho vừa; sau cùng cộng trần thưởng OT 31 × 48 000 = 1 488 000. Nếu mọi nhà đều lọt trong ngân sách thì lấy hết.\n" +
-            "4. `duDia` = (`canTren` / `B` − 1) × 100 (%) — dư địa của nghiệm cơ sở (§7.3).\n\n" +
+            "4. `duDia` = (`canTren` / `B` − 1) × 100 (%) — **độ hở** của nghiệm cơ sở (§7.3); tên biến vẫn là `duDia`.\n\n" +
             "**Mức đạt:** đúng trên mọi test. Hãy chạy ở τ = 0, 7, 9,5 (số liệu của §7.2) và để ý cận trên giảm ra sao; rồi thử *τ lớn*: thứ tự `p/(s+τ)` có còn giống thứ tự `p/s` không (Nhận xét 2 của đề: máy càng lớn càng chịu được chi phí di chuyển)? Với *ít nhà*, bài toán còn bão hoà không và `canTren` là gì?",
         vanDe: "b21-can-tren-p3",
         bienThe: [

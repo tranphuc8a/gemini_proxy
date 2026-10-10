@@ -35,11 +35,11 @@ TH.dangKy({
     "Bài 2609 (Entropy của vũ trụ): lưới H × W (80–180 mỗi chiều), N hạt (mật độ p = 0,3–0,5), mỗi nước đi dịch một hạt sang ô kề còn trống, hạn mức L = 40·H·W nước. SCORE = ⌊10⁶ρ²⌋ + ⌊(L − m)/100⌋ với ρ = (E₀ − E₁)/E₀ và entropy E = tổng khoảng cách Manhattan của mọi cặp hạt.",
     "Quan sát then chốt: entropy tách theo hai trục, E = F(r) + F(c) với F(v) = Σ S_t·(N − S_t) (S_t là tổng tiền tố của biên duyên hàng hoặc cột). Tính trong O(H + W + N) thay vì O(N²) — nhanh cỡ 10⁴ lần — và E chỉ phụ thuộc hai biên duyên, không phụ thuộc hạt nằm ở đâu (bất biến tịnh tiến).",
     "Bài toán rút gọn thành hai bài con độc lập: (A) chọn cặp biên duyên khả thi (R, C) cực tiểu F(R) + F(C) — quyết định gần như 100 % điểm; (B) vận tải đưa cấu hình về (R, C), không va chạm, trong ngân sách — chỉ cần làm đúng vì ngân sách dư gấp đôi. Lời giải k-means trộn hai việc làm một nên không giải tốt việc nào.",
-    "Lời giải hiện tại (k-means v3: 151 123 điểm, ρ = 0,3797) vừa chậm vừa sai mô hình: entropy O(N²) gọi 10 lần làm 17 % test vượt 1 000 ms (xấu nhất 3 331 ms); quét k = 1..5 vô ích vì k = 1 luôn thắng; hạt bị chặn bị bỏ rơi. v1/v2 chỉ bằng điểm của process() rỗng vì int move() thiếu return (hành vi không xác định).",
+    "Lời giải hiện tại (k-means v3: 151 123 điểm, ρ = 0,3797) vừa chậm vừa sai mô hình: entropy O(N²) gọi 10 lần làm 17 % test vượt 1 000 ms (xấu nhất 3 331 ms); quét k = 1..5 vô ích vì k = 1 thắng (12/12 test đã in); hạt bị chặn bị bỏ rơi. v1/v2 chỉ bằng điểm của process() rỗng vì int move() thiếu return (hành vi không xác định; số đo của bản dựng gốc, tuỳ trình biên dịch/phiên bản — mã tối thiểu với g++ 14: -O0 Illegal instruction, -O2 Segmentation fault).",
     "Bài A giải bằng Frank–Wolfe: nới lỏng 0/1 thành mật độ liên tục là chặt vì J lõm (cực tiểu đạt ở đỉnh), gradient tách thành ψ_Y(y) + ψ_X(x) tính bằng tổng tiền tố. Hình tối ưu là đĩa tròn (κ = 0,6502), không phải hình vuông (0,6668) hay kim cương (0,6598): đổi hình đích đáng +7 % đến +12 % điểm.",
     "Bài B giải bằng vận tải hai pha: pha dọc sửa biên duyên hàng, pha ngang sửa biên duyên cột; ghép cặp đơn điệu (lùi trước, tới sau) bảo đảm mọi ô đích đều rỗng, gán đích bằng tham lam Gale–Ryser. Kết quả 0 nước đi hỏng trên 2 000 test, chi phí thực khoảng 1,205× cận dưới vận tải.",
-    "Kết quả: 161 205 điểm (+6,67 % so với v3), 9,6 ms trung bình, 0 test vượt hạn. Ngân sách chỉ dùng 31 % (tối đa 46 %) — ràng buộc thật là hình học và mật độ: ρ* ≈ 1 − 0,9755·√p. Trên 1 000 test đạt 160 933 so với cận 161 318 (99,76 %); dư địa còn lại ~0,25 %.",
-    "Bài học khoá: mô hình hoá đúng (Bài 1) quan trọng hơn thuật toán; cực trị cục bộ là tính chất của cặp (bài toán, lân cận) (Bài 12) nên “gom cụm + kéo hạt” chạm trần ρ ≈ 0,38; cận chặt (Bài 18) cho biết khi nào dừng; luôn dịch với -Wall -Wextra ở cả -O0 và -O2 vì hành vi không xác định có thể im lặng."
+    "Kết quả: 161 205 điểm trên 200 test (+6,67 % so với v3), 9,6 ms trung bình, 0 test vượt hạn. Ngân sách chỉ dùng 31 % (tối đa 46 %) — ràng buộc thật là hình học và mật độ: ρ* ≈ 1 − 0,9755·√p. Trên 1 000 test đạt 160 933 so với cận 161 318 (99,76 %); dư địa còn lại ~0,25 %.",
+    "Bài học khoá: mô hình hoá đúng (Bài 1) quan trọng hơn thuật toán; cực trị cục bộ là tính chất của cặp (bài toán, lân cận) (Bài 12) nên “gom cụm + kéo hạt” chạm trần ρ ≈ 0,38; cận chặt (Bài 18) cho biết khi nào dừng; luôn dịch với -Wall -Wextra ở cả -O0 và -O2 vì hành vi không xác định chỉ im lặng khi không ai đọc cảnh báo."
   ],
 
   trac: [
@@ -75,7 +75,7 @@ TH.dangKy({
     },
     {
       id: "q4", loai: "mot", doKho: 2, ref: "02 · B3 · Bài 1",
-      hoi: "Vòng quét k = 1..5 của k-means v3 chiếm ~4/5 thời gian chạy nhưng k = 1 thắng ở mọi test. Vì sao chia hạt thành k > 1 cụm luôn tệ hơn một khối duy nhất?",
+      hoi: "Vòng quét k = 1..5 của k-means v3 chiếm ~4/5 thời gian chạy nhưng k = 1 thắng ở cả 12/12 test đã in. Vì sao chia hạt thành k > 1 cụm luôn tệ hơn một khối duy nhất?",
       chon: [
         "Entropy là tổng khoảng cách của MỌI cặp hạt, kể cả cặp thuộc hai cụm khác nhau; chia thành các cụm rời nhau giữ nguyên toàn bộ khoảng cách liên cụm nên luôn kém hơn một khối đặc",
         "Vì k > 1 cần nhiều nước đi hơn hạn mức L cho phép",
@@ -83,7 +83,7 @@ TH.dangKy({
         "Vì thuật toán k-means chỉ hội tụ đúng khi k = 1"
       ],
       dung: 0,
-      giaiThich: "Mục tiêu là giảm khoảng cách giữa MỌI cặp hạt, nên một khối đặc duy nhất (diện tích N) là cấu hình tốt nhất; k cụm rời nhau không làm giảm các khoảng cách liên cụm. Trong ba dòng in ra, điểm của k = 1 gấp 1,9–3,7 lần k = 2 và 4,8–9,3 lần k = 5 (tài liệu tóm tắt là “gấp đôi” và “gấp 9”, đúng nhất cho dòng đầu). Ngân sách không phải lý do (lời giải tối ưu chỉ dùng ~31 %), và khoảng cách Manhattan vẫn cộng được; đây là lỗi mô hình (Bài 1), không phải lỗi hội tụ."
+      giaiThich: "Mục tiêu là giảm khoảng cách giữa MỌI cặp hạt, nên một khối đặc duy nhất (diện tích N) là cấu hình tốt nhất; k cụm rời nhau không làm giảm các khoảng cách liên cụm. Trong ba dòng in ra, điểm của k = 1 gấp 1,9–3,7 lần k = 2 và 4,8–9,3 lần k = 5 (chỉ dòng đầu mới là “xấp xỉ gấp đôi, gấp 9”). Ngân sách không phải lý do (lời giải tối ưu chỉ dùng ~31 %), và khoảng cách Manhattan vẫn cộng được; đây là lỗi mô hình (Bài 1), không phải lỗi hội tụ."
     },
     {
       id: "q5", loai: "mot", doKho: 3, ref: "03 §2.4",
@@ -120,7 +120,7 @@ TH.dangKy({
         "Chạy k-means với k = 1 rồi kéo mọi hạt về tâm"
       ],
       dung: 0,
-      giaiThich: "Bổ đề ghép cặp đơn điệu: khi gán hạt thứ i ↦ ô đích thứ i theo thứ tự, và thực hiện hai lượt (lùi trước, tới sau), các hạt khác luôn nằm ngoài hành lang đang đi — nên không bao giờ có nước hỏng, đồng thời tổng chi phí là tối ưu của vận tải 1 chiều. Sau hai pha biên duyên đúng bằng (R, C), nên E₁ = F(R) + F(C) chính xác. Gán đích bằng tham lam Gale–Ryser (chọn cột có rem lớn nhất) bảo đảm khả thi. A*, ngẫu nhiên hay kéo về tâm đều không có bảo đảm tính hợp lệ hay tối ưu."
+      giaiThich: "Bổ đề ghép cặp đơn điệu: khi gán hạt thứ i ↦ ô đích thứ i theo thứ tự, và thực hiện hai lượt (lùi trước, tới sau), các hạt khác luôn nằm ngoài hành lang đang đi — nên không bao giờ có nước hỏng, đồng thời tổng chi phí là tối ưu của vận tải 1 chiều. Sau hai pha biên duyên đúng bằng (R, C), nên E₁ = F(R) + F(C) chính xác. Gán đích bằng tham lam Gale–Ryser (chọn cột có rem lớn nhất) bảo đảm khả thi khi cặp (R, c) thoả điều kiện Gale–Ryser (hạn chế đã biết ở 03 §6.1: lưới rất dẹt sát ngưỡng thì 1–3 hạt phải đứng yên). A*, ngẫu nhiên hay kéo về tâm đều không có bảo đảm tính hợp lệ hay tối ưu."
     },
     {
       id: "q8", loai: "mot", doKho: 2, ref: "01 · Quan sát 5–6",
@@ -146,11 +146,11 @@ TH.dangKy({
       chon: [
         "k-means chọn k = 0 nên không có cụm nào để kéo hạt về",
         "Bộ chấm bỏ qua mọi nước đi của phiên bản cũ",
-        "Hàm Context::move khai báo trả về int nhưng thiếu lệnh return — hành vi không xác định: ở -O0 chương trình chết (illegal instruction), ở -O2 trình biên dịch coi nhánh đó là không thể tới và xoá luôn vòng lặp di chuyển; lỗi im lặng nếu không bật -Wreturn-type",
+        "Hàm Context::move khai báo trả về int nhưng thiếu lệnh return — hành vi không xác định: ở -O0 chương trình chết (illegal instruction), ở -O2 trình biên dịch coi nhánh đó là không thể tới và xoá luôn vòng lặp di chuyển; g++ có báo -Wreturn-type (mặc định bật ở C++, nằm trong -Wall) nhưng nếu không ai đọc cảnh báo thì lỗi im lặng",
         "Cả hai phiên bản đều vượt 1 000 ms nên bị tính là không di chuyển hạt nào"
       ],
       dung: 2,
-      giaiThich: "Rơi khỏi cuối một hàm non-void là hành vi không xác định. Hậu quả đo được: ở -O0 chết ngay test đầu, ở -O2 vòng lặp di chuyển bị loại bỏ nên chạy “bình thường” nhưng không di chuyển hạt nào — điểm chỉ còn tiền thưởng (L − 0)/100. v3 đã sửa bằng đổi sang void. Bài học: luôn dịch thử với -Wall -Wextra ở cả -O0 và -O2. Hai phương án còn lại bịa ra cơ chế không có trong mã; v1 và v2 chạy rất nhanh (363 ms và 1,3 ms trung bình), không phải vì quá giờ."
+      giaiThich: "Rơi khỏi cuối một hàm non-void là hành vi không xác định. Hậu quả đo được: ở -O0 chết ngay test đầu, ở -O2 vòng lặp di chuyển bị loại bỏ nên chạy “bình thường” nhưng không di chuyển hạt nào — điểm chỉ còn tiền thưởng (L − 0)/100. Đó là số đo của bản dựng gốc; vì là hành vi không xác định nên kết quả tuỳ trình biên dịch/phiên bản (mã tối thiểu với g++ 14 cho -O0 ra Illegal instruction nhưng -O2 ra Segmentation fault). v3 đã sửa bằng đổi sang void. Bài học: luôn dịch thử với -Wall -Wextra ở cả -O0 và -O2 và đọc cảnh báo (g++ đã báo -Wreturn-type ngay cả khi không đặt cờ nào; lỗi chỉ im lặng khi không ai đọc). Hai phương án còn lại bịa ra cơ chế không có trong mã; v1 và v2 chạy rất nhanh (363 ms và 1,3 ms trung bình), không phải vì quá giờ."
     }
   ],
 
@@ -185,7 +185,7 @@ TH.dangKy({
     },
     {
       id: "l3", doKho: 3, ref: "03 §2.5, §5 · Bài 4, Bài 18 §9",
-      hoi: "Tài liệu viết: (i) “Frank–Wolfe từ dữ liệu ban đầu cho tối ưu toàn cục trong mọi thực nghiệm”; (ii) “lời giải đề xuất đạt 99,76 % cận trên”, trong khi bảng kết quả ghi điểm 161 205 (200 test) và cận trên chặt là 161 318. Hãy kiểm hai phát biểu bằng chính số liệu trong tài liệu: chúng đúng đến đâu, chỗ nào nói quá hoặc so lẫn hai tập dữ liệu, và cách trình bày trung thực là gì?",
+      hoi: "Một bản tóm tắt viết: (i) “Frank–Wolfe từ dữ liệu ban đầu cho tối ưu toàn cục trong mọi thực nghiệm”; (ii) “lời giải đề xuất đạt 99,76 % cận trên”, trong khi bảng kết quả ghi điểm 161 205 (200 test) và cận trên chặt là 161 318. Hãy kiểm hai phát biểu bằng chính số liệu trong tài liệu: chúng đúng đến đâu, chỗ nào nói quá hoặc so lẫn hai tập dữ liệu, và cách trình bày trung thực là gì?",
       goiY: [
         "Bảng đa khởi tạo ở §2.5: so dòng “từ dữ liệu ban đầu” với giá trị nhỏ nhất của mỗi cột.",
         "Điểm 161 205 đo trên 200 test, còn 160 933 và cận 161 318 đo trên 1 000 test."

@@ -1,0 +1,230 @@
+[
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "hoà nhau thì lấy cái đồng hồ nhỏ hơn.",
+    "new": "hoà nhau thì lấy cái đồng hồ nhỏ hơn; hoà nốt thì lấy cái đứng trước trong bảng.",
+    "ly_do": "[LOGIC] Luật chọn chưa đủ: ở bước 2 ba phương án B→D, C→D, C→B hoà cả tiền (200) lẫn đồng hồ (70), nhưng bài chỉ giữ B→D mà không nêu luật phá hoà thứ ba. Mô phỏng beam W=2 (python) cho đúng bảng của bài khi phá hoà theo thứ tự liệt kê."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Gấp đôi việc, hơn 13 % tiền.",
+    "new": "Gấp đôi việc, hơn 15 % tiền (300 so với 260).",
+    "ly_do": "[SỐ] So beam với tham lam: 300/260 = 1,154 => +15,4 %. Con số 13 % ở §1.3 là 40/300 (mức tham lam thua so với tối ưu), khác cơ sở nên không dùng lại làm 'lợi ích của beam'."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Chữa bằng cách giữ nhiều hơn.",
+    "new": "Chữa bằng cách giữ nhiều hơn (phép so sánh \"cùng cách chấm\" là: chấm mỗi bước theo \"nghìn mỗi phút\" của §1.2 thì W = 1 ra 260, W = 2 ra 300; riêng cách chấm \"tiền đã thu\" ở trên được chọn cho dễ tính tay và ở ví dụ bé này nó tự đủ để W = 1 cũng ra 300 — đừng suy ra từ ví dụ này rằng W = 2 luôn hơn W = 1).",
+    "ly_do": "[LOGIC] Điều 1 khẳng định 'lỗi không ở cách chấm điểm mà ở số phương án giữ', nhưng §1.4 đổi cách chấm (tiền đã thu, hoà thì đồng hồ nhỏ) so với §1.2 (nghìn/phút). Mô phỏng: rank = tiền đã thu, hoà đồng hồ => W=1 cũng ra B,C,D = 300. Rank = nghìn/phút của bước vừa đi: W=1 -> A,B,C = 260; W=2 -> B,C,D = 300. Đã thêm câu làm rõ, không đổi bảng."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "> $\\rho$ chính là **giá mờ $\\lambda$** của Bài 6!",
+    "new": "> Khi $f$ là điểm **gộp** (chưa trừ $\\lambda\\cdot c$), $\\rho$ chính là **giá mờ $\\lambda$** của Bài 6!",
+    "ly_do": "[LOGIC] Quyết định thống nhất số 5. Nếu f = gộp thì f + λR xếp hạng giống giá trị ròng f - λ·(đã dùng); nếu f đã ròng (đề thi thật: f = Σ v_i, v_i = p + OT - λ c_i, xem 2607/03 §2.1, §3.2) thì λ đã nằm trong f và ρ ≠ λ: λ ≈ 1 420 còn ρ tối ưu = 90 (2607/03 §2.2, §3.4)."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "**Cùng một câu hỏi.** Vì thế bạn không phải dò $\\rho$ từ đầu — nếu đã tính $\\lambda$ ở Bài 6 thì dùng luôn.",
+    "new": "**Cùng một câu hỏi** — miễn là $f$ là điểm *gộp* (như `tien` trong lab P1): khi đó $f + \\lambda R$ xếp hạng giống hệt giá trị ròng $f - \\lambda\\cdot(\\text{đã dùng})$. Vì thế bạn không phải dò $\\rho$ từ đầu — nếu đã tính $\\lambda$ ở Bài 6 thì dùng luôn.",
+    "ly_do": "[LOGIC] Nêu điều kiện của 'ρ = λ' (quyết định thống nhất số 5). Chứng minh: f_gộp + λ(T - đã dùng) = f_ròng + λT, hằng số λT không đổi thứ hạng."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "$\\rho = 90$ khớp với lý thuyết: thặng dư trung bình mỗi ngôi nhà $\\approx 13\\,000$ trên $\\approx 160$ phút $\\Rightarrow \\approx 81$ điểm/phút.",
+    "new": "$\\rho = 90$ khớp với lý thuyết: thặng dư trung bình mỗi ngôi nhà $\\approx 13\\,000$ trên $\\approx 160$ phút $\\Rightarrow \\approx 81$ điểm/phút (chú ý: ở đây $f=\\sum v_i$ là tổng giá trị **ròng** — mỗi ngôi nhà đã trừ $\\lambda c_i$, với $\\lambda \\approx 1\\,420$ — nên $\\rho \\ne \\lambda$: $\\rho$ chỉ là *thặng dư* trên mỗi phút còn lại, phần vượt quá cái giá $\\lambda$ đã được trừ sẵn trong $f$; chỉ khi $f$ là điểm gộp mới đặt $\\rho = \\lambda$).",
+    "ly_do": "[LOGIC] Cùng quyết định số 5: 2607/03 §2.1 (v_i = p + OT - λ c_i), §2.2 (λ ≈ 1 420), §3.2 (f = Σ v_i, 'giá trị ròng tích luỹ'), §3.4 (ρ = 90 ≈ 81 điểm/phút). Hai con số 90 và 1 420 khác nhau 16 lần nên bài không thể nói 'ρ chính là λ' vô điều kiện."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Beam sẽ ưu tiên các trạng thái \"tham lam sớm\"",
+    "new": "Khi $f$ là điểm *gộp* mà quên số hạng tiềm năng, beam sẽ ưu tiên các trạng thái \"tham lam sớm\"",
+    "ly_do": "[LOGIC] Hệ quả của quyết định số 5: 'beam thoái hoá thành greedy' chỉ đúng với f gộp (P1: ρ = 0,3 -> 58 103 < greedy 61 420). Với f ròng (đề thi thật) bỏ hẳn ρ chỉ mất (32 849 395 - 32 799 505)/32 849 395 = 0,15 % (bảng §4.3; 2607/03 §7 ghi −0,10 % khi bỏ thưởng ρ)."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Sửa thành $\\rho = \\lambda$ thì lên **64 273**.",
+    "new": "Sửa thành $\\rho = \\lambda$ thì lên **64 273** (với $f$ ròng như ở đề thi thật thì $\\lambda$ đã nằm trong $f$: bỏ hẳn $\\rho$ chỉ mất khoảng 0,15 % — 32 799 505 so với 32 849 395 ở bảng §4.3).",
+    "ly_do": "[LOGIC] Kèm điều kiện cho khẳng định trên; 0,15 % = (32 849 395 - 32 799 505)/32 849 395 tính lại từ bảng §4.3."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "ρ CHÍNH LÀ GIÁ MỜ λ của Bài 6",
+    "new": "ρ = GIÁ MỜ λ của Bài 6 (khi f là điểm GỘP)",
+    "ly_do": "[LOGIC] Đồng bộ mục tóm tắt với điều kiện ở §4.3 (quyết định thống nhất số 5)."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "⚠️ thiếu số hạng này → beam thoái hoá thành greedy",
+    "new": "⚠️ thiếu số hạng này (với f gộp) → beam thoái hoá thành greedy",
+    "ly_do": "[LOGIC] Đồng bộ mục tóm tắt với §4.4 đã nêu điều kiện."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Một đơn vị tài nguyên còn lại đáng bao nhiêu điểm — **chính là giá mờ $\\lambda$**.",
+    "new": "Một đơn vị tài nguyên còn lại đáng bao nhiêu điểm — **chính là giá mờ $\\lambda$** khi $f$ là điểm gộp.",
+    "ly_do": "[LOGIC] Đồng bộ từ điển thuật ngữ với §4.3 (quyết định thống nhất số 5)."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Đã phân tích §4.4. Beam thoái hoá thành greedy. **Lỗi nghiêm trọng nhất.**",
+    "new": "Đã phân tích §4.4. Với $f$ gộp, beam thoái hoá thành greedy. **Lỗi nghiêm trọng nhất.**",
+    "ly_do": "[LOGIC] Đồng bộ cạm bẫy 1 với §4.4 đã nêu điều kiện f gộp."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "**Vì sao?** Vì beam ở đây chỉ **nối vào cuối**",
+    "new": "**Vì sao?** Một lý do hợp lý là beam ở đây chỉ **nối vào cuối**",
+    "ly_do": "[LOGIC] Nguyên nhân được nêu như sự thật nhưng không có phép đo tách riêng; một phép đo khác (ship1, n = 120, K = 30, ρ = 20 — phát hiện-bài-giảng mục 47) cho beam hơn chèn rẻ nhất 5–8 %, tức dấu của hiệu phụ thuộc dữ liệu/ρ. Hạ khẳng định cho đúng mức, không đổi số đo."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Đây là hạn chế của cách xây dựng theo cây: thứ tự mở rộng = thứ tự trong nghiệm.",
+    "new": "Đây là hạn chế của cách xây dựng theo cây: thứ tự mở rộng = thứ tự trong nghiệm (kết quả này gắn với bộ dữ liệu và $\\rho = \\lambda$ của lab; với dữ liệu hoặc $\\rho$ khác, hiệu giữa beam và chèn có thể đổi dấu — hãy tự đo).",
+    "ly_do": "[LOGIC] Xem bản vá ngay trước: số 64 273 / 65 425 là số đo của lab gốc (không tái lập được trong repo) nên giữ nguyên, chỉ nêu cơ sở và giới hạn."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "### 6.2 Nhưng trên đề thi thật, beam **là** thành phần mạnh nhất",
+    "new": "### 6.2 Nhưng trên đề thi thật, beam **là** một trong những thành phần mạnh nhất",
+    "ly_do": "[MÂU THUẪN] Bài 16 §6.2 nói 'mạnh nhất' nhưng §11 nói 'thành phần mạnh thứ hai', và bảng ablation đầy đủ (2607/03 §7): khung ngày thứ 31 −3,08 % lớn hơn beam −2,43 %; số hạng phạt thời gian chết cũng −2,43 %."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "Ablation trên đề Samsung ([nguồn](../../expe/2607/research/03-de-xuat-cai-tien.md)):",
+    "new": "Ablation trên đề Samsung ([nguồn](../../expe/2607/research/03-de-xuat-cai-tien.md); bảng đầy đủ ở nguồn còn có \"khung ngày thứ 31\" — một chi tiết đọc từ mã chấm, −3,08 % — lớn hơn beam, và số hạng phạt thời gian chết cũng mất −2,43 %):",
+    "ly_do": "[MÂU THUẪN] Nêu rõ vị trí của beam trong bảng ablation 2607/03 §7 (đồng bộ với tóm tắt §11 'mạnh thứ hai')."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**16.1** Beam: $10 \\times 3 \\times 4 = 120$ trạng thái sinh ra. Vét cạn: $4^{10} = 1\\,048\\,576$. **Tỉ lệ 1 : 8 738.**",
+    "new": "**16.1** Beam: tối đa $10 \\times 3 \\times 4 = 120$ trạng thái sinh ra (chính xác $4 + 9 \\times 12 = 112$, vì tầng 1 chỉ mở rộng đúng một trạng thái gốc). Vét cạn: $4^{10} = 1\\,048\\,576$ lá. **Tỉ lệ cỡ 1 : 8 700 (1 : 9 400 nếu tính 112).**",
+    "ly_do": "[SỐ] Đề hỏi 'tất cả' bao nhiêu trạng thái: tầng 1 chỉ có gốc nên sinh 4 con, các tầng 2–10 mỗi tầng 3×4 = 12 => 4 + 9×12 = 112, không phải 120 (120 là cận trên). 4^10/120 = 8 738, 4^10/112 = 9 362."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**16.2** $\\rho = 0$: điểm giảm **~8–10 %**, beam thoái hoá gần bằng greedy (số liệu thật trong khoá: từ 64 273 xuống 58 103 khi $\\rho$ quá nhỏ).",
+    "new": "**16.2** $\\rho = 0$: điểm giảm **~8–10 %**, beam thoái hoá thành greedy, thậm chí kém hơn greedy tỉ số 61 420 (số liệu thật trong khoá: từ 64 273 xuống 58 103 khi $\\rho$ quá nhỏ — đo ở $\\rho = 0{,}3$, $f$ là điểm gộp). Với $f$ ròng như đề thi thật, bỏ hẳn $\\rho$ chỉ mất ≈ 0,15 % (§4.3).",
+    "ly_do": "[SỐ] 58 103 < 61 420 (greedy tỉ số, Bài 16 §4.4 tự nói 'thua cả greedy'), nên 'gần bằng greedy' lệch; −9,6 % = 58 103/64 273 − 1 khớp '8–10 %'. Thêm điều kiện f gộp theo quyết định số 5."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**16.4** Nghiệm tốt nhất thường ở **tầng gần cuối nhưng không phải tầng cuối** — điển hình là tầng $\\lfloor 0{,}85 \\times \\text{depth}_{\\max}\\rfloor$. Nếu chỉ xét tầng cuối, mất ~2–4 %.",
+    "new": "**16.4** Nghiệm tốt nhất thường ở **tầng gần cuối nhưng không nhất thiết là tầng cuối** — lab gốc ghi điển hình khoảng tầng $\\lfloor 0{,}85 \\times \\text{depth}_{\\max}\\rfloor$, nhưng vị trí chính xác và mức thiệt phụ thuộc dữ liệu (một phép đo khác trên `ship1` cho khoảng 0,97–0,98 × tầng cuối và chỉ mất ≈ 0,3 %). Nếu chỉ xét tầng cuối, mất một phần nhỏ (từ vài phần mười đến vài phần trăm); hãy báo số bạn đo được.",
+    "ly_do": "[LOGIC] Hạ khẳng định cho đúng mức: 0,85 và '2–4 %' là số đo gốc không tái lập được trong repo; phép đo độc lập trên ship1 n = 60 cho tầng tốt nhất ≈ 0,97–0,98 và mất ≈ 0,3 % (phát hiện-bài-giảng mục 47). Không phân định được số nào đúng với lab gốc nên chỉ nêu cơ sở và để học viên tự đo."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "Chi phí: ~30 % thời gian bị \"lãng phí\" vào các lần chạy $W$ nhỏ.",
+    "new": "Chi phí: cỡ **50 %** thời gian bị \"lãng phí\" vào các lần chạy $W$ nhỏ (chi phí tỉ lệ với $W$ và $W$ nhân đôi mỗi lần nên $4 + 8 + \\dots$ xấp xỉ bằng đúng lần chạy cuối; còn nhiều hơn nếu lần nhân đôi cuối chưa kịp xong).",
+    "ly_do": "[SỐ] Beam lặp W = 4, 8, ..., W_K = 4·2^K với chi phí tuyến tính theo W (Bài 16 §2): tổng các lần trước = W_K − 4, tổng cộng 2·W_K − 4 => tỉ lệ lãng phí (W_K − 4)/(2W_K − 4) -> 50 % (K = 3: 46,7 %), không phải ~30 %."
+  },
+  {
+    "bai": "khoa-hoc/bai-17-lns-alns",
+    "old": "**M2.** Cài đặt được 3 toán tử phá và 2 toán tử xây lại kinh điển.",
+    "new": "**M2.** Cài đặt được 4 toán tử phá và 2 toán tử xây lại kinh điển.",
+    "ly_do": "[MÂU THUẪN] §4.1–4.4 định nghĩa BỐN toán tử phá (ngẫu nhiên, tệ nhất, quan hệ, đoạn), §6.1, §11 và câu 17.5 cũng nói 4; chỉ M2 ghi 3. (Mã ALNS ở §6.3 dùng 3 toán tử, câu 17.3 thêm toán tử thứ tư.) Số toán tử xây 'kinh điển' = 2 khớp §11."
+  },
+  {
+    "bai": "khoa-hoc/bai-17-lns-alns",
+    "old": "Bốn thay đổi, và **ba bước đầu đều lỗ**.",
+    "new": "Năm thay đổi (bỏ A, bỏ B, nhận C, nhận D, nhận E), và **bốn bước đầu đều lỗ**.",
+    "ly_do": "[SỐ] {F,G,A,B} -> {F,G,C,D,E}: hiệu đối xứng = {A,B,C,D,E} = 5 phần tử (đếm bằng python). Đi từng bước: 1080 -> 1040 -> 1000 -> 1035 -> 1070 -> 1105, tức 4 bước lỗ rồi mới lãi. Đầu bài cũng nói 'năm chỗ cùng một lúc'."
+  },
+  {
+    "bai": "khoa-hoc/bai-17-lns-alns",
+    "old": "là **lời giải tốt hơn nằm cách chỗ đứng hiện tại bốn thay đổi**",
+    "new": "là **lời giải tốt hơn nằm cách chỗ đứng hiện tại năm thay đổi**",
+    "ly_do": "[SỐ] Cùng lý do với bản vá ngay trước (5 thay đổi, không phải 4)."
+  },
+  {
+    "bai": "khoa-hoc/bai-17-lns-alns",
+    "old": "Lân cận lớn hơn 2-opt cỡ $10^{30}$ lần.",
+    "new": "Lân cận lớn hơn 2-opt cỡ $10^{35}$ lần ($2{,}7\\times10^{38}$ chia $2\\,080$).",
+    "ly_do": "[SỐ] C(260,16)·16! = 2,72e38 (python, 39 chữ số); C(65,2) = 2 080 => tỉ số 1,31e35. Đáp án 17.1 ('35 bậc độ lớn') đúng, bài nói 10^30 là sai."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "$\\binom{260}{16} \\times 16! \\approx 10^{25} \\times 2\\times10^{13} = 10^{38}$. Lân cận 2-opt: $\\binom{65}{2} = 2\\,080$. **Chênh 35 bậc độ lớn.**",
+    "new": "$\\binom{260}{16} \\times 16! \\approx 1{,}3\\times10^{25} \\times 2{,}1\\times10^{13} \\approx 2{,}7\\times10^{38}$. Lân cận 2-opt: $\\binom{65}{2} = 2\\,080$. **Chênh ≈ $1{,}3\\times10^{35}$ lần, tức 35 bậc độ lớn.**",
+    "ly_do": "[SỐ] 10^25 × 2×10^13 = 2×10^38, không phải '= 10^38'. Tính lại: C(260,16) = 1,301e25, 16! = 2,092e13, tích 2,723e38, chia 2 080 = 1,31e35."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "Tại 0,05 gần như không cải thiện; tại 0,60 kém hơn ~2 %.",
+    "new": "Tại 0,05 gần như không cải thiện; tại 0,60 kém hơn ~2 % (số đo của lab P2 gốc; mức giảm phụ thuộc dữ liệu — trên một phép đo khác, nghiệm ngắn, phá nhiều lại không thua — nên hãy đối chiếu với số đo của bạn).",
+    "ly_do": "[LOGIC] Hạ khẳng định đúng mức: ~2 % là số đo gốc không tái lập; phép đo độc lập (phát hiện-bài-giảng mục 46) cho đường cong q lớn đi xuống nhẹ hơn / không thấy 'điểm ngọt 15–35 %' trên ship1 n=120. Không phân định được nên chỉ thêm cơ sở."
+  },
+  {
+    "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+    "old": "Sau vài chục vòng, xác suất chọn cạnh A–B lên trên 95 % và đàn kiến gần như chỉ còn đi tuyến tốt nhất.",
+    "new": "Sau vài vòng (4 vòng là đủ), xác suất kiến rời A bằng một trong hai cạnh của tuyến tốt nhất (A–B hoặc A–D) đã trên 95 %, và đàn kiến gần như chỉ còn đi tuyến tốt nhất — theo chiều này hoặc chiều ngược lại. Riêng A–B chỉ tiến tới 80 % (còn 20 % là A–D), vì D–A cũng thuộc tuyến tốt; cái tiến tới 0 là xác suất chọn A–C.",
+    "ly_do": "[SỐ] Mô phỏng đúng cập nhật §1.5 (ρ = 0,5, Q/L = 1/11 trên 4 cạnh tuyến tốt): P(B) = 72,2 → 73,9 → 75,7 → 77,3 → 78,5 → ... → 80,0 % (giới hạn 0,25/(0,25+0,0625) = 0,8), không bao giờ > 80 %. P(B)+P(D) vượt 95 % ở vòng 4 (96,7 %)."
+  },
+  {
+    "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+    "old": "Bỏ bước bay hơi đi, mùi chỉ có thể tăng; sau vài chục vòng cạnh A–B đậm gấp nghìn lần cạnh A–C, xác suất chọn A–C xuống dưới $10^{-3}$, và đàn kiến **không bao giờ thử lại** — kể cả khi tuyến qua C mới là tuyến tốt.",
+    "new": "Bỏ bước bay hơi đi, mùi chỉ có thể tăng và không bao giờ phai: với số liệu §1.5, mùi trên tuyến dẫn đầu chỉ cộng thêm $1/11$ mỗi vòng nên tỉ số mùi A–B : A–C là $1 + k/11$ — sau 30 vòng mới $\\approx 3{,}7$; phải cỡ $10^3$ vòng xác suất chọn A–C mới xuống dưới $10^{-3}$, và cỡ $10^4$ vòng cạnh A–B mới đậm gấp nghìn lần cạnh A–C. Càng về sau đàn càng hiếm khi thử lại, và kể cả khi tuyến qua C mới là tuyến tốt thì mùi mới phải đuổi kịp cả núi mùi cũ.",
+    "ly_do": "[SỐ] Không bay hơi, τ(A–C) = 1 đứng yên, τ(A–B) = 1 + k/11: k = 30 -> 3,73 (không phải gấp nghìn); tỉ số 1 000 cần k ≈ 10 989; P(chọn A–C) < 10^-3 cần k ≈ 1 397 (python). Đã sửa thang thời gian, giữ nguyên ý 'bay hơi = cơ chế quên'. 'Không bao giờ thử lại' hạ thành 'ngày càng hiếm' vì P(C) ~ 1/k vẫn > 0."
+  },
+  {
+    "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+    "old": "Đọc cột cuối cùng của hàng",
+    "new": "Đọc cả hàng",
+    "ly_do": "[NHỎ] Cột cuối của hàng 'bệnh kinh điển' chỉ có một ô (PSO: bầy nổ); câu nói về 'bốn cái tên khác nhau' nên phải đọc cả hàng (khoá mùi, mất đa dạng, quần thể nở, bầy nổ)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "nên tỉ số **tăng vô hạn** và $P(B) \\to 1$.",
+    "new": "nên tỉ số **tăng vô hạn**: $P(C) \\to 0$, còn $P(B) \\to 0{,}25/(0{,}25+0{,}0625) = 80\\,\\%$ và $P(D) \\to 20\\,\\%$ — A–B và A–D đều thuộc tour tốt nên xác suất không dồn hết vào B (đi B hay đi D thì kiến vẫn chạy đúng tour dài 11, chỉ khác chiều).",
+    "ly_do": "[SỐ] P(B) → 1 sai: mô phỏng 40 vòng đúng cập nhật elitist (ρ = 0,5, Q/L = 1/11) cho P(B) = 0,8000, P(D) = 0,2000, P(C) = 0 — vì D–A cũng thuộc tour tốt nên w(D) = τ·η² = 0,1818·0,0625 không bằng 0; giới hạn P(B) = 0,25/(0,25+0,0625) = 0,8."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "và cũng là lý do phải có $\\rho$ đủ lớn, nếu không nó xảy ra quá sớm.",
+    "new": "và cũng là lý do phải chọn $\\rho$ cho vừa: $\\rho$ lớn quá thì nó xảy ra quá sớm (với $\\rho = 0{,}9$, sau 5 vòng tỉ số mùi đã cỡ $10^4$), $\\rho$ nhỏ quá thì mùi cũ không phai được.",
+    "ly_do": "[LOGIC] 'Phải có ρ đủ lớn, nếu không hội tụ quá sớm' ngược chiều: tỉ số mùi cạnh tốt/cạnh xấu sau 5 vòng là 1,53 (ρ=0,05), 1,63 (0,1), 2,5 (0,3), 6,6 (0,5), 10 102 (0,9) — ρ càng lớn thì hội tụ càng sớm (python, cập nhật elitist của §1.5); ρ nhỏ mới là lý do mùi cũ không phai (§3.2, §3.3)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "Với 10 hạt giống, **$F = 0{,}3$ đến $F = 1{,}0$ thường không phân biệt được** với giá trị tốt nhất (khoảng $\\pm 2\\cdot$SE chồng lên nhau); chỉ $F = 0{,}1$ và $F \\ge 1{,}3$ là kém hơn rõ rệt.",
+    "new": "Với 10 hạt giống, **$F = 0{,}3$ đến $F = 0{,}9$ thường không phân biệt được** với giá trị tốt nhất (khoảng $\\pm 2\\cdot$SE chồng lên nhau); $F = 0{,}1$ và $F = 1{,}3$ là kém hơn rõ rệt, còn $F = 1{,}1$ nằm giữa hai vùng nên hãy đọc nó từ số đo của bạn.",
+    "ly_do": "[MÂU THUẪN] Tập quét của đề 17B.4 là {0,1; 0,3; 0,5; 0,7; 0,9; 1,1; 1,3}: F = 1,0 không nằm trong tập quét, còn F = 1,1 không được xếp vào nhóm nào (ngoài '0,3–1,0' và '≥ 1,3'). Sửa cho phủ đủ 7 giá trị; không khẳng định thêm kết quả thực nghiệm cho 1,1."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "**tối đa 12 ngôi nhà**, ta chỉ cần lưu danh sách ngắn:",
+    "new": "**tối đa 11 ngôi nhà** (720/60 = 12 là chưa tính di chuyển: nhà ở các ô khác nhau nên mỗi nhà còn tốn thêm ≥ 1 phút đi, 12×60 + 11 = 731 > 720), ta chỉ cần lưu danh sách ngắn:",
+    "ly_do": "[SỐ] Kiểm chứng từ đề (2607/01 §2.1: nhà ở các ô phân biệt, d = Manhattan nên hai nhà khác nhau cách nhau ≥ 1 phút; s_i = 30·m_i + 30 nên s_min = 60; T = 720). 12 nhà cần ≥ 12·60 + 11 = 731 phút (thậm chí không tính quãng đi tới nhà đầu tiên) > 720; 11 nhà cần ≥ 11·60 + 10 = 670 ≤ 720 nên khả thi. Vậy 720/60 = 12 chỉ là cận trên thô; số nhà tối đa thật là 11."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "/* toi da 12 nha/ngay -> 26 byte */",
+    "new": "/* toi da 11 nha/ngay (du 1 o) -> 26 byte */",
+    "ly_do": "[SỐ] Đồng bộ chú thích mã với bản vá ngay trước (tối đa 11 nhà/ngày; mảng 13 phần tử = 26 byte vẫn đủ, dư 2 ô)."
+  },
+  {
+    "bai": "khoa-hoc/bai-16-beam-search",
+    "old": "duyệt `take[]` (≤ 12 phần tử)",
+    "new": "duyệt `take[]` (≤ 11 phần tử)",
+    "ly_do": "[SỐ] Đồng bộ với bản vá ngay trước (tối đa 11 nhà/ngày)."
+  },
+  {
+    "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+    "old": "Mỗi ngày trong đề thi chỉ phục vụ **tối đa 12 ngôi nhà**. Với nghiệm 12 phần tử:",
+    "new": "Mỗi ngày trong đề thi chỉ phục vụ **tối đa 11 ngôi nhà** (720/60 = 12 là chưa tính di chuyển; 12×60 + 11 = 731 > 720). Với nghiệm cỡ 11 phần tử:",
+    "ly_do": "[SỐ] Kiểm chứng từ đề (2607/01 §2.1: nhà ở các ô phân biệt, d = Manhattan nên hai nhà khác nhau cách nhau ≥ 1 phút; s_i = 30·m_i + 30 nên s_min = 60; T = 720). 12 nhà cần ≥ 12·60 + 11 = 731 phút (thậm chí không tính quãng đi tới nhà đầu tiên) > 720; 11 nhà cần ≥ 11·60 + 10 = 670 ≤ 720 nên khả thi. Vậy 720/60 = 12 chỉ là cận trên thô; số nhà tối đa thật là 11."
+  },
+  {
+    "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+    "old": "- lai ghép hai nghiệm 12 phần tử sinh ra rất ít tổ hợp mới;",
+    "new": "- lai ghép hai nghiệm 11 phần tử sinh ra rất ít tổ hợp mới;",
+    "ly_do": "[SỐ] Đồng bộ với bản vá ngay trước (tối đa 11 nhà/ngày)."
+  },
+  {
+    "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
+    "old": "② nghiệm chỉ ~12 phần tử",
+    "new": "② nghiệm chỉ ≤ 11 phần tử",
+    "ly_do": "[SỐ] Đồng bộ mục tóm tắt với §8.2 (tối đa 11 nhà/ngày)."
+  }
+]

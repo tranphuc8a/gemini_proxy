@@ -1,0 +1,14 @@
+[
+ {
+  "bai": "khoa-hoc/gioi-thieu",
+  "old": "Mọi tuyên bố \"cải thiện X %\" trong khoá đều kèm lệnh để bạn tự chạy lại.",
+  "new": "Mọi tuyên bố \"cải thiện X %\" trong khoá đều kèm cách đo (lệnh chạy hoặc phép tính) để bạn tự kiểm lại; một số số đo lấy từ mã gốc không còn trong kho mã của khoá được ghi rõ là \"số đo gốc\".",
+  "ly_do": "[QUYẾT ĐỊNH] g1/g16-x1 báo: nhiều số đo thực nghiệm (bảng p1_compare/p2_compare, 20 lần 2-opt ngẫu nhiên, ablation…) đến từ mã C++ không còn trong repo nên không thể 'tự chạy lại'; hạ mức câu khẳng định cho đúng."
+ },
+ {
+  "bai": "tai-lieu/cheatsheet",
+  "old": "| phân tán cực trị cục bộ | 1,277 | 1,158 |",
+  "new": "| phân tán cực trị cục bộ (số đo gốc, chưa tái lập — xem Bài 12 §6) | 1,277 | 1,158 |",
+  "ly_do": "[QUYẾT ĐỊNH] Cùng quyết định với Bài 9/12/13/15: số 1,277 là số đo từ mã gốc; dựng lại độc lập cho 1,06–1,11 (g16-x2). Cheatsheet bị sót ghi chú cơ sở."
+ }
+]

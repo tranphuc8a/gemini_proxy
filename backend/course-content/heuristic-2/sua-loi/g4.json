@@ -1,0 +1,206 @@
+[
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "nó đáng **+6,5 %** trên P1 — nhiều hơn mọi metaheuristic ở Phần 4.",
+    "new": "nó đáng **+6,5 %** trên P1 (so với greedy tỉ số) — gấp hơn 8 lần phần mà SA hay ALNS còn cộng thêm được lên trên chèn rẻ nhất (≈ +0,7–0,8 %, bảng ở Bài 8 §4.1).",
+    "ly_do": "[LOGIC] Câu gốc so '+6,5 % so với greedy' với 'mọi metaheuristic ở Phần 4' nhưng cùng cơ sở (greedy tỉ số 61 420) thì SA = 65 928,5 → +7,34 % và ALNS = 65 892,2 → +7,28 % (Bài 8 §4.1) đều LỚN hơn 6,5 % — câu sai. Chỉ đúng khi so với phần metaheuristic cộng thêm lên trên chèn: 65 928,5/65 424,9 = +0,77 %, 65 892,2/65 424,9 = +0,71 %; 6,5/0,77 ≈ 8,4 lần."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "### 2.3 Vì sao bắt buộc phải dùng giá mờ $\\lambda$ ở đây",
+    "new": "### 2.3 Vì sao dùng giá mờ $\\lambda$ ở đây",
+    "ly_do": "[LOGIC] Đi kèm sửa đoạn §2.3: 'bắt buộc' vượt quá bằng chứng (xem bản vá kế tiếp). Mục đích: hạ cho đúng mức."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "Nếu dùng tỉ số $p_j / \\Delta t_j$: khi $j$ nằm gần đúng trên đoạn $a \\to b$, ta có $\\Delta t_j \\approx s_j$ (chi phí đi vòng ~0) → tỉ số bùng nổ → thuật toán ưu tiên mù quáng những đơn \"tiện đường\" dù giá trị thấp.",
+    "new": "Nếu dùng tỉ số $p_j / \\Delta t_j$: khi $j$ nằm gần đúng trên đoạn $a \\to b$, ta có $\\Delta t_j \\approx s_j$ (chi phí đi vòng ~0). Ở P1, $s_j$ là thời gian giao — một số dương không nhỏ — nên tỉ số xấp xỉ $p_j / s_j$ chứ **không bùng nổ**: chỉ khi chi phí delta có thể tiến tới 0 (bài không có thời gian phục vụ) thì $p_j/\\Delta t_j \\to \\infty$ và thuật toán mới ưu tiên mù quáng những đơn \"tiện đường\" dù giá trị thấp. Vậy ở P1 tỉ số vẫn **dùng được** cho chèn; lý do chọn giá mờ là những điều dưới đây.",
+    "ly_do": "[LOGIC] Bản gốc tự mâu thuẫn: nói Δt_j ≈ s_j (không phải ≈ 0) rồi kết luận 'tỉ số bùng nổ'. Δt = đi vòng + s_j ≥ s_j > 0 (bộ sinh của trang: s_j ≥ 5 phút) nên p/Δt ≤ p/s_j hữu hạn. Kiểm lại trên bộ sinh ship1 của trang (n=120, 40 test, rải đều): chèn theo p/Δt = 14 265, theo p/(Δt+1) = 14 321, theo λ = 10 → 14 283, λ = 16 → 14 291; chỉ λ = 0 sụp (7 270) — tỉ số KHÔNG bùng nổ và không thua λ. (Cụm: 18 385 / 18 366 / 18 277 / 18 316 / 8 916.)"
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "Với $p_j - \\lambda \\Delta t_j$, đơn vị nhất quán, không bùng nổ.",
+    "new": "Với $p_j - \\lambda \\Delta t_j$, đơn vị nhất quán, cộng trừ được (điều cần cho local search, beam, LNS — xem bảng nguyên tắc ở Bài 6 §6.4) và không bùng nổ kể cả khi $\\Delta t_j$ nhỏ.",
+    "ly_do": "[LOGIC] Đồng bộ với bản vá trên: nêu lý do thật của giá mờ (đơn vị nhất quán, cộng được) thay vì 'tỉ số bùng nổ'. Tham chiếu Bài 6 §6.4 (bảng 'Nguyên tắc: dùng tỉ số hay giá mờ') đã đọc và khớp."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "Số liệu ở Bài 6 §6.3 đã cho thấy: **chèn với $\\lambda = 0$ chỉ được 40 220; với $\\lambda = 80$ được 63 920.**",
+    "new": "Số liệu ở Bài 6 §6.3 đã cho thấy: **chèn với $\\lambda = 0$ chỉ được 40 220; với $\\lambda = 80$ được 63 920.** (Đó là chuyện bỏ hẳn giá của thời gian — $\\lambda = 0$ nghĩa là chỉ nhìn tiền — chứ không phải chuyện dùng tỉ số thay giá mờ.)",
+    "ly_do": "[LOGIC] Số liệu 40 220 là chèn với λ = 0 (Bài 6 §6.1, §6.3, bảng 'PHAN 2'), không phải chèn bằng tỉ số; bài không có phép đo chèn-theo-tỉ-số. Thêm một câu làm rõ cơ sở của hai con số."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "### ❌ Cạm bẫy 3 — Dùng tỉ số thay vì giá mờ cho $\\Delta t$",
+    "new": "### ❌ Cạm bẫy 3 — Bỏ giá của thời gian ($\\lambda = 0$) khi xếp hạng nước chèn",
+    "ly_do": "[MÂU THUẪN] Cạm bẫy 3 gán '63 920 → 40 220' cho việc dùng tỉ số, nhưng 40 220 là chèn với λ = 0 (Bài 6 §6.3 và chính §2.3 của bài này: 'chèn với λ = 0 chỉ được 40 220'). Sửa nhãn cho khớp số liệu."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "Đã giải thích ở §2.3. Hậu quả: điểm sụt từ 63 920 xuống 40 220.",
+    "new": "Đã giải thích ở §2.3. Hậu quả: điểm sụt từ 63 920 ($\\lambda = 80$) xuống 40 220 ($\\lambda = 0$).",
+    "ly_do": "[MÂU THUẪN] Đồng bộ với nhãn mới của cạm bẫy 3: 63 920 là λ = 80, 40 220 là λ = 0 (Bài 6 §6.3)."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "← BẮT BUỘC dùng λ, không dùng tỉ số",
+    "new": "← dùng giá mờ λ (λ = 0 thì sụp đổ: 40 220)",
+    "ly_do": "[LOGIC] Đồng bộ với §2.3: 'BẮT BUỘC … không dùng tỉ số' vượt quá bằng chứng (tỉ số p/Δt không bùng nổ vì Δt ≥ s_j; chỉ λ = 0 mới sụp)."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "| Số ứng viên rất lớn | ✓ nhanh hơn | ✗ đắt gấp đôi |",
+    "new": "| Số ứng viên rất lớn | ✓ nhanh hơn | ✗ đắt hơn (~1,5 lần) |",
+    "ly_do": "[MÂU THUẪN] Bảng §3.3 ghi regret 'đắt gấp đôi' còn chú thích ngay dưới ghi 'chi phí tính toán gấp ~1,5 lần, vẫn O(n·m)'. Thống nhất theo số có định lượng ở chú thích (không bài nào đo riêng hệ số này)."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "> **Chi phí:** regret cần biết **hai** vị trí tốt nhất thay vì một → chi phí tính toán gấp ~1,5 lần, vẫn $O(n \\cdot m)$.",
+    "new": "> **Chi phí:** regret cần biết **hai** vị trí tốt nhất thay vì một → chi phí tính toán gấp ~1,5 lần, vẫn $O(n \\cdot m)$.\n>\n> ⚠️ Con số \"2–5 %\" ở bảng chưa có bảng đo đi kèm trong bài (BT 7.3 yêu cầu bạn tự đo). Khi cài, lưu ý: regret thuần $v^{(1)} - v^{(2)}$ chỉ đo độ \"khó chiều\", không xét giá trị $v^{(1)}$ — ở bài **chọn lọc** như P1 nó có thể ưu tiên đơn khó chiều nhưng giá trị thấp và thua cả chèn rẻ nhất. Nếu thấy vậy, thử xếp hạng theo $v^{(1)} + \\beta \\cdot \\text{regret}$ với $\\beta$ nhỏ (vd 0,5).",
+    "ly_do": "[LOGIC] Khẳng định 'regret thắng 2–5 %' không có số đo trong bài (bảng §6 không có dòng regret). Kiểm lại trên bộ sinh ship1 của trang (n=120, 30 test, λ=16, so với chèn rẻ nhất = 1,000): regret thuần v1−v2 = 0,522 (rải đều) / 0,512 (cụm) — thua một nửa; v1+0,5·regret = 1,021 / 1,021; v1+0,25·regret = 1,015 / 1,006; v1+1,0·regret = 0,982 / 1,019. Hạ khẳng định và thêm ghi chú cảnh báo, không đổi con số."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "+2–5 % nữa trên dữ liệu cụm",
+    "new": "kỳ vọng +2–5 % nữa trên dữ liệu cụm (chưa đo trong bài, xem chú ý ở §3.3)",
+    "ly_do": "[LOGIC] Đồng bộ mục tóm tắt §10 với bản vá hạ mức ở §3.3: con số 2–5 % của regret không có bảng đo trong bài."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "Kho ở gốc. Ba khách: $i$ cách kho 10, $j$ cách kho 12, và $d(i,j) = 3$ (hai khách ở sát nhau).",
+    "new": "Kho ở gốc. Hai khách: $i$ cách kho 10, $j$ cách kho 12, và $d(i,j) = 3$ (hai khách ở sát nhau).",
+    "ly_do": "[NHỎ] Ví dụ chỉ có hai khách i và j (S(i,j) = 10 + 12 − 3 = 19; 'kiểm lại' cũng chỉ hai chuyến riêng), câu gốc ghi 'Ba khách'."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "> **Biểu diễn \"chuỗi phẳng\" ở Bài 3 chính là route-first, cluster-second** — và nó thắng trên P2 với +5,7 %.",
+    "new": "> **Biểu diễn \"chuỗi phẳng\" ở Bài 3 chính là route-first, cluster-second** — nó trì hoãn quyết định \"ngày nào\" đến lúc mô phỏng; lợi ích của việc trì hoãn đó được đo ở Bài 3 §6: +5,7 % cho chiến lược (B) so với (A) trên P2 (bản chuỗi phẳng thuần chưa được đo riêng).",
+    "ly_do": "[THAM CHIẾU] +5,7 % ở Bài 3 §6.2–6.3 là 357 940 (B: chèn toàn cục, quyết định ngày muộn hơn) so với 338 673 (A: lấp đầy từng ngày) = +5,69 %; Bài 3 §3.4 nói (A) và (B) dùng cùng một biểu diễn. Không có phép đo riêng của biểu diễn chuỗi phẳng (D), nên câu gốc gán sai nguồn con số."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "**Số liệu từ đề thi thật:** một trong các đề xuất ban đầu là *\"chia bản đồ thành vùng, mỗi ngày phục vụ một vùng\"*. Nghe rất hợp lý. Nhưng đo ra thì **kém hơn** cách để thuật toán tự chọn, vì:",
+    "new": "**Ví dụ từ đề thi thật (ca 2607):** một trong các đề xuất ban đầu là *\"chia bản đồ thành vùng, mỗi ngày phục vụ một vùng\"*. Nghe rất hợp lý. Nhưng phân tích cấu trúc đề (ca 2607, tài liệu *giải pháp hiện tại*, §3 — là lập luận chứ chưa kèm phép đo riêng cho hướng này) cho thấy nó sẽ **kém hơn** cách để thuật toán tự chọn, vì:",
+    "ly_do": "[LOGIC] Câu gốc nói 'số liệu … đo ra thì kém hơn', nhưng ca 2607 (02-giai-phap-hien-tai.md §3, bảng đánh giá các đề xuất) chỉ xếp hướng này là '⚠️ Hợp lý nhưng sai tiền đề' bằng lập luận; không tài liệu nào của ca 2607 (01–05) có con số đo hướng gom cụm (grep 'gom cụm|K-means|chia lưới|vùng'). Hạ cho đúng mức."
+  },
+  {
+    "bai": "khoa-hoc/bai-07-chen-gom-cum",
+    "old": "Luôn đo. Trong đề thi thật, gom cụm cứng **làm giảm** điểm vì nó chặn mất đòn bẩy chính.",
+    "new": "Luôn đo. Trong đề thi thật, phân tích (ca 2607) cho thấy gom cụm cứng **nhiều khả năng làm giảm** điểm vì nó chặn mất đòn bẩy chính.",
+    "ly_do": "[LOGIC] Đồng bộ với bản vá §5.3: kết luận ở ca 2607 là lập luận, không phải số đo."
+  },
+  {
+    "bai": "khoa-hoc/bai-08-grasp",
+    "old": "từ 1 lên 10 lần rút thì nhảy vọt, từ 100 lên 1 000 thì gần như không đổi.",
+    "new": "từ 1 lên 10 lần rút thì nhảy vọt, từ 100 lên 1 000 thì chỉ thêm chừng 29 % so với mức đã có.",
+    "ly_do": "[MÂU THUẪN] Bảng §5.1 của chính bài: E[max_N Z] = 2,51 (N=100) → 3,24 (N=1 000) = +29 % ('100 → 1 000 (gấp 10): +29 %'), không phải 'gần như không đổi'. Tính lại bằng tích phân số: 2,5076 → 3,2414."
+  },
+  {
+    "bai": "khoa-hoc/bai-08-grasp",
+    "old": "if (k > 4) k = 4;                       /* RCL nho -> it pha vo greedy */",
+    "new": "if (k > 4) k = 4;                       /* RCL nho -> it pha vo greedy; muon quet k = 5, 10 (§5.2, BT 8.3) phai nang/bo chot nay */",
+    "ly_do": "[MÃ] Mã chặn k ≤ 4 nên không thể cho ra kết quả k = 5 và k = 10 mà §5.2 báo (~65 800 và ~64 500) và BT 8.3 quét k ∈ {1,2,3,5,8,12}. Ghi rõ điều kiện: muốn quét k > 4 phải nâng/bỏ chốt này (không đổi logic mã)."
+  },
+  {
+    "bai": "khoa-hoc/bai-08-grasp",
+    "old": "Cùng một kỹ thuật GRASP, cùng số lần khởi động, cùng bộ dữ liệu. Một cái vô dụng, một cái tốt nhất bảng.",
+    "new": "Cùng một kỹ thuật GRASP, cùng số lần khởi động, cùng bộ dữ liệu. Một cái vô dụng, một cái tốt nhất bảng.\n\n⚠️ Đọc \"vô dụng\" cho đúng mức: đó là kết quả ở **một mức ngẫu nhiên cố định** của lab ($k \\le 4$, §3.4). Ở mức khác, cán cân $\\sigma\\,\\mathbb{E}[\\max_N Z]$ so với $\\Delta\\mu$ (§2.1) dịch đi, và GRASP trên greedy có thể lãi nhẹ hoặc lỗ nặng hơn. Đây là một thí nghiệm, không phải định luật.",
+    "ly_do": "[LOGIC] 'GRASP trên greedy vô dụng' là kết quả của một k. Kiểm lại trên bộ sinh ship1 (n=120, 30 test, 40 lần khởi động, tỉ lệ so với greedy tỉ số, rải đều/cụm): k=2 → 1,035/1,057; k=3 → 0,997/1,021; k=4 → 0,971/0,993; k=5 → 0,935/0,969; k=10 → 0,820/0,870. Kết luận 'vô dụng' chỉ khớp quanh k=3; k=2 còn lãi, k ≥ 4 lỗ. Không đổi số của lab, chỉ hạ mức khẳng định."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "- Nó **luôn dừng ở chỗ chưa tối ưu**, và hiểu vì sao là chìa khoá mở cả Phần 4.",
+    "new": "- Nó **luôn dừng ở một cực trị cục bộ** — chỗ đó không bảo đảm là tối ưu — và hiểu vì sao là chìa khoá mở cả Phần 4.",
+    "ly_do": "[MÂU THUẪN] Gốc: 'luôn dừng ở chỗ chưa tối ưu' nhưng §1.6 của chính bài cho ví dụ leo đồi dừng đúng ở tối ưu (50, vét cạn 4! = 24 thứ tự xác nhận). Điều luôn đúng là dừng ở cực trị CỤC BỘ (§7.5)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "- **M5.** Giải thích được vì sao leo đồi **luôn** kết thúc ở chỗ chưa tối ưu — điều mở đường cho Bài 12–17.",
+    "new": "- **M5.** Giải thích được vì sao leo đồi **luôn** kết thúc ở một cực trị cục bộ, không bảo đảm là tối ưu — điều mở đường cho Bài 12–17.",
+    "ly_do": "[MÂU THUẪN] Cùng lý do với bản vá trước (mục tiêu M5)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "§7 sẽ cho thấy với 200 điểm, chỗ mà leo đồi dừng lại có thể **tệ hơn tối ưu tới 28 %**.",
+    "new": "§7 sẽ cho thấy với 200 điểm, chỗ mà leo đồi dừng lại có thể **kém chỗ dừng tốt nhất tới 28 %** (so với tối ưu thật thì chỉ có thể kém hơn nữa).",
+    "ly_do": "[SỐ] 1,277 (§7.2) = 24 240 / 18 980 = tệ nhất / tốt nhất trong 20 lần leo từ điểm ngẫu nhiên, không phải khoảng cách tới tối ưu (tối ưu ≤ 14 656 nên khoảng cách thật ≥ 24 240/14 656 = +65 %). Bài 13 §1 và Bài 14 §1 đã nói đúng 'chỗ tệ nhất kém chỗ tốt nhất 28 %'."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "Với $n = 200$, thí nghiệm trên cho thấy cực trị cục bộ có thể tệ hơn tối ưu tới **28 %**.",
+    "new": "Với $n = 200$, thí nghiệm trên cho thấy cực trị cục bộ tệ nhất có thể kém cực trị tốt nhất tìm được tới **28 %** (so với tối ưu thật thì chỉ có thể kém hơn nữa).",
+    "ly_do": "[SỐ] Cùng lý do (28 % là tệ nhất/tốt nhất trong 20 lần chạy, §7.2)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "§7.2 cho thấy chỗ đó có thể tệ hơn tối ưu 28 %.",
+    "new": "§7.2 cho thấy chỗ đó có thể kém chỗ dừng tốt nhất tìm được 28 %.",
+    "ly_do": "[SỐ] Cùng lý do (28 % là tệ nhất/tốt nhất trong 20 lần chạy, §7.2)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "⇒ cực trị cục bộ có thể tệ hơn tối ưu 28 %",
+    "new": "⇒ cực trị cục bộ có thể kém cực trị tốt nhất tìm được 28 %",
+    "ly_do": "[SỐ] Cùng lý do (mục tóm tắt §9)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "⇒ Mọi tuyến qua đủ 5 điểm đều dài ít nhất $40 + 10 = 50$.",
+    "new": "⇒ Mọi tuyến qua đủ 5 điểm đều dài ít nhất $40 + 10 = 50$. (Chặt chẽ hơn: hai điểm bất kỳ trong năm điểm cách nhau ít nhất 10 — góc–góc là 10 hoặc 20, tâm–góc là 10 — mà một tuyến khép kín qua 5 điểm có đúng 5 chặng, nên dài ít nhất $5 \\times 10 = 50$.)",
+    "ly_do": "[LOGIC] Ba gạch đầu dòng chỉ cho thấy 'chu vi hình vuông + chèn điểm giữa' = 50, chưa chứng minh được mọi tuyến ≥ 50 (tuyến tối ưu không nhất thiết là chu vi + một lần chèn). Thêm lập luận đủ chặt; vét cạn 4! = 24 thứ tự cho min = 50 (đã chạy lại)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "| **Chèn** | thêm một đối tượng chưa dùng vào tuyến | $(n-m)\\cdot m$ |",
+    "new": "| **Chèn** | thêm một đối tượng chưa dùng vào tuyến | $(n-m)(m+1)$ |",
+    "ly_do": "[SỐ] Tuyến m phần tử có m+1 vị trí chèn (đầu, cuối, m−1 khe giữa). Ví dụ ngay dưới và đáp án 9.1(c) dùng (120−14)×15 = 1 590 = (n−m)(m+1); công thức gốc (n−m)·m cho 1 484. Bài 7 §1.1 cũng dùng n×(m+1)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "| chuyển đoạn | $\\approx 3 \\times 14 \\times 15$ | 630 |",
+    "new": "| chuyển đoạn | $14 \\cdot 13 + 13 \\cdot 12 + 12 \\cdot 11$ (mỗi $L$: $(m-L+1)$ đoạn × $(m-L)$ vị trí đích khác chỗ cũ; $\\approx 3m^2$ khi $m$ lớn) | 470 |",
+    "ly_do": "[SỐ] Công thức bảng ≈ 3m² (= 588 tại m=14) nhưng ví dụ ghi 3×14×15 = 630 (mâu thuẫn nhau). Đếm đúng (đã chạy lại, không đảo chiều đoạn, bỏ nước đứng yên): Σ_{L=1..3} (m−L+1)(m−L) = 182 + 156 + 132 = 470 (371 nếu gộp các nước trùng kết quả). Tổng '≈ 23 000' vẫn đúng: 91 + 470 + 1 590 + 14 + 20 776 = 22 941."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "  chèn         (n−m)·m",
+    "new": "  chèn         (n−m)(m+1)",
+    "ly_do": "[SỐ] Đồng bộ với bản vá bảng §3.2 (mục tóm tắt)."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "| **Tổng thời gian** | **thường nhanh hơn 2–5 lần** | thường chậm hơn |",
+    "new": "| **Tổng thời gian** | **thường nhanh hơn 2–5 lần** (với thứ tự duyệt xáo trộn; nếu mỗi lần lại duyệt từ cùng một đầu danh sách cố định thì lợi thế mỏng hơn nhiều) | thường chậm hơn |",
+    "ly_do": "[LOGIC] Khẳng định phụ thuộc cách cài. Đếm số lần tính delta của 2-opt (TSP bắt đầu từ láng giềng gần nhất, 10 bộ mỗi cỡ; best = 1): n=40/100/200 Manhattan — first-improvement quay lại từ đầu danh sách cố định: 0,73 / 0,71 / 0,71 (chỉ ~1,4× ít hơn; Euclid ~1,0–1,3×); quay lại từ đầu nhưng xáo trộn thứ tự: 0,37 / 0,24 / 0,14 (2,7–7×); quét tiếp: 0,41 / 0,22 / 0,13. Giữ '2–5 lần' (bài đã khuyến nghị xáo trộn) nhưng nêu điều kiện."
+  },
+  {
+    "bai": "khoa-hoc/bai-09-lan-can-leo-doi",
+    "old": "và xác nhận chỉ có đúng một nước cải thiện.",
+    "new": "và đếm xem có bao nhiêu nước cải thiện (gợi ý: tuyến khép kín nên \"đảo một khúc\" và \"đảo phần còn lại\" cho cùng một chu trình — hãy đếm theo cặp cạnh bị bỏ).",
+    "ly_do": "[LOGIC] Đề yêu cầu 'xác nhận chỉ có đúng một nước cải thiện' nhưng có hai (tuyến 0→1→3→2→4→0, 5 nước 2-opt khác nhau: Δ = 0, +10, −10, −10, +10; hai nước Δ = −10 cho 0→1→2→3→4→0 và 0→1→4→2→3→0, đều dài 50). Đã chạy lại bằng code."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "Tất cả âm → **vẫn nhận cái tốt nhất** (đơn 1). Kết quả tương tự. $\\lambda$ cao làm thuật toán \"keo kiệt\" hơn nhưng vì luôn nhận cái tốt nhất nên khác biệt nhỏ.",
+    "new": "Đơn 4 trước 3 cho $-600$. Tất cả âm, nhưng thuật toán (§2.4) vẫn nhận cái tốt nhất (đơn 1) → `[1, 3]`, $t = 60$. Bước 3: đơn 4 ($\\Delta t = 17$) cho $v = 1200 - 2040 = -840$, **cao hơn** đơn 2 ($\\Delta t = 30$, $v = 2500 - 3600 = -1100$) — thứ hạng **đảo** so với $\\lambda = 60$ (lúc đó đơn 2 thắng, $700 > 180$). Chèn đơn 4 → `[4, 1, 3]` (hoặc `[1, 4, 3]`, hoà $\\Delta t = 17$), $t = 77$, còn 23 phút, đơn 2 cần 30 ✗. **Tổng = 1200 + 2000 + 6000 = 9 200** (bằng greedy gần nhất), thấp hơn 10 500 của $\\lambda = 60$. Kết quả **khác và tệ hơn**: $\\lambda$ cao làm thời gian \"đắt\" đến mức thuật toán ưu tiên đơn tốn ít phút dù ít tiền và bỏ lỡ đơn 2.",
+    "ly_do": "[SỐ] Đáp án gốc nói 'kết quả tương tự' (10 500). Chạy lại chèn rẻ nhất λ=120 trên ví dụ §7 bằng code: bước 3 đơn 4 (−840) lấn đơn 2 (−1 100) → tuyến [4,1,3] (hoặc [1,4,3] khi hoà), t = 77, tổng 9 200; λ=60 cho [1,3,2] = 10 500 (tối ưu, vét cạn). Câu giải thích 'khác biệt nhỏ' cũng sai theo."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "Regret-2 thường thắng chèn thuần **+0,5–1,5 %** trên dữ liệu rải đều và **+2–4 %** trên dữ liệu gom cụm. Xác nhận dự đoán §3.3.",
+    "new": "Kỳ vọng: regret-2 thắng chèn thuần cỡ **+0,5–1,5 %** trên dữ liệu rải đều và **+2–4 %** trên dữ liệu gom cụm (nằm trong khoảng 2–5 % của §3.3) — hãy tự đo để xác nhận. Nếu bạn thấy regret **thua** chèn thuần, kiểm xem khoá xếp hạng có chỉ là $v^{(1)} - v^{(2)}$ không: ở bài chọn lọc như P1 nó có thể ưu tiên đơn khó chiều nhưng giá trị thấp (xem chú ý ở §3.3); thử $v^{(1)} + \\beta \\cdot \\text{regret}$.",
+    "ly_do": "[MÂU THUẪN] Đáp án '+2–4 %' vs bài '2–5 %' (nằm trong khoảng, nên chỉ làm rõ), và 'xác nhận dự đoán §3.3' là khẳng định chưa có bảng đo trong bài; đồng bộ với bản vá hạ mức ở §3.3 (regret thuần có thể thua rất nhiều trên P1 — số đo ở bản vá §3.3)."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "- (b) Or-opt $L\\le2$: $\\approx 2 \\times 14 \\times 15 = 420$",
+    "new": "- (b) Or-opt $L\\le2$: công thức §3.2 cho $\\approx 2m^2 \\approx 390$; đếm đúng: mỗi $L$ có $(m-L+1)$ đoạn × $(m-L)$ vị trí đích khác chỗ cũ ⇒ $14\\cdot13 + 13\\cdot12 = 182 + 156 = 338$",
+    "ly_do": "[SỐ] Gốc 2×14×15 = 420 không theo công thức bảng §3.2 (≈ 2m² = 392) và không khớp lập luận đếm mà đề 9.1 yêu cầu: Σ_{L=1..2} (m−L+1)(m−L) = 182 + 156 = 338 (290 nếu gộp nước trùng). Đã chạy lại. Đồng bộ với bản vá hàng 'chuyển đoạn' của §3.2."
+  },
+  {
+    "bai": "khoa-hoc/dap-an",
+    "old": "**9.2** Có 10 nước 2-opt (chọn 2 trong 5 vị trí). Chỉ một nước có delta âm (đảo $[2..3]$, delta $=-10$); các nước còn lại delta $\\ge 0$.",
+    "new": "**9.2** Tuyến khép kín 5 điểm có $n(n-3)/2 = 5$ nước 2-opt khác nhau (chọn 2 trong 5 cạnh sao cho không kề nhau); $\\binom{m}{2}$ ở §3.2 là công thức cho tuyến **mở** như P1 — đếm theo vị trí trên tuyến khép kín sẽ đếm trùng. Với tuyến `0→1→3→2→4→0`, cặp cạnh bỏ đi và $\\Delta$: $\\{01,32\\}$: $0$; $\\{01,24\\}$: $+10$; $\\{13,24\\}$: $\\mathbf{-10}$ (đảo $[3,2]$, chính là nước ở §1.3); $\\{13,40\\}$: $\\mathbf{-10}$ (đảo $[3,2,4]$, cho tuyến `0→1→4→2→3→0` dài 50); $\\{32,40\\}$: $+10$. Vậy có **hai** nước cải thiện (đều đưa tuyến về 50, là tối ưu), không phải một.",
+    "ly_do": "[SỐ] Gốc: '10 nước … chỉ một nước có delta âm'. Chạy lại: chu trình 5 điểm có n(n−3)/2 = 5 nước 2-opt khác nhau; Δ = 0, +10, −10, −10, +10 → hai nước Δ = −10 (đảo [3,2] → 0→1→2→3→4→0 = 50; đảo [3,2,4] → 0→1→4→2→3→0 = 50). Đảo theo vị trí mảng cho 10 phép nhưng nhiều phép trùng chu trình (đảo một khúc ≡ đảo phần bù). Đồng bộ với đề 9.2 đã sửa ở Bài 9 §11."
+  }
+]

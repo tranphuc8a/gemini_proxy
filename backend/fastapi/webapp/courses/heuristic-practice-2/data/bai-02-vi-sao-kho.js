@@ -191,7 +191,7 @@
         id: "q7", loai: "so", doKho: 2, ref: "§4.3", donVi: "(giây)",
         hoi: "Held–Karp có độ phức tạp O(n²·2ⁿ). Với n = 25 ở 10⁹ phép/giây, mất khoảng bao nhiêu giây?",
         dapAn: 21, saiSo: 0.5,
-        giaiThich: "n²·2ⁿ = 625 × 33 554 432 ≈ 2,1×10¹⁰ phép, chia 10⁹ ra khoảng 21 giây. Cùng công thức: n = 15 chỉ khoảng 7 ms (ý nghĩa cho matheuristic ở Bài 16), n = 30 khoảng 16 phút, n = 40 khoảng 21 ngày — nên ranh giới thực tế của thuật toán chính xác cho định tuyến là n ≈ 20–30. Nếu bạn ra khoảng 0,03 giây thì mới tính 2²⁵ mà quên nhân n² = 625."
+        giaiThich: "n²·2ⁿ = 625 × 33 554 432 ≈ 2,1×10¹⁰ phép, chia 10⁹ ra khoảng 21 giây. Cùng công thức: n = 15 chỉ khoảng 7 ms (ý nghĩa cho matheuristic ở Bài 23 §6.3), n = 30 khoảng 16 phút, n = 40 khoảng 21 ngày — nên ranh giới thực tế của thuật toán chính xác cho định tuyến là n ≈ 20–30. Nếu bạn ra khoảng 0,03 giây thì mới tính 2²⁵ mà quên nhân n² = 625."
       },
       {
         id: "q8", loai: "mot", doKho: 3, ref: "§6.2",
@@ -242,10 +242,10 @@
       },
       {
         id: "l3", doKho: 2, ref: "Bài tập 2.4",
-        hoi: "Trong đề thi thật, mỗi ngày phục vụ tối đa 12 ngôi nhà (720/60 = 12). Nếu đã biết **tập** 12 ngôi nhà của một ngày, tìm **thứ tự tối ưu** bằng Held–Karp tốn bao nhiêu phép? Có kịp 100 ms không? Nếu phải làm cho cả 31 ngày, và mỗi ngày gọi 3 lần, thì sao?",
-        goiY: ["Thay n = 12 vào n²·2ⁿ.", "Nhân số lần gọi rồi so với 100 ms (≈ 10⁸ phép)."],
-        mau: "Một ngày: n²·2ⁿ = 144 × 4 096 = **589 824 phép ≈ 0,6 ms** ở 10⁹ phép/giây — kịp 100 ms với dư rất lớn.\n\nCho 31 ngày: 31 × 0,6 ≈ 18 ms; nếu mỗi ngày gọi 3 lần thì 93 lần ≈ **55 ms** — vừa 100 ms nhưng sát, nên chỉ nên dùng cho những ngày quan trọng hoặc không gọi trong mọi vòng lặp.\n\nĐây là ý tưởng nền của **matheuristic** (Bài 16): heuristic quyết định *chia việc thế nào*, thuật toán chính xác lo *làm tối ưu từng phần* — khả thi vì bài lớn tách được thành các bài con cỡ 12–15.",
-        tieuChi: ["Tính đúng n²·2ⁿ = 144 × 4 096 = 589 824 phép (≈ 0,6 ms)", "Kết luận một ngày kịp 100 ms với dư rất lớn", "Nhân số ngày và số lần gọi (≈ 18 ms hoặc ≈ 55 ms) và nhận xét độ sát ngân sách", "Nêu ý tưởng matheuristic: heuristic chia việc, thuật toán chính xác tối ưu từng phần"]
+        hoi: "Trong đề thi thật, mỗi ngày phục vụ tối đa 11 ngôi nhà (mỗi nhà ≥ 60 phút nên 720/60 = 12 là cận thô, nhưng giữa hai nhà luôn đi ≥ 1 phút, nên 12 nhà cần ≥ 12 × 60 + 11 = 731 > 720). Nếu đã biết **tập** 11 ngôi nhà của một ngày, tìm **thứ tự tối ưu** bằng Held–Karp tốn bao nhiêu phép? Có kịp 100 ms không? Nếu phải làm cho cả 31 ngày, và mỗi ngày gọi 3 lần, thì sao?",
+        goiY: ["Thay n = 11 vào n²·2ⁿ.", "Nhân số lần gọi rồi so với 100 ms (≈ 10⁸ phép)."],
+        mau: "Một ngày: n²·2ⁿ = 121 × 2 048 = **247 808 phép ≈ 0,25 ms** ở 10⁹ phép/giây — kịp 100 ms với dư rất lớn.\n\nCho 31 ngày: 31 × 0,25 ≈ **7,7 ms**; nếu mỗi ngày gọi 3 lần thì 93 lần ≈ **23 ms** — vẫn thoải mái trong 100 ms (100 ms chứa cỡ 400 lần gọi); chỉ khi heuristic gọi bộ giải chính xác vài trăm lần trở lên thì ngân sách mới thành vấn đề.\n\nĐây là ý tưởng nền của **matheuristic** (§9 của bài và Bài 23 §6.3): heuristic quyết định *chia việc thế nào*, thuật toán chính xác lo *làm tối ưu từng phần* — khả thi vì bài lớn tách được thành các bài con cỡ 12–15.",
+        tieuChi: ["Nêu một ngày chứa tối đa 11 nhà (12 nhà cần ≥ 731 > 720 phút) và tính đúng n²·2ⁿ = 121 × 2 048 = 247 808 phép (≈ 0,25 ms)", "Kết luận một ngày kịp 100 ms với dư rất lớn", "Nhân số ngày và số lần gọi (≈ 7,7 ms hoặc ≈ 23 ms) và nhận xét còn dư nhiều so với 100 ms", "Nêu ý tưởng matheuristic: heuristic chia việc, thuật toán chính xác tối ưu từng phần"]
       },
       {
         id: "l4", doKho: 2, ref: "§6.1",

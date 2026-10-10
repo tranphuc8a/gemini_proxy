@@ -1,0 +1,14 @@
+[
+ {
+  "bai": "khoa-hoc/bai-21-mo-xe-de-thi",
+  "old": "> Đây là lý do đòn bẩy #1 lớn nhất — và là lý do phải xây thuật toán quanh $\\lambda$.",
+  "new": "> Đây là lý do đòn bẩy #1 được *ước tính* lớn nhất — và là lý do phải xây thuật toán quanh $\\lambda$.\n>\n> ⚠️ Cột \"Ước tính\" ở trên là dự đoán **trước khi đo**. Ablation ở Bài 22 §8.1 cho thứ tự khác: bỏ khung ngày thứ 31 mất 3,08 %, bỏ số hạng phạt thời gian chết mất 2,43 %. Phát hiện \"một phút chết đáng $\\lambda$, không phải 200\" vẫn đúng; chỉ con số \"+4…6 %\" là ước tính, không phải kết quả đo.",
+  "ly_do": "[MÂU THUẪN] Bảng 'Bốn đòn bẩy' xếp #1 = +4…6 % (khung ngày 31 chỉ +3,2 %), nhưng ablation Bài 22 §8.1 đo: khung ngày 31 −3,08 % > phạt thời gian chết −2,43 %. Cột đã ghi 'Ước tính' nên chỉ cần nói rõ đó là ước tính trước khi đo (do g1 phát hiện ngoài phạm vi)."
+ },
+ {
+  "bai": "2607/01-phat-bieu-de-bai",
+  "old": "**Đòn bẩy #1 là phát hiện quan trọng nhất.**",
+  "new": "**Đòn bẩy #1 là phát hiện quan trọng nhất** (theo ước tính ban đầu; bảng ablation ở `03-…` đo khung ngày 31 là −3,08 %, lớn hơn số hạng phạt thời gian chết −2,43 %).",
+  "ly_do": "[MÂU THUẪN] Cùng bảng 'Bốn đòn bẩy' ở Bài 21 §6.3: '+4…6 %' là ước tính trước khi đo, ablation đo số hạng phạt chỉ −2,43 % và thấp hơn khung ngày 31 (−3,08 %)."
+ }
+]

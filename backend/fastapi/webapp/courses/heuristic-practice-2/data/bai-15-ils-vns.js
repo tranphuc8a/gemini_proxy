@@ -59,7 +59,7 @@ TH.dangKy({
   tomTat: [
     "ILS gói trong một vòng lặp: **nhiễu loạn → local search → chấp nhận → cập nhật best**. Khung chỉ cỡ 30 dòng và gần như không có tham số phải dò; khoá học khuyến nghị **thử ILS trước tiên**.",
     "ILS khác đa khởi động ở chỗ **giữ lại 70–90 %** lời giải cũ (phá 10–30 %), còn đa khởi động giữ 0 %. Vì thế ILS cải thiện liên tục theo số vòng, còn đa khởi động cạn dần.",
-    "Nhiễu loạn phải **không bị local search hoàn tác ngay**: với TSP dùng double-bridge (cắt 4 đoạn, nối P1–P3–P2–P4, một nước 4-opt). Nhiễu quá yếu thì ILS thành leo đồi lặp vô ích; phá quá mạnh (≈ 80 %) thì thành đa khởi động.",
+    "Nhiễu loạn nên **khó bị local search hoàn tác**: với TSP dùng double-bridge (cắt 4 đoạn, nối P1–P4–P3–P2, một nước 4-opt đổi 4 cạnh mà không nước 2-opt hay Or-opt đơn lẻ nào hoàn tác được — nhưng một chuỗi nhiều nước thì có thể), còn đảo một đoạn ngẫu nhiên (= 1 nước 2-opt) dễ bị hoàn tác hơn nhiều. Nhiễu quá yếu thì ILS thành leo đồi lặp vô ích; phá quá mạnh (≈ 80 %) thì thành đa khởi động.",
     "Tiêu chí chấp nhận khuyến nghị: **nhận nếu tốt hơn, ngoài ra nhận với xác suất 2–5 %** — Metropolis bỏ hết phần tinh vi. Luôn giữ hai biến: `fCur` (đang đứng, có thể tệ đi) và `fBest` (kỷ lục); lẫn hai biến là lỗi phổ biến nhất ở Phần 4.",
     "VND = đổi lân cận khi kẹt, **không có chút ngẫu nhiên**: thành công thì về k = 1, thất bại thì k + 1, lân cận xếp **rẻ trước, đắt sau**. Quên đặt lại k = 1 là lỗi im lặng: mỗi lân cận chỉ được duyệt đúng một lần.",
     "VNS = VND + shake: lấy ngẫu nhiên một nghiệm trong lân cận N_k rồi chạy VND; thành công thì k = 1, thất bại thì k + 1. Cường độ nhiễu có cấu trúc (thứ tự các lân cận) thay cho một con số mờ kiểu “phá 20 %”.",
@@ -127,7 +127,7 @@ TH.dangKy({
       hoi: "Chọn mọi phát biểu ĐÚNG về nhiễu loạn trong ILS:",
       chon: [
         "Nhiễu loạn càng mạnh càng tốt: phá 80 % nghiệm vẫn giữ nguyên ưu thế của ILS",
-        "Double-bridge cắt chu trình thành 4 đoạn rồi nối lại theo thứ tự P1–P3–P2–P4",
+        "Double-bridge cắt chu trình thành 4 đoạn rồi nối lại theo thứ tự P1–P4–P3–P2 (đổi 4 cạnh)",
         "Không một nước 2-opt hay Or-opt đơn lẻ nào hoàn tác được double-bridge trong một bước",
         "Nếu f sau local search luôn bằng f(x) trước đó thì nhiễu loạn đang quá mạnh",
         "Nhiễu bằng “đảo một đoạn ngẫu nhiên” dễ bị local search (vốn dùng 2-opt) đảo lại đúng chỗ cũ"
@@ -157,7 +157,7 @@ TH.dangKy({
         "Vì khi lân cận rẻ còn cải thiện được thì bạn không bao giờ phải trả giá duyệt lân cận đắt; chỉ khi mọi thứ rẻ cạn mới động tới công cụ nặng"
       ],
       dung: 3,
-      giaiThich: "Lập luận hoàn toàn về chi phí: duyệt N₅ (exchange, đắt nhất và là cái duy nhất đổi TẬP đơn được chọn) chỉ khi N₁..N₄ đã cạn. “Rẻ hơn thì tốt hơn” không đúng — chỉ là rẻ hơn; thứ tự có ảnh hưởng tới thời gian chạy; và không có ràng buộc kỹ thuật nào cấm exchange chạy trước."
+      giaiThich: "Lập luận hoàn toàn về chi phí: duyệt N₅ (exchange, đắt nhất và — trong danh sách N₁..N₅ ở §3.3 — là cái duy nhất đổi TẬP đơn được chọn) chỉ khi N₁..N₄ đã cạn. “Rẻ hơn thì tốt hơn” không đúng — chỉ là rẻ hơn; thứ tự có ảnh hưởng tới thời gian chạy; và không có ràng buộc kỹ thuật nào cấm exchange chạy trước."
     },
     {
       id: "q9", loai: "nhieu", doKho: 3, ref: "§4.2",
@@ -183,14 +183,15 @@ TH.dangKy({
   luan: [
     {
       id: "l1", doKho: 1, ref: "Bài tập 15.1, §2.7",
-      hoi: "Giải thích vì sao double-bridge là nhiễu loạn tốt cho TSP còn “đảo một đoạn ngẫu nhiên” thì không. Nêu một cách **kiểm chứng bằng thực nghiệm** cho kết luận đó.",
+      hoi: "Giải thích vì sao double-bridge thường được chọn làm nhiễu loạn cho TSP thay cho “đảo một đoạn ngẫu nhiên”. Nêu một cách **kiểm chứng bằng thực nghiệm** cho kết luận đó, và cho biết kết luận đúng tới mức nào.",
       goiY: ["Local search của ILS dùng phép gì để sửa tuyến? Phép đảo một đoạn ngẫu nhiên có phải là một nước của nó không?", "Double-bridge thay đổi bao nhiêu cạnh của chu trình?"],
-      mau: "**Đảo một đoạn ngẫu nhiên** chính là một nước 2-opt (tệ). Local search của ILS vốn dùng 2-opt nên ngay bước đầu nó nhận ra đó là nước xấu và đảo lại: bạn quay về đúng chỗ cũ, tốn công vô ích (cạm bẫy 1).\n\n**Double-bridge** cắt chu trình thành 4 đoạn P1–P2–P3–P4 rồi nối lại P1–P3–P2–P4: một nước **4-opt** mà không một nước 2-opt hay Or-opt đơn lẻ nào hoàn tác được. Local search buộc phải chấp nhận cấu hình mới và tìm đường xuống từ đó — thường tới một cực trị cục bộ **khác**.\n\n**Cách kiểm chứng** (§7): ở mỗi vòng in f ngay sau nhiễu loạn và f sau local search, rồi đếm tỉ lệ vòng mà f sau local search **bằng đúng** f(x) trước đó. Nhiễu quá yếu cho tỉ lệ này rất cao. Sau đó chạy cùng số vòng, cùng seed với hai kiểu nhiễu và so độ dài tốt nhất.\n\nLưu ý trung thực: chỉ cần đếm tỉ lệ bị hoàn tác là thấy khác biệt rõ; còn độ dài cuối cùng thì chênh lệch có thể nhỏ (lab bên dưới cho bạn tự đo), vì kết quả phụ thuộc cả vào kiểu local search (gặp-là-đổi hay chọn nước tốt nhất).",
+      mau: "**Đảo một đoạn ngẫu nhiên** chính là một nước 2-opt (tệ). Local search của ILS vốn dùng 2-opt nên **có thể** nhận ra đó là nước xấu và đảo lại — chỉ một nước 2-opt là đủ để hoàn tác. Mỗi lần như vậy bạn quay về đúng chỗ cũ, tốn công vô ích (cạm bẫy 1); còn xảy ra thường đến mức nào thì phụ thuộc cách cài local search.\n\n**Double-bridge** cắt chu trình thành 4 đoạn P1–P2–P3–P4 rồi nối lại P1–P4–P3–P2: một nước **4-opt** (đổi 4 cạnh) mà không một nước 2-opt hay Or-opt đơn lẻ nào hoàn tác được trong một bước. Local search phải tìm đường xuống từ cấu hình mới, thường qua nhiều nước. Điều đó làm giảm khả năng quay về chỗ cũ chứ **không đảm bảo** nó: một chuỗi nhiều nước cải thiện vẫn có thể đưa về đúng cực trị cũ.\n\n**Cách kiểm chứng** (§7): ở mỗi vòng in f ngay sau nhiễu loạn và f sau local search, rồi đếm tỉ lệ vòng mà f sau local search **bằng đúng** f(x) trước đó. Nhiễu quá yếu cho tỉ lệ này rất cao. Sau đó chạy cùng số vòng, cùng seed với hai kiểu nhiễu và so độ dài tốt nhất.\n\n**Kết luận đúng tới mức nào** (số đo thử ở §2.7: TSP n = 100, ILS 300 vòng, 10 bộ phân bố đều và 10 bộ gom cụm): tỉ lệ vòng bị hoàn tác với đảo đoạn so với double-bridge là khoảng 70 % so với 27 % (2-opt + Or-opt) và khoảng 40 % so với 4–5 % (2-opt gặp-là-đổi); với 2-opt chọn nước tốt nhất thì cả hai đều bị hoàn tác gần hết (≈ 100 % và ≈ 97 %) và ILS kém hơn rõ. Nhưng với hai cấu hình đầu, độ dài cuối cùng của hai loại nhiễu loạn chỉ chênh nhau dưới 0,3 % (trên dữ liệu gom cụm đảo đoạn còn nhỉnh hơn chút). Vậy double-bridge **thường** ít bị hoàn tác hơn nhiều, nhưng điều đó không nhất thiết kéo theo kết quả cuối tốt hơn — hãy tự đo trên bài toán của bạn (lab bên dưới cho bạn tự đo).",
       tieuChi: [
-        "Nhận ra phép đảo một đoạn chính là một nước 2-opt nên local search đảo lại được",
-        "Nêu double-bridge là nước 4-opt (P1–P3–P2–P4) mà không nước 2-opt/Or-opt đơn lẻ nào hoàn tác",
+        "Nhận ra phép đảo một đoạn chính là một nước 2-opt nên local search có thể đảo lại được",
+        "Nêu double-bridge là nước 4-opt (P1–P4–P3–P2, đổi 4 cạnh) mà không nước 2-opt/Or-opt đơn lẻ nào hoàn tác được trong một bước — nhưng không đảm bảo, vì một chuỗi nhiều nước vẫn có thể về chỗ cũ",
         "Đề xuất phép kiểm cụ thể: so f sau nhiễu với f sau local search (hoặc tỉ lệ vòng quay về đúng f(x))",
-        "Nói rõ phải so ở cùng số vòng, cùng seed"
+        "Nói rõ phải so ở cùng số vòng, cùng seed",
+        "Nêu đúng mức kết luận: double-bridge thường ít bị hoàn tác hơn, nhưng độ dài cuối chênh rất ít nên phải tự đo"
       ]
     },
     {
@@ -208,7 +209,7 @@ TH.dangKy({
       id: "l3", doKho: 2, ref: "§3.2, §6",
       hoi: "Trên ví dụ §6 (tuyến [A, B, C, D], dùng 450/480 phút): (a) vì sao bước Or-opt ở k = 2 được nhận dù **không tăng điểm chút nào**? (b) vì sao sau bước đó phải quay về k = 1 chứ không đi tiếp k = 3?",
       goiY: ["Đếm số phút còn dư trước và sau bước Or-opt, rồi so với thời gian đơn E cần.", "Sau một thành công, lời giải còn giống lúc đứng ở k = 1 không?"],
-      mau: "**(a)** Or-opt tiết kiệm 12 phút nên thời gian dư tăng từ 30 lên 42 phút. 12 phút này là **nguyên liệu**: đủ để chèn đơn E (38 phút) ở bước k = 3, thu thêm 2 400 điểm. Nếu không làm bước k = 2 trước thì dư chỉ 30 < 38 và E không bao giờ vào được. Đây là nguyên tắc “toán tử giải phóng tài nguyên đứng trước toán tử tiêu tài nguyên” (Bài 9 §5.2).\n\n**(b)** Nước đi vừa rồi đã **làm thay đổi lời giải**, nên những nước 2-opt vốn vô vọng ở N₁ giờ có thể lại có tác dụng (Bài 9 §5.3, vòng lặp ngoài). Vì vậy thành công ở bất kỳ k nào cũng đặt lại k = 1. Quên dòng k = 1 thì VND duyệt mỗi lân cận đúng một lần rồi dừng — lỗi im lặng.",
+      mau: "**(a)** Or-opt tiết kiệm 12 phút nên thời gian dư tăng từ 30 lên 42 phút. 12 phút này là **nguyên liệu**: đủ để chèn đơn E (38 phút) ở bước k = 3, thu thêm 2 400 điểm. Nếu không làm bước k = 2 trước thì dư chỉ 30 < 38 và E không bao giờ vào được. Đây là nguyên tắc “toán tử giải phóng tài nguyên đứng trước toán tử tiêu tài nguyên” (Bài 9 §5.2). Về điều kiện nhận: theo khung §3.2 nước này chỉ được nhận nếu “tốt hơn” tính cả thời gian (điểm trừ λ·phút như ở Bài 9 §5.1), hoặc nếu với toán tử rút ngắn “thành công” nghĩa là *thời gian giảm* như trong `leoDoi` (Bài 9 §5.2). Ghi chú: ví dụ §6 dùng bốn lân cận của `leoDoi` (N₁ = 2-opt, N₂ = Or-opt L = 1, N₃ = chèn một đơn chưa dùng, N₄ = exchange), nên số thứ tự khác danh sách tổng quát ở §3.3 và khác bộ bốn lân cận của bài tập 15.3.\n\n**(b)** Nước đi vừa rồi đã **làm thay đổi lời giải**, nên những nước 2-opt vốn vô vọng ở N₁ giờ có thể lại có tác dụng (Bài 9 §5.3, vòng lặp ngoài). Vì vậy thành công ở bất kỳ k nào cũng đặt lại k = 1. Quên dòng k = 1 thì VND duyệt mỗi lân cận đúng một lần rồi dừng — lỗi im lặng.",
       tieuChi: [
         "Tính đúng: dư 30 → 42 phút nhờ Or-opt; E cần 38 phút",
         "Nêu nguyên tắc: toán tử giải phóng tài nguyên đứng trước toán tử tiêu tài nguyên",
@@ -303,7 +304,7 @@ for (let k = 1; k < n; k++) {
 haiOpt(x);
 
 // TODO 1: viết doubleBridge(p) — chọn 3 điểm cắt 1 ≤ a < b < c ≤ n−1 bằng r.int(...),
-//         trả về mảng mới  p[0..a) + p[b..c) + p[a..b) + p[c..n)   (P1 P3 P2 P4).
+//         trả về mảng mới  p[0..a) + p[c..n) + p[b..c) + p[a..b)   (P1 P4 P3 P2 — đổi 4 cạnh).
 // TODO 2: lặp soVong vòng: y = doubleBridge(x); haiOpt(y); chấp nhận (ngắn hơn thì nhận,
 //         ngoài ra nhận khi r() < 0.02); nhớ best thật cẩn thận — fCur và fBest là HAI biến khác nhau.
 let best = x;
@@ -362,7 +363,7 @@ int main() {
     haiOpt(x);
 
     // TODO 1: viết doubleBridge(p) — chọn 3 điểm cắt 1 <= a < b < c <= n-1 bằng rnd(...),
-    //         trả về  p[0..a) + p[b..c) + p[a..b) + p[c..n)   (P1 P3 P2 P4).
+    //         trả về  p[0..a) + p[c..n) + p[b..c) + p[a..b)   (P1 P4 P3 P2 — đổi 4 cạnh).
     // TODO 2: lặp soVong vòng: y = doubleBridge(x); haiOpt(y); chấp nhận (ngắn hơn thì nhận,
     //         ngoài ra nhận khi unit() < 0.02); nhớ best thật cẩn thận — fCur và fBest là HAI biến khác nhau.
     vector<int> best = x;
@@ -403,13 +404,13 @@ function haiOpt(p) {
   }
 }
 
-// Double-bridge: cắt thành P1 P2 P3 P4 rồi nối lại P1 P3 P2 P4 — một nước 4-opt.
+// Double-bridge: cắt thành P1 P2 P3 P4 rồi nối lại P1 P4 P3 P2 — một nước 4-opt (đổi 4 cạnh).
 function doubleBridge(p) {
   let a, b, c;
   do {
     [a, b, c] = [1 + r.int(n - 1), 1 + r.int(n - 1), 1 + r.int(n - 1)].sort((u, v) => u - v);
   } while (a === b || b === c);
-  return p.slice(0, a).concat(p.slice(b, c), p.slice(a, b), p.slice(c));
+  return p.slice(0, a).concat(p.slice(c), p.slice(b, c), p.slice(a, b));
 }
 
 // Khởi tạo: láng giềng gần nhất + 2-opt.
@@ -470,7 +471,7 @@ void haiOpt(vector<int>& p) {
     }
 }
 
-// Double-bridge: cắt thành P1 P2 P3 P4 rồi nối lại P1 P3 P2 P4 — một nước 4-opt.
+// Double-bridge: cắt thành P1 P2 P3 P4 rồi nối lại P1 P4 P3 P2 — một nước 4-opt (đổi 4 cạnh).
 vector<int> doubleBridge(const vector<int>& p) {
     int cat[3];
     for (;;) {
@@ -480,9 +481,9 @@ vector<int> doubleBridge(const vector<int>& p) {
     }
     vector<int> y;
     y.insert(y.end(), p.begin(), p.begin() + cat[0]);
+    y.insert(y.end(), p.begin() + cat[2], p.end());
     y.insert(y.end(), p.begin() + cat[1], p.begin() + cat[2]);
     y.insert(y.end(), p.begin() + cat[0], p.begin() + cat[1]);
-    y.insert(y.end(), p.begin() + cat[2], p.end());
     return y;
 }
 
@@ -521,7 +522,7 @@ int main() {
       },
       goiY: [
         "Chỉ cần ba thành phần ngoài khung: một hàm double-bridge, một vòng lặp `soVong` lần, và hai biến `fCur` / `fBest`. Local search 2-opt đã có sẵn trong khung.",
-        "Double-bridge: chọn ba điểm cắt khác nhau 1 ≤ a < b < c ≤ n−1, rồi ghép lại `p[0..a)`, `p[b..c)`, `p[a..b)`, `p[c..n)`. Nếu hai điểm cắt trùng nhau thì bốc lại.",
+        "Double-bridge: chọn ba điểm cắt khác nhau 1 ≤ a < b < c ≤ n−1, rồi ghép lại `p[0..a)`, `p[c..n)`, `p[b..c)`, `p[a..b)` (P1 P4 P3 P2). Nếu hai điểm cắt trùng nhau thì bốc lại.",
         "Mỗi vòng: `y = doubleBridge(x)`, 2-opt cho `y`, tính `fy`; nhận `y` làm điểm xuất phát nếu `fy < fCur` hoặc với xác suất 2 %; riêng kỷ lục thì cập nhật bất kể có nhận hay không (`fy < fBest`).",
         "Nếu điểm không hơn 2-opt chút nào: kiểm tra xem bạn có cập nhật `best` bằng `y` (bản sao!) hay chỉ cập nhật `x`; và `rng`/`mt19937` có thật sự được gọi mỗi vòng không."
       ]

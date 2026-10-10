@@ -86,20 +86,20 @@ TH.dangKy({
   id: "bai-19b-go-loi-heuristic",
 
   tomTat: [
-    "Trong heuristic, bug không kêu: nó chỉ làm **điểm thấp hơn** và trông y hệt “thuật toán chưa đủ tốt”. Ví dụ thật: hàm `int move()` thiếu `return` làm `-O2` xoá luôn vòng lặp di chuyển, điểm 7 369 thay vì 151 123 — đúng điểm của một `process()` rỗng.",
+    "Trong heuristic, bug không kêu: nó chỉ làm **điểm thấp hơn** và trông y hệt “thuật toán chưa đủ tốt”. Ví dụ thật: hàm `int move()` thiếu `return` làm `-O2` xoá luôn vòng lặp di chuyển, điểm 7 369 thay vì 151 123 — đúng điểm của một `process()` rỗng. Đó là số đo của bản dựng gốc; vì là hành vi không xác định nên kết quả tuỳ trình biên dịch/phiên bản (mã tối thiểu với g++ 14: `-O0` ra Illegal instruction, `-O2` ra Segmentation fault).",
     "Bốn triệu chứng, bốn nhóm nguyên nhân: **A** điểm thấp, không vi phạm, đúng giờ (điểm tưởng ≠ điểm thật, UB, hoặc thuật toán yếu); **B** có vi phạm (mô phỏng nội bộ lệch grader); **C** vượt giờ ở một số test (độ phức tạp ẩn); **D** chạy lại ra điểm khác (trạng thái sót lại, RNG không reset).",
     "**Bất biến + `KIEM`**: bảo toàn, nhất quán, đơn điệu — đặt ngay sau mỗi nước đi, ở ranh giới pha và trước khi trả về. `KIEM` phải **biến mất** ở bản nộp (`-DGO_LOI`) và phải **đo lại thời gian** sau khi tắt, vì bất biến O(H·W) gọi mỗi nước đi là tự sát.",
     "Bộ kiểm tra hợp lệ phải **độc lập**: đọc trạng thái qua API của grader (`getCell`, `getMoveCount`), không dùng lại mã mô phỏng của chính mình — nó sẽ đồng ý với chính nó. Grader tăng bộ đếm nước đi **trước** khi kiểm hợp lệ nên nước hỏng vẫn mất lượt; đừng tự đếm.",
     "Đối chiếu vét cạn ở n = 5…8 kiểm **hạ tầng**, không kiểm chất lượng thuật toán. Ba điều phải khớp: điểm solver ≤ vét cạn; **điểm tự tính = điểm grader** (dòng bắt nhiều bug nhất); tài nguyên dùng = grader báo.",
     "Chạy xuôi rồi ngược thứ tự seed: tổng khác nhau (S1 ≠ S2) nghĩa là có **trạng thái sống sót** giữa các test — `static` không reset, bộ đệm không xoá, hạt giống RNG không đặt lại.",
-    "Với triệu chứng C: quét 1 000 seed, in **seed xấu nhất** và **thời gian xấu nhất**, rồi thu nhỏ test. Ở đề 2609, xấu nhất là H = 178, W = 180, N = 15 905 (mật độ ≈ 0,5) cho 3 331 ms trong khi trung bình chỉ 619 ms.",
-    "Bắt UB bằng cách **so hai mức tối ưu**: build `-O0` và `-O2` rồi `diff` — khác nhau là gần như chắc chắn có UB. Quy trình 20 phút gồm 6 bước (2 + 2 + 5 + 3 + 5 + 3); chạy hết mà sạch thì bạn mới được quyền tin thuật toán yếu, vì điểm thấp là một triệu chứng, không phải một chẩn đoán."
+    "Với triệu chứng C: quét 1 000 seed, in **seed xấu nhất** và **thời gian xấu nhất**, rồi thu nhỏ test. Ở đề 2609, quét 3 000 seed cho seed xấu nhất H = 178, W = 180, N = 15 905 (mật độ ≈ 0,5; 7 183 ms); còn trong 200 test của bộ chấm, xấu nhất là 3 331 ms trong khi trung bình chỉ 619 ms — hai mẫu khác nhau.",
+    "Bắt UB bằng cách **so hai mức tối ưu**: build `-O0` và `-O2` rồi `diff` — khác nhau là gần như chắc chắn có UB. Quy trình 20 phút gồm 6 bước (2 + 2 + 5 + 3 + 5 + 3; ở lịch 4 giờ của Bài 4B §7 chỉ có 15 phút cho chẩn đoán thì bỏ bước ⑤, còn 2 + 2 + 5 + 3 + 3); chạy hết mà sạch thì bạn mới được quyền tin thuật toán yếu, vì điểm thấp là một triệu chứng, không phải một chẩn đoán."
   ],
 
   trac: [
     {
       id: "q1", loai: "mot", doKho: 1, ref: "Bài này nói về chuyện gì",
-      hoi: "Một lời giải được 7 369 điểm trong khi lời giải tham khảo được 151 123; không crash, không cảnh báo, không vi phạm. Nguyên nhân thật trong câu chuyện của bài là gì?",
+      hoi: "Một lời giải được 7 369 điểm trong khi lời giải tham khảo được 151 123; không crash, không cảnh báo nào lọt vào mắt, không vi phạm. Nguyên nhân thật trong câu chuyện của bài là gì?",
       chon: [
         "Nhiệt độ simulated annealing đặt sai nên thuật toán hội tụ quá sớm",
         "Điểm tích luỹ bị tràn `int` nên quay vòng thành một số nhỏ",
@@ -107,7 +107,7 @@ TH.dangKy({
         "Bộ chấm cục bộ tính điểm sai so với grader thật"
       ],
       dung: 2,
-      giaiThich: "Rơi khỏi cuối hàm non-`void` là hành vi không xác định; ở `-O2` trình biên dịch suy ra nhánh đó không thể xảy ra và xoá cả vòng lặp di chuyển, nên chương trình chạy êm mà không di chuyển hạt nào. 7 369 đúng bằng điểm của hàm rỗng. Chỉnh nhiệt độ SA hay nghi bộ chấm sẽ chỉ cho điểm kém dần hoặc lệch, không ra đúng con số đó — và đây là loại bug bị nhầm thành “thuật toán yếu”."
+      giaiThich: "Rơi khỏi cuối hàm non-`void` là hành vi không xác định; ở `-O2` trình biên dịch suy ra nhánh đó không thể xảy ra và xoá cả vòng lặp di chuyển, nên chương trình chạy êm mà không di chuyển hạt nào (số đo của bản dựng gốc; là hành vi không xác định nên tuỳ trình biên dịch/phiên bản — mã tối thiểu với g++ 14 cho `-O2` ra Segmentation fault). 7 369 đúng bằng điểm của hàm rỗng. Chỉnh nhiệt độ SA hay nghi bộ chấm sẽ chỉ cho điểm kém dần hoặc lệch, không ra đúng con số đó — và đây là loại bug bị nhầm thành “thuật toán yếu”."
     },
     {
       id: "q2", loai: "mot", doKho: 2, ref: "§6",
@@ -184,9 +184,9 @@ TH.dangKy({
     },
     {
       id: "q8", loai: "so", doKho: 2, ref: "§5", donVi: "(lần)",
-      hoi: "Quét 3 000 seed cho kết quả: thời gian trung bình 619 ms, xấu nhất 3 331 ms. Thời gian xấu nhất gấp bao nhiêu lần trung bình? (làm tròn một chữ số thập phân)",
+      hoi: "Chạy 200 test của bộ chấm cho kết quả: thời gian trung bình 619 ms, xấu nhất 3 331 ms. Thời gian xấu nhất gấp bao nhiêu lần trung bình? (làm tròn một chữ số thập phân)",
       dapAn: 5.4, saiSo: 0.05,
-      giaiThich: "3 331 / 619 ≈ 5,38, làm tròn 5,4 lần. Trung bình 619 ms trông an toàn; chỉ có số xấu nhất (lưới gần vuông H = 178, W = 180 với mật độ gần 0,5, N = 15 905, nút thắt ở đoạn O(N²)) mới lộ ra việc trượt giới hạn. Vì vậy phải cho bộ chấm in luôn seed xấu nhất và thời gian xấu nhất, không chỉ trung bình."
+      giaiThich: "3 331 / 619 ≈ 5,38, làm tròn 5,4 lần. Trung bình 619 ms trông an toàn; chỉ có số xấu nhất mới lộ ra việc trượt giới hạn (seed xấu nhất trong 3 000 seed còn nặng hơn — 7 183 ms, hai mẫu khác nhau — là lưới gần vuông H = 178, W = 180 với mật độ gần 0,5, N = 15 905, nút thắt ở đoạn O(N²)). Vì vậy phải cho bộ chấm in luôn seed xấu nhất và thời gian xấu nhất, không chỉ trung bình."
     }
   ],
 
@@ -207,7 +207,7 @@ TH.dangKy({
       id: "l2", doKho: 2, ref: "§6, Bài tập 1",
       hoi: "Giải thích bằng lời: vì sao cùng một mã nguồn mà `-O0` cho “crash `ud2`” còn `-O2` cho “chạy êm, 0 nước đi, điểm 7 369”? Và cách rẻ nhất để biết trước điều này là gì?",
       goiY: ["Chuẩn C++ nói gì về việc rơi khỏi cuối hàm non-`void`?", "Nếu một nhánh là hành vi không xác định, trình biên dịch được giả định điều gì về việc nhánh ấy có xảy ra?"],
-      mau: "Rơi khỏi cuối một hàm non-`void` là **hành vi không xác định** (UB): chuẩn C++ không quy định gì nên trình biên dịch được làm **bất cứ điều gì**. Theo bảng của bài, ở `-O0` nó chèn `ud2` nên chết ngay ở test đầu với *Illegal instruction*. Ở `-O2`, nó suy luận rằng một chương trình đúng không bao giờ đến nhánh đó, coi nhánh là **unreachable** và xoá luôn vòng lặp di chuyển phía trên; chương trình chạy êm, đúng giờ và không di chuyển hạt nào — điểm 7 369 chính là điểm của một `process()` rỗng. Hai hành vi trái ngược từ cùng một mã vì không có hành vi “đúng” nào để cả hai cùng tuân theo.\n\nCách rẻ nhất: (1) build `-O0` và `-O2` rồi `diff` kết quả — khác nhau là gần như chắc chắn có UB; (2) bật `-Wreturn-type` (cùng `-Wall -Wextra -Wshadow`) để trình biên dịch bắt đúng lỗi này **ngay lúc biên dịch**, miễn phí; (3) coi build sạch cảnh báo là điều kiện cần, không phải điều tốt nên có.",
+      mau: "Rơi khỏi cuối một hàm non-`void` là **hành vi không xác định** (UB): chuẩn C++ không quy định gì nên trình biên dịch được làm **bất cứ điều gì**. Theo bảng của bài, ở `-O0` nó chèn `ud2` nên chết ngay ở test đầu với *Illegal instruction*. Ở `-O2`, nó suy luận rằng một chương trình đúng không bao giờ đến nhánh đó, coi nhánh là **unreachable** và xoá luôn vòng lặp di chuyển phía trên; chương trình chạy êm, đúng giờ và không di chuyển hạt nào — điểm 7 369 chính là điểm của một `process()` rỗng. Hai hành vi trái ngược từ cùng một mã vì không có hành vi “đúng” nào để cả hai cùng tuân theo. Lưu ý đó là số đo của bản dựng gốc: vì là hành vi không xác định nên kết quả tuỳ trình biên dịch/phiên bản — mã tối thiểu với g++ 14 cho `-O0` ra Illegal instruction nhưng `-O2` ra Segmentation fault; đừng dựa vào một kiểu hỏng cụ thể, chỉ cần nhớ hai mức tối ưu cho kết quả khác nhau là dấu hiệu UB.\n\nCách rẻ nhất: (1) build `-O0` và `-O2` rồi `diff` kết quả — khác nhau là gần như chắc chắn có UB; (2) bật bộ cờ `-Wall -Wextra -Wshadow -Wconversion` — `-Wall` đã chứa `-Wreturn-type` (g++ còn bật sẵn nó cho C++ dù không truyền cờ nào, nhưng chỉ là một dòng `warning` dễ chìm) — để trình biên dịch bắt đúng lỗi này **ngay lúc biên dịch**, miễn phí; (3) coi build sạch cảnh báo là điều kiện cần, không phải điều tốt nên có.",
       tieuChi: [
         "Nêu rơi khỏi cuối hàm non-void là hành vi không xác định nên trình biên dịch được làm bất cứ điều gì",
         "Giải thích `-O0` chèn `ud2` (crash) còn `-O2` coi nhánh là unreachable và xoá vòng lặp (0 nước đi)",

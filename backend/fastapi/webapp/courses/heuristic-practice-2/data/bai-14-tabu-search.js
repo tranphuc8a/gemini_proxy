@@ -79,9 +79,9 @@
       "**Cấm theo thuộc tính, không cấm theo nghiệm.** Không gian nghiệm quá lớn nên gần như không bao giờ quay lại đúng một nghiệm — bảng cấm theo nghiệm luôn rỗng. Quy tắc: cấm cái làm **hoàn tác** nước vừa đi (2-opt: không thêm lại cạnh vừa bỏ; swap: không đổi lại cặp; vừa THÊM đơn j thì cấm BỎ j).",
       "Bảng cấm O(1): đặt `tabuUntil[i][j] = buoc + TT`, bị cấm khi `tabuUntil > buoc`; không phải xoá gì, lệnh cấm tự hết hạn. Hệ quả của dấu `>`: lệnh cấm có hiệu lực TT − 1 bước kế tiếp (TT = 3, đặt ở bước 1: cấm ở bước 2 và 3, được phép lại từ bước 4).",
       "Đừng đặt `buoc = 0` mà quên reset `tabuUntil` giữa hai lần chạy: các dấu thời gian cũ lớn hơn `buoc` mới nên nhiều nước bị cấm oan. Hoặc xoá mảng, hoặc **đừng bao giờ reset `buoc`**.",
-      "Thời hạn cấm: quá nhỏ (1–3) thì vẫn lặp; quá lớn thì có lúc không còn nước nào hợp lệ. Quy tắc bỏ túi TT ≈ √n hoặc 7–15; tabu phản ứng tự tăng TT khi phát hiện lặp và giảm khi lâu không lặp.",
+      "Thời hạn cấm: quá nhỏ (1–3) thì vẫn lặp; quá lớn thì có lúc không còn nước nào hợp lệ. Quy tắc bỏ túi TT ≈ √n hoặc 7–15; tabu phản ứng tự tăng TT khi phát hiện lặp và giảm khi lâu không lặp (nhớ chặn dưới +1 ở nhánh tăng: `(int)(TT * 1.2)` vẫn bằng TT khi TT ≤ 4 nên không tự tăng được).",
       "**Tiêu chí phá lệ:** nước bị cấm vẫn được đi nếu cho kỷ lục mới — lệnh cấm chỉ là xấp xỉ thô, còn kỷ lục mới là bằng chứng ta chưa từng ở đó. Dùng `>` (tốt hơn **hẳn**); dùng `>=` mở đường cho vòng lặp vô hạn giữa các nghiệm cùng điểm.",
-      "Tabu không có yếu tố ngẫu nhiên (tái lập được, dễ gỡ lỗi) và mỗi bước duyệt cả lân cận để chọn nước tốt nhất — O(n·m) mỗi bước. SA làm ~10⁵ bước rẻ, Tabu ~10³ bước đắt: lân cận lớn → SA; lân cận vừa mà mỗi lần đánh giá đắt → Tabu; trong bài thi 100 ms thường GRASP + chèn vẫn thắng cả hai.",
+      "Tabu không có yếu tố ngẫu nhiên (tái lập được, dễ gỡ lỗi) và mỗi bước duyệt cả lân cận để chọn nước tốt nhất — O(n·m) mỗi bước. SA làm ~6·10⁴ bước rẻ, Tabu ~10³ bước đắt (cùng 16 ms; tức Tabu đi ít bước hơn khoảng 60 lần): lân cận lớn → SA; lân cận vừa mà mỗi lần đánh giá đắt → Tabu; trong bài thi 100 ms thường GRASP + chèn vẫn thắng cả hai.",
       "Cạm bẫy hay gặp: cấm theo nghiệm; quên phá lệ; **cấm nhầm chiều** (vừa thêm j mà cấm thêm j — lỗi im lặng, tự kiểm bằng cách in số nước bị chặn mỗi bước); TT cố định cho mọi n; không `break` khi mọi nước đều bị cấm."
     ],
 
@@ -184,11 +184,11 @@
           "Tabu không có yếu tố ngẫu nhiên nào, nên kết quả tái lập được và dễ gỡ lỗi",
           "Mỗi bước Tabu duyệt cả lân cận để chọn nước tốt nhất còn được phép, còn SA chỉ bốc một nước ngẫu nhiên",
           "Tabu cần ít bộ nhớ hơn SA vì không phải giữ bảng nào",
-          "Trong cùng một ngân sách thời gian, SA đi nhiều bước hơn Tabu hàng chục đến hàng trăm lần vì mỗi bước của nó O(1)",
+          "Trong cùng một ngân sách thời gian, SA đi nhiều bước hơn Tabu cỡ hàng chục lần vì mỗi bước của nó O(1)",
           "Tabu chỉ đi lên nên không cần giữ riêng nghiệm tốt nhất"
         ],
         dung: [0, 1, 3],
-        giaiThich: "Tabu tất định, mỗi bước O(n·m) và chọn tốt nhất trong lân cận; SA bốc ngẫu nhiên và chỉ O(1) mỗi bước nên đi nhiều bước hơn rất nhiều (cỡ 10⁵ so với 10³ bước trong cùng 16 ms, theo bảng §5.1). Tabu thì **cần** bảng cấm (một mảng dấu thời gian), và nó cũng đi lên đi xuống — bị ép đi xuống khi mọi nước tốt đều bị cấm — nên **bắt buộc** giữ `best` như SA."
+        giaiThich: "Tabu tất định, mỗi bước O(n·m) và chọn tốt nhất trong lân cận; SA bốc ngẫu nhiên và chỉ O(1) mỗi bước nên đi nhiều bước hơn rất nhiều (cỡ 6·10⁴ so với 10³ bước trong cùng 16 ms, theo bảng §5.1 — tức khoảng 60 lần). Tabu thì **cần** bảng cấm (một mảng dấu thời gian), và nó cũng đi lên đi xuống — bị ép đi xuống khi mọi nước tốt đều bị cấm — nên **bắt buộc** giữ `best` như SA."
       },
       {
         id: "q10", loai: "mot", doKho: 3, ref: "§8 (cạm bẫy 3)",
@@ -230,7 +230,7 @@
         id: "l4", doKho: 3, ref: "Bài tập 14.3–14.4, §5.1, §7",
         hoi: "Bạn phải so Tabu với SA và GRASP + chèn trên P1, rồi chọn thời hạn cấm cho Tabu trên TSP. Nêu (a) vì sao phép so sánh công bằng duy nhất là cùng ngân sách thời gian, (b) bạn kỳ vọng Tabu xếp ở đâu trong ngân sách ~15 ms, (c) cách quét thời hạn cấm và kết quả kỳ vọng, (d) khi nào bạn chọn Tabu thay vì SA.",
         goiY: ["Mỗi bước của Tabu và của SA tốn bao nhiêu?", "Quy tắc bỏ túi cho TT, và hai kiểu hỏng khi TT lệch quá xa."],
-        mau: "- **(a)** Một bước Tabu tốn O(n·m) (duyệt cả lân cận), một bước SA chỉ O(1) ⇒ so cùng số bước là bất công; phải so cùng thời gian (theo bảng §5.1: SA cỡ 10⁵ bước so với Tabu cỡ 10³ bước trong ~16 ms).\n- **(b)** Với 1 000 bước ở ~15 ms trên P1, Tabu thường đạt khoảng 65 500–66 000: **ngang SA, không vượt trội**, khớp với nhận định rằng trong ngân sách rất ngắn Tabu không phải lựa chọn tốt nhất (GRASP + chèn thường vẫn ngang hoặc hơn).\n- **(c)** Quét TT ∈ {5, 10, 20, 40} trên TSP (2-opt + danh sách ứng viên K = 10): kỳ vọng TT 10–20 tốt nhất; TT = 5 vẫn lặp (cấm hết hạn quá nhanh), TT = 40 quá chặt (nhiều lúc mọi nước đều bị cấm). So với quy tắc √n: với n = 600 thì √n ≈ 24, gần 20 nhất trong tập quét — khớp với vùng 10–20 mà đáp án của khoá cho là tốt nhất; √n là điểm xuất phát hợp lý nhưng giá trị tốt nhất vẫn phải đo.\n- **(d)** Chọn Tabu khi lân cận vừa (10²–10³) mà mỗi lần đánh giá đắt, hoặc khi cần kết quả tất định, dễ tái lập; chọn SA khi delta O(1) và lân cận rất lớn (> 10⁴), hoặc cần đơn giản ít tham số.",
+        mau: "- **(a)** Một bước Tabu tốn O(n·m) (duyệt cả lân cận), một bước SA chỉ O(1) ⇒ so cùng số bước là bất công; phải so cùng thời gian (theo bảng §5.1: SA cỡ 6·10⁴ bước so với Tabu cỡ 10³ bước trong ~16 ms).\n- **(b)** Với 1 000 bước ở ~15 ms trên P1, Tabu thường đạt khoảng 65 500–66 000: **ngang SA, không vượt trội**, khớp với nhận định rằng trong ngân sách rất ngắn Tabu không phải lựa chọn tốt nhất (GRASP + chèn thường vẫn ngang hoặc hơn).\n- **(c)** Quét TT ∈ {5, 10, 20, 40} trên TSP (2-opt + danh sách ứng viên K = 10): kỳ vọng TT 10–20 tốt nhất; TT = 5 vẫn lặp (cấm hết hạn quá nhanh), TT = 40 quá chặt (nhiều lúc mọi nước đều bị cấm). So với quy tắc √n: với n = 600 thì √n ≈ 24, gần 20 nhất trong tập quét — khớp với vùng 10–20 mà đáp án của khoá cho là tốt nhất; √n là điểm xuất phát hợp lý nhưng giá trị tốt nhất vẫn phải đo.\n- **(d)** Chọn Tabu khi lân cận vừa (10²–10³) mà mỗi lần đánh giá đắt, hoặc khi cần kết quả tất định, dễ tái lập; chọn SA khi delta O(1) và lân cận rất lớn (> 10⁴), hoặc cần đơn giản ít tham số.",
         tieuChi: ["Nêu chi phí mỗi bước khác nhau (O(n·m) so với O(1)) nên phải so cùng ngân sách thời gian", "Kỳ vọng Tabu ngang SA (khoảng 65 500–66 000) trong ngân sách ngắn, không vượt trội", "Quét thời hạn cấm và dự đoán 10–20 tốt nhất, 5 vẫn lặp, 40 quá chặt", "Nêu điều kiện chọn Tabu: lân cận vừa + đánh giá đắt, hoặc cần tất định"]
       }
     ],

@@ -162,13 +162,13 @@ TH.dangKy({
         "Báo lỗi biên dịch vì mảng `static` chưa được khởi tạo"
       ],
       dung: 0,
-      giaiThich: "Mảng `static` được khởi tạo bằng 0. Với khoảng cách dương, điều kiện `v < 0` không bao giờ đúng nên không ai được chèn và `topIdx` giữ nguyên toàn 0. Khi đổi từ “K lớn nhất” sang “K nhỏ nhất”, phải đặt `topVal[q]` bằng một số rất lớn lúc bắt đầu (và nhớ làm lại cho mỗi lần dùng). Không có phép chèn nào xảy ra nên hai kết quả “K gần nhất”, “K xa nhất” đều sai; `static` chưa khởi tạo là hợp lệ nên không có lỗi biên dịch."
+      giaiThich: "Mảng `static` được khởi tạo bằng 0. Với khoảng cách dương, điều kiện `v < 0` không bao giờ đúng nên không ai được chèn và `topIdx` giữ nguyên toàn 0. Khi đổi từ “K lớn nhất” sang “K nhỏ nhất”, phải đặt `topVal[q]` bằng một số rất lớn lúc bắt đầu (và nhớ làm lại cho mỗi lần dùng). Không có phép chèn nào xảy ra nên hai kết quả “K gần nhất”, “K xa nhất” đều sai; `static` chưa khởi tạo là hợp lệ nên không có lỗi biên dịch. (Cách khác, như chú thích ở §3.2: giữ phép `>` và đẩy −khoảng cách; khi đó cũng phải gán `topVal[q] = -1e300` trước mỗi lượt, vì giá trị 0 mặc định lớn hơn mọi −khoảng cách.)"
     },
     {
       id: "q6", loai: "so", doKho: 2, ref: "§5.4", donVi: "(lần)",
       hoi: "Với cấu trúc dưới đây, thân vòng lặp `while` chạy bao nhiêu lần?\n\n```cpp\nstruct OpBudget {\n    long long left;\n    bool spend(long long cost = 1) { left -= cost; return left > 0; }\n};\n\nOpBudget nganSach{1000};\nint dem = 0;\nwhile (nganSach.spend(100)) { ++dem; }\n```",
       dapAn: 9, saiSo: 0,
-      giaiThich: "`spend` trừ trước rồi mới kiểm tra `left > 0`: sau lần gọi thứ k, left = 1000 − 100k. Các lần k = 1…9 cho left = 900…100 > 0 nên trả `true`; lần thứ 10 ra left = 0 nên trả `false` và thân vòng không chạy. Vậy thân chạy 9 lần chứ không phải 10. Cùng lý do, ngân sách 30 000 000 với cost 100 ở bài chỉ cho 299 999 vòng (đã chạy thử bằng code)."
+      giaiThich: "`spend` trừ trước rồi mới kiểm tra `left > 0`: sau lần gọi thứ k, left = 1000 − 100k. Các lần k = 1…9 cho left = 900…100 > 0 nên trả `true`; lần thứ 10 ra left = 0 nên trả `false` và thân vòng không chạy. Vậy thân chạy 9 lần chứ không phải 10. Cùng lý do, với `left > 0` ngân sách 30 000 000 và cost 100 chỉ cho 299 999 vòng (đã chạy thử bằng code); bài giảng §5.4 dùng `left >= 0` để ngân sách vừa đủ vẫn được chạy trọn 300 000 vòng (left kết thúc −100) — với ngân sách 1 000 ở đây, bản `>= 0` cho 10 lần."
     },
     {
       id: "q7", loai: "so", doKho: 1, ref: "§6.2", donVi: "(byte)",
@@ -221,11 +221,11 @@ TH.dangKy({
       id: "l1", doKho: 2, ref: "§1.1, §3.2, Bài tập 19.1",
       hoi: "Bạn phải chọn **3 nhà gần nhất** trong 8 nhà có khoảng cách `17 4 23 9 4 31 12 6` (đúng thứ tự mảng) mà **không được dùng `sort`**. Mô tả cách làm bằng bảng ba ô, chạy tay từng bước, rồi so sánh chi phí với sắp xếp: khi nào cách của bạn thua?",
       goiY: ["Bảng luôn giữ thứ tự từ gần tới xa; mỗi số mới chỉ hỏi “mày có gần hơn ô nào đang có không?”.", "Đếm số phép so sánh tối đa mỗi phần tử, rồi so n·K với n·log n."],
-      mau: "Giữ bảng 3 ô sắp tăng. Với mỗi khoảng cách `v` mới, duyệt ô từ đầu: gặp ô đầu tiên có `v < ô` thì dịch các ô sau xuống một nấc (ô cuối rớt ra) và đặt `v` vào đó; nếu không nhỏ hơn ô nào nhưng bảng còn ô trống thì đưa vào ô trống; thua cả ba ô thì vứt.\n\n| Xét | Bảng sau đó |\n|---|---|\n| 17 | `17 · — · —` |\n| 4 | `4 · 17 · —` |\n| 23 | `4 · 17 · 23` |\n| 9 | `4 · 9 · 17` |\n| 4 | `4 · 4 · 9` |\n| 31 | vứt, vẫn `4 · 4 · 9` |\n| 12 | vứt, vẫn `4 · 4 · 9` |\n| 6 | `4 · 4 · 6` |\n\nKết quả: ba khoảng cách 4, 4, 6 là các nhà ②, ⑤, ⑧. Mỗi phần tử tốn tối đa K = 3 phép so sánh, cả thảy cỡ n·K ≈ 24, một lượt duyệt, không cần bộ nhớ phụ hay đệ quy.\n\nSắp xếp tốn cỡ n·log n nên chèn top-K chỉ nhanh hơn khi K < log n. Với n = 400, K = 24 thì n·K = 9 600 còn n·log₂n cỡ 3 460, tức sắp xếp ít phép hơn — nhưng khi `sort` bị cấm ta vẫn dùng chèn, hoặc counting sort (§3.3) nếu khoảng cách là số nguyên nhỏ.",
+      mau: "Giữ bảng 3 ô sắp tăng. Với mỗi khoảng cách `v` mới, duyệt ô từ đầu: gặp ô đầu tiên có `v < ô` thì dịch các ô sau xuống một nấc (ô cuối rớt ra) và đặt `v` vào đó; nếu không nhỏ hơn ô nào nhưng bảng còn ô trống thì đưa vào ô trống; thua cả ba ô thì vứt.\n\n| Xét | Bảng sau đó |\n|---|---|\n| 17 | `17 · — · —` |\n| 4 | `4 · 17 · —` |\n| 23 | `4 · 17 · 23` |\n| 9 | `4 · 9 · 17` |\n| 4 | `4 · 4 · 9` |\n| 31 | vứt, vẫn `4 · 4 · 9` |\n| 12 | vứt, vẫn `4 · 4 · 9` |\n| 6 | `4 · 4 · 6` |\n\nKết quả: ba khoảng cách 4, 4, 6 là các nhà ②, ⑤, ⑧. Mỗi phần tử tốn tối đa K = 3 phép so sánh, cả thảy cỡ n·K ≈ 24, một lượt duyệt, không cần bộ nhớ phụ hay đệ quy.\n\nMỗi lần chèn tốn O(K) (heap chỉ O(log K)), tổng O(n·K) so với O(n·log n) của sắp xếp: chèn chỉ lợi nhờ hằng số nhỏ khi K nhỏ. Với n = 400, K = 24 thì n·K = 9 600 còn n·log₂n cỡ 3 460, tức sắp xếp ít phép hơn — nhưng khi `sort` bị cấm ta vẫn dùng chèn, hoặc counting sort (§3.3) nếu khoảng cách là số nguyên nhỏ.",
       tieuChi: [
         "Mô tả bảng K ô luôn sắp thứ tự và quy tắc chèn / dịch / vứt cho từng số mới",
         "Chạy tay ra đúng 4, 4, 6 (các nhà ②, ⑤, ⑧)",
-        "Nêu chi phí O(n·K) so với O(n log n) và điều kiện K < log n để chèn thắng",
+        "Nêu chi phí O(n·K) so với O(n log n) và rằng chèn chỉ lợi nhờ hằng số nhỏ khi K nhỏ (K lớn thì sắp xếp ít phép hơn)",
         "Nhắc được cách thay thế khi `sort` bị cấm và khoảng cách là số nguyên nhỏ: counting sort"
       ]
     },
@@ -245,7 +245,7 @@ TH.dangKy({
       id: "l3", doKho: 2, ref: "§4, Bài tập 19.2–19.4 (RNG)",
       hoi: "Nêu hai lý do (ngoài chuyện bị cấm header) khiến khoá học dùng `xorshift64*` tự viết thay cho `<random>`; rồi nêu ba lỗi thường gặp khi cài xorshift, mỗi lỗi kèm hậu quả và cách phòng.",
       goiY: ["Nghĩ đến chuyện cùng một đoạn mã chạy trên hai thư viện chuẩn khác nhau.", "Điểm bất động của xorshift là gì?"],
-      mau: "Hai lý do: (1) `std::uniform_int_distribution` cho **kết quả khác nhau** giữa libstdc++ và libc++, nên thí nghiệm không tái lập được — trong khi so sánh hai phiên bản thuật toán cần tính **tất định**; (2) bài nêu `std::mt19937` chậm hơn xorshift 3–5 lần.\n\nBa lỗi thường gặp:\n\n1. **Seed = 0** → xorshift kẹt vĩnh viễn ở 0 (dịch và XOR của 0 vẫn là 0, 0 nhân hằng số cũng là 0). Phòng: `s = seed ? seed : 88172645463325252ULL`.\n2. **Không làm nóng** → vài giá trị đầu chất lượng kém. Phòng: gọi `next()` 8 lần trong hàm khởi tạo.\n3. **`next() % n` với n lớn** → lệch nhẹ (một số giá trị xuất hiện nhiều hơn). Không quan trọng với heuristic, nhưng cần biết.\n\n(Thêm) Trong môi trường cấm mọi header, kiểu `uint64_t` cũng đến từ `<cstdint>`; hãy tự khai `typedef unsigned long long uint64;` như ở lab bên dưới.",
+      mau: "Hai lý do: (1) `std::uniform_int_distribution` cho **kết quả khác nhau** giữa libstdc++ và libc++, nên thí nghiệm không tái lập được — trong khi so sánh hai phiên bản thuật toán cần tính **tất định**; (2) bài nêu `std::mt19937` chậm hơn xorshift 3–5 lần.\n\nBa lỗi thường gặp:\n\n1. **Seed = 0** → xorshift kẹt vĩnh viễn ở 0 (dịch và XOR của 0 vẫn là 0, 0 nhân hằng số cũng là 0). Phòng: `s = seed ? seed : 88172645463325252ULL`.\n2. **Không làm nóng** → vài giá trị đầu chất lượng kém. Phòng: gọi `next()` 8 lần trong hàm khởi tạo.\n3. **`next() % n` với n lớn** → lệch nhẹ (một số giá trị xuất hiện nhiều hơn). Không quan trọng với heuristic, nhưng cần biết.\n\n(Thêm) Trong môi trường cấm mọi header, kiểu `uint64_t` cũng đến từ `<cstdint>`; hãy tự khai `typedef unsigned long long u64;` như ở lab bên dưới (đừng đặt tên trùng `uint64_t` nếu file có include).",
       tieuChi: [
         "Nêu `uniform_int_distribution` khác nhau giữa libstdc++ và libc++ nên mất tính tất định / tái lập",
         "Nêu lỗi seed = 0 kẹt ở 0 và cách phòng bằng seed mặc định khác 0",
@@ -257,11 +257,11 @@ TH.dangKy({
       id: "l4", doKho: 3, ref: "§5, Bài tập 19.4",
       hoi: "Đề cấm `<chrono>` và giới hạn 100 ms mỗi test. Hãy thiết kế cách quản lý ngân sách cho một simulated annealing: (a) “ngân sách cố định theo cấu trúc” nghĩa là gì; (b) quy trình hiệu chuẩn một lần; (c) khi một phần phụ thuộc dữ liệu thì dùng gì, và nó đảm bảo / không đảm bảo điều gì?",
       goiY: ["Số phép tính có thể tính trước từ các hằng số biên dịch như BEAM_W, MAX_DEPTH…", "Lời giải đề thi đạt 27,4 ms trung bình và 37,8 ms xấu nhất trên giới hạn 100 ms."],
-      mau: "(a) Thiết kế để số phép tính **không phụ thuộc dữ liệu**: mọi tham số là hằng số biên dịch (`#define BEAM_W 24`, `BEAM_B 10`, `MAX_DEPTH 13`, `SO_NGAY 31`, `SO_PRESET 3`), nên tổng chi phí 3 × 31 × 13 × 24 × 10 × (chi phí mở rộng) **tính được trước**, không đổi.\n\n(b) Hiệu chuẩn một lần trên máy dev: đo (ví dụ 27 ms) → giả định máy chấm chậm hơn 2–3 lần (54–81 ms) → chừa hệ số an toàn ≥ 2 → mục tiêu ≤ 40 ms trên dev → chỉnh hằng số cho vừa. Số liệu thật: 27,4 ms trung bình, 37,8 ms xấu nhất, giới hạn 100 ms, hệ số ≈ 2,6.\n\n(c) Với phần phụ thuộc dữ liệu dùng bộ đếm phép toán `OpBudget { long long left; bool spend(c) { left -= c; return left > 0; } }`, hiệu chuẩn `left` một lần trên máy dev. Nó đảm bảo **khối lượng công việc cố định** (nên kết quả tái lập được, và bảo vệ khỏi TLE nếu hệ số an toàn đủ lớn); nó **không** đảm bảo thời gian thực cố định — thời gian vẫn dao động theo tốc độ và tải của máy.",
+      mau: "(a) Thiết kế để số phép tính **không phụ thuộc dữ liệu**: mọi tham số là hằng số biên dịch (`#define BEAM_W 24`, `BEAM_B 10`, `MAX_DEPTH 13`, `SO_NGAY 31`, `SO_PRESET 3`), nên tổng chi phí 3 × 31 × 13 × 24 × 10 × (chi phí mở rộng) **tính được trước**, không đổi.\n\n(b) Hiệu chuẩn một lần trên máy dev: đo (ví dụ 27 ms) → giả định máy chấm chậm hơn 2–3 lần (54–81 ms) → chừa hệ số an toàn ≥ 2 (= giới hạn ÷ thời gian dev) → mục tiêu ≤ 40 ms trên dev (100 ÷ 40 = 2,5) → chỉnh hằng số cho vừa. Đây cùng là lề “chậm 2–3 lần” của bước trên, không nhân thêm lề thứ hai. Số liệu thật: 27,4 ms trung bình, 37,8 ms xấu nhất, giới hạn 100 ms, hệ số ≈ 2,6.\n\n(c) Với phần phụ thuộc dữ liệu dùng bộ đếm phép toán `OpBudget { long long left; bool spend(c) { left -= c; return left >= 0; } }` (dùng `>= 0` để ngân sách vừa đủ vẫn chạy trọn; biến thể `> 0` mất đúng một lần), hiệu chuẩn `left` một lần trên máy dev. Nó đảm bảo **khối lượng công việc cố định** (nên kết quả tái lập được, và bảo vệ khỏi TLE nếu hệ số an toàn đủ lớn); nó **không** đảm bảo thời gian thực cố định — thời gian vẫn dao động theo tốc độ và tải của máy.",
       tieuChi: [
         "Giải thích ngân sách cấu trúc: hằng số biên dịch nên tổng phép tính tính được trước",
-        "Nêu đủ các bước hiệu chuẩn, gồm hệ số an toàn ≥ 2 và mục tiêu ≈ 40 ms trên máy dev",
-        "Mô tả OpBudget cho phần phụ thuộc dữ liệu (trừ trước rồi kiểm tra `left > 0`)",
+        "Nêu đủ các bước hiệu chuẩn, gồm hệ số an toàn ≥ 2 (= giới hạn ÷ thời gian dev, cùng là lề “chậm 2–3 lần”, không nhân đôi lề) và mục tiêu ≈ 40 ms trên máy dev",
+        "Mô tả OpBudget cho phần phụ thuộc dữ liệu (trừ trước rồi kiểm tra `left >= 0`)",
         "Nói rõ OpBudget đảm bảo khối lượng công việc / tái lập nhưng không đảm bảo thời gian thực"
       ]
     }
@@ -391,7 +391,7 @@ int main() {
       ten: "2-opt dưới ngân sách phép toán (OpBudget)",
       doKho: 3,
       ref: "§5, §3, §6",
-      de: "Đề cấm `<chrono>`: thay vì hỏi đồng hồ, ta **đếm phép toán**. Cài 2-opt cho chu trình ngắn nhất với đúng cấu trúc của §5.4:\n\n" +
+      de: "Đề cấm `<chrono>`: thay vì hỏi đồng hồ, ta **đếm phép toán**. Cài 2-opt cho chu trình ngắn nhất với cấu trúc `OpBudget` của §5.4, ở biến thể `left > 0` dưới đây (bài giảng dùng `left >= 0` để ngân sách vừa đủ vẫn chạy trọn; ở bài này ta cố ý dùng `left > 0` — nó chỉ cho `B − 1` lần đánh giá — để bạn tự tay gặp lỗi lệch một):\n\n" +
           "```cpp\nstruct OpBudget {\n    long long left;\n    bool spend(long long cost = 1) { left -= cost; return left > 0; }\n};\n```\n\n" +
           "Chu trình ban đầu là thứ tự nhập `0, 1, …, n−1`; khoảng cách là Manhattan `|Δx| + |Δy|` (số nguyên — không có sai số thực). Làm **đúng từng bước** để kết quả trùng khớp trên mọi máy:\n\n" +
           "1. lặp `while (còn cải thiện)`: duyệt `i = 0 … n−2`, trong đó `j = i+2 … n−1` (bỏ cặp `i = 0, j = n−1`);\n" +

@@ -43,7 +43,7 @@ Thay đổi ngoài thư mục app (đều nhỏ):
 ## Việc người dùng cần làm
 
 1. **Không có gì phải nạp vào database.** Chỉ cần triển khai như các app tĩnh khác. Lần đầu người học bấm biên dịch C++ cần mạng tới `cdn.jsdelivr.net`.
-2. Đọc `phat-hien-bai-giang.md` (47 nhóm sai lệch tìm được trong bài giảng/đáp án — nhiều chỗ ảnh hưởng nội dung, ví dụ đáp án D1 của bài kiểm tra đầu vào, đáp án 7.1, 9.2, 11.2, bảng thời gian ở Bài 2, logic ngược ở Bài 22 §8.3) và quyết định chỗ nào sửa ở nguồn.
+2. **Bài giảng đã được rà soát và sửa (cùng ngày, theo yêu cầu tiếp theo):** 658 bản vá ở `backend/course-content/heuristic-2.json` (các mục "cần tác giả quyết định" đã được chốt thay tác giả theo uỷ quyền), chi tiết + bảng quyết định + danh sách còn chưa phân định ở `sua-bai-giang.md`; bản phát hiện ban đầu: `phat-hien-bai-giang.md` (47 nhóm). **Bundle chưa nạp vào database** — bạn tự chạy `manage_courses.py import` (ghi đè chỉnh sửa tay qua trang Quản lý, nếu có). Nội dung trang thực hành đã đồng bộ theo bài giảng đã sửa.
 3. Chưa commit (đang ở nhánh `lab/261009`, chưa stage).
 
 ## Giới hạn và nợ

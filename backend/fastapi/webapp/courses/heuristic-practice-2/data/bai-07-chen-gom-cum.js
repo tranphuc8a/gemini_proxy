@@ -49,13 +49,13 @@ TH.dangKy({
   id: "bai-07-chen-gom-cum",
 
   tomTat: [
-    "Greedy chỉ biết **nối vào cuối** tuyến; chèn mở rộng tập quyết định thành “chọn đơn nào **và đặt ở đâu**”. Chỉ riêng việc đó đã cho +6,5 % trên P1 (65 425 so với 61 420).",
+    "Greedy chỉ biết **nối vào cuối** tuyến; chèn mở rộng tập quyết định thành “chọn đơn nào **và đặt ở đâu**”. Chỉ riêng việc đó đã cho +6,5 % trên P1 (65 425 so với 61 420; đo với λ đã hiệu chuẩn lại ≈ 88 — số 63 920 ở Bài 6 dùng λ = 80, cùng bộ 60 test, đừng so trực tiếp).",
     "Công thức hạt nhân: Δt(j,k) = d(a,j) + d(j,b) − d(a,b) + s_j. Phần d(a,j) + d(j,b) − d(a,b) là chi phí đi vòng, luôn ≥ 0 (bất đẳng thức tam giác) và bằng 0 khi j nằm đúng trên đường a → b.",
     "Greedy là trường hợp đặc biệt của chèn: chèn vào cuối (không có b) cho Δt = d(a,j) + s_j. Chèn vào đầu thì a là kho: Δt = d₀(j) + d(j,b) − d₀(b) + s_j. Hai trường hợp biên này gây nhiều lỗi nhất.",
     "Chèn rẻ nhất xếp hạng theo giá trị ròng p − λ·Δt (không theo Δt nhỏ nhất). Chèn với λ = 0 chỉ được 40 220, với λ = 80 được 63 920. Mỗi bước tốn O(n·m), cả hàm O(n·m²); đừng tính lại thời gian của cả tuyến trong vòng lặp trong cùng.",
-    "Chèn theo tiếc nuối: regret(j) = v⁽¹⁾ − v⁽²⁾ — ưu tiên đơn sẽ thiệt nhiều nhất nếu mất vị trí tốt nhất của nó. Hy sinh điểm hôm nay để tránh mất nhiều hơn ở bước sau; thắng chèn rẻ nhất 2–5 % trên dữ liệu gom cụm, nhưng sai giả định khi tuyến còn thưa.",
+    "Chèn theo tiếc nuối: regret(j) = v⁽¹⁾ − v⁽²⁾ — ưu tiên đơn sẽ thiệt nhiều nhất nếu mất vị trí tốt nhất của nó. Hy sinh điểm hôm nay để tránh mất nhiều hơn ở bước sau; kỳ vọng thắng chèn rẻ nhất 2–5 % trên dữ liệu gom cụm (bài giảng chưa kèm bảng đo — BT 7.3 yêu cầu tự đo), nhưng sai giả định khi tuyến còn thưa, và ở bài chọn lọc như P1 regret thuần v⁽¹⁾ − v⁽²⁾ có thể thua cả chèn rẻ nhất (thử v⁽¹⁾ + β·regret).",
     "Tiết kiệm Clarke–Wright S(i,j) = d₀(i) + d₀(j) − d(i,j) hợp với bài có depot, phải quay về, có tải trọng, phục vụ tất cả khách; **không** áp dụng trực tiếp cho P1/P3 (đường mở, chọn lọc). Ý tưởng “đo tác động lên cấu trúc sẵn có” thì chính là Δt.",
-    "Gom cụm (lưới, quét góc, k-means; cluster-first hay route-first) đóng băng quyết định sớm. Chỉ dùng khi có **chi phí thật** giữa các cụm; trong đề thi thật, gom cụm cứng làm giảm điểm vì chặn mất quyền chọn ngôi nhà cuối ngày.",
+    "Gom cụm (lưới, quét góc, k-means; cluster-first hay route-first) đóng băng quyết định sớm. Chỉ dùng khi có **chi phí thật** giữa các cụm; trong đề thi thật, phân tích cấu trúc đề cho thấy gom cụm cứng nhiều khả năng làm giảm điểm vì chặn mất quyền chọn ngôi nhà cuối ngày (đây là lập luận, chưa có phép đo riêng).",
     "Đo trên nhiều loại dữ liệu: lợi thế của chèn giảm từ +6,5 % (rải đều) xuống +5,0 % (gom cụm). Chỉ đo một loại dữ liệu sẽ ước lượng sai giá trị của mọi cải tiến."
   ],
 
@@ -126,7 +126,7 @@ TH.dangKy({
         "Khi số vị trí chèn lớn hơn số đơn chưa dùng"
       ],
       dung: 0,
-      giaiThich: "Regret dựa trên niềm tin rằng vị trí tốt nhất của một đơn sẽ mất nếu không lấy ngay. Khi tuyến còn thưa, niềm tin đó sai nên regret không mang lại gì. Dữ liệu gom cụm có đơn lẻ loi và ngân sách chặt chính là hai tình huống bài giảng nêu regret thắng (2–5 %); còn so sánh số vị trí với số đơn không liên quan."
+      giaiThich: "Regret dựa trên niềm tin rằng vị trí tốt nhất của một đơn sẽ mất nếu không lấy ngay. Khi tuyến còn thưa, niềm tin đó sai nên regret không mang lại gì. Dữ liệu gom cụm có đơn lẻ loi và ngân sách chặt chính là hai tình huống bài giảng nêu regret kỳ vọng thắng (cỡ 2–5 %, chưa có bảng đo trong bài); còn so sánh số vị trí với số đơn không liên quan. Thêm một lưu ý: ở bài chọn lọc như P1, regret thuần v⁽¹⁾ − v⁽²⁾ không xét giá trị v⁽¹⁾ nên cũng có thể thua chèn rẻ nhất."
     },
     {
       id: "q8", loai: "mot", doKho: 2, ref: "§5.3, §5.4",

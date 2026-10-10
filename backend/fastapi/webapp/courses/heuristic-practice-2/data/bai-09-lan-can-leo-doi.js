@@ -84,11 +84,11 @@ TH.dangKy({
   tomTat: [
     "Leo đồi: lấy một lời giải có sẵn, thử mọi phép sửa nhỏ (nước đi), nhận cái nào tốt hơn, lặp cho tới khi **không còn phép sửa nào tốt hơn**. Ba cái tên: lân cận N(x) = tập lời giải cách x đúng một nước đi; nước đi cải thiện; cực trị cục bộ.",
     "Điểm dễ hiểu sai nhất: cực trị cục bộ **không** phải tính chất của bài toán mà của **cặp (bài toán, lân cận)**. Tuyến dài 50 ở ví dụ 5 điểm là cực trị cục bộ với “đảo một khúc” nhưng không còn là cực trị cục bộ nếu thêm “bỏ một điểm” (còn 40). Kẹt thường do tập nước đi quá hẹp — thoát bằng cách **thêm kiểu nước đi**, không phải chạy lâu hơn.",
-    "Đếm lân cận trước khi viết code (P1, n = 120, m = 14): đảo đoạn 91; chuyển đoạn ≈ 630; chèn (n − m)(m + 1) = 1 590; bỏ 14; đổi m·(n − m)·m = 20 776 — gấp ≈ 228 lần đảo đoạn. Lân cận lớn mạnh hơn nhưng đắt đúng bằng tỉ lệ đó.",
+    "Đếm lân cận trước khi viết code (P1, n = 120, m = 14): đảo đoạn 91; chuyển đoạn (L ≤ 3, đếm đúng 14·13 + 13·12 + 12·11) = 470; chèn (n − m)(m + 1) = 1 590; bỏ 14; đổi m·(n − m)·m = 20 776 — gấp ≈ 228 lần đảo đoạn. Lân cận lớn mạnh hơn nhưng đắt đúng bằng tỉ lệ đó.",
     "Bốn tính chất của một lân cận tốt: **liên thông**, kích thước vừa phải, tính địa phương (hàng xóm có điểm gần điểm hiện tại), và delta tính nhanh O(1). Ví dụ phá liên thông: P1 chỉ có đảo đoạn + chuyển đoạn thì tập đơn được chọn không bao giờ đổi.",
-    "Hai cách leo: **first-improvement** (nhận nước cải thiện đầu tiên gặp — mặc định, thường nhanh hơn 2–5 lần, nhớ xáo thứ tự duyệt) và **best-improvement** (duyệt hết rồi nhận nước tốt nhất); chất lượng chỗ dừng tương đương. Mẹo “bit đừng nhìn lại” nhanh thêm 3–10 lần nhưng phải mở lại các phần tử bị ảnh hưởng.",
+    "Hai cách leo: **first-improvement** (nhận nước cải thiện đầu tiên gặp — mặc định, thường nhanh hơn 2–5 lần với thứ tự duyệt được xáo trộn; nếu mỗi lần lại duyệt từ cùng một đầu danh sách cố định thì lợi thế mỏng hơn nhiều) và **best-improvement** (duyệt hết rồi nhận nước tốt nhất); chất lượng chỗ dừng tương đương. Mẹo “bit đừng nhìn lại” nhanh thêm 3–10 lần nhưng phải mở lại các phần tử bị ảnh hưởng.",
     "Số liệu: TSP n = 200, khởi tạo 16 828 → leo đồi 14 656 (−12,9 % trong 0,5 ms). P1: từ greedy tỉ số yếu 61 420 → ≈ 64 200 (+4,5 %), nhưng từ chèn rẻ nhất mạnh 65 425 → 65 718 (+0,45 %). Lời giải ban đầu càng yếu, leo đồi càng lãi.",
-    "Bề mặt gồ ghề: 20 lần leo từ điểm ngẫu nhiên cho kết quả từ 18 980 đến 24 240 (tệ nhất / tốt nhất = 1,277), trong khi một lần leo từ khởi tạo tốt cho 14 656. Bài lớn hơn (n = 600) phân tán chỉ 1,158 — các lần chạy giống nhau hơn nên chạy nhiều lần ít lợi hơn.",
+    "Bề mặt gồ ghề: 20 lần leo từ điểm ngẫu nhiên cho kết quả từ 18 980 đến 24 240 (tệ nhất / tốt nhất trong 20 lần = 1,277 — chưa phải khoảng cách tới tối ưu thật, vốn chỉ có thể lớn hơn), trong khi một lần leo từ khởi tạo tốt cho 14 656. Bài lớn hơn (n = 600) phân tán chỉ 1,158 — các lần chạy giống nhau hơn nên chạy nhiều lần ít lợi hơn. (Đây là số đo từ mã gốc, không còn trong repo; dựng lại độc lập cho độ phân tán nhỏ hơn — tệ nhất / tốt nhất ≈ 1,06–1,11 ở n = 200 — và khởi tạo tốt thắng trung bình các lần ngẫu nhiên; kết luận định tính giữ nguyên, độ lớn phụ thuộc cách cài đặt.)",
     "Cạm bẫy: nhận nước có delta = 0 (`delta <= 0`) gây lặp vô hạn — dùng `delta < −1e−9`; quên kiểm ràng buộc sau nước đi (P1: chèn vượt 480 phút); không có `maxVong`; tin rằng leo đồi tìm được tối ưu. Thứ tự toán tử: giải phóng tài nguyên trước, tiêu thụ sau."
   ],
 
@@ -130,10 +130,10 @@ TH.dangKy({
         "Best-improvement, vì mỗi vòng nhận nước tốt nhất nên tổng thời gian luôn thấp hơn",
         "Best-improvement, vì nó bảo đảm dừng ở cực trị toàn cục",
         "Hai cách chênh nhau rất xa về chất lượng chỗ dừng nên phải thử cả hai trên từng bài rồi mới chọn",
-        "First-improvement: mỗi bước rẻ vì dừng ngay khi gặp nước cải thiện (ở các vòng đầu nó xuất hiện rất sớm), thường nhanh hơn 2–5 lần với chất lượng tương đương; nhớ xáo thứ tự duyệt"
+        "First-improvement: mỗi bước rẻ vì dừng ngay khi gặp nước cải thiện (ở các vòng đầu nó xuất hiện rất sớm), thường nhanh hơn 2–5 lần (khi thứ tự duyệt được xáo trộn) với chất lượng tương đương"
       ],
       dung: 3,
-      giaiThich: "First-improvement nhận nước cải thiện ngay nên không phải duyệt hết hàng chục nghìn nước chỉ để tìm cái nhỉnh hơn một chút; chất lượng chỗ dừng tương đương, và cần xáo thứ tự duyệt để không luôn sửa cùng một vùng. Best-improvement cần ít bước hơn nhưng mỗi bước đắt, tổng thời gian thường cao hơn; và không cách nào bảo đảm tối ưu toàn cục — cả hai đều dừng ở cực trị cục bộ."
+      giaiThich: "First-improvement nhận nước cải thiện ngay nên không phải duyệt hết hàng chục nghìn nước chỉ để tìm cái nhỉnh hơn một chút; chất lượng chỗ dừng tương đương, và cần xáo thứ tự duyệt để không luôn sửa cùng một vùng (nếu mỗi lần lại duyệt từ cùng một đầu danh sách cố định thì lợi thế tốc độ mỏng hơn nhiều). Best-improvement cần ít bước hơn nhưng mỗi bước đắt, tổng thời gian thường cao hơn; và không cách nào bảo đảm tối ưu toàn cục — cả hai đều dừng ở cực trị cục bộ."
     },
     {
       id: "q5", loai: "nhieu", doKho: 2, ref: "§3.4",
@@ -177,7 +177,7 @@ TH.dangKy({
         "Không nên dùng leo đồi vì kết quả phân tán quá lớn"
       ],
       dung: 2,
-      giaiThich: "Kết quả tốt nhất trong 20 lần ngẫu nhiên (18 980) vẫn tệ hơn một lần leo từ khởi tạo tốt (14 656): điểm xuất phát quan trọng hơn số lần thử. Điều kiện đi kèm là cách khởi tạo phải thật sự tốt; nếu bài của bạn chưa có cách xây lời giải tử tế thì thứ tự ưu tiên đảo lại (§7.3). Phân tán lớn không có nghĩa là bỏ leo đồi — nó nghĩa là cần đầu tư vào điểm xuất phát."
+      giaiThich: "Trong số đo gốc, kết quả tốt nhất trong 20 lần ngẫu nhiên (18 980) vẫn tệ hơn một lần leo từ khởi tạo tốt (14 656); dựng lại độc lập thì khởi tạo tốt thắng trung bình các lần ngẫu nhiên, còn khi n lớn thường thắng cả lần tốt nhất, nhưng khoảng cách nhỏ hơn: điểm xuất phát quan trọng hơn số lần thử. Điều kiện đi kèm là cách khởi tạo phải thật sự tốt; nếu bài của bạn chưa có cách xây lời giải tử tế thì thứ tự ưu tiên đảo lại (§7.3). Phân tán lớn không có nghĩa là bỏ leo đồi — nó nghĩa là cần đầu tư vào điểm xuất phát."
     },
     {
       id: "q9", loai: "nhieu", doKho: 2, ref: "§8 (cạm bẫy 2–4)",
@@ -211,8 +211,8 @@ TH.dangKy({
       id: "l1", doKho: 1, ref: "Bài tập 9.1",
       hoi: "P1 có n = 200 đơn, tuyến hiện tại dài m = 20 đơn. Tính kích thước lân cận của: (a) đảo đoạn, (b) chuyển đoạn với L ≤ 3, (c) chèn, (d) bỏ, (e) đổi — theo cách đếm ở §3.2. Lân cận nào đắt nhất, và nó buộc bạn thiết kế thế nào?",
       goiY: ["Chèn: (n − m) đơn chưa dùng × (m + 1) vị trí.", "Đổi: bỏ một trong m đơn, chọn một trong (n − m) đơn chưa dùng, chèn vào một trong m vị trí."],
-      mau: "- (a) Đảo đoạn: C(20, 2) = 20·19/2 = **190**.\n- (b) Chuyển đoạn L ≤ 3: xấp xỉ 3·m·(m + 1) = 3·20·21 = **1 260**.\n- (c) Chèn: (n − m)·(m + 1) = 180 × 21 = **3 780**.\n- (d) Bỏ: m = **20**.\n- (e) Đổi: m·(n − m)·m = 20 × 180 × 20 = **72 000**.\n\nTổng cộng ≈ 77 250 lời giải phải xét mỗi lượt. “Đổi” áp đảo: gấp 72 000 / 190 ≈ **379 lần** đảo đoạn.\n\nHệ quả thiết kế: nếu mỗi lần chấm tốn O(m) = 20 phép thì một lượt ≈ 1,5 triệu phép; nếu tính lại toàn bộ O(n) = 200 phép thì ≈ 15 triệu và chậm gấp 10 lần nữa. Lân cận lớn thì mạnh hơn (ít bị kẹt) nhưng đắt đúng bằng tỉ lệ đó ⇒ cần delta O(1) (Bài 10) và nên dùng lân cận nhỏ cho tới khi hết nước rồi mới mở sang lân cận lớn (Bài 15).",
-      tieuChi: ["Đếm đúng đảo đoạn 190, chèn 3 780 và đổi 72 000 (chuyển đoạn xấp xỉ 1 260)", "Nhận ra “đổi” là lân cận lớn nhất, gấp khoảng 379 lần đảo đoạn", "Rút ra hệ quả: lân cận lớn mạnh hơn nhưng đắt tương ứng ⇒ cần delta O(1) và/hoặc dùng lân cận nhỏ trước"]
+      mau: "- (a) Đảo đoạn: C(20, 2) = 20·19/2 = **190**.\n- (b) Chuyển đoạn L ≤ 3: mỗi L có (m − L + 1) đoạn × (m − L) vị trí đích khác chỗ cũ, nên 20·19 + 19·18 + 18·17 = 380 + 342 + 306 = **1 028** (công thức xấp xỉ 3m² cho 1 200).\n- (c) Chèn: (n − m)·(m + 1) = 180 × 21 = **3 780**.\n- (d) Bỏ: m = **20**.\n- (e) Đổi: m·(n − m)·m = 20 × 180 × 20 = **72 000**.\n\nTổng cộng ≈ 77 000 lời giải phải xét mỗi lượt. “Đổi” áp đảo: gấp 72 000 / 190 ≈ **379 lần** đảo đoạn.\n\nHệ quả thiết kế: nếu mỗi lần chấm tốn O(m) = 20 phép thì một lượt ≈ 1,5 triệu phép; nếu tính lại toàn bộ O(n) = 200 phép thì ≈ 15 triệu và chậm gấp 10 lần nữa. Lân cận lớn thì mạnh hơn (ít bị kẹt) nhưng đắt đúng bằng tỉ lệ đó ⇒ cần delta O(1) (Bài 10) và nên dùng lân cận nhỏ cho tới khi hết nước rồi mới mở sang lân cận lớn (Bài 15).",
+      tieuChi: ["Đếm đúng đảo đoạn 190, chèn 3 780 và đổi 72 000 (chuyển đoạn đếm đúng 1 028, công thức xấp xỉ 3m² cho 1 200)", "Nhận ra “đổi” là lân cận lớn nhất, gấp khoảng 379 lần đảo đoạn", "Rút ra hệ quả: lân cận lớn mạnh hơn nhưng đắt tương ứng ⇒ cần delta O(1) và/hoặc dùng lân cận nhỏ trước"]
     },
     {
       id: "l2", doKho: 2, ref: "Bài tập 9.2",
@@ -551,7 +551,7 @@ int main() {
       ten: "Ba cách quét lân cận: đếm số lần đánh giá",
       doKho: 3,
       ref: "§3.2, §4.1–4.3",
-      de: "§4.3 nói first-improvement “thường nhanh hơn 2–5 lần” so với best-improvement. Hãy tự **đo** — bằng cách đếm chính xác số lần tính Δ.\n\n" +
+      de: "§4.3 nói first-improvement “thường nhanh hơn 2–5 lần” so với best-improvement (với thứ tự duyệt xáo trộn; nếu mỗi lần lại duyệt từ cùng một đầu danh sách cố định thì lợi thế mỏng hơn nhiều). Hãy tự **đo** — bằng cách đếm chính xác số lần tính Δ.\n\n" +
           "Cho `n` điểm nguyên trên lưới 100×100, khoảng cách **Manhattan**, tuyến khép kín xuất phát là `0, 1, …, n−1`. Chấm trên 10 bộ dữ liệu; mức đạt duy nhất là **đúng cả chín số trên mọi test**. Lân cận 2-opt gồm mọi cặp `(i, j)` với `0 ≤ i < j ≤ n−1`, `j ≥ i+2`, **bỏ cặp (0, n−1)**, duyệt theo thứ tự `i` tăng, trong cùng `i` thì `j` tăng. Với cặp `(i, j)`: `a = q[i]`, `b = q[i+1]`, `c = q[j]`, `d = q[(j+1) mod n]`, **Δ = d(a,c) + d(b,d) − d(a,b) − d(c,d)**; nước cải thiện khi **Δ < 0** (nghiêm ngặt); áp dụng nước = đảo `q[i+1..j]`. Mỗi lần tính Δ của một cặp là **một lần đánh giá**.\n\n" +
           "Cài ba cách, **mỗi cách bắt đầu lại từ tuyến `0..n−1`**:\n\n" +
           "- **A — đầu tiên, quay lại từ đầu:** gặp cặp đầu tiên có Δ < 0 thì áp dụng ngay rồi **quay lại duyệt từ cặp (0, 2)**. Dừng khi một lượt duyệt hết lân cận mà không có nước cải thiện.\n" +

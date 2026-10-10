@@ -45,9 +45,9 @@ TH.dangKy({
     "Bài 2605 (Tensor Buffer Planner) là Dynamic Storage Allocation: gán offset oᵢ cho N = 3 000–5 000 tensor có vòng đời [bᵢ, eᵢ) cố định, thoả căn chỉnh oᵢ ≡ 0 (mod aᵢ) và không chồng lấn địa chỉ khi trùng thời gian, sao cho peak = maxᵢ(oᵢ + sᵢ) nhỏ nhất. Điểm = 10⁶ × baseline / peak, baseline là hằng số của test.",
     "Nghiệm là một vector offset (họ gán nhãn, không phải hoán vị) nên 2-opt / Or-opt không dùng được. Cận dưới LB = max_t Σ size các tensor đang sống (quét sự kiện, ~20 dòng code) cho trần điểm 16 729 771: lời giải tham khảo (14 114 401, peak/LB = 1,1863) còn thua khoảng 18,5 %.",
     "Lời giải tham khảo là First-Fit theo thứ tự đầu vào vì hàm sortTensors() để rỗng. Chỉ điền chỉ số size giảm dần đã được +6,93 % — hai phần ba tổng cải thiện +10,27 %: đòn bẩy nằm ở chỉ số sắp xếp, không phải ở metaheuristic.",
-    "Khoá sắp xếp tốt nhất: (−⌊2·log₂ align_up(size, align)⌋, start) — lớp kích thước tỉ lệ √2 giảm dần, trong lớp thì thời gian bắt đầu tăng dần (thuật toán cạnh trái, tối ưu khi cùng kích thước). Độ mịn có đỉnh rõ ở √2 (peak/LB 1,0734); mịn hơn hay thô hơn đều kém.",
+    "Khoá sắp xếp tốt nhất: (−⌊2·log₂ align_up(size, align)⌋, start) — lớp kích thước tỉ lệ √2 giảm dần, trong lớp thì thời gian bắt đầu tăng dần (thuật toán cạnh trái, tối ưu khi cùng kích thước). Độ mịn có đỉnh rõ ở √2 (peak/LB 1,0734 trong bảng quét độ mịn riêng, không so trực tiếp với thang phiên bản); mịn hơn hay thô hơn đều kém.",
     "Portfolio 6 chiến lược (có nhiễu loạn ranh giới lớp) thêm +0,64 %: ngẫu nhiên hoá đúng chỗ không phá bất biến “lớn trước”. Kết quả cuối 15 563 974 điểm (+10,27 %, peak/LB 1,0752, 93,0 % trần, 0 vi phạm / 300 test, ~150 ms trên giới hạn 1 000 ms).",
-    "Bốn thí nghiệm thất bại: “bump” không sắp xếp (peak/LB 1,10 → 1,67, chậm 4,5×); nén trọng lực (0 tensor di chuyển — là một định lý: First-Fit là cực trị cục bộ của lân cận “hạ một tensor”); LNS (xấu đi ~9 % ở mọi vòng vì phá bất biến toàn cục); Best-Fit (kém First-Fit 3,2 %).",
+    "Bốn thí nghiệm thất bại: “bump” không sắp xếp (peak/LB 1,10 → 1,67, chậm 4,5×); nén trọng lực (0 tensor di chuyển — là một định lý: First-Fit là cực trị cục bộ của lân cận “hạ một tensor”); LNS (xấu đi ở mọi vòng, thường cỡ 9 %, vì phá bất biến toàn cục); Best-Fit (kém First-Fit tới 3,2 % ở chỉ số size giảm dần, trung bình ba chỉ số thử ≈ 1,4 %).",
     "Ablation trên portfolio báo thiếu tới 55 lần: bỏ phân lớp kích thước chỉ −0,03 % ở 6 chiến lược nhưng −1,65 % ở 1 chiến lược. Quy tắc: thành phần dùng chung trong portfolio phải ablation ở cấu hình MỘT nhánh.",
     "Đối chiếu khoá học: giá trị nhất là Bài 5, 18, 12, 4 (kèm bổ sung điều kiện cho ablation) và 21; Bài 9, 11 (toán tử), 17 bị phản bác ở bài này; Bài 6, 10, 13, 14, 16 không áp dụng được. Biết bài học nào KHÔNG áp dụng cho bài toán trước mắt là kỹ năng khó nhất."
   ],
@@ -87,7 +87,7 @@ TH.dangKy({
       id: "q4", loai: "mot", doKho: 2, ref: "01 §4.3 · Bài 18 §6",
       hoi: "Lời giải tham khảo có peak/LB = 1,1863 (14 114 401 điểm so với trần 16 729 771). Cách đọc đúng con số này theo Bài 18 là gì?",
       chon: [
-        "Tham khảo đã ở 84,4 % trần; còn 18,5 % dư địa mà chắc chắn đạt được nếu có thuật toán đủ mạnh",
+        "Tham khảo đã ở 84,4 % trần; còn 18,5 % độ hở mà chắc chắn đạt được nếu có thuật toán đủ mạnh",
         "Cận dưới LB chính là nghiệm tối ưu, nên 18,5 % là khoảng cách chắc chắn tới tối ưu",
         "Khoảng cách 15–30 % là dấu hiệu heuristic xây dựng yếu — nên quay lại Phần 2 (chỉ số, chèn, GRASP) trước khi nghĩ tới metaheuristic; đồng thời LB bỏ qua căn chỉnh nên không phải toàn bộ khoảng này đạt được",
         "Khoảng cách trên 10 % nghĩa là mô hình hoá sai và phải làm lại từ Bài 1"
@@ -115,7 +115,7 @@ TH.dangKy({
     },
     {
       id: "q7", loai: "mot", doKho: 2, ref: "03 §3 · Bài 11 §4",
-      hoi: "Ở 2605, First-Fit thắng Best-Fit trung bình 3,2 % (ở cả ba chỉ số sắp xếp thử), trong khi XLA dùng best-fit và ở bài đóng thùng cổ điển Best-Fit thường thắng. Lý giải nào đúng nhất?",
+      hoi: "Ở 2605, First-Fit thắng Best-Fit ở cả ba chỉ số sắp xếp thử (hơn 3,2 % ở chỉ số size giảm dần, trung bình ba chỉ số ≈ 1,4 %), trong khi XLA dùng best-fit và ở bài đóng thùng cổ điển Best-Fit thường thắng. Lý giải nào đúng nhất?",
       chon: [
         "First-Fit chạy nhanh hơn nên còn thời gian để chạy portfolio",
         "Best-Fit vi phạm ràng buộc căn chỉnh nên bị phạt điểm",
@@ -126,13 +126,13 @@ TH.dangKy({
       giaiThich: "Đây là ví dụ sách giáo khoa của “tối ưu hoá thành phần ≠ tối ưu hoá tổng thể” (Bài 11 §4): mục tiêu là peak, First-Fit tối ưu đúng địa chỉ, Best-Fit tối ưu một đại lượng không liên quan. Mục tiêu khác thì kết luận đảo ngược (đóng thùng cổ điển: mục tiêu là số thùng). XLA dùng best-fit cho phân bố tensor của mạng thật, còn init() của đề sinh dữ liệu ngẫu nhiên — không mâu thuẫn, chỉ là nhắc “đo trên chính phân bố dữ liệu của bạn”. Hai phương án đầu không có cơ sở (Best-Fit không phá căn chỉnh; tốc độ không phải lý do)."
     },
     {
-      id: "q8", loai: "mot", doKho: 3, ref: "03 §7.3 · Bài 17",
-      hoi: "LNS (bỏ ~900 tensor giao thời gian với tensor tạo peak rồi xây lại theo size giảm dần) làm peak xấu đi ~9 % ở mọi vòng trên mọi test, trong khi ở bài 2607 LNS cho +3,0 %. Nguyên nhân là gì?",
+      id: "q8", loai: "mot", doKho: 3, ref: "03 §7.3 · Bài 17 §8",
+      hoi: "LNS (bỏ ~900 tensor giao thời gian với tensor tạo peak rồi xây lại theo size giảm dần) làm peak xấu đi ở mọi vòng trên mọi test (thường cỡ 9 %), trong khi ở bài P2 của khoá (Bài 17 §8) LNS cho +3,0 % so với chèn toàn cục. Nguyên nhân là gì?",
       chon: [
         "Cài đặt LNS ở 2605 có lỗi; sửa lỗi thì LNS sẽ cải thiện",
         "Ở 2605 chưa chạy đủ số vòng lặp nên chưa có nước đi nào được chấp nhận",
         "Toán tử xây lại dùng First-Fit trong khi LNS chỉ hợp với Best-Fit",
-        "Chất lượng nghiệm ở 2605 đến từ một bất biến toàn cục (tensor lớn đặt trước tensor nhỏ): phá một tập con thì các tensor nhỏ được giữ lại thành chướng ngại cố định, buộc tensor lớn luồn lách — đúng ngược FFD. Ở 2607 nghiệm là tuyến đường có cấu trúc cục bộ nên phá và xây lại không làm vỡ gì"
+        "Chất lượng nghiệm ở 2605 đến từ một bất biến toàn cục (tensor lớn đặt trước tensor nhỏ): phá một tập con thì các tensor nhỏ được giữ lại thành chướng ngại cố định, buộc tensor lớn luồn lách — đúng ngược FFD. Ở bài P2 của khoá nghiệm là tuyến đường có cấu trúc cục bộ nên phá và xây lại không làm vỡ gì"
       ],
       dung: 3,
       giaiThich: "Mọi vòng đều xấu đi, không có vòng nào được chấp nhận — đây là hệ thống chứ không phải ngẫu nhiên hay thiếu vòng lặp. “Toán tử phá của LNS phá vỡ chính bất biến tạo nên chất lượng.” Điều kiện áp dụng cần nhớ: LNS chỉ hiệu quả khi chất lượng nghiệm có cấu trúc cục bộ. Cách kiểm trong 10 phút: phá rồi xây lại một lần, in mục tiêu trước và sau; nếu xấu đi có hệ thống thì dừng. Chuyện Best-Fit tệ hơn First-Fit là kết quả riêng (q7), không liên quan tới lý do LNS thất bại."
@@ -148,7 +148,7 @@ TH.dangKy({
         "Kết quả chỉ đúng với test có max_size nhỏ; với max_size lớn thì nén trọng lực vẫn di chuyển được nhiều tensor"
       ],
       dung: [0, 2, 3],
-      giaiThich: "Ba phát biểu đúng gói trọn bài học: định lý Bᵢ′ ⊇ Bᵢ; cực trị cục bộ là tính chất của cặp (bài toán, lân cận) nên muốn thoát phải đổi lân cận; và lân cận hiệu quả ở đây là “đổi khoá sắp xếp”. Phát biểu về SA không có cơ sở: tài liệu không thử SA vì lân cận “di chuyển một tensor” không có nước cải thiện, nước xấu đi thì đẩy tensor lên cao mà mọi tensor khác đã cố định, và đánh giá một nước tốn O(K) với K ≈ 250 chứ không có delta rẻ. Phát biểu cuối sai: kết quả là 0 / 5 000 ở mọi test và là định lý, không phụ thuộc max_size."
+      giaiThich: "Ba phát biểu đúng gói trọn bài học: định lý Bᵢ′ ⊇ Bᵢ; cực trị cục bộ là tính chất của cặp (bài toán, lân cận) nên muốn thoát phải đổi lân cận; và lân cận hiệu quả ở đây là “đổi khoá sắp xếp”. Phát biểu về SA không có cơ sở: tài liệu không thử SA vì lân cận “di chuyển một tensor” không có nước cải thiện, nước xấu đi thì đẩy tensor lên cao mà mọi tensor khác đã cố định, và đánh giá một nước tốn O(K) với K ≈ 250 chứ không có delta rẻ. Phát biểu cuối sai: kết quả là 0 tensor di chuyển (0 / N) ở mọi test và là định lý, không phụ thuộc max_size."
     },
     {
       id: "q10", loai: "mot", doKho: 3, ref: "03 §8.1 · Bài 4 §5",
@@ -172,13 +172,13 @@ TH.dangKy({
         "Bước ① cho ra sáu quan sát từ mã grader; hãy nhớ ít nhất ba (max_size rút một lần, offset là bội của 16, baseline là hằng số, một vi phạm mất tất cả…).",
         "Bước ⑤ sinh lời nhất của cả ca này và chỉ tốn khoảng 20 dòng code."
       ],
-      mau: "1. **① Đọc mã grader.** Rút ra sáu quan sát: max_size rút một lần cho cả test ⇒ hai chế độ dữ liệu (kích thước lớn / nhỏ); mọi offset là bội của 16; baseline là hằng số ⇒ cực đại điểm ⟺ cực tiểu peak; một vi phạm làm mất toàn bộ điểm; mảng “canh gác” chiếm ~8 MB; thời gian 1 000 ms rất rộng ⇒ chạy được 6–10 chiến lược.\n2. **② Mô hình hoá.** (S, C, f): S = vector offset; C = căn chỉnh + không chồng lấn (cứng); f = peak. Nhận ra đây là Dynamic Storage Allocation ⇒ mở ra tài liệu (LOAD, thuật toán cạnh trái, MiniMalloc), biết trước ILP không khả thi, và biết nghiệm thuộc họ gán nhãn nên 2-opt không áp dụng.\n3. **③ Bộ chấm cục bộ — dựng TRƯỚC khi viết thuật toán.** Sao chép nguyên văn pseudo_rand, init, compute_baseline, verify; thêm cận dưới, cờ vi phạm có lý do, bộ kiểm chồng lấn bằng sweep (đối chiếu với bản O(N²) nguyên văn), đo thời gian từng test.\n4. **④ Nghiệm cơ sở.** Chép lời giải tham khảo: 14 114 401 điểm/test, peak/LB = 1,1863.\n5. **⑤ Cận.** LB = max_t Σ size bằng quét sự kiện ⇒ trần 16 729 771 ⇒ tham khảo còn thua khoảng 18,5 %: con số biện minh cho việc đầu tư tiếp. (Về sau chẩn đoán còn cho thấy lãng phí căn chỉnh chỉ ~1 % peak nên không đáng tối ưu alignment.)",
+      mau: "1. **① Đọc mã grader.** Rút ra sáu quan sát: max_size rút một lần cho cả test ⇒ hai chế độ dữ liệu (kích thước lớn / nhỏ); mọi offset là bội của 16; baseline là hằng số ⇒ cực đại điểm ⟺ cực tiểu peak; một vi phạm làm mất toàn bộ điểm; mảng “canh gác” chiếm ~8 MB; thời gian 1 000 ms rất rộng ⇒ chạy được 6–10 chiến lược.\n2. **② Mô hình hoá.** (S, C, f): S = vector offset; C = căn chỉnh + không chồng lấn (cứng); f = peak. Nhận ra đây là Dynamic Storage Allocation ⇒ mở ra tài liệu (LOAD, thuật toán cạnh trái, MiniMalloc), biết trước ILP không khả thi, và biết nghiệm thuộc họ gán nhãn nên 2-opt không áp dụng.\n3. **③ Bộ chấm cục bộ — dựng TRƯỚC khi viết thuật toán.** Sao chép nguyên văn pseudo_rand, init, compute_baseline, verify; thêm cận dưới, cờ vi phạm có lý do, bộ kiểm chồng lấn bằng sweep (đối chiếu với bản O(N²) nguyên văn), đo thời gian từng test.\n4. **④ Nghiệm cơ sở.** Chép lời giải tham khảo: 14 114 401 điểm/test, peak/LB = 1,1863.\n5. **⑤ Cận.** LB = max_t Σ size bằng quét sự kiện ⇒ trần 16 729 771 ⇒ tham khảo còn thua khoảng 18,5 %: con số biện minh cho việc đầu tư tiếp. (Về sau chẩn đoán còn cho thấy lãng phí căn chỉnh chỉ ≈ 1 % peak — trung bình trên 10 test đầu, riêng chế độ kích thước nhỏ là ngoại lệ — nên không đáng tối ưu thêm alignment.)",
       tieuChi: [
         "Nêu đúng năm bước theo thứ tự ① → ⑤",
         "Ở bước ① nêu ít nhất ba quan sát rút từ mã grader (không chỉ từ lời đề)",
         "Ở bước ② viết được (S, C, f) và gọi đúng tên họ bài toán (Dynamic Storage Allocation / họ gán nhãn)",
         "Ở bước ③ nhấn mạnh dựng bộ chấm trước khi viết thuật toán và đối chiếu bộ kiểm tra tự viết với bản gốc",
-        "Ở bước ⑤ nêu cận dưới = max_t Σ size và dùng nó để nói còn bao nhiêu dư địa"
+        "Ở bước ⑤ nêu cận dưới = max_t Σ size và dùng nó để nói độ hở còn bao nhiêu"
       ]
     },
     {
@@ -188,7 +188,7 @@ TH.dangKy({
         "Tính lợi ích biên: đi từ 6 lên 10 chiến lược thêm bao nhiêu phần trăm điểm? Hệ số an toàn theo trường hợp xấu nhất là bao nhiêu?",
         "Bài 20 §10.2: cấu hình dự phòng nên chỉnh được bằng một dòng."
       ],
-      mau: "Lợi ích biên giảm rất nhanh: 1 → 6 chiến lược thêm +0,63 %, 6 → 8 chỉ +0,09 %, 8 → 10 chỉ +0,02 %. Trong khi đó hệ số an toàn thời gian (1 000 ms ÷ trường hợp xấu nhất) tụt từ 2,6× (389 ms) xuống 1,6× (611 và 621 ms). Từ 6 lên 10 chiến lược chỉ được thêm ≈ 0,11 % điểm mà chỉ còn dư 1,6× — nếu máy chấm chậm hơn 1,6× là chạm giới hạn.\n\nTheo tinh thần “an toàn quan trọng hơn vài phần trăm điểm”, chọn **6 chiến lược** (15 563 974 điểm, an toàn 2,6× theo xấu nhất). Dự phòng: đặt sẵn macro NSTRAT, đổi một dòng sang 2 chiến lược — 15 501 631 điểm (−0,40 %) trong 58 ms trung bình (xấu nhất 229 ms, an toàn 4,4×) — để bật khi nghi ngờ máy chấm chậm. Nên đo thời gian bằng nhiều lần chạy rồi lấy giá trị nhỏ nhất, vì máy phát triển có tải nền dao động.",
+      mau: "Lợi ích biên giảm rất nhanh: 1 → 6 chiến lược thêm +0,64 %, 6 → 8 chỉ +0,09 %, 8 → 10 chỉ +0,02 %. Trong khi đó hệ số an toàn thời gian (1 000 ms ÷ trường hợp xấu nhất) tụt từ 2,6× (389 ms) xuống 1,6× (611 và 621 ms). Từ 6 lên 10 chiến lược chỉ được thêm ≈ 0,11 % điểm mà chỉ còn dư 1,6× — nếu máy chấm chậm hơn 1,6× là chạm giới hạn.\n\nTheo tinh thần “an toàn quan trọng hơn vài phần trăm điểm”, chọn **6 chiến lược** (15 563 974 điểm, an toàn 2,6× theo xấu nhất). Dự phòng: đặt sẵn macro NSTRAT, đổi một dòng sang 2 chiến lược — 15 501 631 điểm (−0,40 %) trong 58 ms trung bình (xấu nhất 229 ms, an toàn 4,4×) — để bật khi nghi ngờ máy chấm chậm. Nên đo thời gian bằng nhiều lần chạy rồi lấy giá trị nhỏ nhất, vì máy phát triển có tải nền dao động.",
       tieuChi: [
         "Tính được lợi ích biên giảm dần (từ 6 lên 10 chiến lược chỉ thêm khoảng 0,11 %)",
         "Nêu hệ số an toàn theo trường hợp xấu nhất (2,6× so với 1,6×), không chỉ theo trung bình",
@@ -203,7 +203,7 @@ TH.dangKy({
         "Định lý chỉ nói về một lân cận cụ thể trên một loại nghiệm cụ thể (First-Fit, thứ tự cố định).",
         "Bài 12: cực trị cục bộ là tính chất của cặp (bài toán, lân cận). Hãy thử đổi lân cận."
       ],
-      mau: "**Phần đúng.** Với nghiệm First-Fit theo thứ tự cố định, lân cận “hạ một tensor” có đúng 0 nước cải thiện (định lý Bᵢ′ ⊇ Bᵢ); lân cận lớn hơn kiểu LNS “phá một lát thời gian rồi xây lại” còn tệ hơn (−9 %) vì phá vỡ bất biến toàn cục “lớn trước nhỏ”. Còn 2-opt/Or-opt thì không có nghĩa vì nghiệm là vector offset.\n\n**Phần nói quá.** “Mọi kỹ thuật cải thiện” là suy rộng. Tài liệu mới thử hai lân cận trong không gian offset (hạ một tensor; phá một lát thời gian). Và chính tài liệu chỉ ra một lân cận hiệu quả: **đổi thứ tự xử lý**, nằm trong không gian tham số của thuật toán xây dựng chứ không trong không gian offset — portfolio / GRASP khai thác đúng lân cận này (+0,64 %), và việc quét chỉ số sắp xếp cho phần lớn +10,27 %.\n\n**Hướng còn lại (§12).** (1) Tìm kiếm nhị phân trên peak + đặt có trần với cơ chế hoãn tensor không vừa — thay đổi thứ tự thích nghi mà không phá bất biến “lớn trước”, ước tính +1–2 %; (2) đặt hai phía (two-sided packing, kỹ thuật của MiniMalloc); (3) chuyên biệt hoá cho chế độ kích thước nhỏ, kèm một cận dưới có tính đến căn chỉnh. Phù hợp với bài học: muốn thoát cực trị cục bộ thì **đổi lân cận hoặc đổi chỗ tìm kiếm**, đừng tinh chỉnh lân cận cũ.",
+      mau: "**Phần đúng.** Với nghiệm First-Fit theo thứ tự cố định, lân cận “hạ một tensor” có đúng 0 nước cải thiện (định lý Bᵢ′ ⊇ Bᵢ); lân cận lớn hơn kiểu LNS “phá một lát thời gian rồi xây lại” còn tệ hơn (thường cỡ −9 %) vì phá vỡ bất biến toàn cục “lớn trước nhỏ”. Còn 2-opt/Or-opt thì không có nghĩa vì nghiệm là vector offset.\n\n**Phần nói quá.** “Mọi kỹ thuật cải thiện” là suy rộng. Tài liệu mới thử hai lân cận trong không gian offset (hạ một tensor; phá một lát thời gian). Và chính tài liệu chỉ ra một lân cận hiệu quả: **đổi thứ tự xử lý**, nằm trong không gian tham số của thuật toán xây dựng chứ không trong không gian offset — portfolio / GRASP khai thác đúng lân cận này (+0,64 %), và việc quét chỉ số sắp xếp cho phần lớn +10,27 %.\n\n**Hướng còn lại (§12).** (1) Tìm kiếm nhị phân trên peak + đặt có trần với cơ chế hoãn tensor không vừa — thay đổi thứ tự thích nghi mà không phá bất biến “lớn trước”, ước tính +1–2 %; (2) đặt hai phía (two-sided packing, ý tưởng gần với các bộ giải bin-packing hai phía); (3) chuyên biệt hoá cho chế độ kích thước nhỏ, kèm một cận dưới có tính đến căn chỉnh. Phù hợp với bài học: muốn thoát cực trị cục bộ thì **đổi lân cận hoặc đổi chỗ tìm kiếm**, đừng tinh chỉnh lân cận cũ.",
       tieuChi: [
         "Phân biệt đúng: định lý chỉ áp dụng cho lân cận “hạ một tensor” trên nghiệm First-Fit; LNS thất bại vì phá bất biến toàn cục",
         "Chỉ ra lân cận hiệu quả nằm trong không gian tham số của thuật toán xây dựng (đổi khoá sắp xếp → portfolio / GRASP), nên “mọi kỹ thuật” là nói quá",

@@ -34,7 +34,7 @@ TH.dangKy({
     "**Cận trên = đáp số của một bài nới lỏng** chứa bài gốc: mọi lời giải hợp lệ của ván thật vẫn hợp lệ ở ván dễ, nên điểm tốt nhất của ván dễ không thể kém hơn OPT. Luôn có LB ≤ OPT ≤ UB, và độ hở (UB − LB)/LB là thứ duy nhất bạn đo được mà không cần biết OPT.",
     "Ví dụ 5 đơn, 100 phút: A+B+C = 14 700 (đúng là tối ưu). Cho nhận nửa đơn thì lấy thêm 17/20 = 0,85 đơn D, được UB = 16 740. Nghiệm đạt ít nhất 87,8 % tối ưu, độ hở 13,9 % — nhưng độ hở **thật** là 0 %: cận trên chỉ là lời hứa an toàn, không phải dự báo.",
     "Ba cách nới lỏng: bỏ hẳn một ràng buộc (lỏng), nới LP cho biến liên tục (chặt vừa), nới lỏng Lagrange (chặt). Với cái túi, min_λ [λB + Σ max(0, p_j − λc_j)] **bằng đúng** nghiệm LP của Dantzig; độ hở LP **không vượt quá giá trị một món**, nên với n = 100 chỉ còn 0,11 %.",
-    "Bài có không gian dùng tham số τ (số phút di chuyển phân bổ mỗi đơn): τ = 0 cho cận tuyệt đối 35 571 464, τ = 7 cho 33 943 173, τ = 9,5 cho 33 388 769; lời giải 32 915 840 đạt 97,0 % của cận τ = 7 và 98,6 % của cận τ = 9,5. Cận τ > 0 chỉ đúng nếu τ là cận dưới thật của di chuyển.",
+    "Bài có không gian dùng tham số τ (số phút di chuyển phân bổ mỗi đơn): τ = 0 cho cận tuyệt đối 35 571 464 (lời giải 32 915 840 đạt 92,5 %); τ = 7 (kỳ vọng BHH) cho mức tham chiếu 33 943 173 (đạt 97,0 %); τ = 9,5 (di chuyển thực của chính lời giải) cho mức tham chiếu 33 388 769 (đạt 98,6 %). Chỉ τ = 0 là cận chứng minh được; hai mức kia chỉ là tham chiếu, đúng nếu τ là cận dưới thật của di chuyển.",
     "Hằng số BHH ước lượng độ dài tour tối ưu của n điểm **rải đều ngẫu nhiên**: L* ≈ β√(A·n), β ≈ 0,7124 (Euclid), β ≈ 0,92 (Manhattan). Đó là một ước lượng, không phải cận chứng minh được: với điểm đã chọn lọc gần nhau nó có thể cao hơn thực tế nhiều (344 phút so với 119,8 phút đo được).",
     "Bảng quyết định theo khoảng cách tới cận trên: > 30 % mô hình sai → về Bài 1; 15–30 % heuristic xây dựng yếu → Phần 2; 5–15 % thiếu tìm kiếm → Phần 3–4; 2–5 % tinh chỉnh → quét tham số; < 2 % gần chạm trần → cân nhắc dừng.",
     "Độ hở **co lại khi bài to ra** (13,9 % với n = 5, 0,11 % với n = 100), nên đừng suy độ tin cậy từ bài nhỏ sang bài lớn. Một heuristic mạnh hơn không phải cận trên; cận phải tính riêng cho từng test; kiểm độ chặt của cận bằng cách so UB với OPT trên bài đủ nhỏ để giải tối ưu."
@@ -85,9 +85,9 @@ TH.dangKy({
     },
     {
       id: "q5", loai: "so", doKho: 2, ref: "§2, §3.3, §6", donVi: "(%)",
-      hoi: "Đề thi thật: lời giải đạt 32 915 840 điểm, cận trên τ = 9,5 là 33 388 769. Độ hở theo định nghĩa (UB − LB)/LB bằng bao nhiêu phần trăm? (làm tròn đến 0,01)",
+      hoi: "Đề thi thật: lời giải đạt 32 915 840 điểm, mức tham chiếu τ = 9,5 là 33 388 769 (một mức tham chiếu chứ không phải cận chứng minh được). Lấy mức này làm UB, độ hở theo định nghĩa (UB − LB)/LB bằng bao nhiêu phần trăm? (làm tròn đến 0,01)",
       dapAn: 1.44, saiSo: 0.01,
-      giaiThich: "(33 388 769 − 32 915 840) / 32 915 840 = 472 929 / 32 915 840 = 1,44 %. Theo bảng quyết định (< 2 %: gần chạm trần) đây là vùng “cân nhắc dừng” — với điều kiện cận τ = 9,5 đáng tin. Lưu ý đây khác “98,6 %” (tỉ số LB/UB): hai cách nói cùng một khoảng cách nhưng không phải cùng một con số."
+      giaiThich: "(33 388 769 − 32 915 840) / 32 915 840 = 472 929 / 32 915 840 = 1,44 %. Theo bảng quyết định (< 2 %: gần chạm trần) đây là vùng “cân nhắc dừng” — chỉ với điều kiện mức τ = 9,5 đáng tin; nó là mức di chuyển thực của chính lời giải (1 510 / 158 ≈ 9,56) nên một lời giải khác có thể vượt. Với cận chứng minh được τ = 0 (35 571 464) độ hở là 8,07 %. Lưu ý 1,44 % khác “98,6 %” (tỉ số LB/UB): hai cách nói cùng một khoảng cách nhưng không phải cùng một con số."
     },
     {
       id: "q6", loai: "mot", doKho: 2, ref: "§6",
@@ -111,7 +111,7 @@ TH.dangKy({
         "Vì cái túi nhỏ thì sức chứa B nhỏ nên cận luôn lỏng bất kể số món"
       ],
       dung: 1,
-      giaiThich: "Nghiệm LP lấy trọn các món có tỉ số cao nhất và chỉ cắt dở một món; phần “ảo” đó đáng nhiều nhất bằng giá trị của một món (đây là định lý, không phải quan sát). Với n = 5 một món chiếm cỡ 14 % tổng điểm, với n = 100 chỉ cỡ vài phần trăm hoặc ít hơn. Cận LP hợp lệ ở mọi n; bài toán không nói gì về chất lượng thuật toán; và hệ quả là đừng suy độ tin cậy giữa bài nhỏ và bài lớn."
+      giaiThich: "Nghiệm LP lấy trọn các món có tỉ số cao nhất và chỉ cắt dở một món; phần “ảo” đó đáng nhiều nhất bằng giá trị của một món (đây là định lý, không phải quan sát). Với n = 5 mỗi món đáng trung bình cỡ 24 % tổng điểm (phần dở dang của món bị cắt chiếm 13,9 %), với n = 100 một món chỉ cỡ vài phần trăm hoặc ít hơn. Cận LP hợp lệ ở mọi n; bài toán không nói gì về chất lượng thuật toán; và hệ quả là đừng suy độ tin cậy giữa bài nhỏ và bài lớn."
     },
     {
       id: "q8", loai: "nhieu", doKho: 2, ref: "§2.1, §5",
@@ -130,13 +130,13 @@ TH.dangKy({
       id: "q9", loai: "mot", doKho: 3, ref: "§4, Bài tập 18.4",
       hoi: "Tuyến của một thuật toán trên P1 đi qua 14 đơn chọn trong 120 đơn của lưới 100 × 100, đo được 119,8 phút. Công thức BHH Manhattan cho 0,92 × √(10 000 × 14) ≈ 344 phút. Cách hiểu đúng nhất là gì?",
       chon: [
-        "Thuật toán đã có lỗi vì tuyến ngắn hơn cận dưới BHH",
+        "Thuật toán đã có lỗi vì tuyến ngắn hơn BHH, mà BHH được coi là cận dưới của mọi tuyến",
         "Phải nhân thêm hệ số (1 − 1/14) vì tuyến là đường mở, khi đó BHH cho đúng 119,8",
         "Hằng số 0,92 chỉ đúng cho Euclid nên con số 344 vô nghĩa",
         "BHH chỉ ước lượng cho điểm rải đều ngẫu nhiên; ở đây 14 đơn được chọn lọc ưu tiên những đơn gần nhau nên tuyến ngắn hơn nhiều — BHH không phải một cận chứng minh được"
       ],
       dung: 3,
-      giaiThich: "BHH là kết quả tiệm cận cho điểm phân bố đều. Thuật toán chọn 14 trong 120 đơn và có xu hướng chọn đơn gần nhau, nên tuyến ngắn hơn hẳn: tuyến đã rất chặt, dư địa nằm ở chọn lọc chứ không phải định tuyến. Hệ số (1 − 1/14) chỉ đổi 344 thành khoảng 320, vẫn xa 119,8. 0,92 chính là hệ số của Manhattan (0,7124 mới là của Euclid). Vì BHH chỉ là ước lượng nên “tuyến ngắn hơn BHH” không có nghĩa là lỗi."
+      giaiThich: "BHH là kết quả tiệm cận cho điểm phân bố đều. Thuật toán chọn 14 trong 120 đơn và có xu hướng chọn đơn gần nhau, nên tuyến ngắn hơn hẳn. Vì BHH không phải cận dưới, phép so này không chứng minh tuyến đã chặt; nó chỉ cho thấy tuyến ngắn chủ yếu nhờ chọn lọc những đơn gần nhau (muốn biết còn rút được bao nhiêu ở định tuyến phải so với TSP tối ưu của chính 14 đơn đã chọn). Hệ số (1 − 1/14) chỉ đổi 344 thành khoảng 320, vẫn xa 119,8. 0,92 chính là hệ số của Manhattan (0,7124 mới là của Euclid). Vì BHH chỉ là ước lượng nên “tuyến ngắn hơn BHH” không có nghĩa là lỗi."
     },
     {
       id: "q10", loai: "mot", doKho: 2, ref: "§8.2, §9 (cạm bẫy 2)",
@@ -157,7 +157,7 @@ TH.dangKy({
       id: "l1", doKho: 1, ref: "Bài tập 18.1",
       hoi: "Với bảng 5 đơn ở §1.1 (A: 6 000 / 30 phút; B: 4 500 / 25; C: 4 200 / 28; D: 2 400 / 20; E: 1 000 / 20) nhưng chỉ còn 60 phút, hãy tính cận trên LP và nghiệm nguyên tốt nhất. Độ hở bao nhiêu? Phần hở này có “thật” không?",
       goiY: ["Sắp theo nghìn mỗi phút giảm dần: A, B, C, D, E. Lấy đầy rồi cắt món cuối.", "Để biết nghiệm nguyên tốt nhất, duyệt 32 tập con (hoặc lý luận từ cận trên)."],
-      mau: "**Cận trên LP.** Lấy A (30 phút) và B (25 phút) trọn vẹn, còn 5 phút. Đơn tiếp theo là C cần 28 phút nên chỉ lấy 5/28 ≈ 0,179 của C, được 0,179 × 4 200 = 750. UB = 6 000 + 4 500 + 750 = **11 250**.\n\n" +
+      mau: "**Cận trên LP.** Lấy A (30 phút) và B (25 phút) trọn vẹn, còn 5 phút. Đơn tiếp theo là C cần 28 phút nên chỉ lấy 5/28 của C, được 5/28 × 4 200 = 750. UB = 6 000 + 4 500 + 750 = **11 250**.\n\n" +
            "**Nghiệm nguyên tốt nhất.** Duyệt hết các tập vừa 60 phút: A + B = 55 phút cho 10 500; A + C = 58 phút chỉ 10 200; A + D = 50 phút 8 400; … Tốt nhất là **A + B = 10 500**.\n\n" +
            "**Độ hở** = (11 250 − 10 500) / 10 500 = **7,1 %** (vùng 5–15 %: “thiếu tìm kiếm” theo bảng). Nhưng phần hở này hoàn toàn là **ảo**: nghiệm A + B chính là tối ưu, độ hở thật là 0 %. Toàn bộ 750 điểm hở là phần C bị cắt dở — đúng cơ chế ở §8: độ hở LP không vượt quá giá trị một món, và bài chỉ có 5 món nên một món chiếm tỉ lệ lớn.",
       tieuChi: [
@@ -171,7 +171,7 @@ TH.dangKy({
       id: "l2", doKho: 2, ref: "Bài tập 18.2, §8",
       hoi: "Giả sử bạn đo độ hở (LP − OPT)/OPT của bài cái túi với n = 10, 30, 100, 300 và thấy nó giảm dần: cỡ vài %, cỡ 1 %, cỡ 0,1 %, rồi nhỏ hơn nữa. Hãy giải thích vì sao, và nêu hệ quả với việc đọc độ hở trên bài của bạn.",
       goiY: ["Nghiệm LP khác nghiệm nguyên ở bao nhiêu món?", "Nghĩ về tỉ lệ giữa giá trị của một món và tổng giá trị."],
-      mau: "Nghiệm LP lấy trọn các món có tỉ số cao nhất và chỉ cắt dở **một** món, nên phần hở của cận LP **không bao giờ vượt quá giá trị của một món** (đó là định lý, không phải quan sát). Khi n tăng, tổng giá trị tăng cỡ n còn giá trị một món gần như giữ nguyên, nên tỉ lệ hở giảm cỡ 1/n: 13,9 % với 5 món (một món chiếm cỡ 14 % tổng), 0,11 % với n = 100. Phần dở dang của món bị cắt còn nhỏ hơn cả giá trị một món nên số đo thực tế còn nhỏ hơn giới hạn lý thuyết.\n\n" +
+      mau: "Nghiệm LP lấy trọn các món có tỉ số cao nhất và chỉ cắt dở **một** món, nên phần hở của cận LP **không bao giờ vượt quá giá trị của một món** (đó là định lý, không phải quan sát). Khi n tăng, tổng giá trị tăng cỡ n còn giá trị một món gần như giữ nguyên, nên tỉ lệ hở giảm ít nhất cỡ 1/n (đo thực tế còn nhanh hơn: từ n = 100 lên 300 giảm cỡ 7 lần, không chỉ 3): 13,9 % với 5 món (mỗi món trung bình cỡ 24 % tổng 14 700, phần dở dang của món bị cắt chiếm 13,9 %), 0,11 % với n = 100. Phần dở dang của món bị cắt còn nhỏ hơn cả giá trị một món nên số đo thực tế còn nhỏ hơn giới hạn lý thuyết.\n\n" +
            "**Hệ quả:** không được lấy độ hở đo trên bài nhỏ để suy độ tin cậy trên bài lớn, và ngược lại. Muốn biết cận của mình có chặt không, chạy nó trên các bài đủ nhỏ để giải tối ưu bằng quy hoạch động hoặc vét cạn rồi so UB với OPT thật.",
       tieuChi: [
         "Nêu ý “chỉ một món bị cắt dở” và giới hạn: độ hở không vượt quá giá trị một món",
@@ -181,29 +181,29 @@ TH.dangKy({
     },
     {
       id: "l3", doKho: 3, ref: "Bài tập 18.4, §4",
-      hoi: "Trên P1 tuyến của “chèn rẻ nhất” đi qua khoảng 14 đơn trên lưới 100 × 100, đo được 119,8 phút. Hãy dùng hằng số BHH để ước lượng quãng đường, nêu vì sao con số ước lượng lệch xa thực tế, và kết luận nên tối ưu tuyến hay tối ưu chọn lọc.",
+      hoi: "Trên P1 tuyến của “chèn rẻ nhất” đi qua khoảng 14 đơn trên lưới 100 × 100, đo được 119,8 phút. Hãy dùng hằng số BHH để ước lượng quãng đường, nêu vì sao con số ước lượng lệch xa thực tế, và nói phép so này cho phép (hoặc không cho phép) kết luận gì về chuyện nên tối ưu tuyến hay tối ưu chọn lọc.",
       goiY: ["Tính 0,92 × √(A·n) với A = 10 000 và n = 14.", "BHH giả định điều gì về phân bố của các điểm?"],
       mau: "BHH Manhattan: L* ≈ 0,92 × √(10 000 × 14) = 0,92 × 374 ≈ **344 phút** cho một chu trình kín. Tuyến của ta là đường mở nên cùng lắm giảm còn cỡ 320 phút; thực tế đo được chỉ **119,8 phút**.\n\n" +
            "**Vì sao lệch?** BHH là ước lượng tiệm cận cho các điểm **rải đều ngẫu nhiên**. Ở đây thuật toán *chọn lọc* 14 trong 120 đơn và có xu hướng chọn những đơn **gần nhau**, nên tuyến ngắn hơn rất nhiều. Vì vậy BHH ở đây không phải cận dưới chứng minh được — nó chỉ là một ước lượng cho điểm ngẫu nhiên.\n\n" +
-           "**Kết luận:** tuyến đã rất chặt; dư địa nằm ở **chọn lọc** (đơn nào được chọn), không phải ở định tuyến.",
+           "**Kết luận:** vì BHH ở đây không phải cận dưới (119,8 ≪ 344), phép so này *không* chứng minh tuyến đã chặt; nó chỉ cho thấy tuyến ngắn chủ yếu nhờ **chọn lọc** những đơn gần nhau. Muốn biết còn rút được bao nhiêu ở định tuyến, phải so tuyến với TSP tối ưu của chính 14 đơn đã chọn (giải chính xác được bằng quy hoạch động bitmask, cỡ 14² · 2¹⁴ ≈ 3,2 triệu phép) — trước đó chưa đủ dữ kiện để chọn giữa tối ưu tuyến và tối ưu chọn lọc.",
       tieuChi: [
         "Tính đúng ước lượng BHH ≈ 344 phút",
         "Giải thích sự lệch bằng giả định “điểm rải đều” bị phá vỡ vì các đơn được chọn lọc, gần nhau",
         "Nhận ra BHH là ước lượng, không phải cận chứng minh được",
-        "Kết luận: tối ưu chọn lọc chứ không phải tối ưu tuyến"
+        "Kết luận thận trọng: BHH không chứng minh tuyến đã chặt; cần so với TSP tối ưu của 14 đơn đã chọn trước khi chọn giữa tối ưu tuyến và tối ưu chọn lọc"
       ]
     },
     {
       id: "l4", doKho: 3, ref: "§3.3, §6, §9",
-      hoi: "Đồng đội nói: “Lời giải 32 915 840 đã đạt 98,6 % cận τ = 9,5. Dừng thôi!”. Hãy tính độ hở theo ba cận ở §3.3 (35 571 464 cho τ = 0; 33 943 173 cho τ = 7; 33 388 769 cho τ = 9,5), đối chiếu bảng quyết định, và cho biết bạn có đồng ý dừng không. Nêu những điều cần kiểm trước khi dừng.",
-      goiY: ["Độ hở = (UB − LB)/LB cho từng cận.", "Cận nào đúng với mọi lời giải, và cận nào chỉ đúng nếu τ thoả một điều kiện?"],
+      hoi: "Đồng đội nói: “Lời giải 32 915 840 đã đạt 98,6 % mức τ = 9,5. Dừng thôi!”. Hãy tính độ hở theo ba mức ở §3.3 (35 571 464 cho τ = 0; 33 943 173 cho τ = 7; 33 388 769 cho τ = 9,5), đối chiếu bảng quyết định, và cho biết bạn có đồng ý dừng không. Nêu những điều cần kiểm trước khi dừng.",
+      goiY: ["Độ hở = (UB − LB)/LB cho từng mức.", "Mức nào là cận đúng với mọi lời giải, và mức nào chỉ là tham chiếu, đúng nếu τ thoả một điều kiện?"],
       mau: "Độ hở (UB − LB)/LB: τ = 0 → (35 571 464 − 32 915 840)/32 915 840 = **8,07 %** (vùng 5–15 %: thiếu tìm kiếm); τ = 7 → **3,12 %** (2–5 %: tinh chỉnh); τ = 9,5 → **1,44 %** (< 2 %: cân nhắc dừng).\n\n" +
-           "Chỉ cận τ = 0 là **cận tuyệt đối** (bỏ hẳn di chuyển, luôn đúng nhưng lỏng). Cận τ > 0 chỉ đúng nếu τ là cận dưới thật của số phút di chuyển trung bình mỗi đơn; τ = 9,5 lại là mức di chuyển *thực tế của chính lời giải*, nên “98,6 %” là một chỉ số tham chiếu chứ chưa phải bảo đảm. τ = 7 (cỡ di chuyển tối ưu kiểu TSP-Manhattan) hợp lý hơn.\n\n" +
-           "**Kết luận hợp lý:** chưa nên dừng chỉ vì con số 98,6 %. Cần (1) xác nhận cận nào hợp lệ, (2) đo độ chặt của cận bằng cách so với tối ưu trên bài nhỏ, (3) tính cận riêng cho từng test chứ không chỉ trung bình. Nếu cận τ = 7 đứng vững thì dư địa ~3 % (cộng ~1,5 % từ đường đi) đủ để “không đáng bỏ thêm một tuần” như §4.3 kết luận — nhưng đó phải là kết luận có kiểm, không phải cảm giác.",
+           "Chỉ τ = 0 là **cận chứng minh được** (bỏ hẳn di chuyển, luôn đúng nhưng lỏng). τ = 7 và τ = 9,5 chỉ là **mức tham chiếu**, đúng nếu τ là cận dưới thật của số phút di chuyển trung bình mỗi đơn: τ = 9,5 là mức di chuyển *thực tế của chính lời giải* (1 510 / 158 ≈ 9,56), còn τ = 7 là kỳ vọng BHH cho điểm rải đều (§4) — một lời giải khác có thể đi ít hơn và vượt cả hai mức, nên “98,6 %” là chỉ số tham chiếu chứ chưa phải bảo đảm.\n\n" +
+           "**Kết luận hợp lý:** chưa nên dừng chỉ vì con số 98,6 %. Cần (1) xác nhận mức nào thật sự là cận, (2) đo độ chặt của cận bằng cách so với tối ưu trên bài nhỏ, (3) tính cận riêng cho từng test chứ không chỉ trung bình. Nếu hai mức tham chiếu đáng tin thì dư địa ước chừng ≈ 3 % (dải 2–5 % của bảng §6: cần tinh chỉnh, sát ngưỡng dừng 2 %) — quét tham số thì đáng, còn viết thêm thuật toán mới thì “không đáng bỏ thêm một tuần” như §4.3 kết luận; nhưng với cận chứng minh được (τ = 0) khoảng cách còn tới 8,07 %, nên đó phải là kết luận có kiểm, không phải cảm giác.",
       tieuChi: [
         "Tính đúng ba độ hở: 8,07 %, 3,12 %, 1,44 %",
         "Đối chiếu từng độ hở với bảng quyết định (thiếu tìm kiếm / tinh chỉnh / cân nhắc dừng)",
-        "Phân biệt cận tuyệt đối (τ = 0) với cận tham chiếu cần điều kiện về τ",
+        "Phân biệt cận chứng minh được (τ = 0) với mức tham chiếu (τ = 7, 9,5) cần điều kiện về τ",
         "Nêu ít nhất một phép kiểm trước khi dừng (độ chặt của cận trên bài nhỏ, cận riêng từng test)"
       ]
     }
