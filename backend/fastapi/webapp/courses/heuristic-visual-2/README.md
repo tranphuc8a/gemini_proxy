@@ -14,7 +14,7 @@ Mô phỏng **tương tác** cho [khoá Học Heuristic](../heuristic-course-fro
 không có `fetch` nào.
 
 ```bash
-cd samsung/visual
+cd gemini/visual
 python -m http.server 8781 --bind 127.0.0.1
 # mở http://127.0.0.1:8781
 ```

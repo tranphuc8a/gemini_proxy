@@ -73,8 +73,8 @@
   },
   {
     "bai": "khoa-hoc/bai-20-quy-trinh-8-buoc",
-    "old": "**Bằng chứng:** ba trong bốn cải tiến lớn nhất của lời giải đề Samsung đến từ đọc mã, **không** từ đọc đề:",
-    "new": "**Bằng chứng:** trong bốn thành phần đóng góp lớn nhất của lời giải đề Samsung (bảng ablation §9), **hai** cái đến từ đọc mã chứ không phải từ đọc đề — khung ngày thứ 31 (−3,08 %, lớn nhất bảng) và di chuyển chết cuối ngày (−0,45 %, xuất phát từ một dòng trong mã chấm, xem §3.3); hai cái còn lại (beam và phạt thời gian chết, mỗi cái −2,43 %) là kết quả của tìm kiếm và mô hình hoá. Cộng lại hai phát hiện từ mã chiếm 3,53 trên 8,39 điểm phần trăm (≈ 42 %) tổng mức tụt của bốn thành phần ấy. Các phát hiện chỉ có trong mã:",
+    "old": "**Bằng chứng:** ba trong bốn cải tiến lớn nhất của lời giải đề gemini đến từ đọc mã, **không** từ đọc đề:",
+    "new": "**Bằng chứng:** trong bốn thành phần đóng góp lớn nhất của lời giải đề gemini (bảng ablation §9), **hai** cái đến từ đọc mã chứ không phải từ đọc đề — khung ngày thứ 31 (−3,08 %, lớn nhất bảng) và di chuyển chết cuối ngày (−0,45 %, xuất phát từ một dòng trong mã chấm, xem §3.3); hai cái còn lại (beam và phạt thời gian chết, mỗi cái −2,43 %) là kết quả của tìm kiếm và mô hình hoá. Cộng lại hai phát hiện từ mã chiếm 3,53 trên 8,39 điểm phần trăm (≈ 42 %) tổng mức tụt của bốn thành phần ấy. Các phát hiện chỉ có trong mã:",
     "ly_do": "[LOGIC] Mục 22 + 25 + quyết định thống nhất số 6. Tính lại từ ablation 2607/03 §7: bốn dòng lớn nhất là khung 31 ngày 3,08 · beam 2,43 · phạt thời gian chết 2,43 · di chuyển chết 0,45 (tổng 8,39). Chỉ hai dòng (31 ngày, di chuyển chết — theo chính §3.3 của bài) đến từ đọc mã ⇒ 2/4, không phải 3/4; phần của chúng = 3,53 / 8,39 = 42 %. Bảng ngay dưới liệt kê bốn *phát hiện* trong mã (cả bốn đều ✓), không phải bốn cải tiến lớn nhất — nên câu \"ba trong bốn\" vừa lệch số vừa mâu thuẫn với bảng. Lưu ý: Bài 4B §1 xếp \"di chuyển chết\" là mô hình hoá; nếu chỉ tính khung 31 ngày thì 3,08/8,39 = 37 %."
   },
   {

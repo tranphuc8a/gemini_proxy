@@ -1172,7 +1172,7 @@ Lặp lại.
 
 ---
 
-Đây là cách rất nhiều thí sinh Samsung đạt điểm cao.
+Đây là cách rất nhiều thí sinh gemini đạt điểm cao.
 
 ---
 

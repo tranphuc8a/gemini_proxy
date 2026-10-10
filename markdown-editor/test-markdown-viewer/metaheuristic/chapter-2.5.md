@@ -809,7 +809,7 @@ $$
 
 # 2.5.16 TSP và bài Air Conditioner
 
-Bây giờ nhìn lại bài Samsung.
+Bây giờ nhìn lại bài gemini.
 
 ---
 

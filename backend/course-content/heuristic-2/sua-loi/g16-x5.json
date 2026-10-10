@@ -265,8 +265,8 @@
  },
  {
   "bai": "tai-lieu/tai-lieu-tham-khao",
-  "old": "| [`samsung/expe/2607/research`](../../expe/2607/research/) | Nghiên cứu hoàn chỉnh đề thi thật: mô hình hoá, khảo sát, thiết kế, mã nguồn, liên hệ tài liệu | Bài 21–23; và làm mẫu cho báo cáo đồ án |",
-  "new": "| [`samsung/expe/2607/research`](../../expe/2607/research/) | Nghiên cứu hoàn chỉnh đề thi thật: mô hình hoá, khảo sát, thiết kế, mã nguồn, liên hệ tài liệu | Bài 21–23; và làm mẫu cho báo cáo đồ án |\n\n> Số chương ở bảng trên ghi theo kho `samsung/metaheuristic`; chưa đối chiếu được với kho.",
+  "old": "| [`gemini/expe/2607/research`](../../expe/2607/research/) | Nghiên cứu hoàn chỉnh đề thi thật: mô hình hoá, khảo sát, thiết kế, mã nguồn, liên hệ tài liệu | Bài 21–23; và làm mẫu cho báo cáo đồ án |",
+  "new": "| [`gemini/expe/2607/research`](../../expe/2607/research/) | Nghiên cứu hoàn chỉnh đề thi thật: mô hình hoá, khảo sát, thiết kế, mã nguồn, liên hệ tài liệu | Bài 21–23; và làm mẫu cho báo cáo đồ án |\n\n> Số chương ở bảng trên ghi theo kho `gemini/metaheuristic`; chưa đối chiếu được với kho.",
   "ly_do": "[QUYẾT ĐỊNH] X5 #8(c): giữ mục `chapter-16`; thêm chú thích số chương chưa đối chiếu (g13 mục 2: Bài 17B từng ghi khác; 17B đã bỏ số chương ở cụm X4)."
  }
 ]

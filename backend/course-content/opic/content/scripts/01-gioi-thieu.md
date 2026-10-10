@@ -12,7 +12,7 @@ mo-ta: Câu 1 của mọi đề: tên, tuổi, công việc, tính cách, sở t
 - dang: gioi-thieu
 
 Hi there!
-So, my name is Son — I'm 23 years old and I work as a software engineer at Samsung Vietnam's R&D Center here in Hanoi.
+So, my name is Son — I'm 23 years old and I work as a software engineer at gemini Vietnam's R&D Center here in Hanoi.
 My job mainly involves developing mobile applications and working closely with Korean engineers, so I actually use English quite a bit on a daily basis.
 Outside of work... I like to keep things pretty simple, honestly.
 I go jogging in the mornings, watch movies when I have the time, and I really enjoy exploring new cafes around the city.

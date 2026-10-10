@@ -92,11 +92,11 @@ rồi chụp ảnh vào `_shots/`.
 
 ---
 
-## Quan hệ với trang [`samsung/web`](../../samsung/web/README.md)
+## Quan hệ với trang [`gemini/web`](../../gemini/web/README.md)
 
 Hai trang dùng **cùng một engine** (`app.js`, `app.css`), khác nhau ở:
 
-| | `samsung/web` | `system-design/web` |
+| | `gemini/web` | `system-design/web` |
 |---|---|---|
 | Nội dung | khoá Heuristic + 2 ca nghiên cứu | khoá System Design + 6 đồ án |
 | Màu nhấn | tím chàm `#5b4bd6` | xanh mòng két `#0e7490` |

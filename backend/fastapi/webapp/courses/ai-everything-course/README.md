@@ -104,7 +104,7 @@ nạp bundle bằng `manage_courses.py`, rồi mở trang qua route `/webapp/…
 
 | | Nội dung | Màu nhấn |
 |---|---|---|
-| [`samsung/web`](../../samsung/web/README.md) | khoá Heuristic + 2 ca nghiên cứu | tím chàm `#5b4bd6` |
+| [`gemini/web`](../../gemini/web/README.md) | khoá Heuristic + 2 ca nghiên cứu | tím chàm `#5b4bd6` |
 | [`system-design/web`](../../system-design/web/README.md) | khoá System Design + 6 đồ án | xanh mòng két `#0e7490` |
 | **`ai-everything-course/web`** | đại khoá AI, 15 môn + 8 đồ án | **hồng sen `#9d174d`** |
 | [`ai-everything-course/visual`](../visual/README.md) | **33 mô phỏng tương tác** | hồng sen |

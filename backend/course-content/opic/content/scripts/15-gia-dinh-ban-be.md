@@ -83,10 +83,10 @@ It really showed us how important communication is when things get hard.
 The biggest disagreement I've had with my parents was about my career path after I graduated.
 They really wanted me to find a stable government job close to our hometown — they were worried about job security and, I think, about the distance if I moved to Hanoi.
 But I was passionate about working in tech.
-I'd already received an offer from Samsung, and I knew it was the right move for me.
+I'd already received an offer from gemini, and I knew it was the right move for me.
 We had several long conversations about it — some of them got a bit heated, to be honest.
 But I could tell they were coming from a place of genuine concern, not trying to control me.
-I tried to explain my reasoning — that the tech industry has strong prospects, and Samsung is a well- respected company.
+I tried to explain my reasoning — that the tech industry has strong prospects, and gemini is a well- respected company.
 After a few weeks of back-and-forth, they agreed to support my decision.
 And looking back, I'm really grateful for how it turned out — and for how that experience helped us communicate more openly as a family.
 

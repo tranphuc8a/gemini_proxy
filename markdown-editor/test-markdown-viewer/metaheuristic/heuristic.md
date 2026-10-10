@@ -203,7 +203,7 @@ Approximation   Constructive Heuristic
 
 ---
 
-## Nếu mục tiêu là các bài Samsung SW, ICPC Challenge, HashCode
+## Nếu mục tiêu là các bài gemini SW, ICPC Challenge, HashCode
 
 80% thời gian nên đầu tư vào nhánh này:
 

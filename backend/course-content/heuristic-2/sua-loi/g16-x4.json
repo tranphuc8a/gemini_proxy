@@ -37,8 +37,8 @@
  },
  {
   "bai": "khoa-hoc/bai-17b-bay-dan-tien-hoa",
-  "old": "- Khoá `samsung/metaheuristic`, [Chương 15 — Ant Colony](../../metaheuristic/chapter-15.md) và [Chương 16 — Evolutionary](../../metaheuristic/chapter-16.md).",
-  "new": "- Khoá `samsung/metaheuristic`: các chương về Ant Colony và Evolutionary (xem bảng ở [Tài liệu tham khảo](../tai-lieu/tai-lieu-tham-khao.md)).",
+  "old": "- Khoá `gemini/metaheuristic`, [Chương 15 — Ant Colony](../../metaheuristic/chapter-15.md) và [Chương 16 — Evolutionary](../../metaheuristic/chapter-16.md).",
+  "new": "- Khoá `gemini/metaheuristic`: các chương về Ant Colony và Evolutionary (xem bảng ở [Tài liệu tham khảo](../tai-lieu/tai-lieu-tham-khao.md)).",
   "ly_do": "[QUYẾT ĐỊNH] X4#4. Số chương '15 — Ant Colony', '16 — Evolutionary' mâu thuẫn bảng ở Tài liệu tham khảo (chapter-16 = Hybrid / Matheuristics; bảng không liệt kê chapter-15) → bỏ số chương, chỉ nêu chủ đề."
  },
  {

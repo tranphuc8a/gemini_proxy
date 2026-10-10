@@ -68,7 +68,7 @@ DANG = {
 }
 
 BO = {
-    "A": {"ten": "Bộ A — tự nhiên (IM+)", "nhan_vat": "Son, 23 tuổi, kỹ sư phần mềm tại Samsung R&D Hà Nội, sống một mình",
+    "A": {"ten": "Bộ A — tự nhiên (IM+)", "nhan_vat": "Son, 23 tuổi, kỹ sư phần mềm tại gemini R&D Hà Nội, sống một mình",
           "mo_ta": "Script tiếng Anh tự nhiên, có từ nối, có cảm xúc. Dài hơn mức cần (8–10 câu); học ý và cách nói, rồi rút ngắn về 5–7 câu của mình."},
     "B": {"ten": "Bộ B — cơ bản (IM)", "nhan_vat": "Toàn, 33 tuổi, kỹ sư phần mềm, có vợ và hai con",
           "mo_ta": "Câu ngắn, cấu trúc đơn giản, đúng 5–8 câu — vừa mức IM. Dễ thuộc, dễ nói đủ 1 phút."},

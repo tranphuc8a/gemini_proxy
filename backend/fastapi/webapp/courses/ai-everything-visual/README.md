@@ -120,7 +120,7 @@ thứ tự. Làm hết chúng thay vì kéo ngẫu nhiên.
 
 ★ `vis.css` và `vis-core.js` giờ là **bản sao** của
 [`courses/engine/`](../../engine/README.md), dùng chung với
-[`samsung/visual`](../../samsung/visual/README.md) và
+[`gemini/visual`](../../gemini/visual/README.md) và
 [`system-design/visual`](../../system-design/visual/README.md).
 Sửa engine thì sửa ở `engine/` rồi chạy `python engine/sync.py`.
 

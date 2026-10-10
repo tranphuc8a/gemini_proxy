@@ -70,7 +70,7 @@ python -m http.server 8782 --bind 127.0.0.1
        └── vis-2-du-lieu.js      nhân bản · sharding · CAP/PACELC · SLO
 ```
 
-Engine dùng chung với [`samsung/visual`](../../samsung/visual/README.md) và
+Engine dùng chung với [`gemini/visual`](../../gemini/visual/README.md) và
 [`ai-everything-course/visual`](../../ai-everything-course/visual/README.md) —
 nguồn thật ở [`courses/engine/`](../../engine/README.md).
 

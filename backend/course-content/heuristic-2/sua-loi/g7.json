@@ -91,8 +91,8 @@
   },
   {
     "bai": "khoa-hoc/bai-16-beam-search",
-    "old": "Ablation trên đề Samsung ([nguồn](../../expe/2607/research/03-de-xuat-cai-tien.md)):",
-    "new": "Ablation trên đề Samsung ([nguồn](../../expe/2607/research/03-de-xuat-cai-tien.md); bảng đầy đủ ở nguồn còn có \"khung ngày thứ 31\" — một chi tiết đọc từ mã chấm, −3,08 % — lớn hơn beam, và số hạng phạt thời gian chết cũng mất −2,43 %):",
+    "old": "Ablation trên đề gemini ([nguồn](../../expe/2607/research/03-de-xuat-cai-tien.md)):",
+    "new": "Ablation trên đề gemini ([nguồn](../../expe/2607/research/03-de-xuat-cai-tien.md); bảng đầy đủ ở nguồn còn có \"khung ngày thứ 31\" — một chi tiết đọc từ mã chấm, −3,08 % — lớn hơn beam, và số hạng phạt thời gian chết cũng mất −2,43 %):",
     "ly_do": "[MÂU THUẪN] Nêu rõ vị trí của beam trong bảng ablation 2607/03 §7 (đồng bộ với tóm tắt §11 'mạnh thứ hai')."
   },
   {

@@ -58,7 +58,7 @@ TH.dangKy({
 
   tomTat: [
     "Quy trình 8 bước theo đúng thứ tự: **① đọc mã grader**, ② mô hình hoá (S, C, f) và biểu diễn, **③ bộ chấm cục bộ trước khi có thuật toán**, ④ nghiệm cơ sở, ⑤ cận trên, ⑥ cải tiến có đo, ⑦ ablation, ⑧ chốt an toàn — với tỉ lệ thời gian 10 / 10 / 15 / 5 / 5 / 40 / 10 / 5 %.",
-    "Văn bản đề có thể mơ hồ hoặc sai, **mã bộ chấm là chân lý**: ở đề Samsung 2607, `nextDay()` gọi được 30 lần nên có 31 khung ngày — riêng phát hiện này đáng +3,08 % điểm, nhiều hơn cả beam search (−2,43 % khi bỏ), thành phần tìm kiếm lớn nhất của lời giải cuối.",
+    "Văn bản đề có thể mơ hồ hoặc sai, **mã bộ chấm là chân lý**: ở đề gemini 2607, `nextDay()` gọi được 30 lần nên có 31 khung ngày — riêng phát hiện này đáng +3,08 % điểm, nhiều hơn cả beam search (−2,43 % khi bỏ), thành phần tìm kiếm lớn nhất của lời giải cuối.",
     "Bộ chấm dựng trước thuật toán: không có nó, mọi con số chỉ là một mẫu duy nhất và không phân biệt nổi “tốt hơn” với “may hơn”; chênh lệch giữa hai phiên bản chỉ đáng tin khi lớn hơn 2·SE. Đây là khoản đầu tư có tỉ suất sinh lời cao nhất của cả quy trình.",
     "Nghiệm cơ sở (greedy tỉ số) cho mốc: P3 được 30 714 270. Cận tham chiếu τ = 7 là 33 943 173 (chỉ τ = 0 là cận chứng minh được) cho biết độ hở (33 943 173 − 30 714 270) / 30 714 270 ≈ 10,5 %; theo bảng Bài 18, 5–15 % nghĩa là “thiếu tìm kiếm” nên đầu tư vào Phần 3–4.",
     "Bước ⑥ chiếm 40 % thời gian nhưng không phải bước quan trọng nhất: năm bước đầu chỉ chiếm 45 % mà quyết định ⑥ có ý nghĩa hay không. Quy tắc bất di bất dịch: **mỗi lần đo MỘT thay đổi**, ghi nhật ký, không cải thiện thì hoàn tác ngay.",

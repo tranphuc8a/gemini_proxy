@@ -16,7 +16,7 @@ Tài liệu gốc chỉ có một công thức: **tự tay chuẩn bị một t�
 
 | | Bộ A — tự nhiên | Bộ B — cơ bản |
 |---|---|---|
-| Nhân vật | Son, 23 tuổi, kỹ sư Samsung R&D Hà Nội, sống một mình | Toàn, 33 tuổi, kỹ sư phần mềm, có vợ và hai con |
+| Nhân vật | Son, 23 tuổi, kỹ sư gemini R&D Hà Nội, sống một mình | Toàn, 33 tuổi, kỹ sư phần mềm, có vợ và hai con |
 | Giọng văn | Tự nhiên, có từ nối, có cảm xúc, câu dài | Câu ngắn, cấu trúc đơn giản |
 | Độ dài | 8–10 câu, 110–160 từ — **dài hơn mức cần** | 5–8 câu, 50–100 từ — **vừa mức IM** |
 | Dùng khi | Nhắm IH; học cách nói tự nhiên rồi rút ngắn | Nhắm IM; học khung và nói đủ 1 phút |

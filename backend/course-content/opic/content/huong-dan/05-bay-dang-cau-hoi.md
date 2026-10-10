@@ -6,7 +6,7 @@ Mọi câu trong OPIc đều rơi vào một trong bảy dạng dưới đây. H
 
 Viết bằng tiếng Việt để nắm rõ nội dung cần giới thiệu → sau đó chuyển ngữ sang tiếng Anh (viết trực tiếp bằng tiếng Anh càng tốt). Cần nói được vài điểm: **tên, nghề nghiệp, tính cách**, và một hai điểm riêng (sở thích, gia đình, mục tiêu).
 
-> 📝 *Hi, my name is xxx. I will start introducing myself now. Fifteen years ago, I graduated from college. Since then I have been working as a mobile software developer. Currently, I work at Samsung Electronics. At work, I often have to report directly in English. At first, it was difficult, but I practiced hard and now I can speak English. The software job suits me because my personality is calm and meticulous. That's my introduction. Thank you!*
+> 📝 *Hi, my name is xxx. I will start introducing myself now. Fifteen years ago, I graduated from college. Since then I have been working as a mobile software developer. Currently, I work at gemini Electronics. At work, I often have to report directly in English. At first, it was difficult, but I practiced hard and now I can speak English. The software job suits me because my personality is calm and meticulous. That's my introduction. Thank you!*
 
 Script mẫu: {{script:A01}} · {{script:B115}}
 

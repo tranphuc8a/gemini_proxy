@@ -335,7 +335,7 @@ for(int i=0; i<n; i++){
 - **Tabu**: Cấm hai cơ sở vừa swap lại với nhau, tenure thường lơn (10–20). Aspiration nếu giảm cost.
 - **Kết quả**: TS là thuật toán hàng đầu cho QAP (Taillard 1991, Burkhard 1997). Ví dụ TS của Taillard đã giải nhiều instance QAPlib đạt best known. Các phương pháp mới thường là TS cải tiến hoặc memetic.
 
-## 10.5. Ví dụ áp dụng cho bài Air Conditioner (Samsung)
+## 10.5. Ví dụ áp dụng cho bài Air Conditioner (gemini)
 
 Bài “Máy lạnh” gồm nhiều **nhà cần phục vụ mỗi ngày**, với thời gian phục vụ và thưởng. Mỗi ngày có giới hạn `720 phút`. Ta muốn chọn chuyến (assignment) tối đa doanh thu. 
 
@@ -348,7 +348,7 @@ Bài “Máy lạnh” gồm nhiều **nhà cần phục vụ mỗi ngày**, v�
   - *Move 4:* Remove một nhà khỏi một ngày (thêm penalty/time slot để cân bằng).
 - **Tabu Attributes**: Ví dụ, nếu move 1 chuyển nhà X khỏi ngày 1 sang 2, ta có thể cấm ngay việc đưa X trở lại ngày 1 trong một số vòng (tabu (X, ngày1)). Nếu swap X và Y, cấm swap ngược lại hoặc cấm (X ở ngày cũ). 
 - **Tiêu chí Hard Constraint**: Thời gian mỗi ngày ≤720. Cách 1 xử lý: không cho move vi phạm (loại bỏ trước). Cách 2: dùng hàm mục tiêu có phạt nếu vượt (ví dụ phạt tuyến tính hoặc rất lớn). 
-- **Thời gian**: Bài Samsung cho nhiều ngàn nhà, không thể DP. TS (kết hợp local search) là một giải pháp khả thi. Theo kinh nghiệm thi đấu, TS hoặc biến thể LNS (với local search TS) thường mang lại lời giải tốt với điều kiện thiết kế neighborhood và cấm hợp lý. 
+- **Thời gian**: Bài gemini cho nhiều ngàn nhà, không thể DP. TS (kết hợp local search) là một giải pháp khả thi. Theo kinh nghiệm thi đấu, TS hoặc biến thể LNS (với local search TS) thường mang lại lời giải tốt với điều kiện thiết kế neighborhood và cấm hợp lý. 
 
 Ví dụ blueprint TS cho bài này:
 

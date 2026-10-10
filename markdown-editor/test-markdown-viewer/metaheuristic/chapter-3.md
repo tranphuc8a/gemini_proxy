@@ -1106,7 +1106,7 @@ tối ưu.
 
 # 3.26. Exact Search trong bài Air Conditioner
 
-Bài Samsung:
+Bài gemini:
 
 ```text
 200~400 nhà

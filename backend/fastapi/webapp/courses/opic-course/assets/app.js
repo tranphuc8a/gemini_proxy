@@ -758,7 +758,7 @@ function viewScript(id) {
         '<div class="tool"><textarea id="taToi" placeholder="Viết script của riêng bạn cho câu này — 5 đến 7 câu, dùng chi tiết thật của bạn (tên, nơi ở, sở thích). Viết tiếng Việt trước cũng được, rồi chuyển sang tiếng Anh.">' + esc(cuaToi[id] || "") + '</textarea>' +
         '<div class="cnt"><span><b id="cTu">0</b> từ</span><span>nói ≈ <b id="cGiay">0:00</b></span><span id="cNhan" class="muted"></span></div></div></div>' +
       '<div class="scard ai-op" id="aiOp" style="margin-top:14px" hidden></div>' +
-      '<div class="scard note" style="margin-top:14px"><div class="sh"><b>Ghi chú</b><span class="chip">từ khó · lỗi hay mắc · ý thay thế</span></div><div class="tool"><textarea id="taGhiChu" placeholder="Ví dụ: nhớ nhấn âm /θ/ trong three; thay Samsung bằng công ty mình…">' + esc(ghiChu[id] || "") + '</textarea></div></div>' +
+      '<div class="scard note" style="margin-top:14px"><div class="sh"><b>Ghi chú</b><span class="chip">từ khó · lỗi hay mắc · ý thay thế</span></div><div class="tool"><textarea id="taGhiChu" placeholder="Ví dụ: nhớ nhấn âm /θ/ trong three; thay gemini bằng công ty mình…">' + esc(ghiChu[id] || "") + '</textarea></div></div>' +
       '<div class="related"><div class="sec-h"><h2>Cùng chủ đề</h2><a class="more" href="#/chu-de/' + c.id + '">tất cả ' + ds.length + ' câu</a></div>' +
         ds.filter(function (x) { return x !== q; }).slice(0, 6).map(hangCau).join("") + '</div>' +
       '<div class="pn">' + (prev ? '<a href="#/script/' + prev.id + '"><span>← ' + prev.id + '</span><b>' + esc(prev.vi) + '</b></a>' : "<span></span>") +

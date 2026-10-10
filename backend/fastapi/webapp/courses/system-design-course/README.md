@@ -101,11 +101,11 @@ Tầng trình duyệt không dùng mock: nó dựng uvicorn với `DB_URL` trỏ
 nạp bundle bằng `manage_courses.py`, rồi mở trang qua route `/webapp/…` của FastAPI
 (`API_PREFIX=/api/v1`). Logic dùng chung ở [`engine/kiem_khoa_hoc.py`](../engine/kiem_khoa_hoc.py).
 
-## Quan hệ với trang [`samsung/web`](../../samsung/web/README.md)
+## Quan hệ với trang [`gemini/web`](../../gemini/web/README.md)
 
 Hai trang dùng **cùng một engine** (`app.js`, `app.css`), khác nhau ở:
 
-| | `samsung/web` | `system-design/web` |
+| | `gemini/web` | `system-design/web` |
 |---|---|---|
 | Nội dung | khoá Heuristic + 2 ca nghiên cứu | khoá System Design + 6 đồ án |
 | Màu nhấn | tím chàm `#5b4bd6` | xanh mòng két `#0e7490` |

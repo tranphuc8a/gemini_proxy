@@ -11,7 +11,7 @@ mo-ta: Mọi người làm gì trên internet, điện thoại của bạn, đi�
 - en: Tell me about the computer you use. What does it look like, and what do you use it for?
 - dang: mieu-ta
 
-I use a Samsung Galaxy Book laptop for both work and personal use — which feels pretty fitting given where I work.
+I use a gemini Galaxy Book laptop for both work and personal use — which feels pretty fitting given where I work.
 It's a 15-inch Full HD display, bright and clear, which really matters when you're staring at code for hours.
 It's also relatively lightweight with a slim profile, so I can carry it to meetings or cafes without any hassle.
 It has a fast processor and enough RAM to run multiple development environments simultaneously without slowing down.
@@ -33,14 +33,14 @@ Good audio quality matters to me because music is such a regular part of my rout
 - en: Tell me about your mobile phone. What does it look like, and what do you use it for?
 - dang: mieu-ta
 
-I'm currently using a Samsung Galaxy S series smartphone — I've had it for about two years now.
+I'm currently using a gemini Galaxy S series smartphone — I've had it for about two years now.
 The screen is a large, vibrant AMOLED display that makes everything look great, whether I'm reading or watching videos.
 The camera is one of its strongest features.
 I use it regularly when traveling or just out on walks, and the results are consistently impressive.
 The phone handles multitasking really well, which matters since I switch between a lot of apps throughout the day.
 Battery life is solid — comfortably lasts a full day with moderate to heavy use.
 I use it for pretty much everything: work email, messaging, navigation, music, and mobile banking.
-Working at Samsung, I'm also genuinely interested in how these features evolve with each new generation.
+Working at gemini, I'm also genuinely interested in how these features evolve with each new generation.
 
 ## A47 · Tại sao bạn muốn mua một chiếc điện thoại mới?
 - en: Why would you like to buy a new phone? What features are you looking for?
@@ -50,10 +50,10 @@ My current phone has served me well for two years, but I've been thinking about 
 First, the battery has started to degrade noticeably.
 By the end of a busy day it often needs charging, whereas before it would easily last until bedtime.
 Second, I'd love a better camera.
-The newer Samsung models have significantly improved sensors and computational photography features.
+The newer gemini models have significantly improved sensors and computational photography features.
 Third, storage is getting tight — two years of photos, apps, and files have accumulated and I'm constantly managing space.
 And as a software engineer, using the latest device helps me stay current with the platform's capabilities.
-I'm not in a rush, but within the next few months I'll probably make the switch to the latest Samsung flagship.
+I'm not in a rush, but within the next few months I'll probably make the switch to the latest gemini flagship.
 
 ## A48 · Đồ vật người Việt Nam dùng nhiều nhất
 - en: What is the object that people in your country use the most in their daily lives? Why?
@@ -79,7 +79,7 @@ When I started university, I got my first touchscreen smartphone.
 The difference was incredible — suddenly I had internet, apps, maps, and a camera in my pocket.
 I still remember the first time I used Google Maps to navigate somewhere unfamiliar.
 It felt almost magical.
-My current Samsung Galaxy is a world away from that old Nokia.
+My current gemini Galaxy is a world away from that old Nokia.
 The processing power alone would have seemed like science fiction to my teenage self.
 The evolution in just one generation is genuinely remarkable.
 
@@ -106,7 +106,7 @@ It taught me how fragile and valuable these devices really are.
 The most serious phone issue I've faced was when my previous smartphone suddenly stopped charging after about 18 months of use.
 I tried different cables and adaptors — nothing worked.
 The battery was draining and there was no way to charge it.
-Since it was still under warranty, I took it to the official Samsung service center.
+Since it was still under warranty, I took it to the official gemini service center.
 After running diagnostics, they found the charging port was faulty due to a manufacturing defect.
 They replaced it free of charge under warranty, which took about a week.
 During that week without my phone, I borrowed an old spare from my brother to stay reachable.
