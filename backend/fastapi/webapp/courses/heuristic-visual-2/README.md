@@ -124,5 +124,5 @@ Trường `nhom` phải khớp một mục trong `nhomThuTu` của `assets/cau-h
 
 ---
 
-**Trang khoá học:** [`../web/index.html`](../web/index.html) ·
+**Trang khoá học:** [`../heuristic-course-2/`](../heuristic-course-2/) · **Thực hành:** [`../heuristic-practice-2/`](../heuristic-practice-2/) ·
 **Khoá học:** [`../heuristic-course-from-basic-to-expert/README.md`](../heuristic-course-from-basic-to-expert/README.md)

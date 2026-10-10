@@ -110,5 +110,17 @@
       "khoa-hoc",
       "opic-course"
     ]
+  },
+  "lien_ket": {
+    "_ghi_chu": [
+      "Nut 'Thuc hanh' / 'Mo phong' o dau moi bai giang + o trang chu (mo-lien-ket.js).",
+      "Chi trang nao khai bao `lienKet` trong cau-hinh.js va them 'mo-lien-ket' vao `moDun` moi dung."
+    ],
+    "tep": [
+      "mo-lien-ket.js"
+    ],
+    "dich": [
+      "heuristic-course-2"
+    ]
   }
 }

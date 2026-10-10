@@ -13,7 +13,7 @@
     ten: "Bao nhiêu test case là đủ?",
     moTa: "Vì sao <b>một test case là vô nghĩa</b>. Kéo σ và Δ để thấy " +
           "số test cần tăng theo <b>bình phương</b>, và chỗ kết luận trở nên vô căn cứ.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-04-do-luong">B04 — Đo lường</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-04-do-luong">B04 — Đo lường</a> · <a href="../heuristic-practice-2/#/bai/bai-04-do-luong">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 300, W2 = 560, H2 = 250;
       var cv = V.veBang(W, H), g = cv.g;
@@ -192,7 +192,7 @@
     ten: "Cận trên, cận dưới — và quyết định KHI NÀO DỪNG",
     moTa: "Hằng số BHH cho cận dưới quãng đường. " +
           "Biết khoảng cách tới cận, bạn biết <b>còn đáng tối ưu nữa không</b>.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-18-can-tren-can-duoi">B18 — Cận trên & cận dưới</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-18-can-tren-can-duoi">B18 — Cận trên & cận dưới</a> · <a href="../heuristic-practice-2/#/bai/bai-18-can-tren-can-duoi">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 280, W2 = 560, H2 = 250;
       var cv = V.veBang(W, H), g = cv.g;

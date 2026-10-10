@@ -63,7 +63,7 @@
     ten: "Đàn kiến (ACO) — bầy đàn viết lên bản đồ",
     moTa: "Xem <b>từng con kiến</b> chọn từng cạnh, rồi mùi (pheromone) đọng lại " +
           "và uốn cong lựa chọn của những con sau. Kéo α, β, ρ tới cực trị để thấy nó hỏng.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a> · <a href="../heuristic-practice-2/#/bai/bai-17b-bay-dan-tien-hoa">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 340, W2 = 560, H2 = 210;
       var cv = V.veBang(W, H), g = cv.g;
@@ -347,7 +347,7 @@
     ten: "Giải thuật di truyền — nhìn thấy quần thể mất đa dạng",
     moTa: "Quần thể là một <b>bảng bit</b>. Xem từng phép chọn lọc — lai ghép — đột biến " +
           "diễn ra, và xem đường <b>đa dạng</b> tụt về 0 khi tắt đột biến.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a> · <a href="../heuristic-practice-2/#/bai/bai-17b-bay-dan-tien-hoa">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 330, W2 = 560, H2 = 210;
       var cv = V.veBang(W, H), g = cv.g;
@@ -656,7 +656,7 @@
     ten: "Tiến hoá vi phân — dùng chính quần thể làm thước đo bước đi",
     moTa: "DE không cần bạn chọn độ dài bước: nó lấy <b>hiệu của hai cá thể</b> làm bước. " +
           "Xem từng vectơ thử được tạo ra trên mặt Rastrigin đầy bẫy.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a> · <a href="../heuristic-practice-2/#/bai/bai-17b-bay-dan-tien-hoa">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 330, W2 = 560, H2 = 190;
       var cv = V.veBang(W, H), g = cv.g;
@@ -867,7 +867,7 @@
     ten: "Bầy hạt (PSO) — quán tính, ký ức riêng và áp lực đám đông",
     moTa: "Mỗi hạt bị kéo bởi <b>ba lực</b>. Kéo w lên trên 1 để xem bầy nổ tung, " +
           "kéo c₁ về 0 để xem cả bầy đâm đầu vào một cái hố.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a> · <a href="../heuristic-practice-2/#/bai/bai-17b-bay-dan-tien-hoa">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 330, W2 = 560, H2 = 190;
       var cv = V.veBang(W, H), g = cv.g;
@@ -1067,7 +1067,7 @@
     ten: "Đua bốn thuật toán — cùng hàm, cùng ngân sách đánh giá",
     moTa: "PSO · DE · leo đồi có khởi động lại · tìm kiếm ngẫu nhiên, " +
           "<b>cùng số lần gọi hàm mục tiêu</b>. Đây là cách so sánh công bằng duy nhất.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-17b-bay-dan-tien-hoa">B17B — Bầy đàn & tiến hoá</a> · <a href="../heuristic-practice-2/#/bai/bai-17b-bay-dan-tien-hoa">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 340, W2 = 560, H2 = 220;
       var cv = V.veBang(W, H), g = cv.g;

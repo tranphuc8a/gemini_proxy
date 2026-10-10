@@ -20,7 +20,7 @@ description: Hiểu và sửa hệ thống khoá học — engine trang đọc (
 | --- | --- |
 | `app.js`, `app.css` | trang đọc: mục lục, bài, tìm kiếm phía server, tiến độ, ghi chú, route `#/slug`, API mô-đun `window.KhoaHoc` |
 | `hien-thi.js`, `hien-thi.css` | dựng markdown thành HTML (dùng chung với khung xem trước ở trang Quản lý): lọc HTML an toàn, công thức KaTeX, khối `lab`, `mermaid`, mã chạy được |
-| `mo-*.js` | mô-đun: `mo-ai` (trợ giảng), `mo-on-tap` (SM-2), `mo-so-tay`, `mo-ban-do`, `mo-offline`, `mo-doc`, `mo-thanh-tich` |
+| `mo-*.js` | mô-đun: `mo-ai` (trợ giảng), `mo-on-tap` (SM-2), `mo-so-tay`, `mo-ban-do`, `mo-offline`, `mo-doc`, `mo-thanh-tich`; **`mo-lien-ket`** (nút "Học song song → Thực hành / Mô phỏng" ở đầu bài + trang chủ; chỉ trang khai báo `lienKet` + thêm vào `moDun`, nhóm đồng bộ `lien_ket` — hiện chỉ `heuristic-course-2`, trỏ sang `courses/heuristic-practice-2`) |
 | `ai-khach.js`, `pwa.js`, `sw.js` | khách gọi AI (token, chọn model); PWA/service worker (sw.js vào **gốc** trang) |
 | `vis.css`, `kiem_*.py`, `tao_pwa.py` | giao diện lab; bộ kiểm dùng chung cho `check.py` của từng trang |
 | `dong-bo.json`, `sync.py` | khai báo tệp nào chép sang trang nào (nhóm `khoa_hoc`, `pwa`, `pwa_goc`, `ai_khach`, `quan_ly`…) |

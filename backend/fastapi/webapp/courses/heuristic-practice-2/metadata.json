@@ -1,0 +1,19 @@
+{
+  "title": "Thực hành Heuristic — bài tập, lab & IDE C/C++",
+  "description": "Bài tập song song với từng bài giảng của khoá Học Heuristic (từ cơ bản đến chuyên sâu): trắc nghiệm có giải thích, tự luận tự chấm, lab lập trình chấm tự động trên nhiều bộ dữ liệu với mức đạt và kiểm định ý nghĩa thống kê, ghi chú từng bài — kèm IDE C/C++ biên dịch (Clang → WebAssembly) và chạy ngay trong trình duyệt, không cài đặt, dùng được trên điện thoại. Liên kết hai chiều với bài giảng và các mô phỏng trực quan.",
+  "category": "Khoá học",
+  "tags": [
+    "heuristic",
+    "thuc-hanh",
+    "bai-tap",
+    "lab",
+    "trac-nghiem",
+    "ide",
+    "c++",
+    "webassembly",
+    "toi-uu-hoa",
+    "tieng-viet",
+    "khong-cai-dat"
+  ],
+  "icon": "🧪"
+}

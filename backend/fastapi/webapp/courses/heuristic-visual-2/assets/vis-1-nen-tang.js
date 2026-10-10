@@ -13,7 +13,7 @@
     ten: "Bùng nổ tổ hợp — và cái bẫy của nó",
     moTa: "Bốn họ không gian nghiệm trên thang log. Rồi câu hỏi thật: " +
           "<b>không gian khổng lồ có tự động nghĩa là bài toán khó không?</b>",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-02-vi-sao-kho">B02 — Vì sao khó</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-02-vi-sao-kho">B02 — Vì sao khó</a> · <a href="../heuristic-practice-2/#/bai/bai-02-vi-sao-kho">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 330, W2 = 560, H2 = 210;
       var cv = V.veBang(W, H), g = cv.g;
@@ -211,7 +211,7 @@
     ten: "Biểu diễn nghiệm — ba cách lưu cùng một thứ",
     moTa: "Cùng một lịch giao hàng, ba cách mã hoá. Một nước đi trong mã hoá này " +
           "là <b>chuyện nhỏ</b>, trong mã hoá kia là <b>nghiệm không hợp lệ</b>.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-03-bieu-dien-nghiem">B03 — Biểu diễn nghiệm</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-03-bieu-dien-nghiem">B03 — Biểu diễn nghiệm</a> · <a href="../heuristic-practice-2/#/bai/bai-03-bieu-dien-nghiem">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 300, W2 = 560, H2 = 190;
       var cv = V.veBang(W, H), g = cv.g;
@@ -386,7 +386,7 @@
     ten: "Địa hình tối ưu và cực trị cục bộ",
     moTa: "Ba loại bề mặt: trơn · gồ ghề · sân golf. Thả 40 điểm xuất phát, " +
           "xem <b>bao nhiêu phần trăm leo tới đỉnh thật</b>.",
-    lienKet: '<a href="../web/index.html#/khoa-hoc/bai-12-cuc-tri-cuc-bo">B12 — Cực trị cục bộ</a>',
+    lienKet: '<a href="../heuristic-course-2/#/khoa-hoc/bai-12-cuc-tri-cuc-bo">B12 — Cực trị cục bộ</a> · <a href="../heuristic-practice-2/#/bai/bai-12-cuc-tri-cuc-bo">🧪 Thực hành bài này</a>',
     dung: function (host) {
       var W = 560, H = 290, W2 = 560, H2 = 150;
       var cv = V.veBang(W, H), g = cv.g;
