@@ -1,0 +1,92 @@
+/* editor.css — trình soạn mã của Code Studio (cũng chép sang trang Thực hành heuristic bằng sync.py).
+   Màu là biến --cse-*: trang nhúng có thể đặt lại; mặc định lấy theo biến của trang (--code-bg, --t-kw…) nếu có. */
+.cse {
+  --cse-bg: var(--code-bg, #fbfaff); --cse-fg: var(--code-tx, #1f1d2e); --cse-caret: var(--tx, #1d1b2e);
+  --cse-gut-bg: color-mix(in srgb, var(--cse-bg) 86%, #8a86a8); --cse-gut-fg: #8b88a6; --cse-bd: var(--bd2, #d6d2ea);
+  --cse-cur: color-mix(in srgb, var(--ac, #5b4bd6) 7%, transparent); --cse-sel: color-mix(in srgb, var(--ac, #5b4bd6) 30%, transparent);
+  --cse-find: rgba(255, 196, 0, .38); --cse-find-cur: rgba(255, 128, 0, .6); --cse-occ: color-mix(in srgb, var(--ac, #5b4bd6) 16%, transparent);
+  --cse-err: #d23c3c; --cse-warn: #b97800; --cse-note: #2d7fd0; --cse-pop-bg: var(--card, #fff); --cse-pop-sel: var(--ac-soft, #ece9fb); --cse-ac: var(--ac, #5b4bd6);
+  --cse-kw: var(--t-kw, #7a3cc4); --cse-ty: var(--t-ty, #0b6e99); --cse-st: var(--t-str, #1a7f53); --cse-nu: var(--t-num, #b05a00); --cse-cm: var(--t-com, #6f6c88);
+  --cse-pp: var(--t-pre, #a0328f); --cse-fn: var(--t-fn, #2a52be); --cse-bi: #8a4b08; --cse-an: #a0328f; --cse-tg: #b0255a; --cse-at: #8a5a00;
+  --cse-font: var(--mono, ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace);
+  --cse-fs: 14px;
+  position: relative; display: flex; flex-direction: column; min-height: 0; background: var(--cse-bg); color: var(--cse-fg);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cse {
+    --cse-bg: var(--code-bg, #17151f); --cse-fg: var(--code-tx, #e6e3f5); --cse-gut-fg: #77748f; --cse-bd: var(--bd2, #3c3858);
+    --cse-find: rgba(255, 196, 0, .25); --cse-find-cur: rgba(255, 140, 0, .5); --cse-bi: #e3b57a; --cse-an: #f08bdc; --cse-tg: #ff8db4; --cse-at: #ffd58a;
+    --cse-kw: var(--t-kw, #c79bff); --cse-ty: var(--t-ty, #6cc4ee); --cse-st: var(--t-str, #7fd8a8); --cse-nu: var(--t-num, #f3b36a); --cse-cm: var(--t-com, #8d8aa8);
+    --cse-pp: var(--t-pre, #f08bdc); --cse-fn: var(--t-fn, #8fb0ff); --cse-err: #ff6b6b; --cse-warn: #f2c14e; --cse-note: #7fb6ff;
+  }
+}
+:root[data-theme="dark"] .cse {
+  --cse-bg: var(--code-bg, #17151f); --cse-fg: var(--code-tx, #e6e3f5); --cse-gut-fg: #77748f; --cse-bd: var(--bd2, #3c3858);
+  --cse-find: rgba(255, 196, 0, .25); --cse-find-cur: rgba(255, 140, 0, .5); --cse-bi: #e3b57a; --cse-an: #f08bdc; --cse-tg: #ff8db4; --cse-at: #ffd58a;
+  --cse-kw: var(--t-kw, #c79bff); --cse-ty: var(--t-ty, #6cc4ee); --cse-st: var(--t-str, #7fd8a8); --cse-nu: var(--t-num, #f3b36a); --cse-cm: var(--t-com, #8d8aa8);
+  --cse-pp: var(--t-pre, #f08bdc); --cse-fn: var(--t-fn, #8fb0ff); --cse-err: #ff6b6b; --cse-warn: #f2c14e; --cse-note: #7fb6ff;
+}
+.cse-main { position: relative; display: flex; flex: 1; min-height: 120px; overflow: hidden; }
+.cse-gut { flex: none; overflow: hidden; background: var(--cse-gut-bg); color: var(--cse-gut-fg); user-select: none; border-right: 1px solid color-mix(in srgb, var(--cse-bd) 60%, transparent); }
+.cse-gin { padding: 8px 8px 40px 10px; font: var(--cse-fs)/1.5 var(--cse-font); text-align: right; min-width: 2.6em; will-change: transform; }
+.cse-gin > div { white-space: pre; }
+.cse-gm { color: #fff; border-radius: 4px; cursor: help; }
+.cse-gm.error { background: var(--cse-err); } .cse-gm.warning { background: var(--cse-warn); color: #1d1b2e; } .cse-gm.note { background: var(--cse-note); }
+.cse-body { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.cse-layer { position: absolute; left: 0; top: 0; padding: 8px 14px 40px; font: var(--cse-fs)/1.5 var(--cse-font); tab-size: 4; pointer-events: none; will-change: transform; min-width: 100%; box-sizing: border-box; }
+.cse-hl { position: relative; color: var(--cse-fg); white-space: pre; }
+.cse-wrap .cse-hl { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cse-l { min-height: var(--cse-lh, 21px); }
+.cse-bg, .cse-mk, .cse-br { position: absolute; inset: 0; }
+.cse-cl { position: absolute; left: 0; right: -100000px; background: var(--cse-cur); }
+.cse-bl { position: absolute; left: 0; right: -100000px; }
+.cse-bl.error { background: color-mix(in srgb, var(--cse-err) 13%, transparent); } .cse-bl.warning { background: color-mix(in srgb, var(--cse-warn) 13%, transparent); } .cse-bl.note { background: color-mix(in srgb, var(--cse-note) 10%, transparent); }
+.cse-m { position: absolute; border-radius: 3px; }
+.cse-m.f { background: var(--cse-find); } .cse-m.f.cur { background: var(--cse-find-cur); outline: 1px solid color-mix(in srgb, var(--cse-find-cur) 90%, #000); }
+.cse-m.o { background: var(--cse-occ); }
+.cse-bm { position: absolute; border-radius: 3px; outline: 1px solid color-mix(in srgb, var(--cse-ac) 70%, transparent); background: color-mix(in srgb, var(--cse-ac) 14%, transparent); }
+.cse-bm.bad { outline-color: var(--cse-err); background: color-mix(in srgb, var(--cse-err) 16%, transparent); }
+.cse-ta {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 8px 14px 40px; border: 0; outline: none; resize: none; box-sizing: border-box;
+  font: var(--cse-fs)/1.5 var(--cse-font); tab-size: 4; white-space: pre; overflow: auto; background: transparent; color: transparent;
+  -webkit-text-fill-color: transparent; caret-color: var(--cse-caret);
+}
+.cse-wrap .cse-ta { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; }
+.cse-ta::selection { background: var(--cse-sel); }
+.cse-ro .cse-ta { cursor: default; }
+/* tô cú pháp */
+.cse .t-kw { color: var(--cse-kw); font-weight: 600; } .cse .t-ty { color: var(--cse-ty); } .cse .t-st { color: var(--cse-st); } .cse .t-nu { color: var(--cse-nu); }
+.cse .t-cm { color: var(--cse-cm); font-style: italic; } .cse .t-pp { color: var(--cse-pp); } .cse .t-fn { color: var(--cse-fn); } .cse .t-bi { color: var(--cse-bi); }
+.cse .t-an { color: var(--cse-an); } .cse .t-tg { color: var(--cse-tg); } .cse .t-at { color: var(--cse-at); }
+.cse .cse-hl i { font-style: normal; }
+.cse .cse-hl i.t-cm { font-style: italic; }
+/* gợi ý */
+.cse-pop {
+  position: absolute; z-index: 30; max-height: 260px; overflow-y: auto; background: var(--cse-pop-bg); color: var(--cse-fg); border: 1px solid var(--cse-bd);
+  border-radius: 8px; box-shadow: 0 10px 28px rgba(0, 0, 0, .22); padding: 3px; font: 13px/1.35 var(--cse-font);
+}
+.cse-it { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 5px; cursor: pointer; white-space: nowrap; min-height: 26px; }
+.cse-it.on { background: var(--cse-pop-sel); }
+.cse-ik { flex: none; width: 18px; height: 18px; border-radius: 4px; display: grid; place-items: center; font: 700 11px/1 var(--cse-font); color: #fff; background: #7d7a96; }
+.cse-ik.keyword { background: #7a3cc4; } .cse-ik.type { background: #0b6e99; } .cse-ik.function { background: #2a52be; } .cse-ik.member { background: #1a7f53; }
+.cse-ik.snippet { background: #b05a00; } .cse-ik.variable { background: #5d5a77; } .cse-ik.file { background: #a0328f; }
+.cse-il { flex: 1; overflow: hidden; text-overflow: ellipsis; } .cse-il b { color: var(--cse-ac); }
+.cse-id { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; color: var(--cse-gut-fg); font-size: 12px; }
+/* tìm / thay / tới dòng */
+.cse-find { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--cse-bd); background: var(--cse-gut-bg); }
+.cse-find[hidden], .cse-pop[hidden] { display: none; }
+.cse-frow { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cse-frow[hidden] { display: none; }
+.cse-find input { flex: 1 1 140px; min-width: 0; min-height: 32px; padding: 3px 8px; border: 1px solid var(--cse-bd); border-radius: 6px; background: var(--cse-bg); color: var(--cse-fg); font: 13px var(--cse-font); }
+.cse-find input:focus { outline: 2px solid var(--cse-ac); outline-offset: 0; }
+.cse-tg, .cse-fb { min-width: 32px; min-height: 32px; padding: 0 7px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--cse-fg); font: 600 12px var(--cse-font); cursor: pointer; }
+.cse-tg:hover, .cse-fb:hover { border-color: var(--cse-bd); }
+.cse-tg[aria-pressed="true"] { background: color-mix(in srgb, var(--cse-ac) 18%, transparent); border-color: var(--cse-ac); color: var(--cse-ac); }
+.cse-fb.wide { padding: 0 10px; font-family: inherit; }
+.cse-cnt { min-width: 64px; font: 12px var(--cse-font); color: var(--cse-gut-fg); text-align: center; }
+.cse-cnt.bad { color: var(--cse-err); }
+/* phím ký hiệu cho điện thoại */
+.cse-keys { display: none; gap: 4px; padding: 5px 6px; overflow-x: auto; border-top: 1px solid var(--cse-bd); background: var(--cse-gut-bg); scrollbar-width: none; }
+.cse-keys button { flex: none; min-width: 42px; min-height: 42px; border: 1px solid var(--cse-bd); border-radius: 8px; background: var(--cse-bg); color: var(--cse-fg); font: 600 16px var(--cse-font); cursor: pointer; }
+@media (pointer: coarse) { .cse-keys { display: flex; } }
+@media (prefers-reduced-motion: no-preference) { .cse-it { transition: background .08s; } }

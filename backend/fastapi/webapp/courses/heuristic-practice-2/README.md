@@ -1,7 +1,7 @@
-# Thực hành Heuristic — bài tập, lab và IDE C/C++ online
+# Thực hành Heuristic — bài tập, lab và IDE online
 
 Trang bài tập **song song** với khoá [Học Heuristic](../heuristic-course-2/) (32 trang: bài kiểm tra đầu vào, 28 bài giảng, 3 ca nghiên cứu).
-Người học **không cài gì**, dùng được trên điện thoại: trắc nghiệm, tự luận, lab lập trình chấm tự động, ghi chú theo bài — và một **IDE C/C++** biên dịch ngay trong trình duyệt.
+Người học **không cài gì**, dùng được trên điện thoại: trắc nghiệm, tự luận, lab lập trình chấm tự động, ghi chú theo bài — và một **IDE** (C/C++, JavaScript; thêm Java, Python khi chạy trên máy chủ) có gợi ý khi gõ, định dạng mã, thư viện đoạn mã, chạy ngay trong trình duyệt **hoặc** trên máy chủ.
 
 > App viết tay: HTML + CSS + JavaScript thuần, **không build, không npm, không máy chủ riêng**. Không phông/thư viện ngoài. Phần *duy nhất* phụ thuộc bên thứ ba là
 > bộ biên dịch C/C++ (Clang → WebAssembly, `@yowasp/clang`, giấy phép ISC) nạp từ `cdn.jsdelivr.net` **khi người học bấm biên dịch lần đầu** (xem [§ C/C++](#cc-trong-trình-duyệt)).
@@ -49,12 +49,27 @@ assets/core/          LOGIC THUẦN (không DOM) — kiểm bằng node
   cham.js             bộ chấm lab: sinh test, chạy, mức đạt, so tham chiếu, kiểm định 2·SE
   bai.js              sổ đăng ký bài + kiểm lược đồ nội dung
   tien-do.js          tiến độ theo bài (trọng số 40/25/35)
-assets/ui/            giao diện: dom, tomau (tô màu C/C++/JS), editor (soạn mã tự viết), app (vỏ + trang chủ + ghi chú + hướng dẫn), bai, lab, ide
+assets/ui/            giao diện: dom, tomau (tô màu khối mã trong bài giảng), editor (bộ chuyển tiếng Việt sang CS.editor), app (vỏ + trang chủ + ghi chú + hướng dẫn), bai, lab, ide
+assets/cs/            SINH RA bằng `python ../../tranphuc8a/code-studio/sync.py` — đừng sửa ở đây (nguồn: webapp/tranphuc8a/code-studio): langs, tokenize, format(+ext), complete,
+                      project, store, runner, editor.js/.css = trình soạn dùng chung, định dạng, gợi ý, kho đoạn mã, chạy trực tuyến
 assets/cpp/cpp.js     trình biên dịch + chạy C/C++ (worker biên dịch, worker chạy .wasm, WASI tối thiểu, Cache Storage)
 data/khoa.js          mục lục: 32 trang, phần, slug bài giảng, id demo mô phỏng
 data/<id>.js          nội dung từng bài (tải khi mở) — `TH.dangKy({...})`; soạn theo data/HUONG-DAN-SOAN.md
 data/dem.js           SINH TỰ ĐỘNG (`node kiem.js --ghi-dem`): số câu/lab mỗi bài cho chip trên thẻ bài
 ```
+
+## IDE
+
+Trang `#/ide`. Trình soạn là **CS.editor** (dùng chung với webapp *Code Studio*): tô cú pháp 5 ngôn ngữ, **gợi ý khi gõ** (từ khoá, thành viên sau `.`/`->`/`::` suy từ khai báo, `#include`, mẫu đoạn mã — Ctrl+Space gọi tay),
+tự đóng ngoặc/nháy, tự thụt dòng (tách `{|}`), **tìm/thay** (Ctrl+F/H, cả regex), tới dòng (Ctrl+G), tô cặp ngoặc, tô chỗ trùng từ, di chuyển/nhân đôi dòng (Alt+↑↓), chú thích dòng (Ctrl+/), phóng chữ (Ctrl+=/−), ngắt dòng mềm (Alt+Z), hàng phím ký hiệu trên điện thoại.
+
+- **Định dạng mã xấu** (Shift+Alt+F hoặc nút): người học chọn bộ định dạng — *Tự viết* (có sẵn, tức thì, không mạng; giữ nguyên từ tố, chỉ đổi khoảng trắng/ngắt dòng; chọn kiểu ngoặc K&R/Allman, con trỏ `int *p` / `int* p`),
+  hoặc *clang-format* (WebAssembly), *Prettier*, *Ruff* tải về **một lần có hỏi** từ cdn.jsdelivr.net. Lỗi tải/cú pháp thì tự rơi về bộ tự viết và báo lý do. Một bước hoàn tác (Ctrl+Z trả mã cũ).
+- **Nơi chạy** (hộp *Nơi chạy*, nhớ theo ngôn ngữ): *Trong trình duyệt (offline)* — C/C++ bằng Clang→WebAssembly, JavaScript trong Web Worker, mã không rời máy; *Máy chủ* — backend chuyển mã tới Piston / Judge0 / Wandbox
+  hoặc trình biên dịch cài trên máy chủ (`POST /run`, xem `docs/code-studio-api.md`; **thêm Java, Python**; không bị giới hạn không-ngoại-lệ của WASM; mã **được gửi tới dịch vụ đó**); *Piston của bạn* — gọi thẳng từ trình duyệt tới máy Piston tự dựng (cần CORS).
+  Lab chấm điểm vẫn chạy offline (cần nhiều lần chạy, kiểm soát thời gian).
+- **Đoạn mã**: thư viện có tìm kiếm (theo tên/ngôn ngữ/nội dung), ghim, nhân đôi, xoá, nhập tệp `.cpp/.java/.py/…`, xuất/nhập `.json`. Lưu trong `localStorage` (khoá `th2:ide2/*`, có trong sao lưu ở trang *Hướng dẫn*);
+  đoạn mã cũ (`ide/ds`) được nhập tự động một lần. **Nơi lưu & đồng bộ** (chỉ khi mở qua backend): thêm đồng bộ lên máy chủ — kho JSON / MySQL / MongoDB, không tài khoản (mã không gian + khoá bí mật), hai thiết bị sửa cùng lúc không mất dữ liệu.
 
 ## C/C++ trong trình duyệt
 
@@ -76,7 +91,8 @@ cd backend/fastapi/webapp/courses/heuristic-practice-2
 node kiem.js                 # logic thuần + 32 bài đúng lược đồ + mọi lab: lời giải JS tham chiếu đạt mức cao nhất, khung khởi đầu KHÔNG tự qua
 node kiem.js --cpp           # + biên dịch mọi lời giải/khung C++ bằng g++ trên máy và chấm
 ../../../.venv/Scripts/python.exe check.py --tinh    # tĩnh (+ node kiem.js)
-../../../.venv/Scripts/python.exe check.py           # + Edge thật: trắc nghiệm, tự luận, lab, IDE, sao lưu, 390 px, mọi lab qua Web Worker thật
+../../../.venv/Scripts/python.exe check.py           # + Edge thật: trắc nghiệm, tự luận, lab, IDE (gợi ý, định dạng, kho đoạn mã), sao lưu, 390 px, mọi lab qua Web Worker thật
+python ../../tranphuc8a/code-studio/sync.py --kiem   # assets/cs/ có lệch nguồn Code Studio không
 ../../../.venv/Scripts/python.exe check.py --cpp     # + Clang-WASM thật (cần mạng, vài phút)
 ```
 

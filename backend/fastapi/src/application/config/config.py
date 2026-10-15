@@ -119,6 +119,54 @@ class Settings(BaseSettings): # type: ignore
     # rejects request bodies over 4.5 MB, so a bigger limit could never be saved.
     SPENDING_MAX_BYTES: int = 4_000_000
 
+    # Run source code (/run/*) through a provider the user picks. The backend is
+    # normally serverless (no compiler, no sandbox), so most providers are remote
+    # services; the client names one by id and never sends an address.
+    RUN_ENABLED: bool = True
+    RUN_DEFAULT_PROVIDER: str = "piston"
+    # Piston (github.com/engineer-man/piston). The public emkc.org instance
+    # restricts access: set a key, or point this at a server of your own.
+    RUN_PISTON_URL: str = "https://emkc.org/api/v2/piston"
+    RUN_PISTON_KEY: str = ""
+    # Judge0 CE. Empty means "not configured" (the provider reports itself
+    # unavailable). The key header differs per deployment (self-hosted Judge0:
+    # X-Auth-Token); RUN_JUDGE0_LANGUAGE_IDS overrides ids, e.g. "cpp=105,c=103".
+    RUN_JUDGE0_URL: str = ""
+    RUN_JUDGE0_KEY: str = ""
+    RUN_JUDGE0_KEY_HEADER: str = "X-Auth-Token"
+    RUN_JUDGE0_LANGUAGE_IDS: str = ""
+    # Wandbox needs no key. RUN_WANDBOX_COMPILERS overrides compiler names that
+    # Wandbox retired, e.g. "cpp=gcc-head,python=cpython-head".
+    RUN_WANDBOX_URL: str = "https://wandbox.org/api"
+    RUN_WANDBOX_COMPILERS: str = ""
+    # `local` executes code with the programs installed on THIS machine. It is NOT
+    # a sandbox: leave it off anywhere untrusted people can reach the API. When
+    # on, it still requires an administrator session. The six tool settings
+    # override where g++, gcc, javac, java, python and node are looked for.
+    RUN_LOCAL_ENABLED: bool = False
+    RUN_LOCAL_GCC: str = ""
+    RUN_LOCAL_GXX: str = ""
+    RUN_LOCAL_JAVAC: str = ""
+    RUN_LOCAL_JAVA: str = ""
+    RUN_LOCAL_PYTHON: str = ""
+    RUN_LOCAL_NODE: str = ""
+    # Runs per minute per client address (administrators are exempt).
+    RUN_RATE_PER_MIN: int = 20
+    # Ceiling for one HTTP call to a remote provider, in seconds.
+    RUN_HTTP_TIMEOUT_S: float = 30.0
+
+    # Code Studio store (/codestore/*): code snippets and projects synced between
+    # devices. A workspace is reached with a secret key shown once at creation.
+    CODESTORE_STORAGE_BACKEND: str = "json"
+    CODESTORE_JSON_FILE: str = "data/codestore.json"
+    # Records (snippets, projects and deletion tombstones) one workspace may hold.
+    CODESTORE_MAX_ITEMS: int = 2000
+    # New workspaces one client address may create per hour.
+    CODESTORE_WORKSPACES_PER_HOUR: int = 10
+    # A deletion tombstone is kept this long (so a device that was offline
+    # learns about it), then may be discarded to make room.
+    CODESTORE_TOMBSTONE_DAYS: int = 90
+
     # Course content (/courses/*): reading is public, writing (import, edit,
     # delete) needs this key — exchanged for a session token like the editors.
     # Empty (the default) switches every write endpoint off: a key printed in

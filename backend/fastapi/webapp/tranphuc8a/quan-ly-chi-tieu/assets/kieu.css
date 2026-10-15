@@ -227,6 +227,13 @@ dialog.dlg.wide { width: min(760px, calc(100vw - 24px)); }
 .sl-bar { position: sticky; top: -8px; z-index: 2; margin-top: -8px; padding: 8px 0 10px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .sl-bar select, .sl-bar input[type=search] { min-height: 40px; }
 .sl-bar .row > select { flex: 1; min-width: 0; }
+.sl-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sl-d { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text2); min-width: 0; }
+.sl-d input[type=date] { min-height: 40px; width: 100%; min-width: 0; }
+.sl-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.sl-chips .chip { flex: 0 0 auto; }
+/* màn hình thấp (điện thoại nằm ngang): thanh lọc cao hơn nửa hộp, không dính nữa để còn chỗ xem danh sách */
+@media (max-height: 700px) { .sl-bar { position: static; margin-top: 0; } }
 .sl-f { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 @media (min-width: 700px) { .sl-f { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .sl-sum { font-size: 13px; color: var(--text2); }

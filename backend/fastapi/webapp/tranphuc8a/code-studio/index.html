@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Code Studio</title>
+<meta name="description" content="IDE trên web: soạn, định dạng, chạy mã C/C++, Java, Python, JavaScript… đoạn mã đơn và dự án nhiều tệp.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%235b4bd6%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-size=%2716%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27monospace%27 font-weight=%27bold%27%3E%7B%7D%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#2b2840">
+<link rel="stylesheet" href="assets/editor.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div id="app" class="cs-app" aria-live="off"><noscript>Code Studio cần JavaScript.</noscript></div>
+
+<!-- lõi thuần (kiểm bằng node: kiem.js) -->
+<script src="assets/core/langs.js"></script>
+<script src="assets/core/tokenize.js"></script>
+<script src="assets/core/format.js"></script>
+<script src="assets/core/format-ext.js"></script>
+<script src="assets/core/complete.js"></script>
+<script src="assets/core/project.js"></script>
+<script src="assets/core/zip.js"></script>
+<script src="assets/core/store.js"></script>
+<script src="assets/core/runner.js"></script>
+<!-- nơi chạy trong trình duyệt: tự đăng ký vào CS.runner -->
+<script src="assets/run/browser-js.js"></script>
+<script src="assets/run/browser-py.js"></script>
+<script src="assets/run/browser-cpp.js"></script>
+<!-- giao diện -->
+<script src="assets/ui/dom.js"></script>
+<script src="assets/ui/editor.js"></script>
+<script src="assets/ui/app.js"></script>
+<script src="assets/ui/panel.js"></script>
+<script src="assets/ui/side.js"></script>
+<script src="assets/ui/dialogs.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@
    do assets/cpp/cpp.js quản lý. Trang không có API/đồng bộ nên không có rủi ro ghi đè dữ liệu thiết bị khác. */
 "use strict";
 
-var PHIEN_BAN = "1";
+var PHIEN_BAN = "2";                          /* 2: trình soạn dùng chung (assets/cs/), IDE nhiều nơi chạy + kho đoạn mã */
 var TIEN_TO = "th2-app-";
 var TEN = TIEN_TO + PHIEN_BAN;
 var GOC = new URL("./", self.location).pathname;

@@ -162,3 +162,39 @@ first use). `SPENDING_MAX_BYTES` (4 000 000) caps the serialised document.
 | `GET /spending/workspaces/{id}?since=N` | yes | the workspace; when `N` is still the current revision: `{unchanged: true}` and no `data`. 404 before 401 |
 | `PUT /spending/workspaces/{id}` | yes | `{revision, name?, data}` → the new view (`revision + 1`). **409** with `data.current` when `revision` is stale or a concurrent save won (atomic compare-and-set in all three stores) |
 | `DELETE /spending/workspaces/{id}` | yes | `{deleted: true}` |
+
+## Code Studio: running code (`/run`) and syncing it (`/codestore`)
+
+The editor web app runs code and keeps snippets and projects. Full contract, security
+model and how to host Piston/Judge0 yourself: [`docs/code-studio-api.md`](../../docs/code-studio-api.md).
+
+**`/run`** — the backend is deployed serverless (no compiler, no sandbox), so code runs
+at a provider the user picks per request **by id, never by URL**: `piston`, `judge0`,
+`wandbox` (remote services) or `local` (programs on the server's own machine; **off by
+default, not a sandbox, administrator session required**). A fault of the user's code
+is a 200 with `ok: false`; a broken provider is 502/504 with `data.code`.
+
+| Endpoint | What |
+|---|---|
+| `GET /run/providers` | `{providers: [{id, label, kind, available, reason, languages, multiFile, multiFileLanguages, needsSession}], default}` — no network access |
+| `POST /run` | `{provider, language, files: [{name, content}], mainFile?, stdin?, args?, compileArgs?, runTimeoutMs?, compileTimeoutMs?}` → `{ok, provider, language, version, compile, run, error, warnings}`; 20 runs/min/address (`RUN_RATE_PER_MIN`) |
+
+Settings: `RUN_ENABLED`, `RUN_DEFAULT_PROVIDER`, `RUN_PISTON_URL/KEY`, `RUN_JUDGE0_URL/KEY/KEY_HEADER/LANGUAGE_IDS`,
+`RUN_WANDBOX_URL/COMPILERS`, `RUN_LOCAL_ENABLED` and `RUN_LOCAL_GCC/GXX/JAVAC/JAVA/PYTHON/NODE`, `RUN_RATE_PER_MIN`,
+`RUN_HTTP_TIMEOUT_S`.
+
+**`/codestore`** — workspaces with a secret key (no accounts), records `{id, kind: snippet|project, name,
+language, files, meta, updatedAt, deleted}` merged last-writer-wins per record, deletions kept as tombstones.
+`?backend=json|mysql|mongo`, default `CODESTORE_STORAGE_BACKEND` (tables `codestore_workspaces` /
+`codestore_items`, collections of the same names, created on first use).
+
+| Endpoint | Key | What |
+|---|---|---|
+| `GET /codestore/backends` | — | `{default, backends: [{id, label, available, reason, persistent}]}` (no host or database names) |
+| `POST /codestore/workspaces` | — | `201 {workspaceId, key}`; the key is shown once, only its SHA-256 is stored; `CODESTORE_WORKSPACES_PER_HOUR` per address |
+| `GET /codestore/{id}/items?since=&limit=` | `X-Codestore-Key` | `{items, serverTime, more}` — records stored on the server after `since`; send `serverTime` back as `since` |
+| `PUT /codestore/{id}/items` | `X-Codestore-Key` | `{items: [≤ 100 records, ≤ 512 KB each, ≤ 2 MB]}` → `{items, serverTime}`: what the server holds for those ids |
+| `DELETE /codestore/{id}` | `X-Codestore-Key` | `{deleted: true}` |
+
+Settings: `CODESTORE_STORAGE_BACKEND`, `CODESTORE_JSON_FILE`, `CODESTORE_MAX_ITEMS` (2000), `CODESTORE_WORKSPACES_PER_HOUR`,
+`CODESTORE_TOMBSTONE_DAYS`.

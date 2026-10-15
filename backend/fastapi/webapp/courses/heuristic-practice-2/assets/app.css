@@ -238,22 +238,11 @@ canvas.ve { width: 100%; max-width: 420px; aspect-ratio: 1; background: var(--co
 .tab-nho button { min-height: 40px; padding: 4px 12px; border: 0; border-bottom: 3px solid transparent; background: transparent; font-weight: 700; color: var(--mut); cursor: pointer; white-space: nowrap; }
 .tab-nho button[aria-selected="true"] { color: var(--ac); border-bottom-color: var(--ac); }
 
-/* ---------- trình soạn mã ---------- */
-.ed { border: 1px solid var(--bd2); border-radius: 12px; overflow: hidden; background: var(--code-bg); display: flex; flex-direction: column; }
-.ed-main { position: relative; display: flex; min-height: 220px; height: var(--ed-cao, 340px); }
-.ed-gut, .ed-hl, .ed-ta { font: 13.5px/1.55 var(--mono); tab-size: 2; margin: 0; padding: 10px 0 40px; }
-.ed-gut { flex: none; min-width: 3.2em; padding-right: 10px; padding-left: 8px; text-align: right; color: var(--gut); overflow: hidden; user-select: none; background: color-mix(in srgb, var(--code-bg) 80%, var(--bd)); white-space: pre; }
-.ed-err { font-style: normal; background: var(--bad); color: #fff; border-radius: 3px; padding: 0 3px; margin-right: -3px; }
-.ed-body { position: relative; flex: 1; min-width: 0; }
-.ed-hl, .ed-ta { position: absolute; inset: 0; padding-left: 12px; padding-right: 12px; white-space: pre; word-wrap: normal; overflow: hidden; }
-.ed-hl { color: var(--code-tx); pointer-events: none; } .ed-hl code { font: inherit; background: none; padding: 0; }
-.ed-ta { border: 0; resize: none; overflow: auto; background: transparent; color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--tx); outline: none; width: 100%; height: 100%; }
-.ed-ta::selection { background: color-mix(in srgb, var(--ac) 35%, transparent); }
-.ed-doc .ed-ta { cursor: default; }
-.ed:focus-within { border-color: var(--ac); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 25%, transparent); }
-.ed-keys { display: none; gap: 4px; padding: 6px; overflow-x: auto; border-top: 1px solid var(--bd2); background: var(--card); scrollbar-width: none; }
-.ed-keys button { flex: none; min-width: 44px; min-height: 44px; border: 1px solid var(--bd2); border-radius: 9px; background: var(--code-bg); font: 600 16px var(--mono); cursor: pointer; }
-@media (pointer: coarse) { .ed-keys { display: flex; } .ed-main { height: var(--ed-cao, 300px); } }
+/* ---------- trình soạn mã (CS.editor dùng chung; kiểu chi tiết: assets/cs/editor.css) ---------- */
+.cse { border: 1px solid var(--bd2); border-radius: 12px; overflow: hidden; height: var(--ed-cao, 400px); }
+.cse:focus-within { border-color: var(--ac); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 25%, transparent); }
+.cse.cse-ro { height: 300px; }
+@media (pointer: coarse) { .cse { height: var(--ed-cao, 360px); } }
 
 /* ---------- IDE ---------- */
 .ide-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }

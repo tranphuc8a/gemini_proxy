@@ -52,7 +52,7 @@ trước khi sửa một ứng dụng nào đó (ứng dụng làm gì, mã ngu�
   Chỉ đọc khi được yêu cầu. Không chạy migration trên môi trường thật.
 - Không gọi Gemini thật trong test hay trong vòng lặp tự động. Chỉ gọi thật khi người dùng đồng ý rõ ràng (tốn quota); khoá ở
   `backend/fastapi/.env` — **không in khoá ra màn hình, log hay tài liệu**.
-- Không sửa tệp sinh ra: `webapp/**/assets/index-*.js` (bản build), bản sao engine trong `courses/<trang>/assets/`
+- Không sửa tệp sinh ra: `webapp/**/assets/index-*.js` (bản build), `courses/heuristic-practice-2/assets/cs/` (chép từ `tranphuc8a/code-studio` bằng `sync.py`), bản sao engine trong `courses/<trang>/assets/`
   (sửa ở `courses/engine/` rồi `python engine/sync.py`), `backend/course-content/*.json` khi chưa hiểu `_ghi_bundle.py`.
 - Không thêm dependency mới khi chưa hỏi; ứng dụng viết tay không nạp thư viện/CDN ngoài (trừ những chỗ đã có: Pyodide, mermaid, katex).
 - Không commit trực tiếp lên `main`; chỉ commit khi người dùng yêu cầu.

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thử bộ chạy</title>
+<style>body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; } pre { background: #f4f4f4; padding: 8px; overflow: auto; }</style>
+</head>
+<body>
+<!-- Trang CHỈ ĐỂ KIỂM bộ chạy mã (kiem-chay-trinh-duyet.py). Không phải giao diện của Code Studio. -->
+<h1>Thử bộ chạy mã (chỉ để kiểm)</h1>
+<p>Nạp <code>core/{langs,project,runner}.js</code> và <code>run/*.js</code>; <code>window.csRun(req, opts, cancelAfterMs)</code> chạy một yêu cầu và trả lại
+  <code>{ok, result|error, events}</code> (sự kiện tiến độ, danh sách hỏi tải).</p>
+<pre id="log">sẵn sàng</pre>
+<script>window.CS = window.CS || {};</script>
+<script src="assets/core/langs.js"></script>
+<script src="assets/core/project.js"></script>
+<script src="assets/core/runner.js"></script>
+<script src="assets/run/browser-js.js"></script>
+<script src="assets/run/browser-py.js"></script>
+<script src="assets/run/browser-cpp.js"></script>
+<script>
+(function () {
+  var cfg = window.__WEBAPP_CONFIG__ || {};
+  window.csRun = function (req, opts, cancelAfterMs) {
+    var events = [], asked = [];
+    opts = Object.assign({ apiBase: typeof cfg.apiBase === "string" ? cfg.apiBase : "", fetch: window.fetch.bind(window) }, opts || {});
+    opts.onProgress = function (e) { events.push(e); };
+    opts.confirmDownload = function (info) { asked.push(info); return Promise.resolve(opts.decline ? false : true); };
+    var t0 = performance.now(), h = window.CS.runner.run(req, opts);
+    if (cancelAfterMs) setTimeout(function () { h.cancel(); }, cancelAfterMs);
+    return h.promise.then(function (r) { return { ok: true, result: r, events: events, asked: asked, ms: Math.round(performance.now() - t0) }; },
+      function (e) { return { ok: false, error: { message: e.message, code: e.code, status: e.status, retryAfter: e.retryAfter }, events: events, asked: asked, ms: Math.round(performance.now() - t0) }; });
+  };
+  document.getElementById("log").textContent = "sẵn sàng · apiBase=" + JSON.stringify(cfg.apiBase) + " · trình chạy: " + Object.keys(window.CS.runner).join(", ").slice(0, 120);
+})();
+</script>
+</body>
+</html>

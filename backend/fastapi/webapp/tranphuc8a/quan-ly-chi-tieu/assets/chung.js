@@ -18,7 +18,7 @@
   /* ===================================================================
      Các khoản chung — với một người, hoặc của một nhóm
      =================================================================== */
-  /** scope: {personId} | {groupId}; init: {month: "YYYY-MM", memberId}. */
+  /** scope: {personId} | {groupId}; init: {month: "YYYY-MM" | from/to: "YYYY-MM-DD", memberId}. */
   function openSharedLedger(scope, init) {
     init = init || {};
     var app = A(), c = app.ctx(), doc = c.doc, nm = nameIn(c);
@@ -29,7 +29,11 @@
     var all = L.sharedLedger(doc, scope), months = {};
     all.items.forEach(function (it) { var k = D.monthKey(it.tx.date); months[k] = (months[k] || 0) + 1; });
     var monthKeys = Object.keys(months).sort().reverse();                       // mới → cũ
-    var F = { month: init.month && months[init.month] ? init.month : "", kind: "", payer: "", memberId: init.memberId || "", groupId: "", q: "" };
+    var F = { from: "", to: "", kind: "", payer: "", memberId: init.memberId || "", groupId: "", q: "" };
+    if (init.month && months[init.month]) { var im = D.period("month", init.month + "-01"); F.from = im.from; F.to = im.to; }
+    else if (init.from || init.to) { var ir = D.normalizeRange(init.from, init.to); F.from = ir.from; F.to = ir.to; }
+    var dates = all.items.map(function (it) { return it.tx.date; }), minDate = dates.reduce(function (a, b) { return a && a < b ? a : b; }, ""), maxDate = dates.reduce(function (a, b) { return a > b ? a : b; }, "");
+    var PRESETS = [["month", "Tháng này"], ["lastMonth", "Tháng trước"], ["7d", "7 ngày"], ["30d", "30 ngày"], ["year", "Năm nay"], ["all", "Tất cả"]];
     var limit = PAGE;
     var groupsOfP = person ? L.groupsOfPerson(doc, person.id, true) : [];
     var gname = {}; (doc.groups || []).forEach(function (g) { gname[g.id] = g.name; });
@@ -51,8 +55,11 @@
     var body = '<p>' + head + "</p>" +
       '<div class="sl-bar stack gap-s">' +
       '<div class="row gap-s"><button type="button" class="icon-btn" data-step="1" aria-label="Tháng cũ hơn">‹</button>' +
-      select("sl-month", "Tháng", [{ id: "", label: "Tất cả các tháng · " + all.count + " khoản" }].concat(monthKeys.map(function (k) { return { id: k, label: monthLabel(k) + " · " + months[k] + " khoản" }; })), F.month) +
+      '<label class="sr" for="sl-month">Tháng</label><select id="sl-month"></select>' +
       '<button type="button" class="icon-btn" data-step="-1" aria-label="Tháng mới hơn">›</button></div>' +
+      '<div class="sl-dates"><label class="sl-d" for="sl-from"><span>Từ ngày</span><input type="date" id="sl-from"></label>' +
+      '<label class="sl-d" for="sl-to"><span>Đến ngày</span><input type="date" id="sl-to"></label></div>' +
+      '<div class="sl-chips" role="group" aria-label="Chọn nhanh khoảng ngày">' + PRESETS.map(function (p) { return '<button type="button" class="chip" data-range="' + p[0] + '" aria-pressed="false">' + p[1] + "</button>"; }).join("") + "</div>" +
       '<div class="grid sl-f">' +
       select("sl-kind", "Loại", [{ id: "", label: "Mọi loại" }, { id: "expense", label: "Khoản chi chung" }, { id: "settle", label: "Thanh toán" }], "") +
       select("sl-payer", "Ai trả", [{ id: "", label: "Ai trả: tất cả" }, { id: "me", label: "Bạn trả" }, { id: "other", label: "Người khác trả" }], "") +
@@ -69,7 +76,8 @@
 
     function filters() {
       var f = { kind: F.kind || undefined, payer: F.payer || undefined, memberId: F.memberId || undefined, groupId: F.groupId || undefined, q: F.q || undefined };
-      if (F.month) { var per = D.period("month", F.month + "-01"); f.from = per.from; f.to = per.to; }
+      if (F.from) f.from = F.from;
+      if (F.to) f.to = F.to;
       return f;
     }
     function row(it) {
@@ -88,40 +96,97 @@
       if (r.spend) parts.push("chi chung " + fmt(r.spend), "phần của bạn " + fmt(r.mine), "bạn đã trả " + fmt(r.paidByMe));
       parts.push(st.direction === "even" ? "chênh lệch 0" : (person ? (st.direction === "receive" ? person.name + " nợ bạn " : "bạn nợ " + person.name + " ")
         : (st.direction === "receive" ? "nhóm nợ bạn " : "bạn nợ nhóm ")) + fmt(st.amount));
+      if (F.from || F.to) parts.push(D.rangeLabel(F.from, F.to));
       sum.textContent = "Trong bộ lọc: " + parts.join(" · ");
-      var filtered = F.month || F.kind || F.payer || F.memberId || F.groupId || F.q;
+      var filtered = F.from || F.to || F.kind || F.payer || F.memberId || F.groupId || F.q;
       out.innerHTML = r.count ? '<div class="list">' + r.items.slice(0, limit).map(row).join("") + "</div>" +
         '<p class="small muted">Số bên phải: <span class="thu">+</span> ' + (person ? esc(person.name) + " nợ bạn thêm" : "nhóm nợ bạn thêm") + ", <span class=\"chi\">−</span> bạn nợ thêm (hoặc đã được trả).</p>" +
         (r.count > limit ? '<button type="button" class="btn" data-more style="align-self:center">Hiện thêm ' + Math.min(PAGE, r.count - limit) + " (còn " + (r.count - limit) + ")</button>" : "")
         : '<p class="muted">' + (filtered ? "Không có khoản nào khớp bộ lọc." : "Chưa có khoản chung nào.") + "</p>";
-      var idx = monthKeys.indexOf(F.month);
-      el.querySelector('[data-step="1"]').disabled = !monthKeys.length || idx === monthKeys.length - 1;
-      el.querySelector('[data-step="-1"]').disabled = idx <= 0;
+      drawSteps();
       if (focusFrom !== undefined) { var nx = out.querySelectorAll(".item")[focusFrom]; if (nx) nx.focus(); }
+    }
+
+    /* ----- khoảng ngày: ô chọn tháng, hai ô ngày, nút chọn nhanh và nút ‹ › dùng chung một trạng thái (F.from/F.to) ----- */
+    var monthSel = el.querySelector("#sl-month"), fromIn = el.querySelector("#sl-from"), toIn = el.querySelector("#sl-to");
+    var prevBtn = el.querySelector('[data-step="1"]'), nextBtn = el.querySelector('[data-step="-1"]');
+    function monthOfRange() { var k = D.wholeMonth(F.from, F.to); return k && months[k] ? k : ""; }
+    function drawRangeControls() {
+      var mk = monthOfRange(), custom = !mk && (F.from || F.to), cur = mk || (custom ? "custom" : "");
+      var list = [{ id: "", label: "Tất cả các tháng · " + all.count + " khoản" }].concat(monthKeys.map(function (k) { return { id: k, label: monthLabel(k) + " · " + months[k] + " khoản" }; }));
+      if (custom) list.push({ id: "custom", label: "Khoảng ngày: " + D.rangeLabel(F.from, F.to) });
+      monthSel.innerHTML = U.options(list, cur); monthSel.value = cur;
+      fromIn.value = F.from; toIn.value = F.to;
+      el.querySelectorAll("[data-range]").forEach(function (b) {
+        var pr = D.rangePreset(b.dataset.range, app.ctx().today);
+        b.setAttribute("aria-pressed", String(pr.from === F.from && pr.to === F.to));
+        b.classList.toggle("on", pr.from === F.from && pr.to === F.to);
+      });
+    }
+    function drawSteps() {
+      var mk = monthOfRange(), closed = F.from && F.to;
+      if (mk) {
+        var idx = monthKeys.indexOf(mk);
+        prevBtn.disabled = idx === monthKeys.length - 1; nextBtn.disabled = idx <= 0;
+        prevBtn.setAttribute("aria-label", "Tháng cũ hơn"); nextBtn.setAttribute("aria-label", "Tháng mới hơn");
+      } else if (closed) {
+        var days = D.diffDays(F.from, F.to) + 1;
+        prevBtn.disabled = !minDate || F.from <= minDate; nextBtn.disabled = !maxDate || F.to >= (maxDate > app.ctx().today ? maxDate : app.ctx().today);
+        prevBtn.setAttribute("aria-label", "Lùi " + days + " ngày"); nextBtn.setAttribute("aria-label", "Tiến " + days + " ngày");
+      } else { prevBtn.disabled = nextBtn.disabled = true; }
+    }
+    function setRange(from, to, quiet) {
+      var r = D.normalizeRange(from, to);
+      if (r.swapped && !quiet) U.toast("Đã đổi chỗ hai ngày cho đúng thứ tự");
+      F.from = r.from; F.to = r.to; limit = PAGE;
+      drawRangeControls(); draw();
     }
 
     var search = U.debounce(function (v) { F.q = v.trim(); limit = PAGE; draw(); }, 150);
     el.addEventListener("input", function (e) { if (e.target.id === "sl-q") search(e.target.value); });
     el.addEventListener("change", function (e) {
-      var key = { "sl-month": "month", "sl-kind": "kind", "sl-payer": "payer", "sl-member": "memberId", "sl-group": "groupId" }[e.target.id];
+      if (e.target.id === "sl-month") {
+        var v = e.target.value;
+        if (v === "custom") return;
+        if (!v) setRange("", "", true);
+        else { var mp = D.period("month", v + "-01"); setRange(mp.from, mp.to, true); }
+        return;
+      }
+      if (e.target.id === "sl-from" || e.target.id === "sl-to") {
+        /* ô ngày xoá trống = bỏ giới hạn đầu đó; gõ dở (chưa thành ngày thật) thì trình duyệt trả "" nên cũng bỏ qua */
+        setRange(fromIn.value, toIn.value);
+        return;
+      }
+      var key = { "sl-kind": "kind", "sl-payer": "payer", "sl-member": "memberId", "sl-group": "groupId" }[e.target.id];
       if (!key) return;
       F[key] = e.target.value; limit = PAGE; draw();
     });
     el.addEventListener("click", function (e) {
       var b = e.target.closest("button"); if (!b) return;
-      if (b.dataset.step) {
-        var i = monthKeys.indexOf(F.month) + (+b.dataset.step);
-        if (i < 0 || i >= monthKeys.length) return;
-        F.month = monthKeys[i]; el.querySelector("#sl-month").value = F.month; limit = PAGE; draw();
+      if (b.dataset.range) {
+        var pr = D.rangePreset(b.dataset.range, app.ctx().today);
+        setRange(pr.from, pr.to, true);
+      } else if (b.dataset.step) {
+        var dir = +b.dataset.step, mk = monthOfRange();
+        if (mk) {
+          var i = monthKeys.indexOf(mk) + dir;
+          if (i < 0 || i >= monthKeys.length) return;
+          var np = D.period("month", monthKeys[i] + "-01"); setRange(np.from, np.to, true);
+        } else {
+          var sh = D.shiftRange(F.from, F.to, -dir);
+          if (sh) setRange(sh.from, sh.to, true);
+        }
       } else if (b.hasAttribute("data-more")) { var from = limit; limit += PAGE; draw(from); }
       else if (b.dataset.open) {
         var tx = Mo.find(app.ctx().doc.transactions, b.dataset.open);
         if (tx) { d.close(); app.editTx(tx); }
       } else if (b.hasAttribute("data-settle")) {
         d.close();
-        if (person) DL.settle(person.id, F.month ? F.month + "-01" : undefined); else openGroupSettle(group.id, F.month ? F.month + "-01" : undefined);
+        var sel = F.from && F.to ? { from: F.from, to: F.to } : undefined;     /* khoảng hở một đầu → để hộp quyết toán tự chọn kỳ */
+        if (person) DL.settle(person.id, sel); else openGroupSettle(group.id, sel);
       }
     });
+    drawRangeControls();
     draw();
     return d;
   }

@@ -18,13 +18,25 @@ import copy
 from typing import Any, Dict, Iterable, List
 
 
+#: Comparison operators; a missing field never satisfies one, as in MongoDB.
+_COMPARISONS = {
+    "$lt": lambda value, bound: value < bound,
+    "$lte": lambda value, bound: value <= bound,
+    "$gt": lambda value, bound: value > bound,
+    "$gte": lambda value, bound: value >= bound,
+}
+
+
 def _matches(document: Dict[str, Any], query: Dict[str, Any]) -> bool:
     for field, condition in query.items():
         value = document.get(field)
         if isinstance(condition, dict):
             if "$in" in condition and value not in condition["$in"]:
                 return False
-            unsupported = set(condition) - {"$in"}
+            for operator, compare in _COMPARISONS.items():
+                if operator in condition and (value is None or not compare(value, condition[operator])):
+                    return False
+            unsupported = set(condition) - {"$in", *_COMPARISONS}
             if unsupported:
                 raise NotImplementedError(f"fake_mongo does not implement {sorted(unsupported)}")
         elif value != condition:

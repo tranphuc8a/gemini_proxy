@@ -132,6 +132,49 @@
   function inPeriod(iso, per) { return iso >= per.from && iso <= per.to; }
 
   /**
+   * Khoảng ngày soạn sẵn cho bộ lọc: "month" | "lastMonth" | "7d" | "30d" | "year" | "all".
+   * Trả {from,to}; "all" hoặc id lạ → hai chuỗi rỗng (không giới hạn). "7d"/"30d" tính cả hôm nay.
+   */
+  function rangePreset(id, todayIso) {
+    if (id === "month") { var m = period("month", todayIso); return { from: m.from, to: m.to }; }
+    if (id === "lastMonth") { var l = period("month", addMonths(startOfMonth(todayIso), -1)); return { from: l.from, to: l.to }; }
+    if (id === "7d") return { from: addDays(todayIso, -6), to: todayIso };
+    if (id === "30d") return { from: addDays(todayIso, -29), to: todayIso };
+    if (id === "year") { var y = period("year", todayIso); return { from: y.from, to: y.to }; }
+    return { from: "", to: "" };
+  }
+
+  /**
+   * Chuẩn hoá cặp ngày người dùng chọn: giá trị không phải ngày thật → "" (bỏ giới hạn đầu đó);
+   * từ > đến → đổi chỗ. Trả {from, to, swapped}.
+   */
+  function normalizeRange(from, to) {
+    var a = isValid(from) ? from : "", b = isValid(to) ? to : "", swapped = false;
+    if (a && b && a > b) { var t = a; a = b; b = t; swapped = true; }
+    return { from: a, to: b, swapped: swapped };
+  }
+
+  /** Nhãn của khoảng có thể hở một đầu: "05/10/2026 – 15/10/2026", "Từ …", "Đến …", "Tất cả". */
+  function rangeLabel(from, to) {
+    var f = from ? dm(from) + "/" + parse(from).y : "", t = to ? dm(to) + "/" + parse(to).y : "";
+    if (f && t) return f === t ? f : f + " – " + t;
+    return f ? "Từ " + f : (t ? "Đến " + t : "Tất cả");
+  }
+
+  /** Dịch khoảng kín (có đủ hai đầu) sang kỳ liền trước/sau có cùng số ngày; khoảng hở → null. */
+  function shiftRange(from, to, dir) {
+    if (!isValid(from) || !isValid(to) || from > to) return null;
+    var span = diffDays(from, to) + 1;
+    return { from: addDays(from, span * dir), to: addDays(to, span * dir) };
+  }
+
+  /** Khoảng này có đúng là một tháng dương lịch trọn vẹn không? Trả "YYYY-MM" hoặc "". */
+  function wholeMonth(from, to) {
+    if (!isValid(from) || !isValid(to)) return "";
+    return from === startOfMonth(from) && to === endOfMonth(from) ? monthKey(from) : "";
+  }
+
+  /**
    * Đọc ngày người dùng gõ: "5/10", "05/10/2026", "5-10", "2026-10-05".
    * Không có năm thì lấy năm của `todayIso`; nếu ngày đó rơi quá 60 ngày về
    * TƯƠNG LAI thì hiểu là năm trước ("28/12" gõ vào đầu tháng 1).
@@ -161,7 +204,8 @@
     startOfWeek: startOfWeek, endOfWeek: endOfWeek, startOfMonth: startOfMonth, endOfMonth: endOfMonth,
     monthKey: monthKey, isoWeek: isoWeek, dm: dm, dayLabel: dayLabel, relativeLabel: relativeLabel,
     lastWeekday: lastWeekday, weekdayGroup: weekdayGroup,
-    period: period, shift: shift, inPeriod: inPeriod, parseUser: parseUser
+    period: period, shift: shift, inPeriod: inPeriod, parseUser: parseUser,
+    rangePreset: rangePreset, normalizeRange: normalizeRange, rangeLabel: rangeLabel, shiftRange: shiftRange, wholeMonth: wholeMonth
   };
   if (typeof module !== "undefined" && module.exports) module.exports = QL.dates;
 })(typeof globalThis !== "undefined" ? globalThis : this);

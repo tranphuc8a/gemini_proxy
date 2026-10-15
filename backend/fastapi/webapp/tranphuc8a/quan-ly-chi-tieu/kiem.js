@@ -171,6 +171,23 @@ nhom("dates");
   kiem("parseUser · ngày xa trong tương lai → năm trước", U("28/12", "2026-01-05") === "2025-12-28");
   kiem("parseUser · tương lai gần giữ nguyên năm", U("15/10") === "2026-10-15");
   kiem("parseUser · không có thật → null", U("30/2") === null && U("32/1") === null && U("abc") === null && U("") === null);
+
+  /* khoảng ngày tự chọn của sổ "Các khoản chung" */
+  const T = "2026-10-15", RP = (id, t) => D.rangePreset(id, t || T), eq = (r, f, t) => r.from === f && r.to === t;
+  kiem("rangePreset · tháng này / tháng trước", eq(RP("month"), "2026-10-01", "2026-10-31") && eq(RP("lastMonth"), "2026-09-01", "2026-09-30"));
+  kiem("rangePreset · tháng trước qua năm và tháng 2 nhuận", eq(RP("lastMonth", "2027-01-20"), "2026-12-01", "2026-12-31") && eq(RP("lastMonth", "2028-03-05"), "2028-02-01", "2028-02-29"));
+  kiem("rangePreset · 7/30 ngày tính cả hôm nay", eq(RP("7d"), "2026-10-09", "2026-10-15") && eq(RP("30d"), "2026-09-16", "2026-10-15") && D.diffDays(RP("7d").from, RP("7d").to) === 6);
+  kiem("rangePreset · 7 ngày qua ranh giới tháng/năm", eq(RP("7d", "2026-01-03"), "2025-12-28", "2026-01-03"));
+  kiem("rangePreset · năm nay; 'all' và id lạ → không giới hạn", eq(RP("year"), "2026-01-01", "2026-12-31") && eq(RP("all"), "", "") && eq(RP("xyz"), "", ""));
+  const NR = D.normalizeRange;
+  kiem("normalizeRange · giữ nguyên khi đúng thứ tự", eq(NR("2026-10-01", "2026-10-10"), "2026-10-01", "2026-10-10") && !NR("2026-10-01", "2026-10-10").swapped);
+  kiem("normalizeRange · từ > đến → đổi chỗ", eq(NR("2026-10-10", "2026-10-01"), "2026-10-01", "2026-10-10") && NR("2026-10-10", "2026-10-01").swapped === true);
+  kiem("normalizeRange · cùng một ngày hợp lệ; hở một đầu; giá trị rác bị bỏ", eq(NR("2026-10-05", "2026-10-05"), "2026-10-05", "2026-10-05") && eq(NR("2026-10-05", ""), "2026-10-05", "") && eq(NR("", "2026-10-05"), "", "2026-10-05") && eq(NR("2026-02-30", "abc"), "", "") && eq(NR(undefined, null), "", ""));
+  kiem("rangeLabel · đủ hai đầu / một ngày / hở đầu / trống", D.rangeLabel("2026-10-01", "2026-10-15") === "01/10/2026 – 15/10/2026" && D.rangeLabel("2026-10-05", "2026-10-05") === "05/10/2026" && D.rangeLabel("2026-10-05", "") === "Từ 05/10/2026" && D.rangeLabel("", "2026-10-05") === "Đến 05/10/2026" && D.rangeLabel("", "") === "Tất cả");
+  const SR = D.shiftRange;
+  kiem("shiftRange · cùng số ngày, lùi và tiến", eq(SR("2026-10-11", "2026-10-20", -1), "2026-10-01", "2026-10-10") && eq(SR("2026-10-11", "2026-10-20", 1), "2026-10-21", "2026-10-30"));
+  kiem("shiftRange · một ngày; qua năm; khoảng hở/ngược → null", eq(SR("2026-01-01", "2026-01-01", -1), "2025-12-31", "2025-12-31") && eq(SR("2026-01-01", "2026-01-10", -1), "2025-12-22", "2025-12-31") && SR("2026-10-01", "", 1) === null && SR("2026-10-10", "2026-10-01", 1) === null);
+  kiem("wholeMonth · đúng tháng trọn vẹn (kể cả tháng 2 nhuận); lệch một ngày thì không", D.wholeMonth("2026-10-01", "2026-10-31") === "2026-10" && D.wholeMonth("2028-02-01", "2028-02-29") === "2028-02" && D.wholeMonth("2026-10-01", "2026-10-30") === "" && D.wholeMonth("2026-10-02", "2026-10-31") === "" && D.wholeMonth("2026-10-01", "2026-11-30") === "" && D.wholeMonth("", "") === "");
 }
 
 /* ====================== model ====================== */
@@ -1169,6 +1186,14 @@ nhom("nhóm · số dư, sổ khoản chung, đối chiếu và cách chuyển t
   const G = (f) => L.sharedLedger(s2, { groupId: "g_tro" }, f);
   kiem("sharedLedger(nhóm) · mọi khoản của nhóm, mới → cũ (kể cả khoản tôi không trả), không lẫn khoản ngoài nhóm", bang(G().items.map((x) => x.tx.id), ["g4", "g5", "g2", "g1"]), G().items.map((x) => x.tx.id).join(","));
   kiem("sharedLedger · lọc theo tháng 10", bang(G({ from: "2026-10-01", to: "2026-10-31" }).items.map((x) => x.tx.id).sort(), ["g2", "g4", "g5"]));
+  const ids = (f) => G(f).items.map((x) => x.tx.id).sort();
+  kiem("sharedLedger · khoảng ngày tự chọn bao cả hai đầu (02/10 → 04/10)", bang(ids({ from: "2026-10-02", to: "2026-10-04" }), ["g2", "g4", "g5"]));
+  kiem("sharedLedger · khoảng ngày vắt qua ranh giới tháng (20/09 → 02/10)", bang(ids({ from: "2026-09-20", to: "2026-10-02" }), ["g1", "g2"]));
+  kiem("sharedLedger · một ngày duy nhất; khoảng không có khoản nào", bang(ids({ from: "2026-10-02", to: "2026-10-02" }), ["g2"]) && G({ from: "2026-09-21", to: "2026-10-01" }).count === 0);
+  kiem("sharedLedger · khoảng hở một đầu (chỉ từ / chỉ đến)", bang(ids({ from: "2026-10-03" }), ["g4", "g5"]) && bang(ids({ to: "2026-09-30" }), ["g1"]));
+  const ra = G({ to: "2026-10-01" }), rb = G({ from: "2026-10-02" });
+  kiem("sharedLedger · hai khoảng kề nhau chia đúng tổng: số khoản, chênh lệch, chi chung", ra.count + rb.count === G().count && ra.net + rb.net === G().net && ra.spend + rb.spend === G().spend, [ra.count, rb.count, ra.net, rb.net].join(","));
+  kiem("sharedLedger · khoảng ngày kết hợp lọc loại + ai trả", bang(ids({ from: "2026-10-01", to: "2026-10-31", kind: "settle", payer: "other" }), ["g4"]));
   kiem("sharedLedger · lọc chỉ thanh toán / chỉ khoản chi", G({ kind: "settle" }).count === 2 && G({ kind: "expense" }).count === 2);
   kiem("sharedLedger · lọc theo thành viên Lan (tham gia, trả, hay thanh toán)", bang(G({ memberId: "p_l" }).items.map((x) => x.tx.id).sort(), ["g1", "g2", "g4"]));
   kiem("sharedLedger · lọc ai trả: tôi / người khác", bang(G({ payer: "me" }).items.map((x) => x.tx.id).sort(), ["g1", "g5"]) && bang(G({ payer: "other" }).items.map((x) => x.tx.id).sort(), ["g2", "g4"]));

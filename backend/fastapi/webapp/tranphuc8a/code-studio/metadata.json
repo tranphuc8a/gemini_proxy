@@ -1,0 +1,7 @@
+{
+  "title": "Code Studio",
+  "description": "IDE chạy ngay trên web: soạn đoạn mã một tệp hoặc dự án nhiều tệp (cây thư mục, tệp chính) cho C, C++, Java, Python, JavaScript, TypeScript, C#, Go, Rust, Kotlin, PHP, Ruby, Bash, SQL, HTML/CSS. Trình soạn có tô màu cú pháp, gợi ý khi gõ (từ khoá, thành viên sau dấu chấm, #include, mẫu đoạn mã), tự đóng ngoặc và tự thụt dòng, tìm/thay (cả regex), tới dòng, tô cặp ngoặc, đánh dấu lỗi theo dòng. Định dạng mã tuỳ chọn: bộ tự viết chạy tức thì hoặc clang-format / Prettier / Ruff tải về một lần. Chạy mã do bạn chọn: ngay trong trình duyệt (Clang→WebAssembly, Pyodide, JavaScript), trên máy chủ qua Piston / Judge0 / Wandbox hoặc trình biên dịch cài trên máy chủ, hoặc Piston tự dựng. C/C++ nhiều tệp, Java có package. Lưu trên máy này hoặc đồng bộ qua máy chủ (kho JSON, MySQL, MongoDB); xuất/nhập .zip và bản sao lưu. Responsive điện thoại và máy tính, sáng/tối, tiếng Việt, không thư viện ngoài.",
+  "category": "Công cụ",
+  "tags": ["tranphuc8a", "ide", "editor", "code", "lap-trinh", "c", "cpp", "java", "python", "javascript", "dinh-dang", "format", "goi-y", "autocomplete", "bien-dich", "wasm", "du-an", "zip", "dong-bo", "mysql", "mongodb", "responsive", "tieng-viet", "khong-thu-vien"],
+  "icon": "{}"
+}

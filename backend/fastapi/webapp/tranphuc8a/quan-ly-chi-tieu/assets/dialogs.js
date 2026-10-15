@@ -53,10 +53,14 @@
       { id: "all", label: "Tất cả", per: D.period("all", today) }
     ];
     var initial = null;
+    /* monthIso: một ngày bất kỳ trong tháng cần chọn sẵn, hoặc {from,to} (khoảng ngày tự chọn ở sổ khoản chung; hở đầu nào thì coi như Tất cả) */
+    var range = monthIso && typeof monthIso === "object" ? D.normalizeRange(monthIso.from, monthIso.to) : null;
+    if (range && !(range.from && range.to)) { monthIso = null; range = null; }
     if (monthIso) {
-      var pm = D.period("month", monthIso), same = list.filter(function (x) { return x.per.kind === "month" && x.per.from === pm.from; })[0];
+      var pm = range ? D.period("custom", range.from, range) : D.period("month", monthIso);
+      var same = list.filter(function (x) { return x.per.from === pm.from && x.per.to === pm.to; })[0];
       if (same) initial = same.id;
-      else { initial = "m:" + pm.from; list.splice(4, 0, { id: initial, label: pm.label, per: pm }); }
+      else { initial = (range ? "c:" + pm.from + ":" + pm.to : "m:" + pm.from); list.splice(4, 0, { id: initial, label: pm.label, per: pm }); }
     }
     return { list: list, initial: initial, of: function (id) { return (list.filter(function (x) { return x.id === id; })[0] || list[0]).per; } };
   }

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller, sql_admin_controller, mongo_admin_controller, proxy_controller, postman_controller, spending_controller, graph_storage_controller, storage_controller, course_controller, ai_controller, arena_controller
+from src.adapter.input.controllers import conversation_controller, health_controller, gemini_controller, messages_controller, webapp_controller, markdown_storage_controller, sql_admin_controller, mongo_admin_controller, proxy_controller, postman_controller, spending_controller, graph_storage_controller, storage_controller, course_controller, ai_controller, arena_controller, run_controller, codestore_controller
 from fastapi import Request
 from src.application.exceptions.exceptions import AppException
 from src.adapter.input.controllers.response_utils import error_response
@@ -76,6 +76,8 @@ app.include_router(storage_controller.router, prefix=settings.API_PREFIX)
 app.include_router(course_controller.router, prefix=settings.API_PREFIX)
 app.include_router(ai_controller.router, prefix=settings.API_PREFIX)
 app.include_router(arena_controller.router, prefix=settings.API_PREFIX)
+app.include_router(run_controller.router, prefix=settings.API_PREFIX)
+app.include_router(codestore_controller.router, prefix=settings.API_PREFIX)
 
 # Mount webapp controller at root level (static content, not API)
 app.include_router(webapp_controller.router)
