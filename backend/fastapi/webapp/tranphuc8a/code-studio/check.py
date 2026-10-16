@@ -660,6 +660,7 @@ def tang_trinh_duyet(chup, wasm):
                  ev(pv, "() => CS.app.S.item.id") != id_goc and ev(pv, "() => CS.app.S.item.name") == ten_goc + " (bản chia sẻ)" and ev(pv, "() => JSON.stringify(CS.app.S.item.files.map(f => [f.path, f.content]).sort())") == noi_dung_goc and ev(pv, "() => location.hash") == "")
             pv.wait_for_timeout(300)
             pv.reload(); pv.wait_for_selector(".cse-ta")
+            pv.wait_for_function("() => typeof CS !== 'undefined' && CS.app && CS.app.booted === true")          # kho luu da dung xong (WebKit cham hon)
             kiem("sau khi tai lai KHONG nhan ban them lan nua (thu vien cua nguoi xem co dung 1 ban sao)", ev(pv, "async () => (await CS.app.Store.list()).filter(x => /bản chia sẻ/.test(x.name)).length") == 1)
 
             # chu doi ten roi 'Cap nhat ban chia se': lien ket GIU NGUYEN, nguoi xem thay ban moi
