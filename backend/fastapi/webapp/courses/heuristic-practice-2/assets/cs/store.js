@@ -450,6 +450,9 @@
     if (!ra && Number(d.retryAfter) > 0) ra = Number(d.retryAfter);
     var msg;
     if (code === "codestore_rate_limited" || status === 429) msg = ra > 0 ? "Gửi quá nhanh, thử lại sau " + Math.ceil(ra) + " giây" : "Gửi quá nhanh, hãy thử lại sau ít phút";
+    else if (code === "codestore_share_not_found") msg = "Liên kết chia sẻ không tồn tại hoặc đã bị thu hồi";
+    else if (code === "codestore_item_not_found") msg = "Mục này chưa có trên máy chủ (chưa đồng bộ được, hoặc đã bị xoá)";
+    else if (code === "codestore_too_many_shares") msg = "Đã có quá nhiều liên kết chia sẻ" + (d.limit ? " (tối đa " + d.limit + ")" : "") + " — hãy thu hồi bớt liên kết cũ";
     else if (code === "codestore_key_required") msg = "Thiếu khoá của không gian";
     else if (code === "codestore_bad_key" || status === 401) msg = "Khoá không đúng";
     else if (code === "codestore_not_found" || status === 404) msg = "Không tìm thấy không gian";
@@ -463,6 +466,32 @@
     else if (status >= 500) msg = "Máy chủ đang gặp sự cố (HTTP " + status + ")";
     else msg = server || "Lỗi HTTP " + status;
     return syncError(msg, code, { status: status, retryAfter: ra, itemId: d.itemId, serverMessage: server });
+  }
+
+  /** fetch → JSON. 2xx → thân đã phân tích (null nếu rỗng); lỗi HTTP → Error tiếng Việt (httpError); không tới được máy chủ → Error "offline". */
+  function requestJson(fetchFn, url, init) {
+    return new Promise(function (resolve) { resolve(fetchFn(url, init)); }).then(function (res) {
+      return Promise.resolve(res.text ? res.text() : res.json().then(JSON.stringify)).catch(function () { return ""; }).then(function (text) {
+        var body = null;
+        try { body = text ? JSON.parse(text) : null; } catch (e) { body = null; }
+        if (res.status >= 200 && res.status < 300) return body;
+        throw httpError(res, body);
+      });
+    }, function () { throw syncError("Không có kết nối mạng — sẽ đồng bộ lại khi có mạng", "offline"); });
+  }
+  /**
+   * Đọc bản chia sẻ CÔNG KHAI: GET /codestore/shared/{token}?backend= — không cần không gian, không cần khoá.
+   * o = {apiBase, backend, fetch}. → {item:{id,kind,name,language,files,meta,updatedAt}, sharedAt}. Token không hợp lệ/đã thu hồi → Error code "codestore_share_not_found".
+   */
+  function readShared(token, o) {
+    o = o || {};
+    var f = o.fetch || (root.fetch ? root.fetch.bind(root) : null);
+    if (typeof f !== "function") return Promise.reject(syncError("Trình duyệt không có fetch", "no_fetch"));
+    var url = String(o.apiBase || "").replace(/\/+$/, "") + "/codestore/shared/" + encodeURIComponent(String(token || "")) + (o.backend ? "?backend=" + encodeURIComponent(o.backend) : "");
+    return requestJson(f, url, { method: "GET", headers: { Accept: "application/json" }, cache: "no-store" }).then(function (body) {
+      if (!isObj(body) || !isObj(body.item) || !Array.isArray(body.item.files)) throw syncError("Máy chủ trả về bản chia sẻ sai định dạng", "bad_response");
+      return body;
+    });
   }
 
   /**
@@ -521,14 +550,7 @@
       if (!o.noKey && key) headers["X-Codestore-Key"] = key;
       var init = { method: method, headers: headers };
       if (o.body !== undefined) { headers["Content-Type"] = "application/json"; init.body = JSON.stringify(o.body); }
-      return new Promise(function (resolve) { resolve(fetchFn(url, init)); }).then(function (res) {
-        return Promise.resolve(res.text ? res.text() : res.json().then(JSON.stringify)).catch(function () { return ""; }).then(function (text) {
-          var body = null;
-          try { body = text ? JSON.parse(text) : null; } catch (e) { body = null; }
-          if (res.status >= 200 && res.status < 300) return body;
-          throw httpError(res, body);
-        });
-      }, function () { throw syncError("Không có kết nối mạng — sẽ đồng bộ lại khi có mạng", "offline"); });
+      return requestJson(fetchFn, url, init);
     }
     function wsPath() { return "/" + encodeURIComponent(state.workspaceId) + "/items"; }
 
@@ -699,6 +721,29 @@
     }
     function dispose() { disposed = true; listeners = []; }
 
+    /* ---- liên kết chia sẻ chỉ đọc (cần đã nối không gian; khoá không bao giờ rời bộ đồng bộ) ---- */
+    function needWs() {
+      if (!connected()) throw syncError("Chưa nối với không gian nào — bật đồng bộ ở “Nơi lưu & đồng bộ” để chia sẻ", "not_connected");
+      return "/" + encodeURIComponent(state.workspaceId);
+    }
+    /** Các liên kết đang có của không gian: [{token, itemId, name, sharedAt, updatedAt}], mới chia sẻ nhất trước. */
+    function shares() {
+      return Promise.resolve().then(function () { return http("GET", needWs() + "/shares"); }).then(function (r) { return isObj(r) && Array.isArray(r.shares) ? r.shares : []; });
+    }
+    /** Tạo (hoặc làm mới bản chụp của) liên kết cho một mục. Đẩy mọi thay đổi lên máy chủ TRƯỚC — bản chụp lấy từ bản đang lưu ở máy chủ. → {token, sharedAt, updatedAt} */
+    function share(itemId) {
+      return Promise.resolve().then(function () { needWs(); return syncNow(); }).then(function () {
+        return http("POST", needWs() + "/items/" + encodeURIComponent(itemId) + "/share");
+      }).then(function (r) {
+        if (!isObj(r) || typeof r.token !== "string" || !r.token) throw syncError("Máy chủ trả về liên kết sai định dạng", "bad_response");
+        return r;
+      });
+    }
+    /** Thu hồi liên kết của một mục. → true; chưa chia sẻ → Error codestore_share_not_found */
+    function unshare(itemId) {
+      return Promise.resolve().then(function () { return http("DELETE", needWs() + "/items/" + encodeURIComponent(itemId) + "/share"); }).then(function () { return true; });
+    }
+
     var api = {
       ready: ready,
       get workspaceId() { return state.workspaceId; },
@@ -706,11 +751,12 @@
       get status() { return status; },
       get lastError() { return lastError; },
       isConnected: connected, onStatus: onStatus, dispose: dispose,
-      backends: backends, createWorkspace: createWorkspace, connect: connect, disconnect: disconnect, syncNow: syncNow
+      backends: backends, createWorkspace: createWorkspace, connect: connect, disconnect: disconnect, syncNow: syncNow,
+      shares: shares, share: share, unshare: unshare
     };
     return api;
   }
 
-  CS.store = { kv: { memory: memory, local: local, idb: idb, auto: auto }, library: library, sync: sync, stable: stable, describeHttpError: httpError };
+  CS.store = { kv: { memory: memory, local: local, idb: idb, auto: auto }, library: library, sync: sync, readShared: readShared, stable: stable, describeHttpError: httpError };
   if (typeof module !== "undefined" && module.exports) module.exports = CS.store;
 })(typeof globalThis !== "undefined" ? globalThis : this);

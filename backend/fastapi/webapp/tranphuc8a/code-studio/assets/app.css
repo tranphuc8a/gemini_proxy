@@ -154,6 +154,86 @@ textarea.inp { font: 13px/1.45 var(--mono); resize: vertical; }
 .cs-io textarea { min-height: 120px; }
 .cs-cfg { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; padding: 10px 12px; }
 
+/* ---------- chia sẻ liên kết chỉ đọc: hộp thoại + trang xem ---------- */
+.cs-shd { display: grid; gap: 10px; min-width: min(560px, 78vw); } .cs-shd p { margin: 0; }
+.cs-shd-link { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .cs-shd-link .inp { flex: 1 1 260px; font: 12px var(--mono); }
+.cs-shd-all summary { cursor: pointer; font-size: 13px; }
+.cs-shd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 0; }
+.cs-shd-row .n { flex: 1 1 140px; font-weight: 600; overflow-wrap: anywhere; } .cs-shd-row .d { color: var(--mut); font-size: 12px; }
+.cs-share { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+a.cs-logo { text-decoration: none; flex: none; }
+.cs-sh-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--bd); }
+.cs-sh-id { min-width: 0; flex: 1 1 200px; } .cs-sh-t { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.cs-sh-m { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; } .cs-sh-m .chip { cursor: default; min-height: 22px; }
+.cs-sh-tabs { display: flex; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid var(--bd); background: var(--card); }
+.cs-sh-tab { flex: none; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 8px 12px; cursor: pointer; font: 600 12px var(--mono); color: var(--mut); white-space: nowrap; }
+.cs-sh-tab[aria-selected="true"] { color: var(--tx); border-bottom-color: var(--ac); }
+.cs-sh-ed { flex: 1; min-height: 0; background: var(--code-bg); }
+.cs-sh-in { padding: 6px 12px; border-top: 1px solid var(--bd); background: var(--card); font-size: 12px; } .cs-sh-in summary { cursor: pointer; }
+.cs-sh-in pre { margin: 6px 0 0; max-height: 120px; overflow: auto; font: 12px/1.45 var(--mono); }
+.cs-sh-note { margin: 0; padding: 12px; } .cs-sh-note.bad { color: var(--bad); font-weight: 600; }
+.cs-sh-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; padding: 6px 12px; font-size: 12px; color: var(--mut); border-top: 1px solid var(--bd); background: var(--card); }
+
+/* ---------- AI giải thích lỗi ---------- */
+.cs-ai { margin: 8px 12px; border: 1px solid var(--bd2); border-radius: 10px; background: var(--ac-soft); }
+.cs-ai-h { display: flex; align-items: center; gap: 8px; padding: 6px 10px; flex-wrap: wrap; }
+.cs-ai-h small { color: var(--mut); font: 12px var(--mono); } .cs-ai-h .grow { flex: 1; }
+.cs-ai-b { padding: 0 10px 10px; display: grid; gap: 8px; font-size: 13px; }
+.cs-ai-b p { margin: 0; } .cs-ai-b .cs-note { font-size: 12px; }
+.cs-ai-busy { color: var(--warn); font-weight: 600; }
+.cs-ai-sum { font-weight: 600; }
+.cs-ai-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cs-ai-items li { padding: 8px 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--bd); display: grid; gap: 4px; }
+.cs-ai-items .t { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cs-ai-items .fix { color: var(--ok); }
+.cs-ai-unlock { display: flex; gap: 6px; max-width: 360px; }
+.cs-ai-patch { display: grid; gap: 6px; padding: 8px 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--bd); }
+.cs-ai-patch .t { font-weight: 700; font-size: 12px; }
+.cs-ai-diff { margin: 0; max-height: 200px; overflow: auto; border-radius: 6px; background: var(--code-bg); font: 12px/1.5 var(--mono); }
+.cs-ai-diff span { display: block; padding: 0 8px; white-space: pre-wrap; word-break: break-all; }
+.cs-ai-diff .del { background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.cs-ai-diff .add { background: color-mix(in srgb, var(--ok) 16%, transparent); }
+
+/* ---------- bộ test ---------- */
+.cs-ptab .n.t { background: var(--mut); } .cs-ptab .n.t.ok { background: var(--ok); } .cs-ptab .n.t.bad { background: var(--bad); }
+.sel.sm { min-height: 28px; padding: 2px 8px; font-size: 12px; }
+.cs-thead { position: sticky; top: 0; z-index: 2; background: var(--card); border-bottom: 1px solid var(--bd); }
+.cs-tbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px 4px; }
+.cs-tbar .grow, .cs-tsum .grow { flex: 1; }
+.cs-tsum { display: flex; align-items: center; gap: 8px; padding: 2px 12px 8px; font-size: 12px; color: var(--mut); flex-wrap: wrap; min-height: 26px; }
+.cs-budget.warn { color: var(--warn); font-weight: 700; }
+.cs-tempty { display: grid; gap: 6px; padding: 12px; font-size: 13px; } .cs-tempty p { margin: 0; }
+.cs-tcases { display: grid; gap: 8px; padding: 10px 12px 14px; }
+.cs-tc { border: 1px solid var(--bd2); border-radius: 10px; background: var(--card); }
+.cs-tc-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 8px; }
+.cs-tc-tg { flex: none; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--mut); cursor: pointer; }
+.cs-tc-tg:hover { background: var(--ac-soft); }
+.cs-tc .pill, .cs-tsum .pill { flex: none; padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: 11px; background: var(--bg2); color: var(--mut); white-space: nowrap; }
+.cs-tc .pill.ok, .cs-tsum .pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.cs-tc .pill.bad, .cs-tsum .pill.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.cs-tc .pill.busy, .cs-tsum .pill.busy { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.cs-tc-name { flex: 1 1 140px; min-width: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; padding: 3px 6px; font-weight: 600; text-overflow: ellipsis; }
+.cs-tc-name:hover, .cs-tc-name:focus { border-color: var(--bd2); background: var(--bg); }
+.cs-tc-ms { flex: none; min-width: 54px; text-align: right; font: 11px var(--mono); color: var(--mut); }
+.cs-tc-b { padding: 0 10px 10px; display: grid; gap: 8px; }
+.cs-tc-io { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; } .cs-tc-io .fld { min-width: 0; }
+.cs-tc-io textarea { min-height: 84px; }
+.cs-tc-res { display: grid; gap: 6px; }
+.cs-tc-res:empty { display: none; }
+.cs-tc-ok { margin: 0; font-size: 12.5px; color: var(--ok); }
+.cs-tc-bad { margin: 0; font-size: 12.5px; color: var(--bad); font-weight: 600; word-break: break-word; }
+.cs-tc-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-tc-err { margin: 0; padding: 6px 8px; max-height: 160px; overflow: auto; border-radius: 6px; background: var(--bg2); font: 12px/1.45 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.cs-tc-det summary { cursor: pointer; font-size: 12px; color: var(--mut); }
+.cs-diffwrap { max-height: 220px; overflow: auto; border: 1px solid var(--bd); border-radius: 6px; }
+.cs-diff { width: 100%; border-collapse: collapse; font: 12px/1.45 var(--mono); }
+.cs-diff th { position: sticky; top: 0; padding: 2px 8px; background: var(--bg2); color: var(--mut); text-align: left; font: 700 11px var(--sans); }
+.cs-diff td { padding: 1px 8px; vertical-align: top; border-top: 1px solid var(--bd); white-space: pre-wrap; word-break: break-all; }
+.cs-diff td.n { width: 1%; text-align: right; color: var(--mut); }
+.cs-diff tr.x td { background: color-mix(in srgb, var(--bad) 13%, transparent); }
+.cs-diff td.none { color: var(--mut); font-style: italic; }
+.cs-diff tr.gap td { text-align: center; color: var(--mut); font-style: italic; background: var(--bg2); }
+
 /* ---------- thanh trạng thái ---------- */
 .cs-status { display: flex; align-items: center; gap: 2px; padding: 0 6px; min-height: 26px; background: var(--ac); color: var(--ac-tx); font-size: 12px; overflow-x: auto; scrollbar-width: none; }
 .cs-status button, .cs-status span { border: 0; background: transparent; color: inherit; padding: 3px 8px; border-radius: 4px; cursor: default; white-space: nowrap; font-size: 12px; }
@@ -210,13 +290,13 @@ textarea.inp { font: 13px/1.45 var(--mono); resize: vertical; }
   .cs-hide-n { display: none !important; }
   .cs-title { flex: 1 1 0; min-width: 40px; max-width: none; }
   .cs-top .cs-sp { display: none; }
-  .cs-io { grid-template-columns: 1fr; }
+  .cs-io { grid-template-columns: 1fr; } .cs-tc-io { grid-template-columns: minmax(0, 1fr); }
   .cs-grid2 { grid-template-columns: 1fr; }
 }
 @media (min-width: 761px) { .cs-only-n { display: none !important; } }
 @media (pointer: coarse) {                       /* ngón tay: vùng chạm tối thiểu ≈ 36–44 px */
   .cs-tab { min-height: 42px; } .cs-tab .x { width: 36px; height: 36px; }
   .cs-shead .ic, .cs-ptabs .ic { min-width: 40px; min-height: 40px; }
-  .cs-ptab { min-height: 40px; } .btn.sm { min-height: 40px; } .chip { min-height: 36px; } .cs-node { min-height: 40px; }
+  .cs-ptab { min-height: 40px; } .btn.sm, .sel.sm { min-height: 40px; } .cs-tc-tg { width: 40px; height: 40px; } .chip { min-height: 36px; } .cs-node { min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) { .cs-act, .cs-side, .cs-toast.out { transition: none; } }

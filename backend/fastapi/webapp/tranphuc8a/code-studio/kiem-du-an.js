@@ -85,19 +85,19 @@ module.exports = async function ({ nhom, kiem, bang, CS, A }) {
     kiem("meta: openTabs bỏ tệp không có/trùng; activeFile hỏng → tab đầu; folders bỏ tên trùng tệp/thư mục lồng/không hợp lệ, chỉ giữ lá", bang(m2.meta.openTabs, ["a.cpp"]) && m2.meta.activeFile === "a.cpp" && bang(m2.meta.folders, ["d/e", "lib"]), JSON.stringify(m2.meta.folders));
   }
 
-  nhom("project · meta ≤ 8 KB");
+  nhom("project · meta ≤ giới hạn của máy chủ (" + P.limits.store.metaBytes / 1024 + " KB)");
   {
-    const s = multi();
-    const m = P.setMeta(s, { openTabs: paths(s), junk: "x".repeat(20000), stdin: "y".repeat(20000), tags: ["a".repeat(3000), "b".repeat(3000)] });
-    kiem("meta quá lớn bị cắt về ≤ 8 KB (đo như máy chủ)", P.pyJsonBytes(m.meta) <= 8192, String(P.pyJsonBytes(m.meta)));
+    const s = multi(), M = P.limits.store.metaBytes;
+    const m = P.setMeta(s, { openTabs: paths(s), junk: "x".repeat(M * 2), stdin: "y".repeat(M * 2), tags: ["a".repeat(Math.floor(M / 3)), "b".repeat(Math.floor(M / 3))] });
+    kiem("meta quá lớn bị cắt về ≤ giới hạn (đo như máy chủ)", P.pyJsonBytes(m.meta) <= M, String(P.pyJsonBytes(m.meta)));
     kiem("cắt theo thứ tự: trường lạ bỏ trước; stdin cắt kèm cờ stdinTruncated; mainFile/std/opt còn", m.meta.junk === undefined && m.meta.stdinTruncated === true && m.meta.stdin.length > 100 && m.meta.mainFile === "main.cpp" && m.meta.std === "c++17");
-    const m2 = P.setMeta(s, { openTabs: paths(s).concat(Array.from({ length: 800 }, (_, i) => "src/f" + i + ".cpp")) });
-    kiem("openTabs trỏ tới tệp không có bị bỏ (không phình)", P.pyJsonBytes(m2.meta) <= 8192 && m2.meta.openTabs.length === 5);
-    const big = P.setMeta(s, { stdin: "é".repeat(20000) });
-    kiem("stdin Unicode bị cắt vẫn là chuỗi hợp lệ (không cắt giữa cặp thay thế)", !/[\ud800-\udbff]$/.test(big.meta.stdin) && P.pyJsonBytes(big.meta) <= 8192);
-    const emoji = P.setMeta(s, { stdin: "🙂".repeat(9000) });
-    kiem("stdin emoji bị cắt: không để lại nửa cặp thay thế", !/[\ud800-\udbff]$/.test(emoji.meta.stdin) && P.pyJsonBytes(emoji.meta) <= 8192);
-    kiem("validate báo meta > 8 KB khi chưa chuẩn hoá", P.validate(Object.assign(multi(), { meta: { x: "z".repeat(9000) } })).some((e) => /meta quá lớn/.test(e)));
+    const m2 = P.setMeta(s, { openTabs: paths(s).concat(Array.from({ length: M / 8 }, (_, i) => "src/f" + i + ".cpp")) });
+    kiem("openTabs trỏ tới tệp không có bị bỏ (không phình)", P.pyJsonBytes(m2.meta) <= M && m2.meta.openTabs.length === 5);
+    const big = P.setMeta(s, { stdin: "é".repeat(M * 2) });
+    kiem("stdin Unicode bị cắt vẫn là chuỗi hợp lệ (không cắt giữa cặp thay thế)", !/[\ud800-\udbff]$/.test(big.meta.stdin) && P.pyJsonBytes(big.meta) <= M);
+    const emoji = P.setMeta(s, { stdin: "🙂".repeat(M) });
+    kiem("stdin emoji bị cắt: không để lại nửa cặp thay thế", !/[\ud800-\udbff]$/.test(emoji.meta.stdin) && P.pyJsonBytes(emoji.meta) <= M);
+    kiem("validate báo meta quá giới hạn khi chưa chuẩn hoá", P.validate(Object.assign(multi(), { meta: { x: "z".repeat(M + 1000) } })).some((e) => /meta quá lớn/.test(e)));
   }
 
   nhom("project · addFile / addFolder");
@@ -284,7 +284,7 @@ module.exports = async function ({ nhom, kiem, bang, CS, A }) {
     kiem("Unicode trong tên tệp hợp lệ với KHO nhưng không với RUN", (() => { const mut = (q) => { q.files[0].path = "bài.cpp"; q.meta.mainFile = "bài.cpp"; }; return one(mut, { target: "store" }).length === 0 && has(one(mut, { target: "run" }), /không chạy được/); })());
     kiem("trùng tên (không phân biệt hoa/thường) và tệp-trùng-thư-mục", has(one((q) => { q.files[1].path = "MAIN.CPP"; }), /Trùng tên/) && has(one((q) => { q.files.push({ path: "include", content: "" }); }), /vừa là tệp vừa là thư mục/));
     kiem("danh sách tệp sai kiểu (content không phải chuỗi) → một lỗi gọn", bang(one((q) => { q.files[0].content = 5; }), ["Danh sách tệp không hợp lệ (mỗi tệp cần path và content là chuỗi)"]));
-    kiem("meta phải là đối tượng; > 8 KB bị báo", has(one((q) => { q.meta = []; }), /meta phải là một đối tượng/) && has(one((q) => { q.meta = { a: "x".repeat(9000) }; }), /meta quá lớn/));
+    kiem("meta phải là đối tượng; quá giới hạn bị báo", has(one((q) => { q.meta = []; }), /meta phải là một đối tượng/) && has(one((q) => { q.meta = { a: "x".repeat(P.limits.store.metaBytes + 1000) }; }), /meta quá lớn/));
     kiem("bản ghi > 512 KB bị báo (đếm byte UTF-8, đo như máy chủ)", has(one((q) => { q.files[0].content = "x".repeat(520 * 1024); }), /quá lớn để đồng bộ/) && has(one((q) => { q.files[0].content = "é".repeat(270 * 1024); }), /quá lớn để đồng bộ/) && !has(one((q) => { q.files[0].content = "x".repeat(500 * 1024); }, { target: "store" }), /quá lớn/));
     kiem("bia mộ chỉ cần id/kind/language/name/updatedAt hợp lệ (không xét tệp, kích thước)", P.validate({ id: "d", kind: "project", name: "", language: "cpp", files: [], meta: {}, updatedAt: 5, deleted: true }).length === 0 && P.validate({ id: "d", kind: "project", language: "cpp", files: [], updatedAt: 5, deleted: true }).length === 0 && P.validate({ id: "", kind: "project", language: "cpp", files: [], updatedAt: 5, deleted: true }).length === 1);
     // RUN
@@ -353,7 +353,7 @@ module.exports = async function ({ nhom, kiem, bang, CS, A }) {
     kiem("read: dữ liệu trả về là bản sao độc lập (sửa không ảnh hưởng zip gốc)", await (async () => { const c = Z.create([{ path: "a", content: "abc" }]), r1 = await Z.read(c); r1[0].data[0] = 0; return (await Z.read(c))[0].data[0] === 97; })());
     const t0 = Date.now(), many = Z.create(Array.from({ length: 1500 }, (_, i) => ({ path: "d" + (i % 30) + "/f" + i + ".txt", content: "n" + i })));
     const manyBack = await Z.read(many);
-    kiem("hiệu năng: 1.500 tệp tạo + đọc dưới 1,5 giây", manyBack.length === 1500 && Date.now() - t0 < 1500, String(Date.now() - t0));
+    kiem("hiệu năng: 1.500 tệp tạo + đọc dưới 1,5 giây", manyBack.length === 1500 && Date.now() - t0 < 1500 * global.PERF_SLACK, String(Date.now() - t0));
   }
 
   // ---- bộ dựng zip tay (zlib) cho các tình huống mà create() không tạo ra: DEFLATE, comment, mô tả dữ liệu, zip độc hại

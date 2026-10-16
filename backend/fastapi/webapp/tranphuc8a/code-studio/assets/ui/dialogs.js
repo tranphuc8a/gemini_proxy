@@ -297,12 +297,12 @@
   /* ================================================================ bảng lệnh + mở nhanh */
   function commandList() {
     var C = function (id, label, kbd) { return { id: id, label: label, kbd: kbd || "" }; };
-    return [C("run", "Chạy", "Ctrl+Enter"), C("stop", "Dừng chương trình", "Shift+F5"), C("format", "Định dạng tệp", "Shift+Alt+F"), C("save", "Lưu", "Ctrl+S"),
+    return [C("run", "Chạy", "Ctrl+Enter"), C("stop", "Dừng chương trình", "Shift+F5"), C("run-tests", "Chạy bộ test"), C("new-test", "Thêm test mới"), C("format", "Định dạng tệp", "Shift+Alt+F"), C("save", "Lưu", "Ctrl+S"),
       C("new-snippet", "Đoạn mã mới", "Ctrl+N"), C("new-project", "Dự án mới"), C("new-file", "Tệp mới trong dự án", "Ctrl+Alt+N"), C("new-folder", "Thư mục mới trong dự án"),
       C("quick-open", "Mở nhanh tệp…", "Ctrl+P"), C("library", "Mở thư viện", "Ctrl+O"), C("find", "Tìm trong tệp", "Ctrl+F"), C("replace", "Tìm và thay", "Ctrl+H"), C("goto", "Tới dòng…", "Ctrl+G"),
       C("comment", "Bật/tắt chú thích dòng", "Ctrl+/"), C("suggest", "Gợi ý", "Ctrl+Space"), C("wrap", "Bật/tắt ngắt dòng mềm", "Alt+Z"), C("zoom-in", "Phóng to chữ", "Ctrl+="), C("zoom-out", "Thu nhỏ chữ", "Ctrl+-"),
       C("sidebar", "Ẩn/hiện thanh bên", "Ctrl+B"), C("panel", "Ẩn/hiện bảng dưới", "Ctrl+J"), C("theme", "Đổi giao diện sáng/tối"), C("settings", "Cài đặt", "Ctrl+,"),
-      C("storage", "Nơi lưu & đồng bộ…"), C("sync", "Đồng bộ ngay"), C("import", "Nhập .zip / tệp / sao lưu…"), C("export-zip", "Xuất dự án thành .zip"), C("export-all", "Sao lưu toàn bộ thư viện (.json)"),
+      C("storage", "Nơi lưu & đồng bộ…"), C("sync", "Đồng bộ ngay"), C("import", "Nhập .zip / tệp / sao lưu…"), C("export-zip", "Xuất dự án thành .zip"), C("share", "Chia sẻ liên kết chỉ đọc…"), C("export-all", "Sao lưu toàn bộ thư viện (.json)"),
       C("install", "Cài Code Studio như ứng dụng"), C("close-tab", "Đóng thẻ", "Ctrl+W"), C("help", "Phím tắt & trợ giúp", "F1")];
   }
   function palette(mode) {
@@ -373,7 +373,7 @@
     U.menu(el, [
       { label: "Đoạn mã mới", kbd: "Ctrl+N", onclick: function () { A.cmd("new-snippet"); } }, { label: "Dự án mới…", onclick: function () { A.cmd("new-project"); } },
       { label: "Mở thư viện", kbd: "Ctrl+O", onclick: function () { A.showSide("library"); } }, "-",
-      { label: "Nhập .zip / tệp / sao lưu…", onclick: function () { A.cmd("import"); } }, { label: "Xuất dự án (.zip)", disabled: !S().item, onclick: function () { exportZip(); } },
+      { label: "Nhập .zip / tệp / sao lưu…", onclick: function () { A.cmd("import"); } }, { label: "Xuất dự án (.zip)", disabled: !S().item, onclick: function () { exportZip(); } }, { label: "Chia sẻ liên kết chỉ đọc…", disabled: !S().item, onclick: function () { A.cmd("share"); } },
       { label: "Tải tệp đang mở", disabled: !S().active, onclick: function () { var f = A.fileOf(S().active); U.download(S().active.split("/").pop(), f.content); } },
       { label: "Chép toàn bộ mã của tệp", disabled: !S().active, onclick: function () { U.copy(A.ed.getValue()).then(function (ok) { U.toast(ok ? "Đã chép" : "Không chép được", ok ? "ok" : "bad"); }); } }, "-",
       { label: "Tìm / Thay", kbd: "Ctrl+H", onclick: function () { A.cmd("replace"); } }, { label: "Bảng lệnh", kbd: "Ctrl+Shift+P", onclick: function () { palette(); } },

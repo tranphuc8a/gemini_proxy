@@ -116,6 +116,7 @@
               '<button type="button" class="cs-ptab" role="tab" data-ptab="output">Kết quả</button>' +
               '<button type="button" class="cs-ptab" role="tab" data-ptab="problems">Vấn đề<span class="n" hidden></span></button>' +
               '<button type="button" class="cs-ptab" role="tab" data-ptab="input">Dữ liệu vào</button>' +
+              '<button type="button" class="cs-ptab" role="tab" data-ptab="tests">Bộ test<span class="n t" hidden></span></button>' +
               '<button type="button" class="cs-ptab" role="tab" data-ptab="config">Cấu hình chạy</button>' +
               '<span class="cs-sp"></span>' +
               '<button type="button" class="ic" data-cmd="clear-output" title="Xoá kết quả" aria-label="Xoá kết quả">' + ic("clear") + "</button>" +
@@ -388,12 +389,14 @@
   A.loadServerTargets = loadServerTargets;
 
   /* ------------------------------------------------------------------ chạy */
-  function runNow() {
-    if (!S.item || S.running) return;
+  /** Lưu, rồi dựng yêu cầu chạy cho đoạn mã/dự án đang mở + nơi chạy hiện tại → {lang, tgt, req} (req = null: chỉ xem trước HTML);
+      null nếu chưa chạy được (đã báo người dùng). Dùng chung cho ▶ Chạy và bộ test. */
+  function prepareRun() {
+    if (!S.item) return null;
     var lang = runLang(), tgt = currentTarget(lang);
-    if (!lang || !tgt) { U.toast("Chưa chọn được nơi chạy cho ngôn ngữ này", "bad"); return; }
-    if (tgt.id === "preview") { saveNow(); previewHtml(); return; }
-    if (tgt.available === false) { U.toast(tgt.reason || "Nơi chạy này hiện không dùng được — chọn nơi khác ở hộp “Nơi chạy”.", "bad"); return; }
+    if (!lang || !tgt) { U.toast("Chưa chọn được nơi chạy cho ngôn ngữ này", "bad"); return null; }
+    if (tgt.id === "preview") { saveNow(); return { lang: lang, tgt: tgt, req: null }; }
+    if (tgt.available === false) { U.toast(tgt.reason || "Nơi chạy này hiện không dùng được — chọn nơi khác ở hộp “Nơi chạy”.", "bad"); return null; }
     saveNow();
     var meta = S.item.meta || {}, st = S.settings.run;
     var req;
@@ -409,28 +412,47 @@
     req.std = meta.std || st.std[lang]; req.opt = meta.opt || st.opt;
     req.stdin = meta.stdin || ""; req.args = meta.args || [];
     req.runTimeoutMs = meta.runTimeoutMs || st.runTimeoutMs;
-    A.panel.startRun(tgt);
+    return { lang: lang, tgt: tgt, req: req };
+  }
+  A.prepareRun = prepareRun;
+  /** Tuỳ chọn cho CS.runner.run (khoá quản trị, nơi chạy tự dựng, hỏi trước khi tải bộ chạy lớn…); onProgress do người gọi đặt. */
+  function runOptions(onProgress) {
+    return {
+      apiBase: API, fetch: root.fetch.bind(root), pistonUrl: S.settings.run.pistonUrl,
+      adminKey: sessionGet("cs:adminKey"), adminSession: sessionGet("cs:adminSession"),
+      confirmDownload: function (info) { return A.dialogs.confirmDownload(info); },
+      onProgress: onProgress
+    };
+  }
+  A.runOptions = runOptions;
+  function runNow() {
+    if (!S.item || S.running) return;
+    var p = prepareRun();
+    if (!p) return;
+    if (!p.req) { previewHtml(); return; }
+    A.panel.startRun(p.tgt);
     var handle;
-    try {
-      handle = CS.runner.run(req, {
-        apiBase: API, fetch: root.fetch.bind(root), pistonUrl: st.pistonUrl,
-        adminKey: sessionGet("cs:adminKey"), adminSession: sessionGet("cs:adminSession"),
-        confirmDownload: function (info) { return A.dialogs.confirmDownload(info); },
-        onProgress: function (ev) { A.panel.progress(ev); }
-      });
-    } catch (e) { A.panel.failRun(e); return; }
+    try { handle = CS.runner.run(p.req, runOptions(function (ev) { A.panel.progress(ev); })); }
+    catch (e) { A.panel.failRun(e); return; }
     var promise = handle && handle.then ? handle : handle && handle.promise;
     S.running = { cancel: function () { if (handle && handle.cancel) handle.cancel(); else if (CS.runner.cancel) CS.runner.cancel(); } };
     setRunning(true);
+    var stdinUsed = p.req.stdin;
     promise.then(function (res) {
-      S.lastResult = res;
+      S.lastResult = res; S.lastStdin = stdinUsed;        /* để bộ test biến lần chạy này thành một test */
       setDiagnostics(res.diagnostics || []);
       A.panel.showResult(res);
     }, function (e) { A.panel.failRun(e); }).then(function () { S.running = null; setRunning(false); });
   }
-  function stopRun() { if (S.running) { S.running.cancel(); S.running = null; setRunning(false); A.panel.cancelled(); } }
+  /** Bộ test đang chạy cũng là "đang chạy": nút Dừng và thanh trạng thái dùng chung. `token` = {cancel}; trả hàm kết thúc (chỉ gỡ khi vẫn là lần chạy này). */
+  A.beginBatch = function (token) {
+    S.running = token; setRunning(true);
+    return function () { if (S.running === token) { S.running = null; setRunning(false); } };
+  };
+  function stopRun() { if (S.running) { var r = S.running; S.running = null; setRunning(false); r.cancel(); if (!r.batch) A.panel.cancelled(); } }
   function setRunning(b) { els.run.hidden = b; els.stop.hidden = !b; A.renderStatus(); }
   function setDiagnostics(list) {
+    if (A.ai) A.ai.reset();                                     /* lần chạy mới → lời giải thích cũ hết nghĩa */
     S.diags = (list || []).map(function (d) { return { file: d.file || "", line: d.line | 0, col: d.col | 0, severity: d.severity || "error", message: d.message || "" }; });
     if (S.active) ed.setMarkers(S.diags.filter(function (d) { return sameFile(d.file, S.active) || (!d.file && S.active === mainFile()); }));
     A.renderPanel();
@@ -490,6 +512,9 @@
     switch (name) {
       case "run": return runNow();
       case "stop": return stopRun();
+      case "run-tests": return A.tests && A.tests.runAll();
+      case "new-test": return A.tests && A.tests.add();
+      case "share": return A.share && A.share.open();
       case "save": return (S.settings.formatOnSave ? formatNow(true) : Promise.resolve()).then(function () { S.dirty = true; return saveNow(); }).then(function () { U.toast("Đã lưu" + (Store.connected() ? " · đang đồng bộ" : " trên máy này"), "ok", 1600); });
       case "format": return formatNow(false);
       case "drawer": return els.work.classList.toggle("drawer");
@@ -526,6 +551,8 @@
   function closeDrawer() { els.work.classList.remove("drawer"); }
   A.closeDrawer = closeDrawer;
   A.showPanel = function (tab) {
+    /* thẻ "Bộ test" cần cao hơn các thẻ khác (thanh nút + ít nhất một ca); chỉ nới khi vừa chuyển sang, người dùng kéo nhỏ lại tuỳ ý */
+    if (tab === "tests" && S.settings.panelTab !== "tests" && S.settings.panelH < 320) S.settings.panelH = 320;
     S.settings.panelTab = tab; S.settings.panelOpen = true; saveSettings(); applyLayout(); A.renderPanel();
   };
 
@@ -591,6 +618,9 @@
 
   /* ------------------------------------------------------------------ khởi động */
   function boot() {
+    /* địa chỉ #share=… : chỉ HIỆN bản chia sẻ (chỉ đọc), không dựng IDE, không đụng thư viện/cài đặt của người xem */
+    var view = CS.shareView && CS.shareView.wanted();
+    if (view) { CS.shareView.start(view); return; }
     S.settings = merge(DEF, U.lsGet("cs:settings", {}));
     applyTheme();
     build();
@@ -602,17 +632,24 @@
     bindKeys();
     applyLayout();
     A.renderStatus();
+    root.addEventListener("hashchange", function () { if (CS.share && CS.share.parseHash(root.location.hash)) root.location.reload(); });      /* dán liên kết chia sẻ vào thẻ đang mở */
     /* A.ready: khởi động xong (kho đã dựng, đoạn mã đầu tiên đã mở). Lệnh bấm sớm hơn thế sẽ chờ — kho/đồng bộ chưa có thì chưa làm được gì */
     A.ready = Store.init().then(function () {
       return Store.list();
     }).then(function (items) {
-      var params = new URLSearchParams(root.location.search || "");
-      var want = params.get("item") || S.settings.lastItemId;
-      var it = items.filter(function (x) { return x.id === want; })[0];
-      if (it) return openItem(it);
-      if (!items.length) return A.dialogs.firstRun();
-      renderAll();
-      A.showSide("library");
+      function openStart() {
+        var params = new URLSearchParams(root.location.search || "");
+        var want = params.get("item") || S.settings.lastItemId;
+        var it = items.filter(function (x) { return x.id === want; })[0];
+        if (it) return openItem(it);
+        if (!items.length) return A.dialogs.firstRun();
+        renderAll();
+        A.showSide("library");
+      }
+      /* địa chỉ #clone=… (từ nút "Nhân bản về thư viện" ở trang xem): nhập bản chia sẻ thành mục MỚI rồi mở nó; hỏng thì mở như bình thường */
+      var cl = CS.share && CS.share.parseHash(root.location.hash);
+      if (cl && cl.mode === "clone" && A.share) return A.share.clone(cl).then(function (it) { return it ? null : openStart(); });
+      return openStart();
     }).catch(function (e) {
       U.toast("Không mở được kho lưu trên máy: " + (e && e.message ? e.message : e), "bad");
       renderAll();

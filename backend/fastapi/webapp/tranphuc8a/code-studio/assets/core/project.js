@@ -4,7 +4,7 @@
    Bản ghi trùng hình dạng item của /codestore nên đồng bộ thẳng được:
      {id, kind:"snippet"|"project", name, language, files:[{path, content}], meta:{…}, updatedAt, deleted:false}
    meta: {mainFile, folders:[thư mục rỗng], std, opt:"O2", stdin:"", args:[], compileArgs:[], javaMain, openTabs:[], activeFile,
-          pinned, tags:[]} (+ trường tuỳ ý của giao diện). Luôn ≤ 8 KB khi JSON: nếu dài quá thì cắt lần lượt openTabs → trường lạ
+          pinned, tags:[]} (+ trường tuỳ ý của giao diện). Luôn ≤ 32 KB khi JSON: nếu dài quá thì cắt lần lượt openTabs → trường lạ
           → tags → stdin (đặt stdinTruncated) → folders → args → compileArgs.
    • folders chỉ giữ thư mục KHÔNG có tệp nào bên trong (thư mục có tệp đã hiện ra từ đường dẫn tệp).
    • javaMain: lớp chính do người dùng chọn (tuỳ chọn) — chỉ dùng khi mainFile trống; javaMainClass(p) luôn tính lại từ mã.
@@ -23,7 +23,7 @@
 
   /* ------------------------------------------------------------------ giới hạn của backend */
   var LIMITS = {
-    store: { files: 200, itemBytes: 512 * 1024, metaBytes: 8 * 1024, nameChars: 200, languageChars: 32, pathChars: 512, segmentChars: 255, depth: 16,
+    store: { files: 200, itemBytes: 512 * 1024, metaBytes: 32 * 1024, nameChars: 200, languageChars: 32, pathChars: 512, segmentChars: 255, depth: 16,
       putItems: 100, putBytes: 2 * 1024 * 1024, maxTimestamp: 4102444800000, clockAheadMs: 24 * 3600 * 1000 },
     run: { files: 64, fileBytes: 128 * 1024, totalBytes: 256 * 1024, stdinBytes: 64 * 1024, args: 16, argChars: 200, compileArgs: 16,
       pathChars: 200, segmentChars: 100, depth: 8 }
@@ -292,7 +292,7 @@
       arr.splice(i, 1);
     }
   }
-  /** meta ≤ 8 KB (đo như máy chủ): cắt dần những gì ít quan trọng nhất. */
+  /** meta ≤ 32 KB (đo như máy chủ): cắt dần những gì ít quan trọng nhất. */
   function fitMeta(m) {
     var max = LIMITS.store.metaBytes;
     if (pyJsonBytes(m) <= max) return m;
@@ -317,11 +317,13 @@
     if (pyJsonBytes(m) > max) trimArray(m, "folders", max);
     if (pyJsonBytes(m) > max) trimArray(m, "args", max);
     if (pyJsonBytes(m) > max) trimArray(m, "compileArgs", max);
+    if (pyJsonBytes(m) > max) trimArray(m, "tests", max);   /* dữ liệu người dùng tự soạn: bỏ sau cùng, từ ca cuối */
+    if (pyJsonBytes(m) > max) delete m.testMode;
     return m;
   }
-  var KNOWN_META = ["mainFile", "folders", "std", "opt", "stdin", "stdinTruncated", "args", "compileArgs", "javaMain", "openTabs", "activeFile", "pinned", "tags"];
+  var KNOWN_META = ["mainFile", "folders", "std", "opt", "stdin", "stdinTruncated", "args", "compileArgs", "javaMain", "openTabs", "activeFile", "pinned", "tags", "tests", "testMode"];
 
-  /** meta đầy đủ trường mặc định, tham chiếu tới tệp còn tồn tại, ≤ 8 KB. */
+  /** meta đầy đủ trường mặc định, tham chiếu tới tệp còn tồn tại, ≤ 32 KB. */
   function normMeta(meta, item) {
     var m = isObj(meta) ? cloneJson(meta) : {};
     var paths = (item.files || []).map(function (f) { return f.path; }).filter(function (p) { return typeof p === "string"; });
@@ -345,6 +347,12 @@
     out.activeFile = typeof m.activeFile === "string" && has[m.activeFile] ? m.activeFile : (out.openTabs[0] || "");
     out.pinned = m.pinned === true;
     out.tags = unique(strArr(m.tags).map(function (t) { return pyStrip(t); }).filter(Boolean));
+    /* bộ test (core/tests.js): chỉ có mặt khi dùng, để meta mặc định không đổi. Trang không nạp tests.js (IDE heuristic dùng chung project.js)
+       thì để nguyên — đoạn mã tạo ở Code Studio vẫn giữ bộ test của nó. */
+    var T = CS.tests, cases = T ? T.normalize(m.tests) : (Array.isArray(m.tests) ? m.tests : []);
+    if (cases.length) out.tests = cases;
+    var tmode = T ? T.normalizeMode(m.testMode) : m.testMode;
+    if (typeof tmode === "string" && tmode !== (T ? T.defaultMode : "lines")) out.testMode = tmode;
     Object.keys(m).forEach(function (k) { if (KNOWN_META.indexOf(k) < 0 && m[k] !== undefined) out[k] = m[k]; });
     return fitMeta(out);
   }
@@ -540,7 +548,7 @@
     return finish(q);
   }
   function setName(p, name) { var q = clone(p); q.name = cleanName(name); return finish(q); }
-  /** Gộp `patch` vào meta (rồi chuẩn hoá: tham chiếu sai bị bỏ, ≤ 8 KB). */
+  /** Gộp `patch` vào meta (rồi chuẩn hoá: tham chiếu sai bị bỏ, ≤ 32 KB). */
   function setMeta(p, patch) {
     var q = clone(p);
     if (isObj(patch)) Object.keys(patch).forEach(function (k) { q.meta[k] = cloneJson(patch[k]); });

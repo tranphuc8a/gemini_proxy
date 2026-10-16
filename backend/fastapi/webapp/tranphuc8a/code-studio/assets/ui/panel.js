@@ -15,9 +15,11 @@
     U.$$(".cs-ptab").forEach(function (b) { b.setAttribute("aria-selected", String(b.getAttribute("data-ptab") === tab)); });
     var n = (S().diags || []).filter(function (d) { return d.severity === "error"; }).length, badge = U.$('.cs-ptab[data-ptab="problems"] .n');
     if (badge) { badge.hidden = !n; badge.textContent = String(n); }
+    if (A.tests) A.tests.paintBadge();
     var b = body(); b.innerHTML = "";
     if (tab === "problems") return renderProblems(b);
     if (tab === "input") return renderInput(b);
+    if (tab === "tests") return A.tests ? A.tests.render(b) : undefined;
     if (tab === "config") return renderConfig(b);
     renderOutput(b);
   }
@@ -38,6 +40,7 @@
     if (st.msg) runSt.appendChild(h("span", { text: st.msg }));
     if (st.pct != null) { var bar = h("span", { class: "cs-bar" }, [h("i", { style: { width: Math.round(st.pct) + "%" } })]); runSt.appendChild(bar); }
     if (st.extra) runSt.appendChild(h("span", { text: st.extra }));
+    if (st.ai && A.ai && A.ai.offer()) runSt.appendChild(h("button", { type: "button", class: "btn sm", text: "✨ Giải thích bằng AI", title: "Hỏi AI vì sao lỗi và cách sửa (gửi mã của tệp lỗi tới dịch vụ AI)", onclick: function () { A.ai.explain({ open: true }); } }));
   }
   function paintLines() {
     if (!outBox) return;
@@ -97,6 +100,7 @@
     else {
       var e = r.error || {}, label = { compile_error: "Lỗi biên dịch", compile_timeout: "Biên dịch quá giờ", run_timeout: "Quá giờ", runtime_error: "Lỗi khi chạy" }[e.code] || "Lỗi";
       setStatus("bad", label, e.message || parts.join(" · "), e.message ? parts.join(" · ") : "");
+      state.status.ai = true; paintStatus();                    /* nút "Giải thích bằng AI" (chỉ hiện khi có máy chủ AI) */
       if (e.code === "compile_error" && (S().diags || []).length) push("\n→ Xem thẻ “Vấn đề” (" + S().diags.length + ") hoặc bấm vào số dòng đỏ trong trình soạn.\n", "s");
     }
     paintLines();
@@ -115,6 +119,7 @@
   /* ---------------- Vấn đề ---------------- */
   function renderProblems(b) {
     var list = S().diags || [];
+    if (A.ai) A.ai.render(b);                                  /* thẻ "AI giải thích lỗi" nằm đầu tab (chỉ khi có gì để hỏi) */
     if (!list.length) { b.appendChild(h("p", { class: "cs-runst", text: "Không có vấn đề nào từ lần chạy gần nhất." })); return; }
     var ul = h("ul", { class: "cs-probs" });
     list.forEach(function (d) {

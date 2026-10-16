@@ -4,11 +4,13 @@
 const path = require("path");
 const A = (...p) => path.join(__dirname, "assets", ...p);
 global.CS = {};
-const FILES = ["core/langs.js", "core/tokenize.js", "core/format.js", "core/complete.js", "core/project.js", "core/zip.js", "core/store.js", "core/runner.js"];
+const FILES = ["core/langs.js", "core/tokenize.js", "core/format.js", "core/complete.js", "core/tests.js", "core/ai.js", "core/share.js", "core/project.js", "core/zip.js", "core/store.js", "core/runner.js"];
 const missing = [];
 FILES.forEach((f) => { try { require(A(f)); } catch (e) { if (e.code === "MODULE_NOT_FOUND" && String(e.message).indexOf(f.replace("core/", "")) >= 0) missing.push(f); else throw e; } });
 const CS = global.CS;
 
+/* Nhân ngưỡng các phép kiểm hiệu năng (máy CI chậm/đông): CS_PERF_SLACK=3 node kiem.js. Mặc định 1. */
+global.PERF_SLACK = Math.max(1, Number(process.env.CS_PERF_SLACK) || 1);
 let tong = 0, sai = 0;
 function nhom(t) { console.log("\n== " + t); }
 function kiem(ten, ok, chiTiet) {
@@ -102,12 +104,12 @@ if (CS.tokenize) {
   kiem("html() · thoát <, &, > và bọc từ khoá", T.html("if (a < b && c) {}", "cpp") === '<i class="t-kw">if</i> (a &lt; b &amp;&amp; c) {}');
   kiem("html() · tên hàm (đứng trước '(') và hàm có sẵn", T.html("foo(x); cout << 1;", "cpp").indexOf('<i class="t-fn">foo</i>') >= 0 && T.html("cout << 1;", "cpp").indexOf('<i class="t-bi">cout</i>') >= 0);
   kiem("html() · XSS: thẻ <script> trong văn bản được thoát", T.html('x = "<img src=x onerror=1>"', "javascript").indexOf("<img") < 0);
-  kiem("hiệu năng · tô 5.000 dòng C++ dưới 700 ms", (() => { const big = Lg.get("cpp").hello.repeat(1000); const t0 = Date.now(); T.html(big, "cpp"); return Date.now() - t0 < 700; })());
+  kiem("hiệu năng · tô 5.000 dòng C++ dưới 700 ms", (() => { const big = Lg.get("cpp").hello.repeat(1000); const t0 = Date.now(); T.html(big, "cpp"); return Date.now() - t0 < 700 * global.PERF_SLACK; })());
 }
 
 /* ====================== các nhóm còn lại: mỗi tệp kiem-*.js một nhóm (có thể bất đồng bộ) ====================== */
 (async () => {
-  for (const f of ["kiem-dinh-dang.js", "kiem-goi-y.js", "kiem-du-an.js", "kiem-luu.js", "kiem-chay.js"]) {
+  for (const f of ["kiem-dinh-dang.js", "kiem-goi-y.js", "kiem-du-an.js", "kiem-luu.js", "kiem-chay.js", "kiem-bo-test.js", "kiem-ai.js", "kiem-chia-se.js"]) {
     const p = path.join(__dirname, f);
     if (!require("fs").existsSync(p)) continue;
     try { await require(p)({ nhom, kiem, bang, CS, A }); }
