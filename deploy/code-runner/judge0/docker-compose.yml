@@ -1,0 +1,59 @@
+# Judge0 CE tự dựng — nơi chạy mã cho Code Studio (/run với provider "judge0"). Bản đóng gói theo judge0-v1.13.1.
+#
+#   cp judge0.conf.example judge0.conf   # RỒI ĐỔI hai mật khẩu và AUTHN_TOKEN
+#   docker compose -p cs-judge0 up -d db redis && sleep 10 && docker compose -p cs-judge0 up -d
+#   RUN_JUDGE0_URL=http://localhost:2358  RUN_JUDGE0_KEY=<AUTHN_TOKEN>  RUN_JUDGE0_KEY_HEADER=X-Auth-Token   # cho backend (.env)
+#
+# Xem ../README.md — đặc biệt mục "cgroup": Judge0 1.13 cần cgroup v1.
+# Judge0 chạy mã người lạ bằng `isolate` nên server và workers PHẢI privileged. Cổng chỉ mở ở 127.0.0.1.
+services:
+  server:
+    image: judge0/judge0:1.13.1
+    container_name: cs-judge0-server
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "${JUDGE0_BIND:-127.0.0.1}:${JUDGE0_PORT:-2358}:2358"
+    volumes:
+      - ./judge0.conf:/judge0.conf:ro
+    depends_on:
+      - db
+      - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+
+  workers:
+    image: judge0/judge0:1.13.1
+    container_name: cs-judge0-workers
+    command: ["./scripts/workers"]
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - ./judge0.conf:/judge0.conf:ro
+    depends_on:
+      - db
+      - redis
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+
+  db:
+    image: postgres:13.0
+    container_name: cs-judge0-db
+    restart: unless-stopped
+    env_file: judge0.conf
+    volumes:
+      - judge0-postgres:/var/lib/postgresql/data/
+
+  redis:
+    image: redis:6.0
+    container_name: cs-judge0-redis
+    restart: unless-stopped
+    command: ["bash", "-c", 'docker-entrypoint.sh --appendonly no --requirepass "$$REDIS_PASSWORD"']
+    env_file: judge0.conf
+
+volumes:
+  judge0-postgres:

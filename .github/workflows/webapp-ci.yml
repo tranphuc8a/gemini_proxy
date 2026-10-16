@@ -1,0 +1,102 @@
+name: CI - Webapp (Code Studio & ứng dụng viết tay)
+
+# Kiểm các ứng dụng web viết tay (không build) ở backend/fastapi/webapp: logic thuần bằng node, bản sao sinh ra có khớp nguồn không,
+# và trình duyệt THẬT (Playwright: Chromium, Firefox, WebKit) chạy Code Studio + IDE thực hành heuristic trên backend thật (DB SQLite tạm).
+# Backend pytest nằm ở fastapi-ci.yml. Kiểm cần mạng tới Pyodide/Clang-WASM (--wasm) và nhà cung cấp chạy mã công cộng KHÔNG chạy ở đây
+# (chạy tay: xem tasks/2610/261015/code-studio/ban-giao.md).
+
+on:
+  push:
+    branches: [ main, refactor ]
+    paths:
+      - 'backend/fastapi/webapp/**'
+      - 'backend/fastapi/src/**'
+      - 'backend/fastapi/requirements*.txt'
+      - '.github/workflows/webapp-ci.yml'
+  pull_request:
+    branches: [ main, refactor ]
+    paths:
+      - 'backend/fastapi/webapp/**'
+      - 'backend/fastapi/src/**'
+      - 'backend/fastapi/requirements*.txt'
+      - '.github/workflows/webapp-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: webapp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  # Máy CI chậm/đông hơn máy dev: nhân ngưỡng các phép kiểm thời gian (kiem.js) — vẫn bắt được lỗi O(n²), không bắt nhầm vì máy bận.
+  CS_PERF_SLACK: "4"
+
+jobs:
+  logic:
+    name: Logic thuần (node) + bản sao sinh ra
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Node có sẵn trên ubuntu-latest (kiểm: node --version).
+      - name: Phiên bản công cụ
+        run: node --version && python --version
+
+      - name: Mọi ứng dụng viết tay có kiem.js (Code Studio, chi tiêu, json-editor…)
+        run: node backend/fastapi/webapp/tranphuc8a/kiem-tat.js
+
+      - name: Bản sao assets/cs/ của IDE heuristic khớp nguồn Code Studio
+        run: python backend/fastapi/webapp/tranphuc8a/code-studio/sync.py --kiem
+
+      - name: Thực hành heuristic (logic + nội dung + mọi lab)
+        run: node backend/fastapi/webapp/courses/heuristic-practice-2/kiem.js
+
+  browser:
+    name: Trình duyệt thật — ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    needs: logic
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [ chromium, firefox, webkit ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/fastapi/requirements.txt', 'backend/fastapi/requirements-dev.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Cài phụ thuộc (kèm Playwright)
+        working-directory: backend/fastapi
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Cài trình duyệt ${{ matrix.browser }}
+        run: python -m playwright install --with-deps ${{ matrix.browser }}
+
+      # check.py tự dựng uvicorn với DB SQLite tạm, MONGO_URI rỗng, khoá ngẫu nhiên; chạy C/C++/Java/Python bằng g++/javac có sẵn trên runner (nơi chạy `local`).
+      - name: Code Studio (${{ matrix.browser }})
+        run: python backend/fastapi/webapp/tranphuc8a/code-studio/check.py ${{ matrix.browser != 'chromium' && format('--trinh-duyet={0}', matrix.browser) || '' }}
+
+      - name: IDE thực hành heuristic (${{ matrix.browser }})
+        run: python backend/fastapi/webapp/courses/heuristic-practice-2/check.py ${{ matrix.browser != 'chromium' && format('--trinh-duyet={0}', matrix.browser) || '' }}

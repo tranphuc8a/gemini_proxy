@@ -1,0 +1,43 @@
+# Cấu hình Judge0 CE cho Code Studio. Sao chép thành `judge0.conf` (tệp này KHÔNG được commit) rồi đổi các giá trị ĐỔI_ĐI.
+# Đây là bộ tối thiểu; danh sách đầy đủ ở https://github.com/judge0/judge0/blob/v1.13.1/judge0.conf
+
+# ---- Redis / PostgreSQL (nội bộ giữa các container; không mở cổng ra ngoài) ----
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=ĐỔI_ĐI_redis
+
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+POSTGRES_DB=judge0
+POSTGRES_USER=judge0
+POSTGRES_PASSWORD=ĐỔI_ĐI_postgres
+
+# ---- Khoá truy cập: BẮT BUỘC đặt nếu cổng 2358 với tới được từ máy khác ----
+# Backend gửi khoá này trong header AUTHN_HEADER (RUN_JUDGE0_KEY / RUN_JUDGE0_KEY_HEADER).
+AUTHN_HEADER=X-Auth-Token
+AUTHN_TOKEN=ĐỔI_ĐI_khoá_truy_cập
+
+# ---- Tính năng backend của Code Studio cần ----
+# Cờ biên dịch (-std=c++20, -O2…) cho C/C++ — adapter gửi compiler_options.
+ENABLE_COMPILER_OPTIONS=true
+# Tham số dòng lệnh của chương trình (args).
+ENABLE_COMMAND_LINE_ARGUMENTS=true
+# Trả kết quả ngay trong một lời gọi (wait=true). Nếu tắt, adapter tự rơi về thăm dò (poll).
+ENABLE_WAIT_RESULT=true
+
+# ---- Giới hạn (giây / KB). Code Studio đòi tới 15 s chạy; mặc định của Judge0 là 5 s ----
+CPU_TIME_LIMIT=5
+MAX_CPU_TIME_LIMIT=15
+WALL_TIME_LIMIT=10
+MAX_WALL_TIME_LIMIT=20
+MEMORY_LIMIT=256000
+MAX_MEMORY_LIMIT=512000
+MAX_PROCESSES_AND_OR_THREADS=60
+MAX_FILE_SIZE=4096
+MAX_EXTRACT_SIZE=10240
+# Chương trình không có mạng.
+ENABLE_NETWORK=false
+ALLOW_ENABLE_NETWORK=false
+
+# Số worker chạy song song (mỗi worker một lần chạy; đừng vượt số lõi CPU).
+COUNT=2

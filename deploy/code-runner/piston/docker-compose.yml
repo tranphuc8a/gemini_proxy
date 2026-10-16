@@ -1,0 +1,43 @@
+# Piston tự dựng — nơi chạy mã cho Code Studio (/run với provider "piston").
+#
+#   docker compose -p cs-piston up -d            # (hoặc: docker-compose -p cs-piston up -d)
+#   ./cai-runtime.sh                              # cài gcc (C/C++), python, node, java vào ổ dữ liệu
+#   RUN_PISTON_URL=http://localhost:2000/api/v2   # đặt cho backend (backend/fastapi/.env)
+#
+# Xem ../README.md: yêu cầu máy, bảo mật, kiểm tra bằng tools/kiem_nha_cung_cap_that.py.
+#
+# Piston chạy mã người lạ bằng namespace/cgroup nên container PHẢI privileged. Vì thế cổng chỉ mở ở 127.0.0.1
+# (đổi bằng PISTON_BIND nếu backend nằm ở máy khác — và khi đó nhớ đặt tường lửa/mạng riêng, đừng mở ra Internet).
+services:
+  piston:
+    image: ghcr.io/engineer-man/piston:latest
+    container_name: cs-piston
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "${PISTON_BIND:-127.0.0.1}:${PISTON_PORT:-2000}:2000"
+    environment:
+      # Hạn thời gian tối đa mà MỘT yêu cầu được đòi (ms): Piston từ chối (HTTP 400) yêu cầu đòi quá mức này. Backend cho phép tới
+      # 15 s chạy / 30 s biên dịch (trần cố định trong run_vo.py) — Piston mặc định chỉ 3 s / 10 s nên phải nâng.
+      PISTON_RUN_TIMEOUT: "${PISTON_RUN_TIMEOUT:-15000}"
+      PISTON_COMPILE_TIMEOUT: "${PISTON_COMPILE_TIMEOUT:-30000}"
+      PISTON_RUN_CPU_TIME: "${PISTON_RUN_CPU_TIME:-15000}"
+      PISTON_COMPILE_CPU_TIME: "${PISTON_COMPILE_CPU_TIME:-30000}"
+      # Chương trình không có mạng (mặc định của Piston, ghi rõ cho khỏi ai tắt nhầm).
+      PISTON_DISABLE_NETWORKING: "true"
+      PISTON_OUTPUT_MAX_SIZE: "1048576"
+      PISTON_MAX_PROCESS_COUNT: "64"
+    volumes:
+      - piston-packages:/piston/packages
+    tmpfs:
+      - /piston/jobs:exec,uid=1000,gid=1000,mode=711
+    healthcheck:
+      # Ảnh Piston không có curl/wget — dùng node (có sẵn, chính là thứ chạy API).
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:2000/api/v2/runtimes', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  piston-packages:
