@@ -5,6 +5,8 @@ const fs = require("fs"), os = require("os"), path = require("path"), zlib = req
 const { execFileSync } = require("child_process");
 
 module.exports = async function ({ nhom, kiem, bang, CS, A }) {
+  /* Node 18/20 có DecompressionStream nhưng chưa có định dạng "deflate-raw" (từ Node 21.2) — các phép kiểm dùng nó phải tự bỏ qua, như trình duyệt cũ. */
+  const HAS_RAW = (() => { try { new DecompressionStream("deflate-raw"); return true; } catch (e) { return false; } })();
   if (!CS.project) { nhom("project"); kiem("có module project", false); return; }
   const P = CS.project, L = CS.langs;
   const throws = (fn) => { try { fn(); return null; } catch (e) { return e; } };
@@ -387,13 +389,13 @@ module.exports = async function ({ nhom, kiem, bang, CS, A }) {
     const r = await Z.read(z, { inflateRaw: inflateNode });
     kiem("DEFLATE + STORE + rỗng + mô tả dữ liệu (cờ bit 3) cùng một zip", r.length === 5 && text(r[0]) === content && text(r[1]) === "không nén" && r[2].data.length === 0 && text(r[3]) === "có mô tả dữ liệu ".repeat(100) && r[4].dir === true && r.skipped.length === 0, JSON.stringify(r.skipped));
     kiem("DEFLATE nén thật (zip nhỏ hơn dữ liệu nhiều lần)", z.length < content.length / 20);
-    if (typeof DecompressionStream === "function") {
+    if (HAS_RAW) {
       const r2 = await Z.read(z);
       kiem("mặc định (không truyền inflateRaw) dùng DecompressionStream('deflate-raw') — cho cùng kết quả", r2.length === 5 && text(r2[0]) === content && text(r2[3]) === text(r[3]));
       const hong = buildZip([{ name: "x.txt", data: "abc", comp: Buffer.from([0xff, 0xff, 0xff, 0xff]), usize: 3, crc: Z.crc32(bytes("abc")) }, { name: "ok.txt", data: "tốt" }]);
       const r3 = await Z.read(hong);
       kiem("mặc định: luồng deflate hỏng → bỏ mục đó ('dữ liệu nén hỏng'), mục khác vẫn đọc", r3.length === 1 && text(r3[0]) === "tốt" && /nén hỏng/.test(r3.skipped[0].reason) && r3.skipped[0].path === "x.txt");
-    } else kiem("(bỏ qua) môi trường này không có DecompressionStream", true);
+    } else kiem("(bỏ qua) môi trường này không có DecompressionStream(\"deflate-raw\") (Node < 21.2)", true);
     const ghost = buildZip([{ name: "a.txt", data: "xin chào" }], { comment: "ghi chú của zip — có cả PK\u0005\u0006 giả" });
     const gr = await Z.read(ghost, { inflateRaw: inflateNode });
     kiem("zip có COMMENT (kể cả comment chứa chữ ký EOCD giả): vẫn tìm đúng EOCD thật", gr.length === 1 && text(gr[0]) === "xin chào");
@@ -469,7 +471,7 @@ module.exports = async function ({ nhom, kiem, bang, CS, A }) {
     kiem("khai báo 100 byte nhưng giải ra 30 MB (inflate biết giới hạn) → từ chối cả zip, code zip_bomb", e && e.code === "zip_bomb" && /zip bomb/.test(e.message) && viet(e));
     e = await rej(Z.read(liar, { inflateRaw: inflateNaive }));
     kiem("… inflate KHÔNG tôn trọng giới hạn (giải hết 30 MB) → vẫn bị chặn ngay sau đó nhờ so kích thước thực", e && e.code === "zip_bomb");
-    if (typeof DecompressionStream === "function") {
+    if (HAS_RAW) {
       const t0 = Date.now();
       e = await rej(Z.read(liar));
       kiem("mặc định (DecompressionStream): dừng giải nén ngay khi vượt giới hạn, không phình bộ nhớ", e && e.code === "zip_bomb" && Date.now() - t0 < 3000, String(Date.now() - t0));
