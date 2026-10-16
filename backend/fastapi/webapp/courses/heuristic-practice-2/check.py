@@ -102,6 +102,9 @@ class May:
 
 
 def mo_trinh_duyet(pw):
+    khac = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--trinh-duyet=")]
+    if khac and khac[0] in ("firefox", "webkit"):             # kiem cheo: Firefox (Gecko) hoac WebKit (nhu Safari)
+        return getattr(pw, khac[0]).launch(headless=True)
     for kenh in ("msedge", "chrome", None):
         try:
             return pw.chromium.launch(channel=kenh, headless=True) if kenh else pw.chromium.launch(headless=True)
@@ -403,15 +406,20 @@ def tang_trinh_duyet(chup, co_cpp):
         pg.wait_for_timeout(3000)
         n_cache = pg.evaluate("async () => { const k = (await caches.keys()).filter(x => x.startsWith('th2-app-')); if (!k.length) return 0; return (await (await caches.open(k[0])).keys()).length; }")
         kiem("PWA: service worker luu %d tep (th2-app-*), gom %d bai" % (n_cache, n_khoa), n_cache >= n_khoa + 15)
-        ctx.set_offline(True)
-        pg.goto(may.goc + "#/bai/bai-10-delta-evaluation")
-        pg.reload()
-        try:
-            pg.wait_for_selector("#muc-trac", timeout=15000)
-            ok("offline: mo duoc bai chua tung mo — trang + noi dung lay tu bo nho dem")
-        except Exception:
-            sai("offline: khong mo duoc bai tu bo nho dem")
-        ctx.set_offline(False)
+        if "--trinh-duyet=webkit" in sys.argv:
+            # Playwright-WebKit: BrowserContext.set_offline + reload bao "WebKit encountered an internal error" ca voi trang tinh KHONG co service worker
+            # (da thu rieng) — gioi han cong cu, khong phai loi cua app. Kiem offline tren Edge/Firefox.
+            bo_qua("offline + reload: Playwright-WebKit khong ho tro (kiem tren Edge/Firefox)")
+        else:
+            ctx.set_offline(True)
+            pg.goto(may.goc + "#/bai/bai-10-delta-evaluation")
+            pg.reload()
+            try:
+                pg.wait_for_selector("#muc-trac", timeout=15000)
+                ok("offline: mo duoc bai chua tung mo — trang + noi dung lay tu bo nho dem")
+            except Exception:
+                sai("offline: khong mo duoc bai tu bo nho dem")
+            ctx.set_offline(False)
         ctx.close()
 
         # ---- dien thoai 390 px

@@ -32,8 +32,11 @@
     } catch (e) {
       kq.ok = false;
       kq.loi = (e && e.name ? e.name + ": " : "") + (e && e.message ? e.message : String(e));
-      var m = /<anonymous>:(\d+):(\d+)/.exec(String(e && e.stack || ""));
-      if (m) kq.dong = Math.max(1, parseInt(m[1], 10) - 2);
+      /* Số dòng lỗi: V8 ghi "<anonymous>:dòng:cột" trong stack; Firefox "… > Function:dòng:cột" và e.lineNumber; Safari/WebKit chỉ có e.line.
+         Cả ba tính từ đầu hàm do new Function dựng (2 dòng tiêu đề) → trừ 2 để ra dòng trong mã người học. */
+      var st = String(e && e.stack || ""), m = /<anonymous>:(\d+):(\d+)/.exec(st) || /> Function:(\d+):(\d+)/.exec(st);
+      var ln = m ? parseInt(m[1], 10) : ((e && (e.lineNumber || e.line)) | 0);
+      if (ln) kq.dong = Math.max(1, ln - 2);
     }
     kq.text = out.length ? out.join("\n") + "\n" : "";
     kq.err = err.join("\n");

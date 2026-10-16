@@ -303,7 +303,7 @@
       C("comment", "Bật/tắt chú thích dòng", "Ctrl+/"), C("suggest", "Gợi ý", "Ctrl+Space"), C("wrap", "Bật/tắt ngắt dòng mềm", "Alt+Z"), C("zoom-in", "Phóng to chữ", "Ctrl+="), C("zoom-out", "Thu nhỏ chữ", "Ctrl+-"),
       C("sidebar", "Ẩn/hiện thanh bên", "Ctrl+B"), C("panel", "Ẩn/hiện bảng dưới", "Ctrl+J"), C("theme", "Đổi giao diện sáng/tối"), C("settings", "Cài đặt", "Ctrl+,"),
       C("storage", "Nơi lưu & đồng bộ…"), C("sync", "Đồng bộ ngay"), C("import", "Nhập .zip / tệp / sao lưu…"), C("export-zip", "Xuất dự án thành .zip"), C("export-all", "Sao lưu toàn bộ thư viện (.json)"),
-      C("close-tab", "Đóng thẻ", "Ctrl+W"), C("help", "Phím tắt & trợ giúp", "F1")];
+      C("install", "Cài Code Studio như ứng dụng"), C("close-tab", "Đóng thẻ", "Ctrl+W"), C("help", "Phím tắt & trợ giúp", "F1")];
   }
   function palette(mode) {
     var old = U.$(".cs-pal"); if (old) old.remove();
@@ -355,6 +355,20 @@
       h("p", { class: "cs-note", text: "Chạy C/C++/Python trong trình duyệt cần tải bộ chạy một lần (hỏi trước). Chạy trên máy chủ gửi mã tới dịch vụ đã cấu hình — đừng gửi bí mật." })]) });
   }
 
+  /** Cài Code Studio như ứng dụng: mở hộp thoại cài của trình duyệt nếu có, nếu không thì chỉ đúng cách cài theo từng nền tảng. */
+  function installApp() {
+    var P = CS.pwa, st = P ? P.state() : "insecure";
+    if (st === "installed") { U.toast("Code Studio đang chạy như một ứng dụng đã cài", "ok"); return Promise.resolve(); }
+    if (st === "ready") return P.install().then(function (ok) { U.toast(ok ? "Đã cài Code Studio" : "Bạn đã bỏ qua việc cài", ok ? "ok" : ""); });
+    var why = { ios: "Trên iPhone/iPad: bấm nút Chia sẻ của Safari → “Thêm vào Màn hình chính”.",
+      menu: "Dùng menu của trình duyệt: Chrome/Edge → “Cài đặt ứng dụng / Install app” (biểu tượng ở thanh địa chỉ); Firefox máy tính chưa hỗ trợ cài ứng dụng web.",
+      insecure: "Trình duyệt chỉ cho cài khi trang chạy qua HTTPS (hoặc máy chủ chạy ngay trên máy này). Trang đang mở bằng file:// hoặc HTTP thường nên chưa cài được." }[st];
+    return Promise.resolve(P && P.offlineReady ? P.offlineReady() : false).then(function (off) {
+      return U.dialog({ title: "Cài Code Studio như ứng dụng", body: h("div", {}, [h("p", { text: why }),
+        h("p", { class: "cs-note", text: off ? "Trang đã được lưu trong trình duyệt: mở lại được cả khi mất mạng (đoạn mã lưu cục bộ vẫn dùng bình thường; chạy trên máy chủ và đồng bộ cần mạng)." : "Sau lần mở đầu tiên qua HTTP(S), trang được lưu lại để mở khi mất mạng." })]) });
+    });
+  }
+
   function moreMenu(el) {
     U.menu(el, [
       { label: "Đoạn mã mới", kbd: "Ctrl+N", onclick: function () { A.cmd("new-snippet"); } }, { label: "Dự án mới…", onclick: function () { A.cmd("new-project"); } },
@@ -363,13 +377,14 @@
       { label: "Tải tệp đang mở", disabled: !S().active, onclick: function () { var f = A.fileOf(S().active); U.download(S().active.split("/").pop(), f.content); } },
       { label: "Chép toàn bộ mã của tệp", disabled: !S().active, onclick: function () { U.copy(A.ed.getValue()).then(function (ok) { U.toast(ok ? "Đã chép" : "Không chép được", ok ? "ok" : "bad"); }); } }, "-",
       { label: "Tìm / Thay", kbd: "Ctrl+H", onclick: function () { A.cmd("replace"); } }, { label: "Bảng lệnh", kbd: "Ctrl+Shift+P", onclick: function () { palette(); } },
-      { label: "Nơi lưu & đồng bộ…", onclick: function () { storage(); } }, { label: "Cài đặt", kbd: "Ctrl+,", onclick: function () { openSettings(); } }, { label: "Phím tắt & trợ giúp", kbd: "F1", onclick: function () { help(); } }
+      { label: "Nơi lưu & đồng bộ…", onclick: function () { storage(); } }, { label: "Cài đặt", kbd: "Ctrl+,", onclick: function () { openSettings(); } },
+      { label: "Cài Code Studio như ứng dụng…", onclick: function () { installApp(); } }, { label: "Phím tắt & trợ giúp", kbd: "F1", onclick: function () { help(); } }
     ]);
   }
 
   var CMDS = {
     "new-snippet": newSnippet, "new-project": newProject, settings: openSettings, storage: storage, sync: syncNow, help: help, palette: function () { palette(); }, "quick-open": function () { palette("files"); },
-    "import": importAny, "export-zip": function () { exportZip(); }, "export-all": exportAll, indent: pickIndent, formatter: pickFormatter, target: pickTarget, language: pickLanguage
+    install: installApp, "import": importAny, "export-zip": function () { exportZip(); }, "export-all": exportAll, indent: pickIndent, formatter: pickFormatter, target: pickTarget, language: pickLanguage
   };
   A.dialogs = {
     init: function () {}, has: function (n) { return !!CMDS[n]; }, run: function (n, el) { return CMDS[n](el); },

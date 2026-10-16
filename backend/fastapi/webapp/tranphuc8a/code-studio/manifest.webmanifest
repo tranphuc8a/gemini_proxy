@@ -1,0 +1,16 @@
+{
+  "name": "Code Studio",
+  "short_name": "Code Studio",
+  "description": "IDE trên web: soạn, định dạng, chạy mã C/C++, Java, Python, JavaScript… đoạn mã đơn và dự án nhiều tệp. Lưu trên máy hoặc đồng bộ qua máy chủ.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f3f9",
+  "theme_color": "#5b4bd6",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

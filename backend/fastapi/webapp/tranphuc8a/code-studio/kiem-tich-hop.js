@@ -50,9 +50,11 @@ async function startServer(tmp) {
   const port = await freePort();
   const slash = (p) => p.replace(/\\/g, "/");
   const env = Object.assign({}, process.env, {
-    DB_URL: "sqlite+aiosqlite:///" + slash(path.join(tmp, "app.sqlite")),
+    /* CS_DB_URL: một MySQL/MariaDB TẠM do công cụ backend/fastapi/tools/kiem_mysql_that.py dựng (không bao giờ là DB thật của dự án) */
+    DB_URL: process.env.CS_DB_URL || "sqlite+aiosqlite:///" + slash(path.join(tmp, "app.sqlite")),
     DB_HOST: "", DB_USERNAME: "", DB_PASSWORD: "", DB_DATABASE: "",           // phòng khi .env có thông tin MySQL thật
-    MONGO_URI: "",
+    /* CS_MONGO_URI: một mongod TẠM do backend/fastapi/tools/kiem_mongo_that.py dựng (không bao giờ là MongoDB thật của dự án) */
+    MONGO_URI: process.env.CS_MONGO_URI || "",
     CODESTORE_STORAGE_BACKEND: "json",
     CODESTORE_JSON_FILE: path.join(tmp, "codestore.json"),
     CODESTORE_WORKSPACES_PER_HOUR: "1000",
@@ -81,7 +83,7 @@ async function startServer(tmp) {
     } catch (e) { /* chưa lên */ }
     await sleep(300);
   }
-  console.log("(máy chủ thật đã lên ở cổng " + port + " sau " + ((Date.now() - t0) / 1000).toFixed(1) + " s; DB = SQLite tạm, kho json = tệp tạm)");
+  console.log("(máy chủ thật đã lên ở cổng " + port + " sau " + ((Date.now() - t0) / 1000).toFixed(1) + " s; DB = " + (process.env.CS_DB_URL ? "MySQL/MariaDB tạm" : "SQLite tạm") + ", kho json = tệp tạm)");
   return state;
 }
 
@@ -264,16 +266,21 @@ async function main() {
     const b = await raw(server, "GET", "/codestore/backends");
     const byId = Object.fromEntries(((b.json && b.json.backends) || []).map((x) => [x.id, x]));
     kiem("trả {default, backends:[json, mysql, mongo]} với id/label/available/reason/persistent", b.status === 200 && b.json.default === "json" && bang(Object.keys(byId), ["json", "mysql", "mongo"]) && Object.values(byId).every((x) => "label" in x && "available" in x && "reason" in x && "persistent" in x));
-    kiem("json dùng được; mysql dùng được (SQLite tạm); mongo không dùng được (MONGO_URI rỗng) kèm lý do", byId.json.available === true && byId.mysql.available === true && byId.mongo.available === false && byId.mongo.reason.length > 0, JSON.stringify(b.json));
+    const MONGO = !!process.env.CS_MONGO_URI;
+    kiem("json dùng được; mysql dùng được (" + (process.env.CS_DB_URL ? "MariaDB tạm" : "SQLite tạm") + "); mongo " + (MONGO ? "dùng được (mongod tạm)" : "không dùng được (MONGO_URI rỗng) kèm lý do"),
+      byId.json.available === true && byId.mysql.available === true && (MONGO ? byId.mongo.available === true : (byId.mongo.available === false && byId.mongo.reason.length > 0)), JSON.stringify(b.json));
     const probeApi = device(server, "P", "json");
     const bk = await probeApi.sy.backends();
     kiem("CS.store.sync.backends() cho cùng kết quả", bang(bk.backends.map((x) => x.id), ["json", "mysql", "mongo"]) && bk.default === "json");
-    const mg = device(server, "Mg", "mongo"); await mg.sy.ready;
-    const em = await rej(mg.sy.createWorkspace());
-    kiem("tạo không gian ở kho mongo (chưa cấu hình) → codestore_backend_unavailable (503), không lưu gì", em && em.code === "codestore_backend_unavailable" && em.status === 503 && /chưa dùng được/.test(em.message) && (await mg.kv.get("sync:state")) === undefined, em && em.message);
+    if (!MONGO) {
+      const mg = device(server, "Mg", "mongo"); await mg.sy.ready;
+      const em = await rej(mg.sy.createWorkspace());
+      kiem("tạo không gian ở kho mongo (chưa cấu hình) → codestore_backend_unavailable (503), không lưu gì", em && em.code === "codestore_backend_unavailable" && em.status === 503 && /chưa dùng được/.test(em.message) && (await mg.kv.get("sync:state")) === undefined, em && em.message);
+    }
 
     await scenario(server, "json");
     await scenario(server, "mysql");
+    if (MONGO) await scenario(server, "mongo");
 
     nhom("giới hạn tốc độ nhập sai khoá (làm CUỐI CÙNG: 20 lần/10 phút/IP rồi 429)");
     const R = device(server, "R", "json"); await R.sy.ready;

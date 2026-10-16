@@ -51,6 +51,18 @@
       for (var i = 0; i < table.length; i++) { var m = table[i]; if (line >= m.start && line < m.start + m.count) return { file: m.name, line: line - m.start + 1 }; }
       return null;
     }
+    /* Stack theo dạng V8 ("Error: msg" + "    at hàm (tệp:dòng:cột)") cho MỌI trình duyệt: Firefox/Safari chỉ ghi "hàm@tệp:dòng:cột", không có tiêu đề. */
+    function stackOf(e) {
+      var st = String((e && e.stack) || "");
+      if (/^\s+at\s/m.test(st)) return st;
+      var res = [(e && e.name ? e.name : "Error") + (e && e.message ? ": " + e.message : "")], lines = st.split("\n");
+      for (var i = 0; i < lines.length; i++) {
+        var l = lines[i]; if (!l) continue;
+        var at = l.indexOf("@"), fn = at > 0 ? l.slice(0, at) : "", loc = at >= 0 ? l.slice(at + 1) : l;
+        res.push("    at " + (fn ? fn + " (" + loc + ")" : loc));
+      }
+      return res.join("\n");
+    }
     function mapStack(stack) {
       var lines = String(stack).split("\n"), res = [];
       for (var i = 0; i < lines.length; i++) {
@@ -90,7 +102,7 @@
         return "[" + (/^(async\s+)?function\s*\*/.test(src) ? "GeneratorFunction" : /^async/.test(src) ? "AsyncFunction" : "Function") + (nm ? ": " + nm : " (anonymous)") + "]";
       }
       if (seen.indexOf(v) >= 0) return "[Circular *1]";
-      if (v instanceof Error) return mapStack(v.stack || (v.name + ": " + v.message));
+      if (v instanceof Error) return mapStack(stackOf(v));
       if (v instanceof Date) return isNaN(v) ? "Invalid Date" : v.toISOString();
       if (v instanceof RegExp) return String(v);
       if (typeof v.then === "function" && v instanceof Promise) return "Promise { <pending> }";
@@ -166,7 +178,7 @@
       time: function (l) { clocks[l === undefined ? "default" : String(l)] = performance.now(); },
       timeEnd: function (l) { l = l === undefined ? "default" : String(l); if (clocks[l] !== undefined) { consoleObj.log(l + ": " + (performance.now() - clocks[l]).toFixed(3) + "ms"); delete clocks[l]; } },
       timeLog: function (l) { l = l === undefined ? "default" : String(l); if (clocks[l] !== undefined) consoleObj.log(l + ": " + (performance.now() - clocks[l]).toFixed(3) + "ms"); },
-      trace: function () { consoleObj.error("Trace: " + format(arguments) + "\n" + mapStack(String(new Error().stack).split("\n").slice(2).join("\n"))); },
+      trace: function () { consoleObj.error("Trace: " + format(arguments) + "\n" + mapStack(stackOf(new Error()).split("\n").slice(2).join("\n"))); },
       table: function (d) { consoleObj.log(d); }
     };
     consoleObj.info = consoleObj.debug = consoleObj.log;
@@ -378,7 +390,7 @@
     function reportError(er) {
       if (er && er.__csExit !== undefined) { finish(er.__csExit); return; }
       var text;
-      if (er instanceof Error) text = mapStack(er.stack || (er.name + ": " + er.message));
+      if (er instanceof Error) text = mapStack(stackOf(er));
       else text = "Uncaught " + inspect(er, 4, [0]);
       write(true, text + "\n");
       finish(1);
@@ -445,6 +457,24 @@
     push("__csBoot(" + JSON.stringify(table) + ");\n//# sourceURL=cs-run.js\n");
     return { source: parts.join(""), table: table, contents: contents };
   }
+  /** Lỗi cú pháp mà worker không chỉ được vị trí (Safari để trống message/lineno): biên dịch THỬ từng tệp ở luồng chính — chỉ dựng hàm, KHÔNG chạy.
+      → {file, line, col, msg} hoặc null. Cả ba engine tính dòng từ đầu hàm do `new Function` dựng (2 dòng tiêu đề). */
+  function probeSyntax(files) {
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!RE_JS.test(f.name)) continue;
+      try { new Function("exports", "require", "module", "__filename", "__dirname", normLf(f.content)); }
+      catch (e) {
+        if (!(e instanceof SyntaxError)) continue;
+        var ln = (e.lineNumber || e.line || 0) | 0, col = (e.columnNumber || e.column || 1) | 0;
+        if (!ln) { var m = /:(\d+):(\d+)\)?\s*$/m.exec(String(e.stack || "")); if (m) { ln = +m[1]; col = +m[2]; } }
+        var line = Math.max(1, ln - 2), srcLine = normLf(f.content).split("\n")[line - 1] || "";
+        /* cột của JavaScriptCore trong lỗi cú pháp tính theo câu "function anonymous(…)" nên không tin được: kẹp trong dòng */
+        return { file: f.name, line: line, col: Math.min(Math.max(1, col), srcLine.length + 1), msg: (e.name || "SyntaxError") + ": " + e.message };
+      }
+    }
+    return null;
+  }
   function mapLine(table, line) {
     for (var i = 0; i < table.length; i++) { var m = table[i]; if (line >= m.start && line < m.start + m.count) return { file: m.name, line: Math.min(line - m.start + 1, m.count - 1) }; }
     return null;
@@ -484,8 +514,13 @@
         if (ev.preventDefault) ev.preventDefault();
         if (finished) return;
         var msg = String(ev.message || "Lỗi không rõ").replace(/^Uncaught\s+/, ""), pos = ev.lineno ? mapLine(built.table, ev.lineno) : null, text;
+        var col0 = Math.max(1, ev.colno | 0);
+        if (!pos) {                                            /* Safari: không có vị trí → dò lại ở luồng chính */
+          var pr = probeSyntax(req.files);
+          if (pr) { pos = { file: pr.file, line: pr.line }; col0 = pr.col; msg = pr.msg; }
+        }
         if (pos) {
-          var srcLine = (built.contents[pos.file] || "").split("\n")[pos.line - 1] || "", col = Math.max(1, ev.colno | 0);
+          var srcLine = (built.contents[pos.file] || "").split("\n")[pos.line - 1] || "", col = col0;
           text = pos.file + ":" + pos.line + "\n" + srcLine + "\n" + new Array(col).join(" ") + "^\n\n" + msg + "\n    at " + pos.file + ":" + pos.line + ":" + col + "\n";
         } else text = msg + "\n";
         end({ ran: true, ok: false, stdout: out, stderr: err + text, code: 1, signal: null, ms: Date.now() - t0, timedOut: false, truncated: false });

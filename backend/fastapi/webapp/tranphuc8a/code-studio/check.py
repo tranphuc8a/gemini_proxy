@@ -6,12 +6,14 @@
     python check.py            # + trinh duyet that: soan ma, goi y, dinh dang, chay (trinh duyet JS; may chu `local` C++/Java), du an, thu vien, zip, dong bo 2 thiet bi, dien thoai
     python check.py --anh      # chup anh vao _shots/
     python check.py --wasm     # + chay Python (Pyodide) va C++ (Clang-WASM) TRONG TRINH DUYET (can mang toi jsDelivr, tai vai chuc MB)
+    python check.py --trinh-duyet=firefox|webkit   # cung kich ban tren Firefox / WebKit (can: python -m playwright install firefox webkit)
 
 Dung python cua backend/fastapi/.venv (co playwright). Backend duoc khoi dong voi:
   DB_URL=sqlite tam, MONGO_URI rong, RUN_LOCAL_ENABLED=true, COURSE_ADMIN_KEY ngau nhien, CODESTORE_* tro vao tep tam.
 KHONG goi Piston/Judge0/Wandbox cong cong. Thoat 1 neu co muc SAI.
 """
 import io
+import json
 import os
 import re
 import secrets
@@ -72,6 +74,14 @@ def tang_tinh():
     kiem("index.html: %d <script> + %d css, tep nao cung ton tai" % (len(srcs), len(css)), not thieu, ", ".join(thieu))
     ngoai = [s for s in srcs + css if re.match(r"^(https?:)?//", s)]
     kiem("index.html khong nap thu vien/phong ngoai (CDN chi nap luc can: Clang/Pyodide/clang-format... khi nguoi dung dong y)", not ngoai, ", ".join(ngoai))
+    try:
+        mf = json.load(io.open(os.path.join(HERE, "manifest.webmanifest"), encoding="utf-8"))
+        thieu_icon = [i["src"] for i in mf.get("icons", []) if not os.path.isfile(os.path.join(HERE, i["src"]))]
+        kiem("manifest.webmanifest: name, start_url, scope, 3 bieu tuong (any 192/512 + maskable) deu ton tai", mf.get("name") and mf.get("start_url") == "./" and mf.get("scope") == "./" and len(mf.get("icons", [])) >= 3 and not thieu_icon, ", ".join(thieu_icon))
+    except Exception as e:
+        sai("manifest.webmanifest doc duoc: " + str(e)[:100])
+    sw = io.open(os.path.join(HERE, "sw.js"), encoding="utf-8").read()
+    kiem("sw.js: chi xu ly GET cung origin duoi pham vi app, khong nhac toi /api/ (API dong bo khong bao gio bi cache)", 'req.method !== "GET"' in sw and "url.origin !== self.location.origin" in sw and "DUONG_DAN) !== 0" in sw and "/api/" not in sw.replace("(/api/v1/codestore/…, /api/v1/run/…)", ""))
     node = shutil.which("node")
     if not node:
         bo_qua("khong co node - bo qua node --check va kiem.js")
@@ -134,6 +144,9 @@ class May:
 
 
 def mo_trinh_duyet(pw):
+    khac = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--trinh-duyet=")]
+    if khac and khac[0] in ("firefox", "webkit"):             # kiem cheo: Firefox (Gecko) hoac WebKit (nhu Safari)
+        return getattr(pw, khac[0]).launch(headless=True)
     for kenh in ("msedge", "chrome", None):
         try:
             return pw.chromium.launch(channel=kenh, headless=True) if kenh else pw.chromium.launch(headless=True)
@@ -280,6 +293,10 @@ def tang_trinh_duyet(chup, wasm):
             pg.focus(".cse-ta"); pg.keyboard.press("Control+Enter")
             pg.wait_for_function("() => /ctrl-enter/.test(document.querySelector('.cs-out')?.textContent || '')")
             ok("Ctrl+Enter chay ma")
+            thay_ma(pg, "const a = 1;\n\nthrow new Error('hong o dong 3');\n")
+            r = chay_va_doi(pg)
+            dong = ev(pg, "() => (CS.app.S.diags.filter(d => d.severity === 'error')[0] || {}).line")
+            kiem("loi JS luc chay: bao dung dong 3 (moi trinh duyet dinh dang stack khac nhau)", "bad" in r["cls"] and dong == 3, "%s dong=%s" % (r["label"], dong))
 
             # ---------------- chay C++ tren may chu (local) + loi bien dich
             tao_doan_ma(pg, "cpp", "thu cpp may chu")
@@ -395,7 +412,11 @@ def tang_trinh_duyet(chup, wasm):
             pb.on("pageerror", lambda e: loi_console.append("[B] pageerror: " + str(e)[:200]))
             pb.goto(may.goc); pb.wait_for_selector(".cse-ta")
             pb.click('.cs-status [data-cmd="storage"]')
-            pb.wait_for_selector("dialog.cs-dlg select")
+            try:
+                pb.wait_for_selector("dialog.cs-dlg select")
+            except Exception:
+                print("    [chan doan B]", ev(pb, "() => ({booted: !!CS.app.booted, dlgs: [...document.querySelectorAll('dialog')].map(d => d.open + ':' + d.innerText.slice(0, 60)), toasts: [...document.querySelectorAll('.cs-toast')].map(t => t.textContent), status: document.querySelector('.cs-status').innerText.replace(/\\n/g, ' | '), mode: CS.app.S.settings.storage.mode})"))
+                raise
             pb.locator("dialog.cs-dlg select").first.select_option("server")
             pb.fill('dialog.cs-dlg input[aria-label="Mã không gian làm việc"]', ws)
             pb.fill('dialog.cs-dlg input[aria-label="Khoá bí mật"]', kh)
@@ -419,6 +440,41 @@ def tang_trinh_duyet(chup, wasm):
             ten_b = ev(pb, "async () => (await CS.app.Store.list()).map(x => x.name)")
             kiem("A xoa -> bia mo lan sang B", "thu cpp may chu" not in ten_b)
             ctx2.close()
+
+            # ---------------- PWA: service worker luu app, API khong bi cache, mo lai duoc khi mat mang (ngu canh moi => dang ky moi)
+            ctxp = br.new_context(viewport={"width": 1280, "height": 860})
+            pw_ = ctxp.new_page(); pw_.set_default_timeout(25000)
+            pw_.on("pageerror", lambda e: loi_console.append("[pwa] pageerror: " + str(e)[:200]))
+            pw_.goto(may.goc); pw_.wait_for_function("() => CS.app.booted && CS.app.S.item")
+            pw_.evaluate("() => navigator.serviceWorker.ready.then(() => true)")
+            pw_.wait_for_function("() => caches.keys().then(ks => ks.some(k => k.startsWith('codestudio:')))")
+            info = ev(pw_, "async () => { const k = (await caches.keys()).filter(x => x.startsWith('codestudio:'))[0]; const c = await caches.open(k); const urls = (await c.keys()).map(r => new URL(r.url).pathname); return {n: urls.length, urls: urls, has: !!(await c.match(location.pathname)), scope: (await navigator.serviceWorker.ready).scope}; }")
+            nho = [u for u in info["urls"] if "/api/" in u]
+            html_ = io.open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+            can = set(re.findall(r'(?:src|href)="(assets/[^"]+)"', html_)) | {"manifest.webmanifest"}
+            goc_ = "/webapp/tranphuc8a/code-studio/"
+            thieu_ = sorted(p for p in can if goc_ + p not in info["urls"])
+            kiem("PWA: service worker dang ky, luu %d tep gom MOI tep index.html nhac toi + manifest, khong tep /api/ nao" % info["n"], info["has"] and not thieu_ and not nho and info["scope"].endswith("/code-studio/") and len(can) >= 20, "thieu=%s api=%s" % (thieu_[:3], nho[:2]))
+            kiem("PWA: <link rel=manifest> + theme-color + apple-touch-icon co trong trang", ev(pw_, "() => !!document.querySelector('link[rel=manifest]') && !!document.querySelector('meta[name=theme-color]') && !!document.querySelector('link[rel=apple-touch-icon]')"))
+            pw_.evaluate("async () => { await CS.app.Store.put(CS.project.createSnippet({name: 'chi co offline', language: 'python', content: 'print(1)\\n'})); }")
+            if "--trinh-duyet=webkit" in sys.argv:
+                bo_qua("PWA offline + reload: Playwright-WebKit khong ho tro set_offline + reload (kiem tren Edge/Firefox)")
+            else:
+                ctxp.set_offline(True)
+                pw_.reload()
+                pw_.wait_for_selector(".cse-ta")
+                pw_.wait_for_function("() => CS.app.booted && CS.app.S.item")
+                ten_off = ev(pw_, "async () => (await CS.app.Store.list()).map(x => x.name)")
+                kiem("PWA: mat mang van mo lai duoc Code Studio, du lieu cuc bo (IndexedDB) con nguyen", "chi co offline" in ten_off, str(ten_off[:5]))
+                pw_.evaluate("() => { document.querySelector('[data-cmd=sidebar]'); }")
+                r_off = ev(pw_, "() => { CS.app.S.settings.run.target.javascript = 'browser'; return true; }")
+                tao_doan_ma(pw_, "javascript", "off js")
+                thay_ma(pw_, "print('chay offline: ' + (6 * 7))")
+                chon_noi_chay(pw_, "browser")
+                r = chay_va_doi(pw_)
+                kiem("PWA: mat mang chay JavaScript trong trinh duyet van duoc", "ok" in r["cls"] and "chay offline: 42" in r["out"], str(r))
+                ctxp.set_offline(False)
+            ctxp.close()
 
             # ---------------- giao dien sang/toi + dien thoai
             ev(pg, "() => document.documentElement.setAttribute('data-theme', 'dark')")
@@ -465,7 +521,7 @@ def tang_wasm(pg, may, chup, anh):
     pg.wait_for_selector("dialog.cs-dlg button:has-text('Tải')")
     pg.click("dialog.cs-dlg button:has-text('Tải')")
     pg.wait_for_function("() => !!document.querySelector('.cs-runst .pill.ok, .cs-runst .pill.bad')", timeout=280000)
-    out = ev(pg, "() => document.querySelector('.cs-out').textContent")
+    out = ev(pg, "() => document.querySelector('.cs-out').textContent + ' || ' + document.querySelector('.cs-runst').innerText.replace(/[\\r\\n]+/g, ' ')")
     kiem("Python (Pyodide) trong trinh duyet: stdin 12 -> 'binh phuong = 144'", "binh phuong = 144" in out, out[:120])
     tao_doan_ma(pg, "cpp", "thu cpp wasm")
     chon_noi_chay(pg, "browser")
@@ -475,7 +531,7 @@ def tang_wasm(pg, may, chup, anh):
     pg.wait_for_selector("dialog.cs-dlg button:has-text('Tải')")
     pg.click("dialog.cs-dlg button:has-text('Tải')")
     pg.wait_for_function("() => !!document.querySelector('.cs-runst .pill.ok, .cs-runst .pill.bad')", timeout=280000)
-    out = ev(pg, "() => document.querySelector('.cs-out').textContent")
+    out = ev(pg, "() => document.querySelector('.cs-out').textContent + ' || ' + document.querySelector('.cs-runst').innerText.replace(/[\\r\\n]+/g, ' ')")
     kiem("C++ (Clang-WASM) trong trinh duyet: 'tong=42'", "tong=42" in out, out[:120])
 
 

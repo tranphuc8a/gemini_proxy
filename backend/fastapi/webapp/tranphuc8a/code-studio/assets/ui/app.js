@@ -369,8 +369,12 @@
   A.currentTarget = currentTarget;
   function renderTargets() {
     var lang = runLang(), list = targetsFor(lang), cur = currentTarget(lang), sel = els.target;
-    sel.innerHTML = "";
-    list.forEach(function (t) { sel.appendChild(h("option", { value: t.id, text: (t.label || t.id) + (t.available === false ? " — không dùng được" : ""), disabled: t.available === false ? true : null })); });
+    var sig = list.map(function (t) { return t.id + "|" + (t.label || "") + "|" + (t.available === false); }).join("\n");
+    if (sig !== sel.getAttribute("data-sig")) {                  /* chỉ dựng lại khi danh sách đổi (đừng đóng ô chọn đang mở) */
+      sel.innerHTML = "";
+      list.forEach(function (t) { sel.appendChild(h("option", { value: t.id, text: (t.label || t.id) + (t.available === false ? " — không dùng được" : ""), disabled: t.available === false ? true : null })); });
+      sel.setAttribute("data-sig", sig);
+    }
     if (cur) sel.value = cur.id;
     sel.disabled = !S.item || !list.length;
   }
@@ -530,25 +534,30 @@
     var c = S.cursor, el = els.status.querySelector("[data-st=pos]");
     if (el && c) el.textContent = "Dòng " + c.line + ", Cột " + c.col + (c.selected ? " (đã chọn " + c.selected + ")" : "");
   }
+  var statusSig = "";
   A.renderStatus = function () {
     var st = els.status; if (!st) return;
-    st.innerHTML = "";
     var lang = S.active ? langOf(S.active) : null, L = lang ? CS.langs.get(lang) : null, ind = lang ? indentFor(lang) : "";
     var tgt = S.item ? currentTarget(runLang()) : null, sy = Store.syncStatus();
-    function b(attrs, text) { attrs.type = "button"; attrs.text = text; st.appendChild(h("button", attrs)); }
+    var frag = D().createDocumentFragment(), sig = [];
+    function add(el) { sig.push(el.outerHTML); frag.appendChild(el); }
+    function b(attrs, text) { attrs.type = "button"; attrs.text = text; add(h("button", attrs)); }
     b({ "data-cmd": "sidebar", title: "Ẩn/hiện thanh bên (Ctrl+B)" }, "☰");
-    if (S.running) st.appendChild(h("span", { text: "⏳ Đang chạy…" }));
+    if (S.running) add(h("span", { text: "⏳ Đang chạy…" }));
     if (sy) b({ "data-cmd": "sync", title: sy.error || "Đồng bộ ngay" }, (sy.status === "syncing" ? "⟳ Đang đồng bộ" : sy.status === "error" ? "⚠ Lỗi đồng bộ" : sy.status === "offline" ? "⚠ Mất mạng" : "☁ Đã đồng bộ"));
     else b({ "data-cmd": "storage", title: "Nơi lưu: chỉ trên máy này — bấm để bật đồng bộ máy chủ" }, "💾 Máy này");
-    st.appendChild(h("span", { class: "grow" }));
-    if (S.cursor) st.appendChild(h("span", { "data-st": "pos" }));
+    add(h("span", { class: "grow" }));
+    if (S.cursor) add(h("span", { "data-st": "pos" }));
     if (L) {
       b({ "data-cmd": "indent", title: "Thụt dòng" }, ind === "\t" ? "Tab" : "Dấu cách: " + ind.length);
-      st.appendChild(h("span", { text: "UTF-8" }));
+      add(h("span", { text: "UTF-8" }));
       b({ "data-cmd": "formatter", title: "Bộ định dạng cho " + L.name }, "Định dạng: " + ((CS.format.providers[formatOpts(lang).provider] || {}).label || "Tự viết").replace(/ \(.*$/, ""));
       b({ "data-cmd": "language", title: "Ngôn ngữ của tệp (theo đuôi tệp)" }, L.name);
     }
     if (tgt) b({ "data-cmd": "target", title: "Nơi chạy" }, "▶ " + (tgt.label || tgt.id));
+    /* Chỉ dựng lại khi nội dung thật sự đổi: thay nút giữa lúc nhấn xuống và thả ra thì trình duyệt không phát "click" (cú bấm bị mất). */
+    var now = sig.join("");
+    if (now !== statusSig) { statusSig = now; st.replaceChildren(frag); }
     renderCursor();
   };
 
