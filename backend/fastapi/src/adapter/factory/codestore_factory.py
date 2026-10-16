@@ -3,7 +3,8 @@
 One use case per backend, cached: the JSON repository keeps the whole store in
 memory (a second instance would see another store), and the rate-limit counters
 must outlive a request. The counters are shared by the backends, so a client
-cannot create ten workspaces in each.
+cannot create ten workspaces in each. Where they count (memory, the SQL database,
+MongoDB) is `RATE_LIMIT_BACKEND`, see `rate_limit_factory`.
 
 Backends are separate stores, not views of one: a workspace created in `json` does
 not exist in `mysql`. `CODESTORE_STORAGE_BACKEND` names the default and `?backend=`
@@ -19,22 +20,23 @@ from typing import Any, Dict, List, Optional
 from fastapi import Query
 from sqlalchemy import text
 
+from src.adapter.factory.rate_limit_factory import build_rate_limiter
 from src.adapter.output.mongostore import client as mongo_store
 from src.adapter.output.mysql.db.base import get_async_session
 from src.application.config.config import settings
 from src.application.exceptions.exceptions import AppException, BadRequestError
 from src.application.ports.input.codestore_input_port import CodestoreInputPort
 from src.application.ports.output.codestore_repository_port import CodestoreRepositoryPort
+from src.application.ports.output.rate_limiter_port import RateLimiterPort
 from src.application.usecases.codestore_usecase import CodestoreUseCase
 from src.application.utils.data_paths import data_root
-from src.application.utils.rate_limit import FailureWindow
 
 SUPPORTED_BACKENDS = ("json", "mysql", "mongo")
 LABELS = {"json": "Tệp JSON trên máy chủ", "mysql": "MySQL", "mongo": "MongoDB"}
 
 _repositories: Dict[str, CodestoreRepositoryPort] = {}
 _usecases: Dict[str, CodestoreUseCase] = {}
-_limiters: Dict[str, FailureWindow] = {}
+_limiters: Dict[str, RateLimiterPort] = {}
 
 
 def default_backend() -> str:
@@ -70,13 +72,24 @@ def _build_repository(backend: str) -> CodestoreRepositoryPort:
     return JsonCodestoreRepository(file_path=getattr(settings, "CODESTORE_JSON_FILE", "data/codestore.json"))
 
 
-def _limiter(name: str) -> FailureWindow:
+def _limiter(name: str) -> RateLimiterPort:
+    """One counter per purpose, shared by every backend's use case. All are per client address."""
     if name not in _limiters:
         if name == "workspaces":
-            _limiters[name] = FailureWindow(int(getattr(settings, "CODESTORE_WORKSPACES_PER_HOUR", 10)), 3600)
+            _limiters[name] = build_rate_limiter(
+                "codestore_workspaces", max(1, int(getattr(settings, "CODESTORE_WORKSPACES_PER_HOUR", 10))), 3600
+            )
+        elif name == "share_reads":
+            _limiters[name] = build_rate_limiter(
+                "codestore_share_reads", max(1, int(getattr(settings, "CODESTORE_SHARE_READS_PER_MIN", 120))), 60
+            )
+        elif name == "share_failures":
+            # Unknown share tokens: 20 in ten minutes, counted apart from wrong keys so that a
+            # revoked link opened by many people behind one address cannot lock the owner out.
+            _limiters[name] = build_rate_limiter("codestore_share_failures", 20, 600)
         else:
             # Wrong keys per client address: 20 in ten minutes.
-            _limiters[name] = FailureWindow(20, 600)
+            _limiters[name] = build_rate_limiter("codestore_failures", 20, 600)
     return _limiters[name]
 
 
@@ -96,6 +109,9 @@ def get_codestore_usecase(backend: Optional[str] = None) -> CodestoreUseCase:
             tombstone_ttl_days=int(getattr(settings, "CODESTORE_TOMBSTONE_DAYS", 90)),
             workspace_limiter=_limiter("workspaces"),
             failure_limiter=_limiter("failures"),
+            share_read_limiter=_limiter("share_reads"),
+            share_failure_limiter=_limiter("share_failures"),
+            max_shares=int(getattr(settings, "CODESTORE_MAX_SHARES", 50)),
         )
     return _usecases[chosen]
 

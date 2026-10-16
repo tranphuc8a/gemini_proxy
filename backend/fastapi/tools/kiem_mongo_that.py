@@ -8,7 +8,9 @@
 Làm gì: lần đầu tải bản `mongod` cho Linux (~100 MB, lấy từ fastdl.mongodb.org) vào ~/.cache/cs-mongo trong WSL (các lần sau dùng lại), chạy nó với
 thư mục dữ liệu tạm, chỉ nghe 127.0.0.1 ở một cổng trống, đặt `CS_MONGO_URI=mongodb://127.0.0.1:<cổng>/` rồi chạy
 `webapp/tranphuc8a/code-studio/kiem-tich-hop.js` (backend thật + hai thiết bị đồng bộ, kho json, mysql VÀ mongo), cuối cùng tắt mongod và xoá dữ liệu tạm.
-In bộ đếm lệnh của chính mongod (serverStatus.opcounters) làm bằng chứng dữ liệu đã đi qua nó. Cần WSL có distro tên "Ubuntu" (đổi bằng WSL_DISTRO).
+In bộ đếm lệnh của chính mongod (serverStatus.opcounters) làm bằng chứng dữ liệu đã đi qua nó.
+Máy chủ thật chạy với `RATE_LIMIT_BACKEND=mongo`: các bộ đếm tốc độ (khoá sai, token sai) nằm trong collection `rate_limits` của mongod; công cụ in số đếm đó rồi chạy
+thêm `tools/kiem_bo_dem_that.py` (nhiều kết nối + một tiến trình con cùng đếm, hết hạn, chỉ mục TTL, mongod chết thì fail-open). Cần WSL có distro tên "Ubuntu" (đổi bằng WSL_DISTRO).
 Thoát 1 nếu có phép kiểm sai, 2 nếu thiếu môi trường.
 """
 import os
@@ -79,13 +81,26 @@ def main():
                 time.sleep(0.7)
         ver = client.server_info()["version"]
         print("mongod %s thật ở cổng %d" % (ver, port))
-        env = dict(os.environ, CS_MONGO_URI=uri, PYTHONUTF8="1")
+        env = dict(os.environ, CS_MONGO_URI=uri, PYTHONUTF8="1", RATE_LIMIT_BACKEND="mongo")
         code = subprocess.run([node, SCRIPT], env=env).returncode
         ops = client.admin.command("serverStatus")["opcounters"]
         cols = sorted(c for db in client.list_database_names() if db not in ("admin", "local", "config") for c in client[db].list_collection_names())
         print("\nTrong mongod sau kịch bản: collection %s; opcounters insert=%s update=%s query=%s delete=%s" % (cols, ops["insert"], ops["update"], ops["query"], ops["delete"]))
         if ops["insert"] + ops["update"] < 20:
             print("SAI: không thấy bằng chứng dữ liệu đã ghi vào mongod")
+            code = 1
+        # Bộ đếm tốc độ bền: máy chủ thật (RATE_LIMIT_BACKEND=mongo) vừa đếm khoá sai / token sai vào collection rate_limits của mongod.
+        counted = {}
+        for db in client.list_database_names():
+            if db in ("admin", "local", "config"):
+                continue
+            for doc in client[db]["rate_limits"].find():
+                counted[doc["limiter"]] = counted.get(doc["limiter"], 0) + int(doc["hits"])
+        print("Bộ đếm tốc độ trong mongod (collection rate_limits: bộ đếm → tổng lượt): %s" % dict(sorted(counted.items())))
+        if counted.get("codestore_failures", 0) < 20 or counted.get("codestore_share_failures", 0) < 20:
+            print("SAI: máy chủ thật không đếm khoá sai / token sai vào mongod (RATE_LIMIT_BACKEND=mongo)")
+            code = 1
+        if subprocess.run([sys.executable, os.path.join(HERE, "kiem_bo_dem_that.py")], env=dict(env, RL_MONGO_URI=uri)).returncode:
             code = 1
         client.close()
     finally:

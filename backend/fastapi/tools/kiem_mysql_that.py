@@ -9,6 +9,8 @@ Làm gì: dựng một MariaDB mới ở thư mục tạm (cổng trống, chỉ
 tạo database `cs_test`, đặt `CS_DB_URL=mysql+aiomysql://root@127.0.0.1:<cổng>/cs_test` rồi chạy
 `webapp/tranphuc8a/code-studio/kiem-tich-hop.js` (backend thật + hai thiết bị đồng bộ, kho json VÀ mysql), cuối cùng tắt máy chủ và xoá hết.
 Sau đó in các bảng `codestore_*` thật sự có trong MariaDB để chắc dữ liệu nằm ở đó chứ không phải SQLite.
+Máy chủ thật được chạy với `RATE_LIMIT_BACKEND=database`: các bộ đếm tốc độ (khoá sai, token sai) nằm trong bảng `rate_limit_hits` của MariaDB; công cụ
+in số đếm đó rồi chạy thêm `tools/kiem_bo_dem_that.py` (nhiều kết nối + một tiến trình con cùng đếm, hết hạn, dọn hàng, CSDL chết thì fail-open).
 Tìm MariaDB: tham số dòng lệnh → biến MARIADB_HOME → C:\\devtools\\mariadb\\mariadb-*\\mariadb-*\\ (bản portable) → `mariadbd` trong PATH.
 Thoát 1 nếu có phép kiểm sai.
 """
@@ -78,7 +80,8 @@ def main():
         ver = r.stdout.strip().splitlines()[-1]
         subprocess.run(cli + ["-e", "CREATE DATABASE cs_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"], check=True)
         print("MariaDB tạm %s ở cổng %d (dữ liệu: %s)" % (ver, port, data))
-        env = dict(os.environ, CS_DB_URL="mysql+aiomysql://root@127.0.0.1:%d/cs_test" % port, PYTHONUTF8="1")
+        url = "mysql+aiomysql://root@127.0.0.1:%d/cs_test" % port
+        env = dict(os.environ, CS_DB_URL=url, PYTHONUTF8="1", RATE_LIMIT_BACKEND="database")
         code = subprocess.run([node, SCRIPT], env=env).returncode
         # Bằng chứng dữ liệu đi qua MariaDB (kịch bản tự xoá không gian ở cuối nên bảng có thể trống): bảng đã được tạo + bộ đếm lệnh của chính máy chủ.
         r = subprocess.run(cli + ["-N", "-e", "SHOW TABLES FROM cs_test; SHOW GLOBAL STATUS WHERE Variable_name IN ('Com_insert','Com_update','Com_delete')"], capture_output=True, text=True)
@@ -86,6 +89,19 @@ def main():
         counts = {l.split()[0]: int(l.split()[1]) for l in r.stdout.splitlines() if l.startswith("Com_")}
         if "codestore_items" not in r.stdout or counts.get("Com_insert", 0) < 20:
             print("SAI: không thấy bằng chứng dữ liệu đã ghi vào MariaDB")
+            code = 1
+        # Bộ đếm tốc độ bền: máy chủ thật vừa đếm khoá sai / token sai vào bảng rate_limit_hits của MariaDB.
+        r = subprocess.run(cli + ["-N", "-e", "SELECT limiter, COUNT(*), SUM(hits) FROM cs_test.rate_limit_hits GROUP BY limiter ORDER BY limiter"], capture_output=True, text=True)
+        print("\nBộ đếm tốc độ trong MariaDB (bảng rate_limit_hits: bộ đếm / số hàng / tổng lượt):\n" + (r.stdout.strip() or r.stderr.strip()))
+        hits = {}
+        for line in r.stdout.splitlines():
+            parts = line.split("\t")
+            if len(parts) == 3:
+                hits[parts[0]] = int(parts[2])
+        if hits.get("codestore_failures", 0) < 20 or hits.get("codestore_share_failures", 0) < 20:
+            print("SAI: máy chủ thật không đếm khoá sai / token sai vào MariaDB (RATE_LIMIT_BACKEND=database)")
+            code = 1
+        if subprocess.run([sys.executable, os.path.join(HERE, "kiem_bo_dem_that.py")], env=dict(env, RL_DB_URL=url)).returncode:
             code = 1
     finally:
         if proc and proc.poll() is None:

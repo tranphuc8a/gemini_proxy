@@ -600,6 +600,15 @@ def test_wandbox_refuses_arguments_it_cannot_carry():
     assert caught.value.payload["code"] == "run_bad_arg" and server.requests == []
 
 
+def test_piston_multi_file_is_for_interpreted_languages_only():
+    # Verified on a real Piston: its gcc/java packages compile only the entry file, so a project of several
+    # .cpp/.h/.java files must be refused up front rather than fail with "include/calc.h: No such file".
+    executor = PistonExecutor(base_url="http://piston.test/api/v2")
+    assert set(executor.multi_file_languages()) == {"python", "javascript"}
+    assert {"c", "cpp", "java", "go", "rust"} <= set(executor.languages())
+    assert not {"c", "cpp", "java"} & set(executor.multi_file_languages())
+
+
 def test_wandbox_multi_file_is_for_c_cpp_python_and_java_only():
     executor = WandboxExecutor(base_url=WANDBOX_URL)
     assert set(executor.multi_file_languages()) == {"c", "cpp", "python", "java"}

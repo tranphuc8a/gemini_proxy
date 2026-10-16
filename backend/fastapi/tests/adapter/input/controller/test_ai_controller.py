@@ -244,6 +244,74 @@ def test_the_spending_book_route_over_http(client, monkeypatch):
         assert client.post(f"{AI}/spending", json=bad, headers=admin).status_code == 422
 
 
+def test_the_code_explain_route_over_http(client, monkeypatch):
+    from src.application.usecases import ai_usecase
+
+    monkeypatch.setattr(settings, "GEMINI_URL", "https://gemini.test/v1beta/models/gemini-3.5-flash:generateContent")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k")
+    monkeypatch.setattr(settings, "AI_MODEL", "gemini-3.5-flash")
+    answer = {"summary": "Thiếu dấu chấm phẩy.", "items": [{"line": 3, "title": "Thiếu ;", "why": "Câu lệnh phải kết thúc bằng `;`.",
+                                                           "fix": "Thêm `;`."}],
+              "patch": {"line": 3, "endLine": 3, "replacement": "    int x = 5;"}}
+    model = FakeModel([json.dumps(answer)], models=["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.1-pro-preview"])
+    store = FakeStore()
+    app.dependency_overrides[get_ai_usecase] = lambda: AiUseCase(store, model)
+    admin = {"X-Admin-Key": ADMIN_KEY}
+    url = f"{AI}/code/explain"
+    ask = {"language": "cpp", "filename": "main.cpp", "kind": "compile",
+           "code": "int main() {\n    int x = 5\n    int y = 6\n}",
+           "diagnostics": [{"line": 3, "col": 14, "severity": "error", "message": "expected ';'"}],
+           "stderr": "main.cpp:3:14: error: expected ';'"}
+
+    assert client.post(url, json=ask).status_code == 403                                      # AI access first
+    assert client.post(url, json=ask).json()["data"]["code"] == "ai_admin_only" and model.calls == []
+    too_many = [{"line": 1, "col": 1, "severity": "note", "message": "m"}] * 21
+    for bad in ({**ask, "kind": "link"}, {**ask, "language": ""}, {**ask, "language": "x" * 33},
+                {**ask, "filename": "f" * 201}, {**ask, "code": "c" * 30001}, {**ask, "stderr": "e" * 4001},
+                {**ask, "diagnostics": too_many},
+                {**ask, "diagnostics": [{"line": 1, "col": 1, "severity": "error", "message": "m" * 501}]},
+                {**ask, "diagnostics": [{"line": 1, "col": 1, "severity": "fatal", "message": "m"}]},
+                {**ask, "diagnostics": [{"line": -1, "col": 1, "severity": "error", "message": "m"}]},
+                {**ask, "diagnostics": [{"line": 1, "col": -1, "severity": "error", "message": "m"}]},
+                {**ask, "diagnostics": [{"line": 1, "col": 1, "severity": "error"}]},
+                {k: v for k, v in ask.items() if k != "code"}, {k: v for k, v in ask.items() if k != "kind"}):
+        assert client.post(url, json=bad, headers=admin).status_code == 422
+    assert model.calls == [], "a body that breaks the limits costs nothing"
+    edge = {**ask, "code": "c" * 30000, "stderr": "e" * 4000, "filename": "f" * 200,
+            "diagnostics": [{"line": 1, "col": 1, "severity": "warning", "message": "m" * 500}] * 20}
+    assert client.post(url, json=edge, headers=admin).status_code == 200                      # exactly at every limit
+
+    r = client.post(url, json=ask, headers=admin)
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
+    assert r.json() == {**answer, "cached": False}, "bare JSON, as checked by the server"
+    assert client.post(url, json=ask, headers=admin).json()["cached"] is True
+    assert len(model.calls) == 2
+
+    r = client.post(url, json={**ask, "diagnostics": [], "stderr": ""}, headers=admin)
+    assert r.status_code == 400 and r.json()["data"]["code"] == "code_error_missing"
+
+    other = {**ask, "stderr": ask["stderr"] + " (otra vez)"}
+    r = client.post(url, json=other, headers={**admin, "X-AI-Model": "gemini-3.8-flash"})
+    assert r.status_code == 200 and model.calls[-1]["model"] == "gemini-3.8-flash"
+    r = client.post(url, json=other, headers={**admin, "X-AI-Model": "gemini-0-nope"})
+    assert r.status_code == 400 and r.json()["data"]["code"] == "ai_model_unknown"
+
+    monkeypatch.setattr(settings, "AI_ACCESS", "public")
+    monkeypatch.setattr(settings, "AI_RATE_PER_MINUTE", 1)
+    ai_usecase.reset_limits()
+    fresh = {**ask, "code": "int main() { return 1 }"}
+    r = client.post(url, json=fresh, headers={"X-AI-Model": "gemini-3.1-pro-preview"})
+    assert r.status_code == 403 and r.json()["data"]["code"] == "ai_model_admin_only"
+    assert client.post(url, json=fresh).status_code == 200
+    r = client.post(url, json={**fresh, "stderr": "otro"})
+    assert r.status_code == 429 and r.json()["data"]["code"] == "ai_rate_limited" and int(r.headers["Retry-After"]) > 0
+    assert client.post(url, json={**fresh, "stderr": "otro"}, headers=admin).status_code == 200
+
+    monkeypatch.setattr(settings, "AI_ENABLED", False)
+    r = client.post(url, json={**fresh, "stderr": "otro más"}, headers=admin)
+    assert r.status_code == 503 and r.json()["data"]["code"] == "ai_disabled"
+
+
 def test_models_route_and_the_x_ai_model_header(client, monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_URL", "https://gemini.test/v1beta/models/gemini-3.5-flash:generateContent")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "k")

@@ -3,7 +3,7 @@
 Running the MongoDB adapters against a real server would make the suite depend
 on one being installed, and mocking each call individually would test the mock
 rather than the adapter. This fake implements the handful of operations the
-adapters actually issue -- equality and `$in` filters, `$set` updates, sort/skip/
+adapters actually issue -- equality and `$in` filters, `$set`/`$inc`/`$setOnInsert` updates, sort/skip/
 limit cursors, projections and `count_documents` -- so the adapter's own
 serialisation, paging and trimming logic runs for real.
 
@@ -103,16 +103,25 @@ class FakeCollection:
     def __init__(self) -> None:
         self.documents: Dict[Any, Dict[str, Any]] = {}
         self.indexes: List[Any] = []
+        #: Field lists of the indexes created with `unique=True`; `insert_one` enforces them.
+        self.unique_indexes: List[List[str]] = []
 
     # --- writes ----------------------------------------------------------
-    async def create_index(self, keys: Any, **_options: Any) -> str:
+    async def create_index(self, keys: Any, **options: Any) -> str:
         self.indexes.append(keys)
+        if options.get("unique"):
+            fields = [keys] if isinstance(keys, str) else [field for field, _direction in keys]
+            self.unique_indexes.append(fields)
         return "index"
 
     async def insert_one(self, document: Dict[str, Any]) -> Any:
         key = document["_id"]
         if key in self.documents:
             raise KeyError(f"duplicate _id {key!r}")
+        for fields in self.unique_indexes:
+            values = [document.get(field) for field in fields]
+            if any([other.get(field) for field in fields] == values for other in self.documents.values()):
+                raise KeyError(f"duplicate key on {fields!r}")
         self.documents[key] = copy.deepcopy(document)
         return _Result()
 
@@ -122,21 +131,27 @@ class FakeCollection:
         return _Result()
 
     async def update_one(self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False) -> Any:
-        unsupported = set(update) - {"$set"}
+        unsupported = set(update) - {"$set", "$inc", "$setOnInsert"}
         if unsupported:
             raise NotImplementedError(f"fake_mongo does not implement {sorted(unsupported)}")
         for document in self.documents.values():
             if _matches(document, query):
                 document.update(copy.deepcopy(update.get("$set", {})))
+                for field, step in update.get("$inc", {}).items():
+                    document[field] = document.get(field, 0) + step
                 return _Result(modified_count=1, matched_count=1)
 
         if not upsert:
             return _Result()
         # An upsert with no match inserts the equality fields of the query plus
-        # the $set fields, which is what MongoDB does and what the callers rely
-        # on to mint a document under the _id they asked for.
+        # the $set / $setOnInsert fields (and each $inc field, which starts from
+        # zero), which is what MongoDB does and what the callers rely on to mint
+        # a document under the _id they asked for.
         created = {field: value for field, value in query.items() if not isinstance(value, dict)}
+        created.update(copy.deepcopy(update.get("$setOnInsert", {})))
         created.update(copy.deepcopy(update.get("$set", {})))
+        for field, step in update.get("$inc", {}).items():
+            created[field] = created.get(field, 0) + step
         if "_id" not in created:
             raise NotImplementedError("fake_mongo cannot generate an _id for an upsert")
         self.documents[created["_id"]] = created

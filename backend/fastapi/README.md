@@ -119,6 +119,7 @@ budget and the books are skipped with a warning; the per-address limits stay.
 | `POST /ai/opic/script` | `AI_ACCESS` | feedback on a WRITTEN OPIc script before practising it: level, grammar / vocabulary / task / coherence, fixes, a better version |
 | `POST /ai/draft/assist` | admin | the lesson editor's assistant on a selected passage: rewrite, expand, shorten, simplify, translate, quiz, or a self-checked Python/JS exercise (rejected unless it carries hidden checks) |
 | `POST /ai/markdown` | `AI_ACCESS` | Markdown Editor's "smart format": raw text, notes, logs or code → readable markdown (`smart`, `tidy`, `summary`); the answer is flagged `shrunk` if it lost much of the text; never cached |
+| `POST /ai/code/explain` | `AI_ACCESS` | Code Studio: explain a compile or run error. Body `{language, filename, kind: compile|runtime, code ≤ 30 000, diagnostics[≤20] {line, col, severity, message}, stderr ≤ 4 000}` → `{summary, items[1–8] {line|null, title, why, fix}, patch|null {line, endLine, replacement}, cached}`. Source and compiler output are fenced as untrusted data; the answer is re-checked against the file (a `line` or `patch` outside it is dropped, a patch is ≤ 40 lines / 4 000 chars, never identical to the text it replaces, an empty `replacement` deletes the lines). Cached per (language, file name, kind, code, diagnostics, stderr, model); no address or name reaches the model |
 | `POST /ai/ask` also takes `course` | `AI_ACCESS` | with `course`, answers only from that course's own lessons (an unpublished course stays an administrator's) |
 | `POST /ai/spending` | `AI_ACCESS` | Quản lý chi tiêu: free text → proposed expenses/incomes (date, whole đồng, category, who paid, who shares, group). The model sees the text and the NAMES with ids of the user's categories, accounts, people and groups — never balances or past transactions; ids the page did not send are dropped, amounts must be whole positive đồng, exact splits must add up. Nothing is saved server-side and the answer is never cached |
 | `POST /ai/chat` | `AI_ACCESS` | one stateless answer from a chosen model (`gemini-2.5-pro`, `…-flash`, `…-flash-lite`, `2.0-flash`, `2.0-flash-lite`, `flash-latest`) — Gemini Chat's "compare two models" sends two of these side by side. Never cached |
@@ -166,7 +167,8 @@ first use). `SPENDING_MAX_BYTES` (4 000 000) caps the serialised document.
 ## Code Studio: running code (`/run`) and syncing it (`/codestore`)
 
 The editor web app runs code and keeps snippets and projects. Full contract, security
-model and how to host Piston/Judge0 yourself: [`docs/code-studio-api.md`](../../docs/code-studio-api.md).
+model and how to host Piston/Judge0 yourself: [`docs/code-studio-api.md`](../../docs/code-studio-api.md). Ready-made compose files and a runtime
+installer for the self-hosted providers are in [`deploy/code-runner/`](../../deploy/code-runner/README.md) (Piston verified against a real server).
 
 **`/run`** — the backend is deployed serverless (no compiler, no sandbox), so code runs
 at a provider the user picks per request **by id, never by URL**: `piston`, `judge0`,
@@ -186,7 +188,7 @@ Settings: `RUN_ENABLED`, `RUN_DEFAULT_PROVIDER`, `RUN_PISTON_URL/KEY`, `RUN_JUDG
 **`/codestore`** — workspaces with a secret key (no accounts), records `{id, kind: snippet|project, name,
 language, files, meta, updatedAt, deleted}` merged last-writer-wins per record, deletions kept as tombstones.
 `?backend=json|mysql|mongo`, default `CODESTORE_STORAGE_BACKEND` (tables `codestore_workspaces` /
-`codestore_items`, collections of the same names, created on first use).
+`codestore_items` / `codestore_shares`, collections of the same names, created on first use).
 
 | Endpoint | Key | What |
 |---|---|---|
@@ -194,7 +196,26 @@ language, files, meta, updatedAt, deleted}` merged last-writer-wins per record, 
 | `POST /codestore/workspaces` | — | `201 {workspaceId, key}`; the key is shown once, only its SHA-256 is stored; `CODESTORE_WORKSPACES_PER_HOUR` per address |
 | `GET /codestore/{id}/items?since=&limit=` | `X-Codestore-Key` | `{items, serverTime, more}` — records stored on the server after `since`; send `serverTime` back as `since` |
 | `PUT /codestore/{id}/items` | `X-Codestore-Key` | `{items: [≤ 100 records, ≤ 512 KB each, ≤ 2 MB]}` → `{items, serverTime}`: what the server holds for those ids |
-| `DELETE /codestore/{id}` | `X-Codestore-Key` | `{deleted: true}` |
+| `DELETE /codestore/{id}` | `X-Codestore-Key` | `{deleted: true}` — also revokes every read-only link of the workspace |
+| `POST /codestore/{id}/items/{itemId}/share` | `X-Codestore-Key` | read-only link: freezes the record as the server holds it → `201 {token, sharedAt, updatedAt}`; sharing again refreshes the snapshot and keeps the token (`200`); the record must be synced and not deleted (`404 codestore_item_not_found`) |
+| `GET /codestore/{id}/shares` | `X-Codestore-Key` | `{shares: [{token, itemId, name, sharedAt, updatedAt}]}` |
+| `DELETE /codestore/{id}/items/{itemId}/share` | `X-Codestore-Key` | `{revoked: true}` (`404 codestore_share_not_found` if it was not shared) |
+| `GET /codestore/shared/{token}` | — (**public**) | `{item: {id, kind, name, language, files, meta, updatedAt}, sharedAt}` — the snapshot, without `meta.pinned/openTabs/activeFile`, workspace id, key or server clock; unknown and revoked tokens give the same `404`; `no-store`; `CODESTORE_SHARE_READS_PER_MIN` per address, wrong tokens counted (20 / 10 min). Pass the same `?backend=` the link was made in |
 
 Settings: `CODESTORE_STORAGE_BACKEND`, `CODESTORE_JSON_FILE`, `CODESTORE_MAX_ITEMS` (2000), `CODESTORE_WORKSPACES_PER_HOUR`,
-`CODESTORE_TOMBSTONE_DAYS`.
+`CODESTORE_TOMBSTONE_DAYS`, `CODESTORE_MAX_SHARES` (50 active links per workspace), `CODESTORE_SHARE_READS_PER_MIN` (120).
+
+**Rate limits and several instances.** On a serverless deployment every instance has its own memory, so a counter kept in
+memory only slows abuse down. The limits of `/run` (`RUN_RATE_PER_MIN`) and `/codestore` (new workspaces, wrong keys, link reads,
+wrong tokens) are counted by a `RateLimiterPort` chosen with `RATE_LIMIT_BACKEND`:
+
+| Value | Counts in | Notes |
+|---|---|---|
+| `memory` | the instance's memory | exact sliding window; development and tests |
+| `database` | table `rate_limit_hits` of the application's SQL database (created on first use, no migration) | atomic upsert (MySQL `ON DUPLICATE KEY UPDATE`, SQLite/PostgreSQL `ON CONFLICT`); keys stored as SHA-256 |
+| `mongo` | collection `rate_limits` of `MONGO_URI` (TTL index on `expire_at`) | atomic `$inc` + upsert; **never picked by `auto`** |
+| `auto` (default) | `database` when `DB_URL` is not SQLite (or is unset, i.e. the `DB_*` MySQL fields) and this is not a test run; else `memory` | |
+
+If the shared counter fails (database down, network, slower than `RATE_LIMIT_TIMEOUT_S`) the request is still served: a warning is
+logged (error class only, no host, key or URI) and that instance counts in memory for 30 seconds before trying again. The `/ai/*`
+limits are not affected (still in memory).

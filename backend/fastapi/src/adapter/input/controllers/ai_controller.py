@@ -20,6 +20,7 @@
     POST /ai/opic/script  feedback on a WRITTEN OPIc script before practising it
     POST /ai/draft/assist rewrite / expand / translate / quiz / exercise from a selected passage  [admin]
     POST /ai/markdown   "smart format": raw text → readable markdown (Markdown Editor Pro)
+    POST /ai/code/explain  a compile / runtime error of a source file → cause, fixes, an optional one-edit patch (Code Studio)
 
 A caller is identified by the headers the course pages already send:
 `X-Admin-Session` / `X-Admin-Key` (course administrator) and `X-AI-Session`
@@ -38,13 +39,16 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.adapter.factory.ai_factory import (get_ai_chat_usecase, get_ai_course_usecase, get_ai_draft_usecase,
+from src.adapter.factory.ai_factory import (get_ai_chat_usecase, get_ai_code_usecase, get_ai_course_usecase,
+                                            get_ai_draft_usecase,
                                             get_ai_http_usecase, get_ai_query_usecase, get_ai_speaking_usecase,
                                             get_ai_markdown_usecase, get_ai_spending_usecase, get_ai_study_usecase,
                                             get_ai_usecase)
 from src.adapter.input.controllers.admin_auth import client_address, is_admin, require_admin
 from src.application.usecases import ai_usecase
 from src.application.usecases.ai_chat_usecase import PROMPT_CHARS, AiChatUseCase
+from src.application.usecases import ai_code_usecase
+from src.application.usecases.ai_code_usecase import AiCodeUseCase
 from src.application.usecases.ai_course_usecase import SELECTION_CHARS, AiCourseUseCase
 from src.application.usecases.ai_draft_usecase import AiDraftUseCase
 from src.application.usecases.ai_http_usecase import AiHttpUseCase
@@ -178,6 +182,24 @@ class HttpAsk(BaseModel):
     action: Literal["explain", "tests"]
     request: HttpRequestSeen
     response: HttpResponseSeen
+
+
+class CodeDiagnostic(BaseModel):
+    """One compiler / interpreter message the page already parsed (0 = position unknown)."""
+    line: int = Field(default=0, ge=0, le=10_000_000)
+    col: int = Field(default=0, ge=0, le=10_000_000)
+    severity: Literal["error", "warning", "note"] = "error"
+    message: str = Field(..., max_length=ai_code_usecase.MESSAGE_CHARS)
+
+
+class CodeExplain(BaseModel):
+    language: str = Field(..., min_length=1, max_length=ai_code_usecase.LANGUAGE_CHARS)
+    filename: str = Field(default="", max_length=ai_code_usecase.FILENAME_CHARS)
+    kind: Literal["compile", "runtime"]
+    # The file as it was when it failed (the answer's line numbers are against this).
+    code: str = Field(..., max_length=ai_code_usecase.CODE_CHARS)
+    diagnostics: List[CodeDiagnostic] = Field(default_factory=list, max_length=ai_code_usecase.DIAGNOSTICS)
+    stderr: str = Field(default="", max_length=ai_code_usecase.STDERR_CHARS)
 
 
 class ChatCompare(BaseModel):
@@ -378,6 +400,14 @@ async def ai_http(body: HttpAsk, caller: AiCaller = Depends(ai_caller),
                   uc: AiHttpUseCase = Depends(get_ai_http_usecase)):
     run = uc.explain if body.action == "explain" else uc.tests
     out = await run(caller, request=body.request.model_dump(), response=body.response.model_dump())
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/code/explain")
+async def ai_code_explain(body: CodeExplain, caller: AiCaller = Depends(ai_caller),
+                          uc: AiCodeUseCase = Depends(get_ai_code_usecase)):
+    out = await uc.explain(caller, language=body.language, filename=body.filename, kind=body.kind, code=body.code,
+                           diagnostics=[d.model_dump() for d in body.diagnostics], stderr=body.stderr)
     return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
 

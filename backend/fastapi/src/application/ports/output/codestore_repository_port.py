@@ -7,6 +7,10 @@ the last-writer-wins rule (`domain.vo.codestore_vo.wins`) AT THE STORE, as one
 atomic step per record. A read-compare-write in the use case would leave a window
 in which two devices both pass the comparison and the older edit overwrites the
 newer one.
+
+The same store keeps the read-only share links (`ShareRecord`): a token that reads
+a frozen copy of one record. Looking a token up must be an index lookup - it is the
+one query an anonymous client can trigger - and deleting a workspace takes its links with it.
 """
 
 from __future__ import annotations
@@ -14,7 +18,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Sequence
 
-from src.domain.vo.codestore_vo import CodeItem, WorkspaceRecord
+from src.domain.vo.codestore_vo import CodeItem, ShareRecord, ShareSummary, WorkspaceRecord
 
 
 class CodestoreRepositoryPort(ABC):
@@ -50,3 +54,37 @@ class CodestoreRepositoryPort(ABC):
     @abstractmethod
     async def purge_tombstones(self, workspace_id: str, before: int) -> int:
         """Delete tombstones whose `serverUpdatedAt < before`; how many went."""
+
+    # ---------------------------------------------------------------- shares
+    @abstractmethod
+    async def get_share_for_item(self, workspace_id: str, item_id: str) -> Optional[ShareSummary]:
+        """The active link of a record, if it has one."""
+
+    @abstractmethod
+    async def save_share(self, record: ShareRecord) -> ShareSummary:
+        """Create the link of a record, or refresh the snapshot of the one it has.
+
+        The link of a record is unique. When one exists its token and `shared_at`
+        are KEPT (only name, snapshot and `updated_at` change), whatever `record`
+        carries; the summary returned is what is stored.
+        """
+
+    @abstractmethod
+    async def count_shares(self, workspace_id: str) -> int:
+        """Active links of the workspace."""
+
+    @abstractmethod
+    async def list_shares(self, workspace_id: str) -> List[ShareSummary]:
+        """The workspace's links, most recently first shared first (ties by item id)."""
+
+    @abstractmethod
+    async def get_share(self, token: str) -> Optional[ShareRecord]:
+        """The link with exactly this token (by index), or None."""
+
+    @abstractmethod
+    async def delete_share(self, workspace_id: str, item_id: str) -> bool:
+        """Revoke the link of a record; False if it had none."""
+
+    @abstractmethod
+    async def delete_shares(self, workspace_id: str, item_ids: Sequence[str]) -> int:
+        """Revoke the links of several records; how many went."""

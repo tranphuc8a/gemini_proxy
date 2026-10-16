@@ -1,14 +1,16 @@
 """Process-wide wiring for `/run`: which providers exist, built from the settings.
 
-The use case is a singleton because its rate-limit counters must outlive a
-request. Providers are chosen by id from this table; a client can never supply an
-address (see `application/usecases/run_usecase`).
+The use case is a singleton because its rate-limit counter (shared between
+instances when `RATE_LIMIT_BACKEND` says so, see `rate_limit_factory`) must
+outlive a request. Providers are chosen by id from this table; a client can
+never supply an address (see `application/usecases/run_usecase`).
 """
 
 from __future__ import annotations
 
 from typing import Dict, Optional
 
+from src.adapter.factory.rate_limit_factory import build_rate_limiter
 from src.adapter.output.run.judge0_executor import Judge0Executor
 from src.adapter.output.run.local_executor import LocalExecutor
 from src.adapter.output.run.piston_executor import PistonExecutor
@@ -58,11 +60,13 @@ def build_executors() -> Dict[str, CodeExecutorPort]:
 def get_run_usecase() -> RunUseCase:
     global _usecase
     if _usecase is None:
+        rate = max(1, int(getattr(settings, "RUN_RATE_PER_MIN", 20)))
         _usecase = RunUseCase(
             build_executors(),
             enabled=bool(getattr(settings, "RUN_ENABLED", True)),
             default_provider=getattr(settings, "RUN_DEFAULT_PROVIDER", "wandbox"),
-            rate_per_minute=int(getattr(settings, "RUN_RATE_PER_MIN", 20)),
+            rate_per_minute=rate,
+            limiter=build_rate_limiter("run", rate, 60),
         )
     return _usecase
 

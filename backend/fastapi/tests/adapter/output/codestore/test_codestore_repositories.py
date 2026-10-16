@@ -26,7 +26,7 @@ from src.adapter.output.codestore import mongo_repository
 from src.adapter.output.codestore.json_repository import JsonCodestoreRepository
 from src.adapter.output.codestore.mongo_repository import MongoCodestoreRepository
 from src.adapter.output.codestore.mysql_repository import MySqlCodestoreRepository
-from src.domain.vo.codestore_vo import CodeFile, CodeItem, WorkspaceRecord, wins
+from src.domain.vo.codestore_vo import CodeFile, CodeItem, ShareRecord, ShareSummary, WorkspaceRecord, wins
 from tests.conftest import arun
 from tests.support import fake_mongo
 
@@ -454,4 +454,280 @@ def test_sql_tables_are_created_on_demand():
             await session.close()
         return sorted(names)
 
-    assert arun(scenario()) == ["codestore_items", "codestore_workspaces"]
+    assert arun(scenario()) == ["codestore_items", "codestore_shares", "codestore_workspaces"]
+
+
+# ---------------------------------------------------------------------------
+# read-only share links
+# ---------------------------------------------------------------------------
+TOKEN = "tok_AAAAAAAAAAAAAAAAAAAAAA"
+
+
+def make_share(workspace_id, item_id="i1", token=TOKEN, shared_at=1000, updated_at=1000, name="Bài 1 — chia sẻ", **overrides):
+    return ShareRecord(token=token, workspace_id=workspace_id, item_id=item_id, name=name,
+                       shared_at=shared_at, updated_at=updated_at, item=item(item_id, **overrides))
+
+
+def unique_token(ws, suffix):
+    """Tokens are global (an index by token), and the SQL cases share one database for the whole run."""
+    return f"{ws[-40:]}_{suffix}"
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_a_share_is_stored_with_its_snapshot_intact_and_found_by_token_and_by_record(factory, tmp_path, ws):
+    token = unique_token(ws, "a")
+    snapshot_meta = {"$set": {"a.b": [1, {"$gt": "x"}]}, "": "empty", "emoji": "🍜", "stdin": "3\n"}
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        saved = await repo.save_share(make_share(ws, token=token, kind="project", meta=snapshot_meta, server=0,
+                                                 files=[CodeFile(path="src/main.py", content="print('xin chào')"),
+                                                        CodeFile(path="README.md", content="# x")]))
+        return (saved, await repo.get_share(token), await repo.get_share_for_item(ws, "i1"),
+                await repo.count_shares(ws), await repo.get_share_for_item(ws, "other"))
+
+    saved, by_token, by_item, count, nothing = arun(scenario())
+    assert saved == ShareSummary(token=token, workspace_id=ws, item_id="i1", name="Bài 1 — chia sẻ", shared_at=1000, updated_at=1000)
+    assert by_item == saved and count == 1 and nothing is None
+    assert by_token.item.meta == snapshot_meta and by_token.item.kind == "project"
+    assert [file.path for file in by_token.item.files] == ["src/main.py", "README.md"]
+    assert by_token.item.files[0].content == "print('xin chào')"
+    assert by_token.workspace_id == ws and by_token.item_id == "i1"
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_one_link_per_record_a_second_save_refreshes_the_snapshot_and_keeps_token_and_date(factory, tmp_path, ws):
+    first, second = unique_token(ws, "1"), unique_token(ws, "2")
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.save_share(make_share(ws, token=first, shared_at=1000, updated_at=1000, name="v1", content="one"))
+        again = await repo.save_share(make_share(ws, token=second, shared_at=5000, updated_at=5000, name="v2", content="two"))
+        return again, await repo.get_share(first), await repo.get_share(second), await repo.count_shares(ws)
+
+    again, held, never_made, count = arun(scenario())
+    assert again.token == first and again.shared_at == 1000 and again.updated_at == 5000 and again.name == "v2"
+    assert held.item.files[0].content == "two" and held.name == "v2" and held.updated_at == 5000 and held.shared_at == 1000
+    assert never_made is None and count == 1
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_listing_is_newest_share_first_then_by_record_and_per_workspace(factory, tmp_path, ws):
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.create_workspace(record(ws + "_b"))
+        await repo.save_share(make_share(ws, "old", token=unique_token(ws, "o"), shared_at=100))
+        await repo.save_share(make_share(ws, "b", token=unique_token(ws, "b"), shared_at=300))
+        await repo.save_share(make_share(ws, "a", token=unique_token(ws, "n"), shared_at=300))
+        await repo.save_share(make_share(ws + "_b", "x", token=unique_token(ws, "x"), shared_at=999))
+        return await repo.list_shares(ws), await repo.list_shares(ws + "_b"), await repo.count_shares(ws)
+
+    mine, theirs, count = arun(scenario())
+    assert [share.item_id for share in mine] == ["a", "b", "old"] and count == 3
+    assert [share.item_id for share in theirs] == ["x"]
+    assert all(isinstance(share, ShareSummary) and not hasattr(share, "item") for share in mine)
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_the_same_record_id_in_two_workspaces_has_two_links(factory, tmp_path, ws):
+    mine, theirs = unique_token(ws, "m"), unique_token(ws, "t")
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.create_workspace(record(ws + "_b"))
+        await repo.save_share(make_share(ws, token=mine, content="mine"))
+        await repo.save_share(make_share(ws + "_b", token=theirs, content="theirs"))
+        return (await repo.get_share(mine)).item.files[0].content, (await repo.get_share(theirs)).item.files[0].content
+
+    assert arun(scenario()) == ("mine", "theirs")
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_an_unknown_or_differently_cased_token_finds_nothing(factory, tmp_path, ws):
+    token = unique_token(ws, "CaSe")
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.save_share(make_share(ws, token=token))
+        return (await repo.get_share(token.lower()), await repo.get_share(token.upper()), await repo.get_share("nope"),
+                await repo.get_share(token + "x"), await repo.get_share(token))
+
+    lower, upper, nope, longer, exact = arun(scenario())
+    assert lower is None and upper is None and nope is None and longer is None
+    assert exact is not None                                    # MySQL compares case-insensitively; the repository must not
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_revoking_a_share_removes_only_that_one(factory, tmp_path, ws):
+    keep, drop = unique_token(ws, "k"), unique_token(ws, "d")
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.save_share(make_share(ws, "a", token=keep))
+        await repo.save_share(make_share(ws, "b", token=drop))
+        first = await repo.delete_share(ws, "b")
+        again = await repo.delete_share(ws, "b")
+        return first, again, await repo.get_share(drop), await repo.get_share(keep), await repo.count_shares(ws)
+
+    first, again, dropped, kept, count = arun(scenario())
+    assert first is True and again is False and dropped is None and kept is not None and count == 1
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_a_record_can_be_shared_again_after_its_link_was_revoked_with_a_new_token(factory, tmp_path, ws):
+    old, new = unique_token(ws, "old"), unique_token(ws, "new")
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.save_share(make_share(ws, token=old, shared_at=100))
+        await repo.delete_share(ws, "i1")
+        saved = await repo.save_share(make_share(ws, token=new, shared_at=900))
+        return saved, await repo.get_share(old), await repo.get_share(new)
+
+    saved, old_link, new_link = arun(scenario())
+    assert saved.token == new and saved.shared_at == 900 and old_link is None and new_link is not None
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_revoking_several_links_at_once_ignores_unknown_ones(factory, tmp_path, ws):
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.create_workspace(record(ws + "_b"))
+        for letter in "abc":
+            await repo.save_share(make_share(ws, letter, token=unique_token(ws, letter)))
+        await repo.save_share(make_share(ws + "_b", "a", token=unique_token(ws, "z")))
+        gone = await repo.delete_shares(ws, ["a", "c", "never-shared"])
+        nothing = await repo.delete_shares(ws, [])
+        return gone, nothing, [share.item_id for share in await repo.list_shares(ws)], await repo.count_shares(ws + "_b")
+
+    gone, nothing, left, theirs = arun(scenario())
+    assert gone == 2 and nothing == 0 and left == ["b"] and theirs == 1      # the other workspace's "a" is untouched
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_deleting_a_workspace_revokes_its_links_and_only_its_links(factory, tmp_path, ws):
+    mine, theirs = unique_token(ws, "m"), unique_token(ws, "t")
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        await repo.create_workspace(record(ws + "_b"))
+        await repo.save_share(make_share(ws, "a", token=mine))
+        await repo.save_share(make_share(ws + "_b", "a", token=theirs))
+        await repo.delete_workspace(ws)
+        return (await repo.get_share(mine), await repo.count_shares(ws), await repo.list_shares(ws),
+                await repo.get_share(theirs), await repo.count_shares(ws + "_b"))
+
+    revoked, count, listed, other, other_count = arun(scenario())
+    assert revoked is None and count == 0 and listed == []
+    assert other is not None and other_count == 1
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_shares_of_an_unknown_workspace_read_as_empty(factory, tmp_path, ws):
+    async def scenario():
+        repo = factory(tmp_path)
+        return (await repo.count_shares(ws), await repo.list_shares(ws), await repo.get_share_for_item(ws, "i1"),
+                await repo.delete_share(ws, "i1"), await repo.delete_shares(ws, ["i1"]))
+
+    assert arun(scenario()) == (0, [], None, False, 0)
+
+
+@pytest.mark.parametrize("factory", REPOS)
+def test_two_shares_of_one_record_at_once_end_as_one_link_with_one_token(factory, tmp_path, ws):
+    first, second = unique_token(ws, "r1"), unique_token(ws, "r2")
+
+    async def scenario():
+        repo = await setup(factory, tmp_path, ws)
+        saved = await asyncio.gather(
+            repo.save_share(make_share(ws, token=first, name="from A", content="A")),
+            repo.save_share(make_share(ws, token=second, name="from B", content="B")),
+        )
+        return saved, await repo.count_shares(ws), await repo.get_share(first), await repo.get_share(second)
+
+    saved, count, via_first, via_second = arun(scenario())
+    assert count == 1 and saved[0].token == saved[1].token
+    winner = via_first or via_second
+    assert winner is not None and (via_first is None or via_second is None) and winner.token == saved[0].token
+
+
+def test_json_shares_survive_a_restart_and_the_token_index_is_rebuilt(tmp_path):
+    path = tmp_path / "codestore.json"
+    token = "persisted_token_0123456789"
+
+    async def first():
+        repo = JsonCodestoreRepository(file_path=path)
+        await repo.create_workspace(record("cs_persist"))
+        await repo.save_share(make_share("cs_persist", token=token, meta={"emoji": "🍜"}))
+
+    async def second():
+        repo = JsonCodestoreRepository(file_path=path)
+        return await repo.get_share(token), await repo.list_shares("cs_persist")
+
+    arun(first())
+    held, listed = arun(second())
+    assert held.item.meta == {"emoji": "🍜"} and held.workspace_id == "cs_persist" and listed[0].token == token
+
+
+def test_json_a_failed_write_is_not_remembered_as_a_share(tmp_path, monkeypatch):
+    repo = JsonCodestoreRepository(file_path=tmp_path / "codestore.json")
+
+    async def scenario():
+        await repo.create_workspace(record("cs_fail"))
+        await repo.save_share(make_share("cs_fail", "keep", token="kept_token_0123456789012"))
+
+        def refuse():
+            raise OSError("disk full")
+
+        monkeypatch.setattr(repo, "_flush_unlocked", refuse)
+        errors = []
+        for call in (repo.save_share(make_share("cs_fail", "new", token="lost_token_012345678901")),
+                     repo.save_share(make_share("cs_fail", "keep", token="x", name="changed")),
+                     repo.delete_shares("cs_fail", ["keep"]),
+                     repo.delete_workspace("cs_fail")):
+            with pytest.raises(OSError):
+                await call
+            errors.append(True)
+        return (await repo.get_share("lost_token_012345678901"), (await repo.get_share("kept_token_0123456789012")).name,
+                await repo.count_shares("cs_fail"), await repo.get_workspace("cs_fail"), len(errors))
+
+    lost, kept_name, count, workspace, errors = arun(scenario())
+    assert lost is None and kept_name == "Bài 1 — chia sẻ" and count == 1 and workspace is not None and errors == 4
+
+
+def test_mongo_keeps_the_snapshot_as_a_string_under_the_token_as_id(fake_db):
+    token = "mongo_token_0123456789012"
+
+    async def scenario():
+        repo = MongoCodestoreRepository()
+        await repo.create_workspace(record("cs_mongo_share"))
+        await repo.save_share(make_share("cs_mongo_share", token=token, meta={"$set": {"a.b": 1}}))
+
+    arun(scenario())
+    stored = fake_db["codestore_shares"].documents[token]
+    assert isinstance(stored["payload_json"], str) and "meta" not in stored         # a "$" key never reaches Mongo as a field
+    assert stored["workspace_id"] == "cs_mongo_share" and stored["item_id"] == "i1"
+    assert ["workspace_id", "item_id"] in fake_db["codestore_shares"].unique_indexes
+
+
+def test_mongo_a_lost_insert_race_updates_the_link_the_rival_made(fake_db):
+    async def scenario():
+        repo = MongoCodestoreRepository()
+        await repo.create_workspace(record("cs_race_share"))
+        await repo.save_share(make_share("cs_race_share", token="seed_token_01234567890123"))
+        collection = fake_db["codestore_shares"]
+        real_find = collection.find_one
+        state = {"hid": False}
+
+        async def blind_first_look(query):
+            if not state["hid"] and "item_id" in query:
+                state["hid"] = True
+                return None                                   # "no link yet" - while the rival's is there
+            return await real_find(query)
+
+        collection.find_one = blind_first_look
+        saved = await repo.save_share(make_share("cs_race_share", token="late_token_012345678901", name="late"))
+        collection.find_one = real_find
+        return saved, await repo.count_shares("cs_race_share"), await repo.get_share("late_token_012345678901")
+
+    saved, count, never = arun(scenario())
+    assert saved.token == "seed_token_01234567890123" and saved.name == "late" and count == 1 and never is None

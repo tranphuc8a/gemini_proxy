@@ -341,6 +341,35 @@ def test_a_batch_of_records_is_never_cut_through_the_middle_of_a_stamp(tmp_path)
     assert sorted(seen) == [f"b{n:02d}" for n in range(30)] and len(seen) == 30
 
 
+@pytest.mark.parametrize("page_items,batches", [(200, (100, 100, 51)), (7, (5, 5, 5, 5)), (4, (3, 9, 2))])
+def test_requests_in_the_same_millisecond_stamp_alike_and_no_page_ends_between_two_of_them(tmp_path, page_items, batches):
+    """Each request stamps its records `now`, `now+1`, ...: two requests in the same
+    millisecond share stamps. The next call asks for strictly more than the cursor, so a page
+    that ended between two records with one stamp would silently lose the second (a flake the
+    integration run showed once in a few runs: 250 pushed, 249 delivered)."""
+    async def scenario():
+        uc, _, clock = build(tmp_path, page_items=page_items)
+        workspace_id, key = await create(uc)
+        total = 0
+        for size in batches:                                  # the clock does not move: every request stamps now+0..now+size-1
+            await uc.put_items(workspace_id, key, put(*[incoming(f"r{total + n:03d}") for n in range(size)]))
+            total += size
+        clock.now += 10 * SYNC_LAG_MS
+        seen, cursor, pages = [], 0, 0
+        for _ in range(200):
+            page = await uc.list_items(workspace_id, key, cursor)
+            seen += [i["id"] for i in page["items"]]
+            cursor, pages = page["serverTime"], pages + 1
+            assert len(page["items"]) <= page_items
+            if not page["more"]:
+                return total, seen, pages
+        raise AssertionError("paging did not end")
+
+    total, seen, pages = arun(scenario())
+    assert len(seen) == len(set(seen)) == total               # every record exactly once, none lost, none doubled
+    assert pages > 1
+
+
 def test_paging_by_size_keeps_one_answer_under_the_byte_budget(tmp_path):
     async def scenario():
         uc, _, clock = build(tmp_path, page_bytes=30_000)

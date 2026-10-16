@@ -1,7 +1,8 @@
 """JSON-file Code Studio store - the zero-setup backend.
 
 The whole store lives in memory and is mirrored to one file: workspaces, each
-with its records. An `asyncio.Lock` serialises every operation, so
+with its records and its read-only share links (tokens are also kept in an
+in-memory index, so reading a link is a dictionary lookup, not a scan). An `asyncio.Lock` serialises every operation, so
 `upsert_newer` compares and writes under one lock and two concurrent pushes
 cannot both win. Writes go to a temporary file that is then moved into place, so a
 crash halfway leaves the previous good file.
@@ -17,11 +18,11 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from src.application.ports.output.codestore_repository_port import CodestoreRepositoryPort
 from src.application.utils.data_paths import seeded_data_path
-from src.domain.vo.codestore_vo import CodeItem, WorkspaceRecord, wins
+from src.domain.vo.codestore_vo import CodeItem, ShareRecord, ShareSummary, WorkspaceRecord, wins
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,9 @@ class JsonCodestoreRepository(CodestoreRepositoryPort):
         self._loaded = False
         self._workspaces: Dict[str, WorkspaceRecord] = {}
         self._items: Dict[str, Dict[str, CodeItem]] = {}
+        #: workspace id -> item id -> link; `_tokens` is the index token -> (workspace id, item id).
+        self._shares: Dict[str, Dict[str, ShareRecord]] = {}
+        self._tokens: Dict[str, Tuple[str, str]] = {}
 
     # ------------------------------------------------------------------ io
     def _load_unlocked(self) -> None:
@@ -66,6 +70,16 @@ class JsonCodestoreRepository(CodestoreRepositoryPort):
                     logger.warning("Skipping malformed record in %s", self._path)
             self._workspaces[workspace_id] = record
             self._items[workspace_id] = items
+            shares: Dict[str, ShareRecord] = {}
+            for item_id, data in (entry.get("shares") or {}).items():
+                try:
+                    share = ShareRecord(workspace_id=workspace_id, item_id=item_id, **data)
+                except Exception:
+                    logger.warning("Skipping malformed share link in %s", self._path)
+                    continue
+                shares[item_id] = share
+                self._tokens[share.token] = (workspace_id, item_id)
+            self._shares[workspace_id] = shares
 
     def _flush_unlocked(self) -> None:
         payload = {
@@ -75,6 +89,10 @@ class JsonCodestoreRepository(CodestoreRepositoryPort):
                     "key_hash": record.key_hash,
                     "created_at": record.created_at,
                     "items": {item_id: item.model_dump() for item_id, item in self._items.get(workspace_id, {}).items()},
+                    "shares": {
+                        item_id: share.model_dump(exclude={"workspace_id", "item_id"})
+                        for item_id, share in self._shares.get(workspace_id, {}).items()
+                    },
                 }
                 for workspace_id, record in self._workspaces.items()
             },
@@ -90,12 +108,14 @@ class JsonCodestoreRepository(CodestoreRepositoryPort):
             self._load_unlocked()
             self._workspaces[record.id] = record.model_copy()
             self._items[record.id] = {}
+            self._shares[record.id] = {}
             try:
                 self._flush_unlocked()
             except Exception:
                 # Memory must not claim a write the disk refused.
                 self._workspaces.pop(record.id, None)
                 self._items.pop(record.id, None)
+                self._shares.pop(record.id, None)
                 raise
 
     async def get_workspace(self, workspace_id: str) -> Optional[WorkspaceRecord]:
@@ -111,11 +131,17 @@ class JsonCodestoreRepository(CodestoreRepositoryPort):
             if record is None:
                 return False
             items = self._items.pop(workspace_id, {})
+            shares = self._shares.pop(workspace_id, {})
+            for share in shares.values():
+                self._tokens.pop(share.token, None)
             try:
                 self._flush_unlocked()
             except Exception:
                 self._workspaces[workspace_id] = record
                 self._items[workspace_id] = items
+                self._shares[workspace_id] = shares
+                for item_id, share in shares.items():
+                    self._tokens[share.token] = (workspace_id, item_id)
                 raise
             return True
 
@@ -174,3 +200,79 @@ class JsonCodestoreRepository(CodestoreRepositoryPort):
                 held.update(removed)
                 raise
             return len(doomed)
+
+    # --------------------------------------------------------------- shares
+    @staticmethod
+    def _summary(share: ShareRecord) -> ShareSummary:
+        return ShareSummary(**share.model_dump(exclude={"item"}))
+
+    async def get_share_for_item(self, workspace_id: str, item_id: str) -> Optional[ShareSummary]:
+        async with self._lock:
+            self._load_unlocked()
+            share = self._shares.get(workspace_id, {}).get(item_id)
+            return self._summary(share) if share else None
+
+    async def save_share(self, record: ShareRecord) -> ShareSummary:
+        async with self._lock:
+            self._load_unlocked()
+            held = self._shares.setdefault(record.workspace_id, {})
+            before = held.get(record.item_id)
+            stored = record.model_copy(deep=True)
+            if before is not None:
+                # One link per record: keep its token and the date it was first shared.
+                stored = stored.model_copy(update={"token": before.token, "shared_at": before.shared_at})
+            held[record.item_id] = stored
+            self._tokens[stored.token] = (record.workspace_id, record.item_id)
+            try:
+                self._flush_unlocked()
+            except Exception:
+                if before is None:
+                    held.pop(record.item_id, None)
+                    self._tokens.pop(stored.token, None)
+                else:
+                    held[record.item_id] = before
+                raise
+            return self._summary(stored)
+
+    async def count_shares(self, workspace_id: str) -> int:
+        async with self._lock:
+            self._load_unlocked()
+            return len(self._shares.get(workspace_id, {}))
+
+    async def list_shares(self, workspace_id: str) -> List[ShareSummary]:
+        async with self._lock:
+            self._load_unlocked()
+            rows = [self._summary(share) for share in self._shares.get(workspace_id, {}).values()]
+            rows.sort(key=lambda share: (-share.shared_at, share.item_id))
+            return rows
+
+    async def get_share(self, token: str) -> Optional[ShareRecord]:
+        async with self._lock:
+            self._load_unlocked()
+            where = self._tokens.get(token)
+            if where is None:
+                return None
+            share = self._shares.get(where[0], {}).get(where[1])
+            return share.model_copy(deep=True) if share else None
+
+    async def delete_shares(self, workspace_id: str, item_ids: Sequence[str]) -> int:
+        async with self._lock:
+            self._load_unlocked()
+            held = self._shares.get(workspace_id, {})
+            doomed = {item_id: held[item_id] for item_id in item_ids if item_id in held}
+            if not doomed:
+                return 0
+            for item_id, share in doomed.items():
+                del held[item_id]
+                self._tokens.pop(share.token, None)
+            try:
+                self._flush_unlocked()
+            except Exception:
+                for item_id, share in doomed.items():
+                    held[item_id] = share
+                    self._tokens[share.token] = (workspace_id, item_id)
+                raise
+            return len(doomed)
+
+    async def delete_share(self, workspace_id: str, item_id: str) -> bool:
+        return await self.delete_shares(workspace_id, [item_id]) > 0

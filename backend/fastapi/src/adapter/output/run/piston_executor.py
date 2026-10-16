@@ -15,6 +15,12 @@ itself. Facts this adapter relies on, from its v2 API:
   `wall_time` in ms;
 * there is **no way to pass compiler flags**, so `compileArgs` are ignored (and
   the result says so in `warnings`).
+* **several files work only for interpreted languages** (checked against a real
+  Piston 3 server: python 3.12, node 20): its `gcc` and `java` packages compile
+  just the entry file - renamed `main.cpp.cpp` / `Main.java.java` - and keep no
+  sub-directories, so `#include "include/calc.h"` or a second class is "not
+  found". Those projects are refused up front (`run_multifile_unsupported`)
+  instead of failing with a confusing compiler message.
 
 The public instance (emkc.org) restricts access; set `RUN_PISTON_KEY` (sent as
 the `Authorization` header) or point `RUN_PISTON_URL` at a server of your own.
@@ -47,6 +53,10 @@ LANGUAGE_MAP: Dict[str, str] = {
 }
 
 
+#: Languages whose multi-file projects were verified on a real Piston server (see the module docstring).
+MULTI_FILE_LANGUAGES: Tuple[str, ...] = ("python", "javascript")
+
+
 class PistonExecutor(HttpExecutor):
     id = "piston"
     label = "Piston"
@@ -55,7 +65,7 @@ class PistonExecutor(HttpExecutor):
         return self._all_languages(LANGUAGE_MAP)
 
     def multi_file_languages(self) -> Tuple[str, ...]:
-        return self.languages()
+        return tuple(language for language in MULTI_FILE_LANGUAGES if language in self.languages())
 
     def availability(self) -> Tuple[bool, str]:
         if not self._base:

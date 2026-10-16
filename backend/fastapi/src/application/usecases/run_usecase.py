@@ -11,8 +11,9 @@ The rules that live here and nowhere else:
 3. **Executing code on the server's own machine needs an administrator.** A
    provider with `needs_session` is refused to anyone else.
 4. **One address, a limited number of runs per minute** (administrators exempt,
-   as with the AI features). In-process and per instance, so it slows abuse
-   rather than ending it; see `application/utils/rate_limit`.
+   as with the AI features). Counted by a `RateLimiterPort`: shared between
+   instances when the deployment configured a persistent counter, else in the
+   instance's memory (slows abuse rather than ending it).
 5. **The user's code failing is an answer, not an error.** Providers return
    `ok: false` results; only a broken provider raises.
 """
@@ -25,7 +26,7 @@ from src.application.exceptions.exceptions import AppException, BadRequestError
 from src.application.ports.input.run_input_port import RunInputPort
 from src.application.ports.output.code_executor_port import CodeExecutorPort
 from src.application.utils.compile_flags import BadFlag, check_compile_args
-from src.application.utils.rate_limit import FailureWindow
+from src.application.utils.rate_limiter import LimiterLike, MemoryRateLimiter, as_rate_limiter
 from src.application.utils.safe_paths import find_path_conflict, normalize_run_path
 from src.domain.utils.run_languages import LANGUAGES, canonical_language, pick_main_file, source_files
 from src.domain.vo.run_vo import (
@@ -65,12 +66,12 @@ class RunUseCase(RunInputPort):
         enabled: bool = True,
         default_provider: str = "piston",
         rate_per_minute: int = 20,
-        limiter: Optional[FailureWindow] = None,
+        limiter: Optional[LimiterLike] = None,
     ):
         self._executors: Dict[str, CodeExecutorPort] = dict(executors)
         self._enabled = enabled
         self._default = (default_provider or "").strip().lower()
-        self._limiter = limiter or FailureWindow(max(1, int(rate_per_minute)), 60)
+        self._limiter = as_rate_limiter(limiter) or MemoryRateLimiter(max(1, int(rate_per_minute)), 60)
 
     # ------------------------------------------------------------ providers
     def _status(self, executor: CodeExecutorPort) -> tuple[bool, str]:
@@ -108,10 +109,10 @@ class RunUseCase(RunInputPort):
         return {"providers": rows, "default": self._default_id()}
 
     # ------------------------------------------------------------------ run
-    def _admit(self, caller: RunCaller) -> None:
+    async def _admit(self, caller: RunCaller) -> None:
         if caller.admin:
             return
-        wait = self._limiter.retry_after(caller.ip)
+        wait = await self._limiter.retry_after(caller.ip)
         if wait:
             raise AppException(
                 message=f"Bạn chạy mã nhanh quá — thử lại sau {wait} giây",
@@ -120,7 +121,7 @@ class RunUseCase(RunInputPort):
                 payload={"code": "run_rate_limited", "retryAfter": wait},
                 headers={"Retry-After": str(wait)},
             )
-        self._limiter.add(caller.ip)
+        await self._limiter.add(caller.ip)
 
     def _prepare(self, body: RunRequestIn, executor: CodeExecutorPort, language: str) -> ExecutionRequest:
         # --- files
@@ -198,7 +199,7 @@ class RunUseCase(RunInputPort):
         if not self._enabled:
             raise AppException(DISABLED_REASON, status_code=503, code="run_disabled",
                                payload={"code": "run_disabled"})
-        self._admit(caller)
+        await self._admit(caller)
 
         executor = self._executors.get(body.provider.strip().lower())
         if executor is None:

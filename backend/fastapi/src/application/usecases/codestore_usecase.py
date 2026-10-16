@@ -17,7 +17,14 @@ The rules that live here and nowhere else:
 4. **Quotas.** A workspace holds at most `max_items` records; when it is full,
    tombstones older than `tombstone_ttl_days` are discarded to make room. A
    client address may create only so many workspaces an hour.
-5. **Sync cursor.** `serverTime` is the value to send back as `since`. It
+5. **Read-only links** (`create_share`...). A link is a token that reads a FROZEN
+   copy (snapshot) of one stored record: the owner publishes a version on purpose,
+   later edits stay private until the owner publishes again, and nothing a reader
+   does can reach the workspace. The token is the read key, so it is 128 bits of
+   `secrets.token_urlsafe`, never logged, and a link dies with the record (a
+   tombstone) and with the workspace. The public read is rate limited per client
+   address, and so are wrong tokens.
+6. **Sync cursor.** `serverTime` is the value to send back as `since`. It
    trails the real clock by `SYNC_LAG_MS`: a write that began before a poll but
    committed after it would otherwise be stamped older than the poll's cursor
    and never delivered. Replaying a record a device already has is harmless -
@@ -32,7 +39,7 @@ import secrets
 import time
 import unicodedata
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.application.exceptions.exceptions import (
     AppException,
@@ -42,17 +49,19 @@ from src.application.exceptions.exceptions import (
 )
 from src.application.ports.input.codestore_input_port import CodestoreInputPort
 from src.application.ports.output.codestore_repository_port import CodestoreRepositoryPort
-from src.application.utils.rate_limit import FailureWindow
+from src.application.utils.rate_limiter import LimiterLike, as_rate_limiter
 from src.application.utils.safe_paths import find_path_conflict, normalize_store_path
 from src.domain.vo.codestore_vo import (
     MAX_CLOCK_AHEAD_MS,
     MAX_ITEM_BYTES,
     MAX_META_BYTES,
     MAX_PUT_BYTES,
+    PRIVATE_META_KEYS,
     CodeFile,
     CodeItem,
     CodeItemIn,
     PutItemsRequest,
+    ShareRecord,
     WorkspaceRecord,
     wins,
 )
@@ -62,6 +71,9 @@ DEFAULT_PAGE_ITEMS = 200
 #: One `GET` answer stays well under the 4.5 MB a serverless platform allows.
 DEFAULT_PAGE_BYTES = 3_000_000
 DAY_MS = 24 * 3600 * 1000
+#: 16 random bytes = 128 bits: the token is the whole read key of a link.
+SHARE_TOKEN_BYTES = 16
+SHARE_NOT_FOUND = "Liên kết chia sẻ không tồn tại hoặc đã bị thu hồi"
 
 
 def hash_key(key: str) -> str:
@@ -86,6 +98,25 @@ def _has_control(text: str) -> bool:
     return any(unicodedata.category(char) == "Cc" for char in text)
 
 
+def _too_fast(message: str, wait: int) -> AppException:
+    return AppException(
+        message=message, status_code=429, code="codestore_rate_limited",
+        payload={"code": "codestore_rate_limited", "retryAfter": wait},
+        headers={"Retry-After": str(wait)},
+    )
+
+
+def public_item(item: CodeItem) -> Dict[str, Any]:
+    """What a read-only link shows of a record: no workspace, no server clock, and none
+    of the owner's editor state (`PRIVATE_META_KEYS`)."""
+    return {
+        "id": item.id, "kind": item.kind, "name": item.name, "language": item.language,
+        "files": [{"path": file.path, "content": file.content} for file in item.files],
+        "meta": {name: value for name, value in item.meta.items() if name not in PRIVATE_META_KEYS},
+        "updatedAt": item.updatedAt,
+    }
+
+
 class CodestoreUseCase(CodestoreInputPort):
     def __init__(
         self,
@@ -94,8 +125,12 @@ class CodestoreUseCase(CodestoreInputPort):
         max_items: int = 2000,
         tombstone_ttl_days: int = 90,
         clock: Callable[[], int] = now_ms,
-        workspace_limiter: Optional[FailureWindow] = None,
-        failure_limiter: Optional[FailureWindow] = None,
+        workspace_limiter: Optional[LimiterLike] = None,
+        failure_limiter: Optional[LimiterLike] = None,
+        share_read_limiter: Optional[LimiterLike] = None,
+        share_failure_limiter: Optional[LimiterLike] = None,
+        max_shares: int = 50,
+        token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(SHARE_TOKEN_BYTES),
         page_items: int = DEFAULT_PAGE_ITEMS,
         page_bytes: int = DEFAULT_PAGE_BYTES,
     ):
@@ -103,22 +138,23 @@ class CodestoreUseCase(CodestoreInputPort):
         self._max_items = max(1, max_items)
         self._tombstone_ttl_ms = max(0, tombstone_ttl_days) * DAY_MS
         self._clock = clock
-        self._creations = workspace_limiter
-        self._failures = failure_limiter
+        # Counters (`RateLimiterPort`): memory, or shared between instances. The legacy
+        # in-process `FailureWindow` is still accepted.
+        self._creations = as_rate_limiter(workspace_limiter)
+        self._failures = as_rate_limiter(failure_limiter)
+        self._share_reads = as_rate_limiter(share_read_limiter)
+        self._share_failures = as_rate_limiter(share_failure_limiter)
+        self._max_shares = max(1, max_shares)
+        self._new_token = token_factory
         self._page_items = max(1, page_items)
         self._page_bytes = max(1, page_bytes)
 
     # ---------------------------------------------------------------- access
     async def _authorise(self, workspace_id: str, key: str, ip: str) -> WorkspaceRecord:
         if self._failures is not None and ip:
-            wait = self._failures.retry_after(ip)
+            wait = await self._failures.retry_after(ip)
             if wait:
-                raise AppException(
-                    message=f"Nhập sai khoá quá nhiều lần — thử lại sau {wait} giây",
-                    status_code=429, code="codestore_rate_limited",
-                    payload={"code": "codestore_rate_limited", "retryAfter": wait},
-                    headers={"Retry-After": str(wait)},
-                )
+                raise _too_fast(f"Nhập sai khoá quá nhiều lần — thử lại sau {wait} giây", wait)
         record = await self._repo.get_workspace(workspace_id)
         if record is None:
             raise NotFoundError("Không gian làm việc không tồn tại", payload={"code": "codestore_not_found"})
@@ -128,21 +164,16 @@ class CodestoreUseCase(CodestoreInputPort):
         # how much of a guessed key was right.
         if not secrets.compare_digest(hash_key(key), record.key_hash):
             if self._failures is not None and ip:
-                self._failures.add(ip)
+                await self._failures.add(ip)
             raise UnauthorizedError("Khoá không đúng", payload={"code": "codestore_bad_key"})
         return record
 
     # ------------------------------------------------------------ workspaces
     async def create_workspace(self, ip: str) -> Dict[str, Any]:
         if self._creations is not None and ip:
-            wait = self._creations.retry_after(ip)
+            wait = await self._creations.retry_after(ip)
             if wait:
-                raise AppException(
-                    message=f"Tạo không gian làm việc quá nhiều — thử lại sau {wait} giây",
-                    status_code=429, code="codestore_rate_limited",
-                    payload={"code": "codestore_rate_limited", "retryAfter": wait},
-                    headers={"Retry-After": str(wait)},
-                )
+                raise _too_fast(f"Tạo không gian làm việc quá nhiều — thử lại sau {wait} giây", wait)
         key = secrets.token_urlsafe(24)
         record = WorkspaceRecord(
             id="cs_" + secrets.token_urlsafe(12),
@@ -151,7 +182,7 @@ class CodestoreUseCase(CodestoreInputPort):
         )
         await self._repo.create_workspace(record)
         if self._creations is not None and ip:
-            self._creations.add(ip)
+            await self._creations.add(ip)
         return {"workspaceId": record.id, "key": key}
 
     async def delete_workspace(self, workspace_id: str, key: str, ip: str = "") -> bool:
@@ -177,6 +208,17 @@ class CodestoreUseCase(CodestoreInputPort):
             page.append(item)
             used += weight
 
+        if more and page and found[len(page)].serverUpdatedAt == page[-1].serverUpdatedAt:
+            # The cursor is `serverUpdatedAt` and the next call asks for strictly more, so a page
+            # must not end between two records that carry the same stamp (two requests landing in
+            # the same few milliseconds can stamp alike): the second would never be delivered.
+            # End the page before that run instead; it is a little shorter, never lossy.
+            stamp = page[-1].serverUpdatedAt
+            keep = len(page)
+            while keep > 0 and page[keep - 1].serverUpdatedAt == stamp:
+                keep -= 1
+            if keep > 0:
+                page = page[:keep]
         if more and page:
             # A cursor, not a clock: the next call continues right after this page.
             server_time = page[-1].serverUpdatedAt
@@ -262,7 +304,13 @@ class CodestoreUseCase(CodestoreInputPort):
             # records and must never cut through two that share a stamp.
             stamped = [winners[item_id].model_copy(update={"serverUpdatedAt": now + index})
                        for index, item_id in enumerate(order)]
-            await self._repo.upsert_newer(workspace_id, stamped)
+            written = await self._repo.upsert_newer(workspace_id, stamped)
+            # A deleted record takes its read-only links with it. Only deletions that
+            # actually replaced the stored record count: one that lost to a newer edit
+            # changed nothing, and the record (and its link) is still there.
+            gone = [item_id for item_id in written if winners[item_id].deleted]
+            if gone:
+                await self._repo.delete_shares(workspace_id, gone)
 
         held_now = await self._repo.get_items(workspace_id, order) if order else {}
         return {
@@ -285,3 +333,65 @@ class CodestoreUseCase(CodestoreInputPort):
                 f"Không gian làm việc đã đầy ({count}/{self._max_items} bản ghi) — hãy xoá bớt đoạn mã hoặc dự án cũ",
                 "codestore_workspace_full", limit=self._max_items,
             )
+
+    # ---------------------------------------------------------- read-only links
+    async def create_share(
+        self, workspace_id: str, key: str, item_id: str, ip: str = ""
+    ) -> Tuple[bool, Dict[str, Any]]:
+        await self._authorise(workspace_id, key, ip)
+        item = (await self._repo.get_items(workspace_id, [item_id])).get(item_id)
+        if item is None or item.deleted:
+            # The server shows only what it holds: a record that was never synced
+            # (or was deleted) has nothing to freeze.
+            raise NotFoundError(
+                "Bản ghi chưa có trên máy chủ (hãy đồng bộ trước khi chia sẻ) hoặc đã bị xoá",
+                payload={"code": "codestore_item_not_found", "itemId": item_id},
+            )
+        existing = await self._repo.get_share_for_item(workspace_id, item_id)
+        if existing is None and await self._repo.count_shares(workspace_id) >= self._max_shares:
+            raise _bad(
+                f"Không gian làm việc đã có {self._max_shares} liên kết chia sẻ — hãy thu hồi bớt liên kết cũ",
+                "codestore_too_many_shares", limit=self._max_shares,
+            )
+        now = self._clock()
+        # The snapshot is the stored record (already within MAX_ITEM_BYTES), minus the server's clock.
+        stored = await self._repo.save_share(ShareRecord(
+            token=existing.token if existing else self._new_token(),
+            workspace_id=workspace_id, item_id=item_id, name=item.name,
+            shared_at=existing.shared_at if existing else now, updated_at=now,
+            item=item.model_copy(update={"serverUpdatedAt": 0}),
+        ))
+        return existing is None, {"token": stored.token, "sharedAt": stored.shared_at, "updatedAt": stored.updated_at}
+
+    async def list_shares(self, workspace_id: str, key: str, ip: str = "") -> Dict[str, Any]:
+        await self._authorise(workspace_id, key, ip)
+        return {"shares": [
+            {"token": share.token, "itemId": share.item_id, "name": share.name,
+             "sharedAt": share.shared_at, "updatedAt": share.updated_at}
+            for share in await self._repo.list_shares(workspace_id)
+        ]}
+
+    async def revoke_share(self, workspace_id: str, key: str, item_id: str, ip: str = "") -> Dict[str, Any]:
+        await self._authorise(workspace_id, key, ip)
+        if not await self._repo.delete_share(workspace_id, item_id):
+            raise NotFoundError("Bản ghi này chưa được chia sẻ", payload={"code": "codestore_share_not_found"})
+        return {"revoked": True}
+
+    async def read_shared(self, token: str, ip: str = "") -> Dict[str, Any]:
+        if ip and self._share_failures is not None:
+            wait = await self._share_failures.retry_after(ip)
+            if wait:
+                raise _too_fast(f"Mở liên kết chia sẻ sai quá nhiều lần — thử lại sau {wait} giây", wait)
+        if ip and self._share_reads is not None:
+            wait = await self._share_reads.retry_after(ip)
+            if wait:
+                raise _too_fast(f"Mở liên kết chia sẻ quá nhiều — thử lại sau {wait} giây", wait)
+            await self._share_reads.add(ip)
+        share = await self._repo.get_share(token) if token else None
+        if share is None:
+            # Unknown, malformed and revoked tokens are answered alike, and counted:
+            # guessing a 128-bit token is hopeless, but a scanner should still be slowed.
+            if ip and self._share_failures is not None:
+                await self._share_failures.add(ip)
+            raise NotFoundError(SHARE_NOT_FOUND, payload={"code": "codestore_share_not_found"})
+        return {"item": public_item(share.item), "sharedAt": share.shared_at}

@@ -156,6 +156,20 @@ class Settings(BaseSettings): # type: ignore
     # Ceiling for one HTTP call to a remote provider, in seconds.
     RUN_HTTP_TIMEOUT_S: float = 30.0
 
+    # Where the rate limits of /run and /codestore are counted. The backend runs
+    # on several serverless instances that cannot see each other's memory, so a
+    # limit kept in memory only slows an attacker down.
+    #   memory   - per process (development, tests)
+    #   database - a small table in the application's SQL database
+    #   mongo    - a collection in MONGO_URI (never chosen by `auto`)
+    #   auto     - `database` when the database is a real MySQL (not SQLite, not a
+    #              test run), else `memory`
+    # When the shared counter fails the instance logs a warning and counts in
+    # memory for a while (it never takes a request down).
+    RATE_LIMIT_BACKEND: str = "auto"
+    # Seconds one call to the shared counter may take before it counts as failed.
+    RATE_LIMIT_TIMEOUT_S: float = 2.0
+
     # Code Studio store (/codestore/*): code snippets and projects synced between
     # devices. A workspace is reached with a secret key shown once at creation.
     CODESTORE_STORAGE_BACKEND: str = "json"
@@ -167,6 +181,10 @@ class Settings(BaseSettings): # type: ignore
     # A deletion tombstone is kept this long (so a device that was offline
     # learns about it), then may be discarded to make room.
     CODESTORE_TOMBSTONE_DAYS: int = 90
+    # Read-only share links one workspace may have active at once, and how many
+    # public reads of a share one client address may make per minute.
+    CODESTORE_MAX_SHARES: int = 50
+    CODESTORE_SHARE_READS_PER_MIN: int = 120
 
     # Course content (/courses/*): reading is public, writing (import, edit,
     # delete) needs this key — exchanged for a session token like the editors.

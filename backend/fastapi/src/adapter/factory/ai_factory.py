@@ -11,6 +11,7 @@ from src.adapter.output.web.safe_web_fetcher import SafeWebFetcher
 from src.application.ports.input.mongo_admin_input_port import MongoAdminInputPort
 from src.application.ports.input.sql_admin_input_port import SqlAdminInputPort
 from src.application.usecases.ai_chat_usecase import AiChatUseCase
+from src.application.usecases.ai_code_usecase import AiCodeUseCase
 from src.application.usecases.ai_course_usecase import AiCourseUseCase
 from src.application.usecases.ai_draft_usecase import AiDraftUseCase
 from src.application.usecases.ai_http_usecase import AiHttpUseCase
@@ -51,6 +52,10 @@ def get_ai_query_usecase(ai: AiUseCase = Depends(get_ai_usecase),
 
 def get_ai_http_usecase(ai: AiUseCase = Depends(get_ai_usecase)) -> AiHttpUseCase:
     return AiHttpUseCase(ai)
+
+
+def get_ai_code_usecase(ai: AiUseCase = Depends(get_ai_usecase)) -> AiCodeUseCase:
+    return AiCodeUseCase(ai)
 
 
 def get_ai_chat_usecase(ai: AiUseCase = Depends(get_ai_usecase)) -> AiChatUseCase:

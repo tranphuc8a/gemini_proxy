@@ -5,6 +5,8 @@
    — DB_URL = SQLite tạm, MONGO_URI rỗng, CODESTORE_STORAGE_BACKEND=json, CODESTORE_JSON_FILE và DATA_DIR trong thư mục tạm (ghi đè .env;
    TUYỆT ĐỐI không chạm database thật; không in biến môi trường) → chờ GET /api/v1/codestore/backends → chạy kịch bản hai thiết bị qua `fetch`
    thật của node với cả kho `json` và `mysql` (mysql ở đây chạy trên SQLite tạm) → giết cả cây tiến trình, xoá tệp tạm.
+   Sau các kịch bản đồng bộ: nhóm LIÊN KẾT CHIA SẺ chỉ đọc cho từng kho (`shareScenario`, gọi HTTP thẳng) và nhóm dò token sai → 429 ở cuối.
+   Biến RATE_LIMIT_BACKEND (nếu đặt) được chuyển nguyên cho máy chủ: tools/kiem_mysql_that.py đặt `database`, tools/kiem_mongo_that.py đặt `mongo`.
    Thoát mã 1 nếu có phép kiểm sai. Không gọi mạng ra ngoài, không gọi Gemini. */
 "use strict";
 const fs = require("fs"), os = require("os"), net = require("net"), path = require("path");
@@ -243,6 +245,66 @@ async function scenario(server, backend) {
   kiem("sau khi không gian bị xoá: 'Không tìm thấy không gian', dữ liệu cục bộ còn đủ", e404 && e404.message === "Không tìm thấy không gian" && A.sy.status === "error" && A.lib.listSync().length > 250 && A.lib.getSync("sau-xoa") !== null);
 }
 
+/* ------------------------------------------------------------------ liên kết chia sẻ chỉ đọc (nhóm THÊM sau: không sửa nhóm nào ở trên)
+   Gọi thẳng HTTP (thư viện CS.store.sync chưa có hàm chia sẻ). Mỗi kho một nơi riêng nên liên kết phải kèm ?backend=.
+   Giữ số lần đọc token SAI ≤ 4 mỗi kho: bộ đếm "token sai" là 20 lần / 10 phút / IP và nhóm cuối của tệp này cố ý chạm trần đó. */
+async function shareScenario(server, backend) {
+  nhom("kho '" + backend + "' · liên kết chia sẻ chỉ đọc (snapshot) qua backend thật");
+  const q = "?backend=" + backend, other = backend === "json" ? "mysql" : "json";
+  const made = await raw(server, "POST", "/codestore/workspaces" + q);
+  const ws = made.json.workspaceId, key = made.json.key;
+  const put = (items) => raw(server, "PUT", "/codestore/" + ws + "/items" + q, { key, body: { items } });
+  const it = (id, content, extra) => Object.assign({ id, kind: "snippet", name: "Chia sẻ " + id + " 🍜", language: "cpp", files: [{ path: "main.cpp", content }],
+    meta: { stdin: "5\n", args: ["a b"], pinned: true, openTabs: ["main.cpp"], activeFile: "main.cpp" }, updatedAt: Date.now() - 1000, deleted: false }, extra || {});
+  const shareUrl = (id) => "/codestore/" + ws + "/items/" + id + "/share" + q;
+  const read = (token, b) => raw(server, "GET", "/codestore/shared/" + token + "?backend=" + (b || backend));
+
+  await put([it("a", "// bản một\n"), it("b", "// b\n")]);
+  const s1 = await raw(server, "POST", shareUrl("a"), { key });
+  const token = s1.json && s1.json.token;
+  kiem("POST …/items/a/share → 201 {token (≥ 22 ký tự url-safe), sharedAt, updatedAt}, no-store", s1.status === 201 && /^[A-Za-z0-9_-]{22,}$/.test(token || "") && s1.json.sharedAt > 1e12 && s1.json.updatedAt >= s1.json.sharedAt && /no-store/.test(s1.headers.get("cache-control") || ""), JSON.stringify([s1.status, s1.json]));
+
+  const r1 = await read(token);                                                  // KHÔNG gửi khoá
+  const text = JSON.stringify(r1.json);
+  kiem("đọc công khai KHÔNG khoá → 200 {item, sharedAt}; no-store; nội dung đúng, Unicode nguyên vẹn", r1.status === 200 && r1.json.item.files[0].content === "// bản một\n" && r1.json.item.name === "Chia sẻ a 🍜" && typeof r1.json.sharedAt === "number" && /no-store/.test(r1.headers.get("cache-control") || ""), JSON.stringify([r1.status, r1.json]));
+  kiem("bản chia sẻ giữ meta chạy được (stdin, args) nhưng BỎ pinned/openTabs/activeFile; không lộ workspaceId, khoá, serverUpdatedAt", bang(r1.json.item.meta, { stdin: "5\n", args: ["a b"] }) && text.indexOf(ws) < 0 && text.indexOf(key) < 0 && text.indexOf("serverUpdatedAt") < 0 && text.indexOf("workspace") < 0, text);
+  const wrongStore = await read(token, other);
+  kiem("mỗi kho một nơi riêng: cùng token hỏi kho '" + other + "' → 404 codestore_share_not_found", wrongStore.status === 404 && wrongStore.json.data.code === "codestore_share_not_found");
+  const noKey = await raw(server, "POST", shareUrl("b"));
+  const badKey = await raw(server, "POST", shareUrl("b"), { key: "khoa-sai" });
+  kiem("tạo liên kết thiếu khoá → 401 codestore_key_required; sai khoá → 401 codestore_bad_key", noKey.status === 401 && noKey.json.data.code === "codestore_key_required" && badKey.status === 401 && badKey.json.data.code === "codestore_bad_key");
+  const unsynced = await raw(server, "POST", shareUrl("chua-dong-bo"), { key });
+  kiem("bản ghi chưa lên máy chủ → 404 codestore_item_not_found (kèm itemId)", unsynced.status === 404 && unsynced.json.data.code === "codestore_item_not_found" && unsynced.json.data.itemId === "chua-dong-bo");
+
+  // snapshot: sửa sau khi chia sẻ KHÔNG lộ ra; chia sẻ lại giữ token
+  await put([it("a", "// bản hai (riêng tư)\n", { updatedAt: Date.now() })]);
+  const stale = await read(token);
+  kiem("sửa bản ghi SAU khi chia sẻ → liên kết vẫn hiện bản cũ (snapshot, không phải liên kết sống)", stale.status === 200 && stale.json.item.files[0].content === "// bản một\n");
+  const s2 = await raw(server, "POST", shareUrl("a"), { key });
+  const fresh = await read(token);
+  kiem("chia sẻ lại → 200, GIỮ token và sharedAt, cập nhật snapshot (updatedAt mới)", s2.status === 200 && s2.json.token === token && s2.json.sharedAt === s1.json.sharedAt && s2.json.updatedAt >= s1.json.updatedAt && fresh.json.item.files[0].content === "// bản hai (riêng tư)\n", JSON.stringify([s2.status, s2.json]));
+  const listed = await raw(server, "GET", "/codestore/" + ws + "/shares" + q, { key });
+  kiem("GET …/shares (có khoá) liệt kê {token, itemId, name, sharedAt}; không có khoá → 401", listed.status === 200 && bang(listed.json.shares.map((x) => [x.token, x.itemId, x.name]), [[token, "a", "Chia sẻ a 🍜"]]) && (await raw(server, "GET", "/codestore/" + ws + "/shares" + q)).status === 401, JSON.stringify(listed.json));
+
+  // thu hồi
+  const rv = await raw(server, "DELETE", shareUrl("a"), { key });
+  const gone = await read(token);
+  const again = await raw(server, "DELETE", shareUrl("a"), { key });
+  kiem("thu hồi → {revoked:true}; đọc lại 404; thu hồi lần nữa 404 codestore_share_not_found", rv.status === 200 && rv.json.revoked === true && gone.status === 404 && gone.json.data.code === "codestore_share_not_found" && again.status === 404 && again.json.data.code === "codestore_share_not_found");
+  const s3 = await raw(server, "POST", shareUrl("a"), { key });
+  kiem("chia sẻ lại sau khi thu hồi → 201 với token KHÁC (token cũ chết hẳn)", s3.status === 201 && s3.json.token !== token && (await read(s3.json.token)).status === 200);
+
+  // xoá bản ghi / xoá không gian thu hồi liên kết
+  await put([it("a", "", { deleted: true, files: [], meta: {}, updatedAt: Date.now() + 5 })]);
+  const afterDelete = await read(s3.json.token);
+  const deletedShare = await raw(server, "POST", shareUrl("a"), { key });
+  kiem("xoá bản ghi (bia mộ) thu hồi liên kết của nó; bia mộ không chia sẻ được (404 codestore_item_not_found)", afterDelete.status === 404 && deletedShare.status === 404 && deletedShare.json.data.code === "codestore_item_not_found");
+  const sb = await raw(server, "POST", shareUrl("b"), { key });
+  const wsDel = await raw(server, "DELETE", "/codestore/" + ws + q, { key });
+  const afterWs = await read(sb.json.token);
+  kiem("xoá cả không gian → mọi liên kết còn lại chết (404)", sb.status === 201 && wsDel.json.deleted === true && afterWs.status === 404);
+}
+
 async function main() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "cs-tichhop-"));
   fs.mkdirSync(path.join(tmp, "data"), { recursive: true });
@@ -281,6 +343,9 @@ async function main() {
     await scenario(server, "json");
     await scenario(server, "mysql");
     if (MONGO) await scenario(server, "mongo");
+    await shareScenario(server, "json");
+    await shareScenario(server, "mysql");
+    if (MONGO) await shareScenario(server, "mongo");
 
     nhom("giới hạn tốc độ nhập sai khoá (làm CUỐI CÙNG: 20 lần/10 phút/IP rồi 429)");
     const R = device(server, "R", "json"); await R.sy.ready;
@@ -295,6 +360,13 @@ async function main() {
     kiem("khoá ĐÚNG cũng bị 429 trong thời gian chờ; trạng thái error; dữ liệu cục bộ còn dirty", er && er.status === 429 && owner.sy.status === "error" && owner.lib.dirty().length === 1, er && er.message);
     kiem("không gọi lại ngay (nhớ Retry-After): syncNow kế tiếp từ chối tại chỗ", await (async () => { const t0 = Date.now(); const e = await rej(owner.sy.syncNow()); return e && e.status === 429 && Date.now() - t0 < 50; })());
     await raw(server, "DELETE", "/codestore/" + wsId + "?backend=json", { key }).catch(() => null);
+
+    nhom("dò token liên kết chia sẻ: 20 lần sai / 10 phút / IP rồi 429 (bộ đếm riêng với khoá sai; làm SAU nhóm trên)");
+    let guessed = null, guesses = 0;
+    for (let i = 0; i < 30 && !(guessed && guessed.status === 429); i++) { guessed = await raw(server, "GET", "/codestore/shared/doan-" + String(i).padStart(18, "0") + "?backend=json"); guesses++; }
+    kiem("đọc token sai nhiều lần → 404 rồi 429 codestore_rate_limited kèm Retry-After (không quá 30 lần dò)", guessed.status === 429 && guessed.json.data.code === "codestore_rate_limited" && Number(guessed.headers.get("retry-after")) > 0 && guesses <= 30, guesses + " lần: " + JSON.stringify([guessed.status, guessed.json && guessed.json.data]));
+    const stillOk = await raw(server, "GET", "/codestore/backends");
+    kiem("bộ đếm token sai không chặn phần còn lại của API (GET /codestore/backends vẫn 200)", stillOk.status === 200);
   } catch (e) {
     kiem("kịch bản tích hợp chạy hết không ném lỗi", false, e && e.stack ? e.stack : String(e));
   } finally {
