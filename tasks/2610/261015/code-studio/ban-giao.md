@@ -1,5 +1,7 @@
 # Bàn giao 15–16/10/2026 — lọc khoảng ngày, IDE heuristic, Code Studio
 
+> **Đợt tiếp theo (17/10/2026):** bộ test, AI giải thích lỗi, liên kết chia sẻ, bộ đếm bền, Piston/Judge0 tự dựng, CI → `tasks/2610/261017/code-studio/ban-giao.md`. Mục "Còn nợ" dưới đây đã lỗi thời ở các điểm: Piston tự dựng (đã chạy thật), hạn mức `/run` (nay bền), `meta` 8 KB (nay 32 KB), "Code Studio chưa có AI" (đã có).
+
 Yêu cầu gốc: (1) Chi tiêu › "Các khoản chung" lọc theo khoảng ngày; (2) IDE app thực hành heuristic: lưu đoạn mã, biên dịch online song song offline, định dạng + gợi ý khi gõ, rà soát UI/UX; (3) webapp editor riêng: nhiều ngôn ngữ đơn tệp, dự án C/C++ và Java, UI/UX tốt.
 Quyết định của chủ dự án: nơi chạy / bộ định dạng / nơi lưu đều **do người dùng chọn** (offline, bên thứ ba, máy chủ; local / MySQL / MongoDB); công nghệ webapp tự chọn (đã chọn JS thuần, không build). Chưa commit gì.
 
