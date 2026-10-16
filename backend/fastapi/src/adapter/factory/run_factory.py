@@ -61,7 +61,7 @@ def get_run_usecase() -> RunUseCase:
         _usecase = RunUseCase(
             build_executors(),
             enabled=bool(getattr(settings, "RUN_ENABLED", True)),
-            default_provider=getattr(settings, "RUN_DEFAULT_PROVIDER", "piston"),
+            default_provider=getattr(settings, "RUN_DEFAULT_PROVIDER", "wandbox"),
             rate_per_minute=int(getattr(settings, "RUN_RATE_PER_MIN", 20)),
         )
     return _usecase

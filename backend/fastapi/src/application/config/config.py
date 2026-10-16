@@ -123,10 +123,11 @@ class Settings(BaseSettings): # type: ignore
     # normally serverless (no compiler, no sandbox), so most providers are remote
     # services; the client names one by id and never sends an address.
     RUN_ENABLED: bool = True
-    RUN_DEFAULT_PROVIDER: str = "piston"
-    # Piston (github.com/engineer-man/piston). The public emkc.org instance
-    # restricts access: set a key, or point this at a server of your own.
-    RUN_PISTON_URL: str = "https://emkc.org/api/v2/piston"
+    RUN_DEFAULT_PROVIDER: str = "wandbox"
+    # Piston (github.com/engineer-man/piston). Empty = not configured: the public
+    # emkc.org instance became whitelist-only on 2026-02-15 (verified: every call is
+    # refused), so point this at a Piston of your own (docs/code-studio-api.md).
+    RUN_PISTON_URL: str = ""
     RUN_PISTON_KEY: str = ""
     # Judge0 CE. Empty means "not configured" (the provider reports itself
     # unavailable). The key header differs per deployment (self-hosted Judge0:

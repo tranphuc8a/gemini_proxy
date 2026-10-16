@@ -22,7 +22,7 @@ Backend triển khai trên Vercel (serverless: không có g++/javac, không sand
 
 | id | `kind` | Là gì | Nhiều tệp | `compileArgs` | Giới hạn thời gian |
 |---|---|---|---|---|---|
-| `piston` | remote | [Piston](https://github.com/engineer-man/piston), mặc định máy công cộng emkc.org | mọi ngôn ngữ | **bỏ qua** (Piston không có) | theo `runTimeoutMs`/`compileTimeoutMs` |
+| `piston` | remote | [Piston](https://github.com/engineer-man/piston) **tự dựng** (máy công cộng emkc.org đã chỉ cho người trong danh sách trắng từ 15/02/2026 → mặc định để trống, tắt) | mọi ngôn ngữ | **bỏ qua** (Piston không có) | theo `runTimeoutMs`/`compileTimeoutMs` |
 | `judge0` | remote | Judge0 CE (phải tự đặt `RUN_JUDGE0_URL`) | c, cpp, java, python, javascript, ruby, php, bash (chế độ multi-file: zip + `language_id` 89) | có (`compiler_options`) | chỉ `runTimeoutMs`; không có hạn biên dịch riêng |
 | `wandbox` | remote | wandbox.org, không cần khoá | c, cpp, python | có (`compiler-option-raw`) | cố định của dịch vụ, bỏ qua cả hai |
 | `local` | local | chương trình **cài trên máy chủ** (g++, gcc, javac+java, python, node) | có | có (chỉ C/C++) | có |
@@ -218,8 +218,8 @@ bản ghi lưu thành chuỗi JSON `payload_json` để khoá `$`/`.` trong `met
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
 | `RUN_ENABLED` | `true` | công tắc tắt toàn bộ `/run` |
-| `RUN_DEFAULT_PROVIDER` | `piston` | provider mặc định (nếu dùng được) |
-| `RUN_PISTON_URL` / `RUN_PISTON_KEY` | `https://emkc.org/api/v2/piston` / rỗng | khoá gửi ở header `Authorization` |
+| `RUN_DEFAULT_PROVIDER` | `wandbox` | provider mặc định (nếu dùng được) |
+| `RUN_PISTON_URL` / `RUN_PISTON_KEY` | rỗng / rỗng | rỗng = chưa cấu hình (tắt); khoá gửi ở header `Authorization` |
 | `RUN_JUDGE0_URL` / `RUN_JUDGE0_KEY` / `RUN_JUDGE0_KEY_HEADER` | rỗng / rỗng / `X-Auth-Token` | rỗng = chưa cấu hình |
 | `RUN_JUDGE0_LANGUAGE_IDS` | rỗng | ghi đè id, `cpp=105,python=100` |
 | `RUN_WANDBOX_URL` / `RUN_WANDBOX_COMPILERS` | `https://wandbox.org/api` / rỗng | ghi đè tên compiler |
@@ -237,15 +237,23 @@ bản ghi lưu thành chuỗi JSON `payload_json` để khoá `$`/`.` trong `met
 
 ## 4. Giới hạn đã biết, điều chưa kiểm chứng
 
-* **Chưa gọi thử provider ngoài nào thật.** Mọi test dùng `httpx.MockTransport`; hình dạng yêu cầu/phản hồi viết theo tài liệu của
-  Piston/Judge0/Wandbox. Cần thử một lần với dịch vụ thật trước khi tin: nhất là Piston công cộng (có thể đòi khoá), id ngôn ngữ
-  Judge0 của bản bạn dùng, tên compiler Wandbox, chế độ multi-file của Judge0 (các script `compile`/`run` giả định `g++`,
-  `javac`, `python3`, `node`… có trong `PATH` của máy Judge0), và thư mục con trong tên tệp của Piston.
+* **Đã thử với dịch vụ thật ngày 16/10/2026** (chương trình Hello nhỏ, qua chính `/run`; kịch bản ở `backend/fastapi/tools/kiem_nha_cung_cap_that.py`):
+  * **Wandbox** (không cần khoá): C, C++, Python, Java, JavaScript, Go, Rust đều chạy đúng; nhiều tệp C/C++/Python/Java. Chậm (build Java/Rust
+    15–40 s) nên adapter đợi ≥ 60 s (và Vercel cần `maxDuration` ≥ 60, đã đặt ở `vercel.json`). Java: dịch vụ biên dịch `prog.java` rồi chạy lớp `Main`
+    nên `public` ở lớp cấp cao bị bỏ (kèm cảnh báo trong `warnings`), `package` bị từ chối (`run_multifile_unsupported`); JS/Go/Rust một tệp.
+  * **Judge0 CE công cộng** (`RUN_JUDGE0_URL=https://ce.judge0.com`, giới hạn tốc độ): 7 ngôn ngữ đơn tệp và nhiều tệp (C, C++, Python, Java kể cả `package`,
+    JavaScript) đều đúng. Phát hiện: ở chế độ nhiều tệp `source_code` **phải trống** (nội dung bất kỳ → `{"source_code":["must be blank"]}`); Java phải
+    biên dịch `-d out` rồi chạy `-cp out` thì `package` mới tìm được lớp. Phiên bản runtime của máy công cộng cũ (GCC 9.2, Python 3.8, Node 12, Go 1.13, Rust 1.40).
+  * **Piston công cộng (emkc.org) không dùng được**: từ 15/02/2026 chỉ cho người trong danh sách trắng (mọi lời gọi trả `Public Piston API is now whitelist only…`;
+    adapter báo `run_provider_rejected` đúng). Muốn dùng Piston hãy tự dựng (mục dưới) và đặt `RUN_PISTON_URL`. Adapter Piston **chưa thử với máy Piston thật**
+    (không có Docker ở máy phát triển) — chỉ kiểm bằng giả lập theo tài liệu chính thức.
 * Wandbox không có cờ "biên dịch hỏng": adapter suy ra từ việc phản hồi **không có trường `program_*`** mà `status` ≠ 0.
   Wandbox cũng không báo "quá giờ": coi là hết giờ khi bị kill sau ≥ 90% thời gian cho phép.
 * Piston bỏ qua `compileArgs`; Judge0 không có hạn biên dịch riêng; Wandbox dùng giới hạn cố định của dịch vụ.
-* `local`: không giới hạn bộ nhớ/tiến trình/mạng trên Windows; trên POSIX `rlimit` là phần chưa chạy thử trong bộ test này (chỉ chạy được
-  trên Windows). Không phải sandbox — xem mục bảo mật.
+* `local`: không giới hạn bộ nhớ/tiến trình/mạng trên Windows. **`rlimit` trên POSIX đã kiểm trên Linux thật** (WSL Ubuntu 24.04, 16/10/2026): lõi tắt, kích thước tệp 64 MB,
+  1024 tệp mở, 1 GB bộ nhớ cho chương trình native đều có hiệu lực (4 test `posix_only` trong `test_run_local_executor.py`; Windows bỏ qua). Không phải sandbox — xem mục bảo mật.
+* **Kho thật đã kiểm** (kịch bản hai thiết bị hội tụ qua backend thật, 16/10/2026): `tools/kiem_mysql_that.py` (MariaDB 12.0.2 tạm, 71 phép kiểm, máy chủ ghi 259 INSERT) và
+  `tools/kiem_mongo_that.py` (mongod 8.0.4 tạm trong WSL, 102 phép kiểm, 259 insert). Không bao giờ chạm database của dự án. Kiểm provider chạy mã thật: `tools/kiem_nha_cung_cap_that.py`.
 * `PUT /codestore` trả lại **bản máy chủ đang giữ** cho các `id` đã gửi; nếu bản đó lớn hơn bản gửi (một thiết bị khác đã đẩy bản ≤ 512 KB),
   phản hồi có thể tới vài MB. Trường hợp thường gặp nhỏ hơn nhiều.
 * `/run` đếm lượt trong bộ nhớ từng instance (như `/ai/*`): làm chậm lạm dụng, không chặn được kẻ tấn công phân tán.

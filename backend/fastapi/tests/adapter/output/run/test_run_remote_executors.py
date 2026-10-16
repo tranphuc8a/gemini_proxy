@@ -472,7 +472,7 @@ def test_judge0_multi_file_submission_is_a_zip_with_compile_and_run_scripts():
 
     body = server.body()
     assert body["language_id"] == 89 and "command_line_arguments" not in body and "compiler_options" not in body
-    assert body["source_code"]                                         # never blank
+    assert body["source_code"] == ""                                   # the real service rejects any text here ("must be blank")
     archive = zipfile.ZipFile(io.BytesIO(base64.b64decode(body["additional_files"])))
     assert sorted(archive.namelist()) == ["compile", "main.cpp", "run", "util.cpp", "util.h"]
     compile_script = archive.read("compile").decode()
@@ -490,7 +490,7 @@ def test_judge0_multi_file_submission_is_a_zip_with_compile_and_run_scripts():
     [
         ("c", (("main.c", "x"), ("a.c", "y")), "gcc  -o prog main.c a.c -lm", "./prog"),
         ("java", (("Main.java", "public class Main{}"), ("Util.java", "class Util{}")),
-         "javac -encoding UTF-8 Main.java Util.java", "java -Xmx200m -cp . Main"),
+         "javac -encoding UTF-8 -d out Main.java Util.java", "java -Xmx200m -cp out Main"),
         ("python", (("main.py", "x"), ("lib.py", "y")), ":", "python3 main.py"),
         ("javascript", (("main.js", "x"), ("lib.js", "y")), ":", "node main.js"),
         ("bash", (("main.sh", "x"), ("lib.sh", "y")), ":", "bash main.sh"),
@@ -509,7 +509,7 @@ def test_judge0_java_multi_file_runs_the_packaged_main_class():
     server = Server(judge0_reply())
     arun(judge0(server).execute(request("java", files)))
     archive = zipfile.ZipFile(io.BytesIO(base64.b64decode(server.body()["additional_files"])))
-    assert "-cp . app.Main" in archive.read("run").decode()
+    assert "-cp out app.Main" in archive.read("run").decode()
 
 
 def test_judge0_multi_file_languages_are_declared():
@@ -600,9 +600,41 @@ def test_wandbox_refuses_arguments_it_cannot_carry():
     assert caught.value.payload["code"] == "run_bad_arg" and server.requests == []
 
 
-def test_wandbox_multi_file_is_for_c_cpp_and_python_only():
+def test_wandbox_multi_file_is_for_c_cpp_python_and_java_only():
     executor = WandboxExecutor(base_url=WANDBOX_URL)
-    assert set(executor.multi_file_languages()) == {"c", "cpp", "python"}
+    assert set(executor.multi_file_languages()) == {"c", "cpp", "python", "java"}
+
+
+# Java on the real service (measured): compiled as prog.java and run as class Main, so a top-level
+# `public` type is a javac error; several files work in a flat directory; `package` cannot.
+def test_wandbox_java_drops_public_from_top_level_types_and_says_so():
+    server = Server(wandbox_reply())
+    files = (("Main.java", "import java.util.*;\npublic class Main {\n  public static void main(String[] a) {}\n  public static class In {}\n}\n"),
+             ("Util.java", "public final class Util {}\n"))
+    result = arun(wandbox(server).execute(request("java", files)))
+    body = server.body()
+    assert "public class" not in body["code"] and "\nclass Main {" in body["code"]
+    assert "public static void main" in body["code"] and "public static class In" in body["code"]    # members stay public
+    assert body["codes"] == [{"file": "Util.java", "code": "final class Util {}\n"}]
+    assert any("public" in w for w in result.warnings)
+
+
+def test_wandbox_java_without_a_main_class_warns():
+    result = arun(wandbox(Server(wandbox_reply())).execute(request("java", (("App.java", "class App {}"),))))
+    assert any("Main" in w for w in result.warnings)
+
+
+def test_wandbox_java_package_is_refused_without_calling_the_service():
+    server = Server(wandbox_reply())
+    with pytest.raises(BadRequestError) as caught:
+        arun(wandbox(server).execute(request("java", (("A.java", "package app;\npublic class A {}"),))))
+    assert caught.value.payload["code"] == "run_multifile_unsupported" and server.requests == []
+
+
+def test_wandbox_waits_long_enough_for_its_slow_builds():
+    executor = WandboxExecutor(base_url=WANDBOX_URL, http_timeout_s=30.0)
+    assert executor._timeout_for(request()) >= 60.0
+    assert PistonExecutor(base_url=PISTON_URL)._timeout_for(request(run_timeout_ms=1000, compile_timeout_ms=1000)) < 10
 
 
 def test_wandbox_unknown_compiler_name_is_a_rejection_naming_what_wandbox_said():

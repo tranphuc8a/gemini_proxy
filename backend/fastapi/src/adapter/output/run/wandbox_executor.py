@@ -14,7 +14,14 @@ Wandbox (wandbox.org) needs no key. What this adapter relies on:
   `runTimeoutMs` / `compileTimeoutMs` are not sent.
 
 Extra `.c` / `.cpp` files are given to the compiler by listing them as raw
-options, since Wandbox compiles only the main file by itself. Compiler names
+options, since Wandbox compiles only the main file by itself.
+
+Measured against the real service (not just the docs): it is **slow** (a Java or
+Rust build takes 15-40 s), so the HTTP timeout is not derived from the request
+(`_timeout_for`); and Java is compiled as `prog.java` and run as class `Main`,
+so a top-level `public class` is rejected by javac. The adapter therefore drops
+`public` from top-level Java types (reported in `warnings`) and refuses
+`package` declarations, which cannot work in a flat directory. Compiler names
 change when Wandbox retires a release; `RUN_WANDBOX_COMPILERS`
 (`cpp=gcc-head,python=cpython-head`) overrides the table below, and a name
 Wandbox no longer knows comes back as `run_provider_rejected`.
@@ -22,6 +29,7 @@ Wandbox no longer knows comes back as `run_provider_rejected`.
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -48,9 +56,39 @@ COMPILER_MAP: Dict[str, str] = {
     "ruby": "ruby-3.4.9",
     "bash": "bash",
 }
-MULTI_FILE_LANGUAGES: Tuple[str, ...] = ("c", "cpp", "python")
+MULTI_FILE_LANGUAGES: Tuple[str, ...] = ("c", "cpp", "python", "java")
 
 _KILLED = ("Killed", "SIGKILL", "Terminated", "SIGTERM")
+
+#: Slowest builds seen on the public service were ~40 s; the service enforces its own limits.
+MIN_HTTP_TIMEOUT_S = 60.0
+
+_PUBLIC_TYPE = re.compile(r"^public\s+(?=(?:(?:final|abstract|sealed|non-sealed|strictfp)\s+)*(?:class|interface|enum|record|@interface)\b)", re.M)
+_PACKAGE = re.compile(r"^\s*package\s+[\w.]+\s*;", re.M)
+_MAIN_CLASS = re.compile(r"\bclass\s+Main\b")
+
+
+def java_for_wandbox(files):
+    """Top-level `public` types made package-private (javac insists a public type lives in its own file).
+
+    Returns (new contents, warnings). Raises BadRequestError for `package`, which a flat directory cannot run.
+    """
+    out, changed = [], False
+    for file in files:
+        if _PACKAGE.search(file.content):
+            raise BadRequestError(
+                "Wandbox không chạy được mã Java có khai báo package — hãy bỏ dòng package hoặc chọn nhà cung cấp khác",
+                payload={"code": "run_multifile_unsupported", "file": file.path},
+            )
+        text, n = _PUBLIC_TYPE.subn("", file.content)
+        changed = changed or n > 0
+        out.append(text)
+    warnings = []
+    if changed:
+        warnings.append("Wandbox biên dịch mọi tệp Java cùng một lần nên đã bỏ chữ “public” ở các lớp cấp cao.")
+    if not any(_MAIN_CLASS.search(text) for text in out):
+        warnings.append("Wandbox chạy lớp tên Main — hãy đặt tên lớp chứa main() là Main.")
+    return out, warnings
 
 
 class WandboxExecutor(HttpExecutor):
@@ -80,8 +118,14 @@ class WandboxExecutor(HttpExecutor):
         return True, ""
 
     # ------------------------------------------------------------- the call
-    def _payload(self, request: ExecutionRequest) -> Dict[str, Any]:
+    def _timeout_for(self, request: ExecutionRequest) -> float:
+        """Wandbox ignores the per-request limits and builds slowly: wait at least `MIN_HTTP_TIMEOUT_S`."""
+        return max(self._timeout_ceiling, MIN_HTTP_TIMEOUT_S)
+
+    def _payload(self, request: ExecutionRequest, contents: Optional[List[str]] = None) -> Dict[str, Any]:
         main, *others = request.files
+        main_code = contents[0] if contents else main.content
+        other_code = contents[1:] if contents else [file.content for file in others]
         raw_compile: List[str] = list(request.compile_args)
         if request.language in ("c", "cpp"):
             # Only the main file is compiled unless the others are named.
@@ -89,12 +133,12 @@ class WandboxExecutor(HttpExecutor):
             raw_compile += [file.path for file in others if file.path in extra]
         payload: Dict[str, Any] = {
             "compiler": self._compilers[request.language],
-            "code": main.content,
+            "code": main_code,
             "stdin": request.stdin,
             "save": False,
         }
         if others:
-            payload["codes"] = [{"file": file.path, "code": file.content} for file in others]
+            payload["codes"] = [{"file": file.path, "code": code} for file, code in zip(others, other_code)]
         if raw_compile:
             payload["compiler-option-raw"] = "\n".join(raw_compile)
         if request.args:
@@ -108,9 +152,16 @@ class WandboxExecutor(HttpExecutor):
                 "Wandbox không nhận tham số chương trình có xuống dòng",
                 payload={"code": "run_bad_arg"},
             )
+        contents: Optional[List[str]] = None
+        warnings: List[str] = []
+        if request.language == "java":
+            contents, warnings = java_for_wandbox(request.files)
         started = time.perf_counter()
-        response = await self._send("POST", "/compile.json", request, json_body=self._payload(request))
-        return self.read_result(self._json(response), request, self._timed(started))
+        response = await self._send("POST", "/compile.json", request, json_body=self._payload(request, contents))
+        result = self.read_result(self._json(response), request, self._timed(started))
+        if warnings:
+            result.warnings = list(result.warnings or []) + warnings
+        return result
 
     # ---------------------------------------------------------- the answer
     def read_result(self, data: Dict[str, Any], request: ExecutionRequest, elapsed_ms: int) -> RunResult:

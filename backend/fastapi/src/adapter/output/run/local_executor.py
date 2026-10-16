@@ -366,6 +366,10 @@ class LocalExecutor(CodeExecutorPort):
     def _write_files(self, workdir: Path, request: ExecutionRequest) -> None:
         root = workdir.resolve()
         for file in request.files:
+            # Drive letters and backslashes mean "somewhere else" on Windows and are just odd
+            # file names on Linux; refuse them on every platform so the rule is the same.
+            if "\\" in file.path or file.path[1:2] == ":" or file.path.startswith("/"):
+                raise RunProviderUnavailable(self.id, "Tên tệp trỏ ra ngoài thư mục chạy.")
             target = (root / file.path).resolve()
             # The names were vetted already; this is the check that does not
             # trust that.

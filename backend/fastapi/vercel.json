@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "src/main.py": {
-      "excludeFiles": "{tests,alembic,tools,data}/**,webapp/**/*.map"
+      "excludeFiles": "{tests,alembic,tools,data}/**,webapp/**/*.map",
+      "maxDuration": 60
     }
   }
 }

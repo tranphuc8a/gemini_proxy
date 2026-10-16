@@ -392,3 +392,58 @@ def test_javascript_runs_with_stdin(executor):
     assert result.ok, result.model_dump()
     assert result.run.stdout.strip() == "ABC 3"
     assert result.compile is None
+
+
+# ---------------------------------------------------------------------------
+# rlimit (POSIX only): the limits are really applied to the child, not just written in a docstring.
+# Checked on Linux (WSL Ubuntu, 2026-10); Windows has none of this, so these tests are skipped there.
+# ---------------------------------------------------------------------------
+posix_only = pytest.mark.skipif(os.name == "nt", reason="rlimit exists on POSIX only")
+
+
+@posix_only
+@needs_gcc
+def test_native_program_gets_the_posix_limits(executor):
+    code = (
+        "#include <stdio.h>\n#include <sys/resource.h>\n"
+        "int main(void){ struct rlimit r; const int w[] = {RLIMIT_CORE, RLIMIT_FSIZE, RLIMIT_NOFILE, RLIMIT_AS};\n"
+        "  for (int i = 0; i < 4; i++) { getrlimit(w[i], &r); printf(\"%llu\\n\", (unsigned long long)r.rlim_cur); } return 0; }\n"
+    )
+    result = execute(executor, make_request("c", (("main.c", code),)))
+    assert result.ok, result.model_dump()
+    core, fsize, nofile, address = (int(x) for x in result.run.stdout.split())
+    assert core == 0                                                    # no core files
+    assert fsize == local_executor.FILE_SIZE_LIMIT
+    assert nofile == local_executor.OPEN_FILES_LIMIT
+    assert address == local_executor.NATIVE_MEMORY_LIMIT
+
+
+@posix_only
+@needs_gcc
+def test_a_native_program_cannot_allocate_far_more_than_the_memory_limit(executor):
+    code = "#include <stdio.h>\n#include <stdlib.h>\nint main(void){ void *p = malloc(3UL << 30); puts(p ? \"got\" : \"refused\"); return 0; }\n"
+    result = execute(executor, make_request("c", (("main.c", code),)))
+    assert result.ok and result.run.stdout.strip() == "refused", result.model_dump()
+
+
+@posix_only
+@needs_gcc
+def test_writing_a_huge_file_is_stopped_by_the_file_size_limit(executor):
+    code = (
+        "#include <stdio.h>\nint main(void){ FILE *f = fopen(\"big.bin\", \"wb\"); static char b[1 << 20];\n"
+        "  for (int i = 0; i < 200; i++) if (fwrite(b, 1, sizeof b, f) != sizeof b) { puts(\"short write\"); return 3; }\n"
+        "  fclose(f); puts(\"wrote all\"); return 0; }\n"
+    )
+    result = execute(executor, make_request("c", (("main.c", code),)))
+    assert not result.ok and "wrote all" not in result.run.stdout     # 200 MB is over the 64 MB limit: SIGXFSZ or a short write
+    assert result.run.signal == "SIGXFSZ" or result.run.code == 3
+
+
+@posix_only
+@needs_gcc
+def test_opening_too_many_files_fails_at_the_open_files_limit(executor):
+    code = "#include <stdio.h>\nint main(void){ int n = 0; while (fopen(\"/dev/null\", \"r\")) n++; printf(\"%d\\n\", n); return 0; }\n"
+    result = execute(executor, make_request("c", (("main.c", code),)))
+    assert result.ok, result.model_dump()
+    assert 900 <= int(result.run.stdout.strip()) <= local_executor.OPEN_FILES_LIMIT
+

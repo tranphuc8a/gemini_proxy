@@ -135,9 +135,9 @@ def _scripts(request: ExecutionRequest) -> Tuple[str, str]:
         compile_cmd = f"g++ {flags} -o prog {sources}"
         run_cmd = f"./prog {args}"
     elif language == "java":
-        compile_cmd = f"javac -encoding UTF-8 {sources}"
+        compile_cmd = f"javac -encoding UTF-8 -d out {sources}"          # classes by package under out/, whatever the source layout
         main_content = next(file.content for file in request.files if file.path == request.main_file)
-        run_cmd = f"java -Xmx200m -cp . {shlex.quote(java_main_class(request.main_file, main_content))} {args}"
+        run_cmd = f"java -Xmx200m -cp out {shlex.quote(java_main_class(request.main_file, main_content))} {args}"
     elif language == "python":
         run_cmd = f"python3 {main} {args}"
     elif language == "javascript":
@@ -220,9 +220,9 @@ class Judge0Executor(HttpExecutor):
         }
         if len(request.files) > 1:
             payload["language_id"] = MULTI_FILE_ID
-            # Never blank: a server may insist on a source_code that the
-            # multi-file mode then ignores.
-            payload["source_code"] = _b64("# multi-file submission\n")
+            # Blank, as the real service (ce.judge0.com, checked 2026-10) demands for language 89:
+            # any other text is rejected with {"source_code": ["must be blank"]}.
+            payload["source_code"] = ""
             payload["additional_files"] = build_archive(request)
             return payload
         payload["language_id"] = self._ids[request.language]
