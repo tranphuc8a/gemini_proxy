@@ -11,6 +11,7 @@ import { DEFAULT_READING_SETTINGS } from '../lib/reading'
 vi.mock('../services/markdownStorage', () => ({
   verifyAdminKey: vi.fn(),
   restoreAdminSession: vi.fn(async () => false),
+  recheckAdminSession: vi.fn(async () => 'valid'),
   clearAdminCredentials: vi.fn(),
   loadMarkdownFiles: vi.fn(),
   saveMarkdownFiles: vi.fn(),
@@ -198,7 +199,7 @@ describe('on a phone', () => {
   })
 
   it('moves secondary header controls into the overflow menu, font size included', async () => {
-    render(<Header tier="compact" onOpenHelp={vi.fn()} onOpenPalette={vi.fn()} onOpenAuth={vi.fn()} />)
+    render(<Header tier="compact" onOpenHelp={vi.fn()} onOpenInstall={vi.fn()} onOpenPalette={vi.fn()} onOpenAuth={vi.fn()} />)
     act(() => store().setLayout('phone'))
     expect(screen.queryByRole('button', { name: /^File/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reading mode' })).toBeInTheDocument()

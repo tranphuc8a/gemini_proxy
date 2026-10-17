@@ -171,6 +171,40 @@ function audit(app) {
   return findings
 }
 
+/**
+ * An app that ships a service worker (sw.js) must ship one that works offline.
+ *
+ * markdown-editor's worker is generated at build time from a template; a build that leaves a
+ * placeholder in it, or lists a file the folder does not hold, installs a worker that fails or
+ * caches nothing -- and a service worker, once installed on someone's device, is hard to take back.
+ * Returns the problems found; an empty list when there is no worker or it is sound.
+ */
+function auditServiceWorker(app) {
+  const dest = join(COLLECTION, ...app.dest.split('/'))
+  const worker = join(dest, 'sw.js')
+  if (!existsSync(worker)) return []
+
+  const problems = []
+  const text = readFileSync(worker, 'utf8')
+  if (/__BUILD__|__PRECACHE__/.test(text)) problems.push('sw.js still contains a template placeholder')
+
+  const match = text.match(/^var PRECACHE = (\[.*\]);$/m)
+  if (!match) {
+    problems.push('sw.js has no `var PRECACHE = [...]` line')
+  } else {
+    const list = JSON.parse(match[1])
+    if (list.length === 0) problems.push('sw.js saves nothing for offline use')
+    const missing = list.filter((rel) => !existsSync(join(dest, ...rel.split('/'))))
+    if (missing.length) problems.push(`sw.js lists ${missing.length} file(s) that are not published, e.g. ${missing[0]}`)
+    if (!list.some((rel) => /^assets\/index-.+\.js$/.test(rel))) problems.push('sw.js does not list the entry bundle')
+  }
+
+  const page = existsSync(join(dest, 'index.html')) ? readFileSync(join(dest, 'index.html'), 'utf8') : ''
+  if (!/rel="manifest"/.test(page)) problems.push('index.html does not link the web app manifest')
+  if (!existsSync(join(dest, 'manifest.webmanifest'))) problems.push('manifest.webmanifest is not published')
+  return problems
+}
+
 let failed = false
 const audited = []
 
@@ -186,6 +220,15 @@ for (const app of selected) {
 
   const findings = audit(app)
   audited.push({ app, findings })
+
+  const workerProblems = auditServiceWorker(app)
+  if (workerProblems.length) {
+    failed = true
+    console.log('  SERVICE WORKER problems:')
+    for (const problem of workerProblems) console.log(`    ${problem}`)
+  } else if (existsSync(join(COLLECTION, ...app.dest.split('/'), 'sw.js'))) {
+    console.log('  service worker audit clean - every file it saves is published')
+  }
 
   if (findings === null) {
     console.log('  not published yet - nothing to audit')

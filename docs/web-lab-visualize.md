@@ -71,8 +71,8 @@ giống nhau; chỉ bản thân app mới biết nó **là** khoá học hay lab
 
 - `webapp_controller.py` — `AppMetadata.category`, đọc từ `metadata.json`,
   có trong `/_api/list` và được tính điểm trong `/_api/search`
-- `portal.js` / `portal.html` / `portal.css` — bộ lọc, huy hiệu bấm được, sắp
-  xếp "Theo thể loại", tham số URL `?cat=`
+- `_portal/` — bộ lọc theo thể loại, sắp xếp "Theo thể loại", tham số URL `?cat=`
+  (cổng đã viết lại ngày 17/10: `portal.html` + `assets/{css,js}`; xem `tasks/2610/261017/portal-moi/ban-giao.md`)
 - 7 `metadata.json` trong `courses/` — đủ `title` / `description` / `category` /
   `tags` / `icon`. Hai thể loại: **Khoá học** (3) và **Lab trực quan** (4).
 

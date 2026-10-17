@@ -10,6 +10,13 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <title>Markdown Editor</title>
+    <!-- Installable, and usable with no network once installed (pwa/sw.js, written to dist/ by scripts/make-sw.mjs). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#5b5bd6" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Markdown" />
   </head>
   <body>
     <div id="root"></div>

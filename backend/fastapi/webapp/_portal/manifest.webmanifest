@@ -1,0 +1,31 @@
+{
+  "id": "./portal.html",
+  "name": "Web Apps Portal",
+  "short_name": "Portal",
+  "description": "Cổng mở nhanh các web app: tìm, ghim, lọc, dùng offline.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "./portal.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a0f16",
+  "theme_color": "#2159d6",
+  "categories": ["utilities", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Tìm kiếm", "short_name": "Tìm", "description": "Vào ô tìm kiếm", "url": "./portal.html?tab=all&focus=search", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Yêu thích", "short_name": "Yêu thích", "description": "Các app đã ghim", "url": "./portal.html?tab=favorites", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Mở gần đây", "short_name": "Gần đây", "description": "App vừa dùng", "url": "./portal.html?tab=all&sort=recent", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ],
+  "screenshots": [
+    { "src": "assets/shots/wide.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Trang chủ trên máy tính: ghim, gần đây, ứng dụng của tôi, khoá học" },
+    { "src": "assets/shots/narrow.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "Trang chủ trên điện thoại" }
+  ]
+}

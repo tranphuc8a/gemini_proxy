@@ -96,37 +96,75 @@ export async function verifyAdminKey(key: string): Promise<boolean> {
   throw new Error(await describeFailure(response))
 }
 
+/** What the backend said about a session token: it holds, it is spent, or nobody answered. */
+export type SessionCheck = 'valid' | 'rejected' | 'unreachable'
+
+async function checkSession(token: string): Promise<SessionCheck> {
+  try {
+    const response = await request(`${resolveApiBase()}/markdown/admin/session`, {
+      method: 'POST',
+      headers: { 'X-Admin-Session': token }
+    })
+    // Expired, or the admin key was rotated. Either way this token is spent.
+    if (!response.ok) return 'rejected'
+    // The server hands back a fresh token, so an active user is not signed out
+    // mid-session just because the original was near its expiry.
+    setAdminSession(await readSession(response))
+    return 'valid'
+  } catch {
+    return 'unreachable'
+  }
+}
+
+/** The browser itself says there is no network -- as opposed to a server that is merely down. */
+function deviceIsOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
 /**
  * Re-establish admin mode from the token kept in localStorage.
  *
  * Called once on startup. A missing, tampered or expired token simply means
  * "view-only" -- never an error the user has to dismiss, because arriving at the
  * page without a session is the normal case.
+ *
+ * Unreachable backend, two cases. A server that is down while the device is online says nothing
+ * about the token: keep it in storage and stay view-only until a later attempt can settle the
+ * question. A device with no network at all is the installed-app case: the owner must be able to
+ * keep editing the copy in this browser, so the stored token is trusted for now. That grants no
+ * more than the UI -- every write to the server still carries the token and is checked there --
+ * and `recheckAdminSession` settles it the moment the connection returns.
  */
 export async function restoreAdminSession(): Promise<boolean> {
   const stored = readStoredSession()
   if (!stored) return false
 
-  try {
-    const response = await request(`${resolveApiBase()}/markdown/admin/session`, {
-      method: 'POST',
-      headers: { 'X-Admin-Session': stored }
-    })
-    if (!response.ok) {
-      // Expired, or the admin key was rotated. Either way this token is spent.
-      setAdminSession(null)
-      return false
-    }
-    // The server hands back a fresh token, so an active user is not signed out
-    // mid-session just because the original was near its expiry.
-    setAdminSession(await readSession(response))
-    return true
-  } catch {
-    // The backend being unreachable says nothing about the token: keep it in
-    // storage and stay view-only until a later attempt can settle the question.
-    adminSession = null
+  const result = await checkSession(stored)
+  if (result === 'valid') return true
+  if (result === 'rejected') {
+    setAdminSession(null)
     return false
   }
+  if (deviceIsOffline()) {
+    adminSession = stored
+    return true
+  }
+  adminSession = null
+  return false
+}
+
+/**
+ * Back online after trusting a token offline (or any time admin mode should be re-proved).
+ *
+ * Only an explicit rejection takes the session away; a flaky connection right after reconnecting
+ * must not sign the owner out, so 'unreachable' leaves everything as it was.
+ */
+export async function recheckAdminSession(): Promise<SessionCheck> {
+  const token = adminSession ?? readStoredSession()
+  if (!token) return 'rejected'
+  const result = await checkSession(token)
+  if (result === 'rejected') setAdminSession(null)
+  return result
 }
 
 export function clearAdminCredentials(): void {

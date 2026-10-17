@@ -20,6 +20,7 @@ vi.mock('../services/markdownStorage', () => ({
   ]),
   verifyAdminKey: vi.fn(),
   restoreAdminSession: vi.fn(async () => false),
+  recheckAdminSession: vi.fn(async () => 'valid'),
   clearAdminCredentials: vi.fn(),
   loadMarkdownFiles: vi.fn(),
   saveMarkdownFiles: vi.fn()
@@ -244,7 +245,7 @@ describe('Sync menu', () => {
   // which cannot be redefined once another test in this file has installed it.
   // The name is anchored because the button carries an "on" badge once sync is enabled.
   const openSyncMenu = async () => {
-    render(<Header onOpenHelp={() => {}} onOpenPalette={() => {}} onOpenAuth={() => {}} />)
+    render(<Header onOpenHelp={() => {}} onOpenInstall={() => {}} onOpenPalette={() => {}} onOpenAuth={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
   }
 

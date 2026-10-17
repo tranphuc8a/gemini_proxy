@@ -10,6 +10,7 @@ import { DEFAULT_READING_SETTINGS, READING_FONT, READING_KEY } from '../lib/read
 vi.mock('../services/markdownStorage', () => ({
   verifyAdminKey: vi.fn(),
   restoreAdminSession: vi.fn(async () => false),
+  recheckAdminSession: vi.fn(async () => 'valid'),
   clearAdminCredentials: vi.fn(),
   loadMarkdownFiles: vi.fn(),
   saveMarkdownFiles: vi.fn(),

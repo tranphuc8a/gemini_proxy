@@ -3,12 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HISTORY_DEBOUNCE_MS, useEditorStore } from '../store'
 import { FILES_KEY, LEGACY_KEY, SETTINGS_KEY } from '../lib/persistence'
 import { findNode, flatten } from '../lib/tree'
-import { clearAdminCredentials, restoreAdminSession, verifyAdminKey } from '../services/markdownStorage'
+import { clearAdminCredentials, recheckAdminSession, restoreAdminSession, verifyAdminKey } from '../services/markdownStorage'
 
 // The admin key lives on the server now, so unlocking is a network call.
 vi.mock('../services/markdownStorage', () => ({
   verifyAdminKey: vi.fn(),
   restoreAdminSession: vi.fn(async () => false),
+  recheckAdminSession: vi.fn(async () => 'valid'),
   clearAdminCredentials: vi.fn(),
   loadMarkdownFiles: vi.fn(),
   saveMarkdownFiles: vi.fn()
@@ -170,6 +171,45 @@ describe('admin gating', () => {
       await store().restoreAdminSession()
     })
     expect(store().isAdmin).toBe(false)
+  })
+
+  describe('when the connection comes back', () => {
+    // An installed copy may have started offline and trusted the stored session (storage service);
+    // `online` is when the server gets its say.
+    const comeOnline = () => act(async () => { window.dispatchEvent(new Event('online')) })
+
+    beforeEach(async () => {
+      await act(async () => { await store().hydrate() })   // attaches the listener, once per page
+      vi.mocked(recheckAdminSession).mockReset()
+    })
+
+    it('ends admin mode, and says so, when the server now rejects the session', async () => {
+      unlockAdmin()
+      vi.mocked(recheckAdminSession).mockResolvedValueOnce('rejected')
+      await comeOnline()
+      expect(store().isAdmin).toBe(false)
+      expect(store().toasts.some((t) => /view-only/.test(t.message))).toBe(true)
+    })
+
+    it('keeps admin mode when the session still holds', async () => {
+      unlockAdmin()
+      vi.mocked(recheckAdminSession).mockResolvedValueOnce('valid')
+      await comeOnline()
+      expect(store().isAdmin).toBe(true)
+    })
+
+    it('keeps admin mode while the server still does not answer', async () => {
+      unlockAdmin()
+      vi.mocked(recheckAdminSession).mockResolvedValueOnce('unreachable')
+      await comeOnline()
+      expect(store().isAdmin).toBe(true)
+    })
+
+    it('does not bother the server for a visitor who was never unlocked', async () => {
+      await comeOnline()
+      expect(recheckAdminSession).not.toHaveBeenCalled()
+      expect(store().isAdmin).toBe(false)
+    })
   })
 
   it('refuses every file mutation while anonymous', () => {

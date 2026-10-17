@@ -7,8 +7,10 @@
   var U = QL.ui, esc = QL.text.esc, M = QL.money, D = QL.dates, L = QL.ledger, Mo = QL.model, V = QL.views, DL = QL.dialogs;
   var fmt = function (n) { return M.format(n); };
   var PAGE = 50;
+  var DETAIL_KEY = "qlct.sl.chiTiet";          // "1" = phần chi tiết của bộ lọc đang mở (mặc định gập; nhớ theo máy)
 
   function A() { return QL.app; }
+  function detailPref() { try { return root.localStorage.getItem(DETAIL_KEY) === "1"; } catch (e) { return false; } }
   function nameIn(c) { return function (id) { return id === c.me ? "Bạn" : V.personName(c, id); }; }
   function monthLabel(key) { return "Tháng " + (+key.slice(5)) + "/" + key.slice(0, 4); }
   function select(id, label, list, cur) {
@@ -52,11 +54,15 @@
     }
 
     var memberOpts = group ? [{ id: "", label: "Mọi thành viên" }].concat(L.groupMembers(doc, group).map(function (id) { return { id: id, label: nm(id) }; })) : null;
+    /* Hàng luôn hiện: chọn tháng + nút "Bộ lọc". Phần chi tiết (ngày, chọn nhanh, loại/ai trả/…, tìm) gập được để chỉ xem danh sách. */
+    var open = detailPref();
     var body = '<p>' + head + "</p>" +
-      '<div class="sl-bar stack gap-s">' +
-      '<div class="row gap-s"><button type="button" class="icon-btn" data-step="1" aria-label="Tháng cũ hơn">‹</button>' +
+      '<div class="sl-bar stack gap-s' + (open ? " open" : "") + '">' +
+      '<div class="row wrap gap-s"><button type="button" class="icon-btn" data-step="1" aria-label="Tháng cũ hơn">‹</button>' +
       '<label class="sr" for="sl-month">Tháng</label><select id="sl-month"></select>' +
-      '<button type="button" class="icon-btn" data-step="-1" aria-label="Tháng mới hơn">›</button></div>' +
+      '<button type="button" class="icon-btn" data-step="-1" aria-label="Tháng mới hơn">›</button>' +
+      '<button type="button" class="btn sm sl-toggle" id="sl-toggle" aria-expanded="' + open + '" aria-controls="sl-detail">Bộ lọc <span class="sl-badge" id="sl-badge" hidden></span><span class="sl-caret" aria-hidden="true">▾</span></button></div>' +
+      '<div class="stack gap-s" id="sl-detail"' + (open ? "" : " hidden") + ">" +
       '<div class="sl-dates"><label class="sl-d" for="sl-from"><span>Từ ngày</span><input type="date" id="sl-from"></label>' +
       '<label class="sl-d" for="sl-to"><span>Đến ngày</span><input type="date" id="sl-to"></label></div>' +
       '<div class="sl-chips" role="group" aria-label="Chọn nhanh khoảng ngày">' + PRESETS.map(function (p) { return '<button type="button" class="chip" data-range="' + p[0] + '" aria-pressed="false">' + p[1] + "</button>"; }).join("") + "</div>" +
@@ -66,13 +72,36 @@
       (group ? select("sl-member", "Thành viên", memberOpts, F.memberId) : "") +
       (groupsOfP.length ? select("sl-group", "Nhóm", [{ id: "", label: "Mọi nhóm" }, { id: "none", label: "Không thuộc nhóm" }].concat(groupsOfP.map(function (g) { return { id: g.id, label: "Nhóm " + g.name }; })), "") : "") +
       '<label class="sr" for="sl-q">Tìm</label><input type="search" id="sl-q" placeholder="Tìm ghi chú, danh mục…" autocomplete="off">' +
-      "</div>" +
+      "</div></div>" +
+      '<p class="sl-act small muted" id="sl-act" hidden></p>' +
       '<p class="sl-sum" id="sl-sum" role="status" aria-live="polite"></p></div>' +
       '<div id="sl-out" class="stack"></div>';
 
     var d = U.dialog(person ? "Các khoản chung với " + person.name : "Khoản chung · nhóm " + group.name, body,
       '<button type="button" class="btn" data-close>Đóng</button><button type="button" class="btn primary" data-settle>Quyết toán</button>', { wide: true, autofocus: false });
     var el = d.el, out = el.querySelector("#sl-out"), sum = el.querySelector("#sl-sum");
+    var bar = el.querySelector(".sl-bar"), detail = el.querySelector("#sl-detail"), toggle = el.querySelector("#sl-toggle"),
+      badge = el.querySelector("#sl-badge"), act = el.querySelector("#sl-act");
+
+    /* Khi gập, nút "Bộ lọc" mang huy hiệu số bộ lọc đang bật và một dòng nói rõ đang lọc gì — danh sách không bao giờ lọc "ngầm". */
+    function drawActive() {
+      var n = L.activeFilterCount(F), labels = [];
+      ["sl-kind", "sl-payer", "sl-member", "sl-group"].forEach(function (id) {
+        var s = el.querySelector("#" + id);
+        if (s && s.value) labels.push(s.options[s.selectedIndex].text);
+      });
+      if (F.q) labels.push("“" + F.q + "”");
+      badge.hidden = !n; badge.textContent = n;
+      toggle.setAttribute("aria-label", "Bộ lọc" + (n ? ", " + n + " đang bật" : ""));
+      act.hidden = !detail.hidden || !n;
+      act.textContent = "Đang lọc: " + labels.join(" · ");
+    }
+    function setDetail(on) {
+      detail.hidden = !on; bar.classList.toggle("open", on);
+      toggle.setAttribute("aria-expanded", String(on));
+      try { root.localStorage.setItem(DETAIL_KEY, on ? "1" : "0"); } catch (e) { /* cửa sổ riêng tư: vẫn gập/mở được trong phiên này */ }
+      drawActive();
+    }
 
     function filters() {
       var f = { kind: F.kind || undefined, payer: F.payer || undefined, memberId: F.memberId || undefined, groupId: F.groupId || undefined, q: F.q || undefined };
@@ -103,7 +132,7 @@
         '<p class="small muted">Số bên phải: <span class="thu">+</span> ' + (person ? esc(person.name) + " nợ bạn thêm" : "nhóm nợ bạn thêm") + ", <span class=\"chi\">−</span> bạn nợ thêm (hoặc đã được trả).</p>" +
         (r.count > limit ? '<button type="button" class="btn" data-more style="align-self:center">Hiện thêm ' + Math.min(PAGE, r.count - limit) + " (còn " + (r.count - limit) + ")</button>" : "")
         : '<p class="muted">' + (filtered ? "Không có khoản nào khớp bộ lọc." : "Chưa có khoản chung nào.") + "</p>";
-      drawSteps();
+      drawSteps(); drawActive();
       if (focusFrom !== undefined) { var nx = out.querySelectorAll(".item")[focusFrom]; if (nx) nx.focus(); }
     }
 
@@ -163,6 +192,7 @@
     });
     el.addEventListener("click", function (e) {
       var b = e.target.closest("button"); if (!b) return;
+      if (b.id === "sl-toggle") { setDetail(detail.hidden); return; }
       if (b.dataset.range) {
         var pr = D.rangePreset(b.dataset.range, app.ctx().today);
         setRange(pr.from, pr.to, true);

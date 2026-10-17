@@ -19,7 +19,7 @@
    ========================================================================== */
 "use strict";
 
-var PHIEN_BAN = "2";                                          /* 2: sổ khoản chung lọc theo khoảng ngày (assets đổi → worker cài lại) */
+var PHIEN_BAN = "3";                                          /* 3: bộ lọc sổ khoản chung gập được; 2: lọc theo khoảng ngày (assets đổi → worker cài lại) */
 var PHAM_VI = self.registration.scope;                       /* .../quan-ly-chi-tieu/ */
 var DUONG_DAN = new URL(PHAM_VI).pathname;
 var TIEN_TO = "qlct:" + PHAM_VI + ":";

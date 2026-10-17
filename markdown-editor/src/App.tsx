@@ -11,6 +11,7 @@ import ReadingView from './components/ReadingView'
 import StatusBar from './components/StatusBar'
 import AuthModal from './components/AuthModal'
 import HelpModal from './components/HelpModal'
+import InstallModal from './components/InstallModal'
 import SmartFormatModal from './components/SmartFormatModal'
 import CommandPalette from './components/CommandPalette'
 import Toasts from './components/Toasts'
@@ -52,6 +53,7 @@ function App() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
+  const [installOpen, setInstallOpen] = useState(false)
   const dragRef = useRef<Drag>(null)
   /** Whether the split is stacked (tablets) while a divider drag is under way. */
   const stackedRef = useRef(false)
@@ -150,7 +152,7 @@ function App() {
     }
   }, [setEditorWidth, setSidebarWidth])
 
-  useGlobalShortcuts({ setPaletteOpen, setHelpOpen, setAuthOpen, helpOpen, paletteOpen, authOpen })
+  useGlobalShortcuts({ setPaletteOpen, setHelpOpen, setAuthOpen, setInstallOpen, helpOpen, paletteOpen, authOpen, installOpen })
 
   const docked = layout === 'desktop'
   const singlePane = isSinglePane(layout, viewMode)
@@ -172,6 +174,7 @@ function App() {
           <Header
             tier={headerTier}
             onOpenHelp={() => setHelpOpen(true)}
+            onOpenInstall={() => setInstallOpen(true)}
             onOpenPalette={() => setPaletteOpen(true)}
             onOpenAuth={() => setAuthOpen(true)}
           />
@@ -226,6 +229,7 @@ function App() {
 
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
         <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+        <InstallModal open={installOpen} onClose={() => setInstallOpen(false)} />
         <SmartFormatModal />
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onOpenHelp={() => setHelpOpen(true)} />
       </div>
@@ -240,16 +244,27 @@ interface ShortcutOptions {
   setPaletteOpen: (open: boolean) => void
   setHelpOpen: (open: boolean) => void
   setAuthOpen: (open: boolean) => void
+  setInstallOpen: (open: boolean) => void
   helpOpen: boolean
   paletteOpen: boolean
   authOpen: boolean
+  installOpen: boolean
 }
 
 /**
  * Application-level shortcuts. Editing shortcuts stay on the textarea itself so
  * they cannot fire while the user is typing in the rename or search boxes.
  */
-function useGlobalShortcuts({ setPaletteOpen, setHelpOpen, setAuthOpen, helpOpen, paletteOpen, authOpen }: ShortcutOptions) {
+function useGlobalShortcuts({
+  setPaletteOpen,
+  setHelpOpen,
+  setAuthOpen,
+  setInstallOpen,
+  helpOpen,
+  paletteOpen,
+  authOpen,
+  installOpen
+}: ShortcutOptions) {
   const store = useEditorStore
 
   useEffect(() => {
@@ -284,6 +299,7 @@ function useGlobalShortcuts({ setPaletteOpen, setHelpOpen, setAuthOpen, helpOpen
         if (paletteOpen) return setPaletteOpen(false)
         if (helpOpen) return setHelpOpen(false)
         if (authOpen) return setAuthOpen(false)
+        if (installOpen) return setInstallOpen(false)
         if (state.drawerOpen) return state.setDrawerOpen(false)
         if (state.fullscreen) return state.toggleFullscreen()
         return
@@ -352,7 +368,7 @@ function useGlobalShortcuts({ setPaletteOpen, setHelpOpen, setAuthOpen, helpOpen
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [store, setPaletteOpen, setHelpOpen, setAuthOpen, helpOpen, paletteOpen, authOpen])
+  }, [store, setPaletteOpen, setHelpOpen, setAuthOpen, setInstallOpen, helpOpen, paletteOpen, authOpen, installOpen])
 }
 
 export default App

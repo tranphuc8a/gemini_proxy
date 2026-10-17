@@ -629,7 +629,17 @@
       });
   }
 
+  /** Số bộ lọc "chi tiết" đang bật của sổ khoản chung: loại, ai trả, thành viên, nhóm, từ khoá.
+   *  Khoảng ngày không tính — ô chọn tháng (kèm ‹ ›) luôn hiện nên không bị giấu khi gập phần chi tiết. */
+  function activeFilterCount(f) {
+    f = f || {};
+    var n = 0;
+    ["kind", "payer", "memberId", "groupId"].forEach(function (k) { if (f[k]) n++; });
+    return n + (f.q && String(f.q).trim() ? 1 : 0);
+  }
+
   QL.ledger = {
+    activeFilterCount: activeFilterCount,
     effects: effects, accountBalances: accountBalances, netWorth: netWorth,
     personBalances: personBalances, settlementOf: settlementOf, sharedWith: sharedWith, settlementMessage: settlementMessage,
     groupMembers: groupMembers, groupsOfPerson: groupsOfPerson, sharedLedger: sharedLedger, settleUp: settleUp,

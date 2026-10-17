@@ -114,6 +114,10 @@ class AppMetadata(BaseModel):
     collection: Optional[str] = None  # parent folder name if in a collection
     category: Optional[str] = None  # what KIND of app this is, declared in metadata.json
     has_index: bool = False
+    # Epoch seconds of the newest of index.html / metadata.json: "recently added or touched" for the portal.
+    updated: Optional[int] = None
+    # True when the app ships a manifest and a service worker at its root, i.e. it installs and opens offline.
+    pwa: bool = False
 
 
 def _load_app_metadata(app_path: Path, relative_path: str) -> Dict[str, Any]:
@@ -200,6 +204,18 @@ def _html_with_config(index_file: Path, app_path: Path) -> HTMLResponse:
     return HTMLResponse(content=_inject_runtime_config(html, _runtime_config(app_path)))
 
 
+def _app_stamp(folder: Path, index_file: Path) -> tuple:
+    """(updated, pwa) for an app folder; see AppMetadata."""
+    mtimes = []
+    for entry in (index_file, folder / "metadata.json"):
+        try:
+            mtimes.append(entry.stat().st_mtime)
+        except OSError:
+            pass
+    has_manifest = any((folder / name).is_file() for name in ("manifest.webmanifest", "manifest.json"))
+    return (int(max(mtimes)) if mtimes else None, has_manifest and (folder / "sw.js").is_file())
+
+
 def _scan_apps_recursive(base: Path, current: Path, collection: Optional[str] = None, depth: int = 0) -> List[AppMetadata]:
     """Recursively scan for apps (folders with index.html or subdirectories).
     
@@ -229,6 +245,7 @@ def _scan_apps_recursive(base: Path, current: Path, collection: Optional[str] = 
             if has_index:
                 # This is an app - add it and STOP (don't scan its subdirectories)
                 metadata = _load_app_metadata(child, relative_path)
+                updated, pwa = _app_stamp(child, index_file)
                 apps.append(AppMetadata(
                     name=child.name,
                     path=relative_path,
@@ -238,7 +255,9 @@ def _scan_apps_recursive(base: Path, current: Path, collection: Optional[str] = 
                     icon=metadata.get("icon"),
                     collection=collection,
                     category=metadata.get("category"),
-                    has_index=True
+                    has_index=True,
+                    updated=updated,
+                    pwa=pwa,
                 ))
                 # DON'T scan deeper - this is a complete app
             else:

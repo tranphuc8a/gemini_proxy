@@ -14,6 +14,7 @@ vi.mock('../services/markdownStorage', () => ({
   listBackends: vi.fn(async () => []),
   verifyAdminKey: vi.fn(),
   restoreAdminSession: vi.fn(async () => false),
+  recheckAdminSession: vi.fn(async () => 'valid'),
   clearAdminCredentials: vi.fn(),
   loadMarkdownFiles: vi.fn(),
   saveMarkdownFiles: vi.fn()

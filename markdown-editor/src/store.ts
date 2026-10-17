@@ -3,6 +3,7 @@ import type { EditorState, FileNode, Settings, SidebarTab, StorageBackend, Theme
 import {
   clearAdminCredentials,
   loadMarkdownFiles,
+  recheckAdminSession,
   restoreAdminSession as restoreStoredSession,
   saveMarkdownFiles,
   verifyAdminKey
@@ -159,6 +160,27 @@ const initialState: EditorState = {
 /** Timers live outside the store so they never end up serialised. */
 let historyTimer: ReturnType<typeof setTimeout> | null = null
 let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+let watchingConnection = false
+
+/**
+ * An installed copy can start with no network and trust the stored admin token (see
+ * `restoreAdminSession` in the storage service). When the connection comes back, settle it: a
+ * token the server now rejects ends admin mode, anything else -- including a server that still
+ * does not answer -- leaves the owner where they were.
+ */
+function watchConnection() {
+  if (watchingConnection || typeof window === 'undefined') return
+  watchingConnection = true
+  window.addEventListener('online', () => {
+    if (!useEditorStore.getState().isAdmin) return
+    void recheckAdminSession().then((result) => {
+      if (result !== 'rejected') return
+      useEditorStore.setState({ isAdmin: false })
+      useEditorStore.getState().pushToast('Admin session expired — switched to view-only mode', 'info')
+    })
+  })
+}
 
 function settingsOf(state: EditorState): Settings {
   return {
@@ -567,6 +589,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
       // Admin mode is not read from storage -- it is re-proved against the
       // backend, which is what makes an expired or revoked session take effect.
       const sessionChecked = get().restoreAdminSession()
+      watchConnection()
 
       if (stored?.files.length) {
         const current = findNode(stored.files, stored.currentFileId)

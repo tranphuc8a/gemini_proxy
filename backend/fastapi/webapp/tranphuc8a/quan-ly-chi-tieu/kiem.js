@@ -1203,6 +1203,16 @@ nhom("nhóm · số dư, sổ khoản chung, đối chiếu và cách chuyển t
   kiem("sharedLedger(người) · chênh lệch = số dư tổng với người đó", P().net === L.personBalances(s2).p_x && P().count === 4);
   kiem("sharedLedger(người) · lọc 'không thuộc nhóm' / theo nhóm", bang(P({ groupId: "none" }).items.map((x) => x.tx.id), ["g3"]) && P({ groupId: "g_tro" }).count === 3);
 
+  /* đếm bộ lọc chi tiết (huy hiệu trên nút "Bộ lọc" khi gập) */
+  kiem("activeFilterCount · không lọc gì / tham số rỗng → 0", L.activeFilterCount({}) === 0 && L.activeFilterCount() === 0 && L.activeFilterCount(null) === 0);
+  kiem("activeFilterCount · mỗi bộ lọc chi tiết tính 1 (loại, ai trả, thành viên, nhóm, từ khoá)",
+    L.activeFilterCount({ kind: "settle" }) === 1 && L.activeFilterCount({ kind: "expense", payer: "me" }) === 2 &&
+    L.activeFilterCount({ kind: "expense", payer: "other", memberId: "p_l", groupId: "none", q: "dien" }) === 5);
+  kiem("activeFilterCount · khoảng ngày KHÔNG tính (ô chọn tháng luôn hiện); từ khoá toàn khoảng trắng không tính",
+    L.activeFilterCount({ from: "2026-10-01", to: "2026-10-31" }) === 0 && L.activeFilterCount({ from: "2026-10-03", q: "   " }) === 0 &&
+    L.activeFilterCount({ from: "2026-10-01", to: "2026-10-31", payer: "me" }) === 1);
+  kiem("activeFilterCount · giá trị rỗng '' của ô chọn là chưa lọc", L.activeFilterCount({ kind: "", payer: "", memberId: "", groupId: "", q: "" }) === 0);
+
   /* settleUp: thuộc tính trên dữ liệu ngẫu nhiên */
   const R = rng(42);
   let okAll = true, worst = "";

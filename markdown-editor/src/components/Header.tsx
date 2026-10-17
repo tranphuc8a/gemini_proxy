@@ -78,13 +78,14 @@ interface HeaderAction {
 
 interface HeaderProps {
   onOpenHelp: () => void
+  onOpenInstall: () => void
   onOpenPalette: () => void
   onOpenAuth: () => void
   /** How much of the header fits inline; desktop (`full`) shows everything. */
   tier?: HeaderTier
 }
 
-function Header({ onOpenHelp, onOpenPalette, onOpenAuth, tier = 'full' }: HeaderProps) {
+function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = 'full' }: HeaderProps) {
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const theme = useEditorStore((state) => state.theme)
   const scrollSync = useEditorStore((state) => state.scrollSync)
@@ -287,6 +288,11 @@ function Header({ onOpenHelp, onOpenPalette, onOpenAuth, tier = 'full' }: Header
       <button className="menu-item" onClick={() => window.print()}>
         <IconPrinter size={14} />
         Print… <kbd>Ctrl P</kbd>
+      </button>
+      <div className="menu-separator" />
+      <button className="menu-item" onClick={onOpenInstall}>
+        <IconDownload size={14} />
+        Install app / use offline…
       </button>
     </>
   )

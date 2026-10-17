@@ -1,0 +1,21 @@
+{
+  "title": "Web Apps Portal",
+  "sections": [
+    { "id": "mine", "title": "Ứng dụng của tôi", "icon": "🧑‍💻", "collections": ["tranphuc8a"], "limit": 12 },
+    { "id": "learn", "title": "Khoá học & công cụ học", "icon": "📚", "collections": ["courses"], "limit": 12 }
+  ],
+  "library": {
+    "title": "Thư viện",
+    "icon": "🗂️",
+    "order": ["games", "tools", "calculators"]
+  },
+  "labels": {
+    "tranphuc8a": "Của tôi",
+    "courses": "Khoá học",
+    "games": "Trò chơi",
+    "tools": "Công cụ",
+    "calculators": "Máy tính"
+  },
+  "recentLimit": 8,
+  "newDays": 21
+}

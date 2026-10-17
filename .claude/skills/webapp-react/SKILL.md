@@ -26,6 +26,10 @@ Bảng chính thức: `scripts/build-webapps.mjs` (`--list`). Bản `webapp/gemi
 
 Đừng sửa `webapp/**/assets/index-*.js` — mất khi build lại.
 
+## PWA (hiện chỉ `markdown-editor`)
+
+Cài về máy + offline: `public/manifest.webmanifest`, `public/icons/` (vẽ bằng `pwa/tao-bieu-tuong.py`), `pwa/sw.js` là **mẫu** — `scripts/make-sw.mjs` (đã nối vào `npm run build`) điền danh sách precache + build id rồi ghi `dist/sw.js`. Đừng gõ tên tệp băm vào tay, đừng ghi `__BUILD__`/`__PRECACHE__` vào comment của mẫu (script chỉ khớp đúng hai dòng `var BUILD`/`var PRECACHE`). `build-webapps.mjs` có `auditServiceWorker` kiểm bản xuất bản. Kiểm bằng trình duyệt thật: `backend\fastapi\.venv\Scripts\python.exe markdown-editor\scripts\kiem-pwa.py` (server thật, tắt server + mất mạng, đổi khoá quản trị). Worker chỉ đụng GET dưới phạm vi app, không bao giờ cache API.
+
 ## Gốc API lúc chạy
 
 `vite.config.ts` đặt `base: './'`. Máy chủ chèn `window.__WEBAPP_CONFIG__ = {apiBase, webappBase}` vào `index.html`; code đọc qua `src/lib/runtimeConfig.ts`
@@ -41,5 +45,6 @@ Chat: danh sách model **lấy từ máy chủ** (`useAiModels` → `GET /ai/mod
 ## Cạm bẫy
 
 - Test chat/so sánh model mock `aiService` (`vi.mock`) — thêm hàm mới vào `aiService` thì thêm vào mock ở `ChatArea.test.tsx`.
+- `markdown-editor`: offline vẫn sửa được **chỉ khi** thiết bị thật sự mất mạng và đã có token quản trị lưu (`restoreAdminSession` → `deviceIsOffline()`); có mạng lại thì `recheckAdminSession` hạ về chỉ-xem nếu server từ chối. Test nào `vi.mock('../services/markdownStorage')` phải có `recheckAdminSession`.
 - `markdown-editor` có hộp thư nhập `?import=1` + `localStorage["markdown-editor:inbox"]` (chat và sổ tay khoá học gửi tài liệu sang); giữ nguyên hợp đồng này.
 - Markdown Editor chỉ cho sửa/lưu khi là quản trị viên; người xem chỉ đọc (chế độ đọc phải dùng được cho cả hai).
