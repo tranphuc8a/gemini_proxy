@@ -9,7 +9,7 @@
 
   function S() { return A.S; }
   function client() {
-    if (!A.API || !AI) return null;
+    if (!A.HAS_API || !AI) return null;
     if (!st.client) st.client = AI.client({ apiBase: A.API });
     return st.client;
   }

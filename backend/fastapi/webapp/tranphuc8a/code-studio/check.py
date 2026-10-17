@@ -110,16 +110,16 @@ def cong_trong():
 
 class May:
     """Khoi dong uvicorn that voi moi truong an toan; dung de phuc vu trang + /run + /codestore."""
-    def __init__(self):
+    def __init__(self, prefix="/api/v1"):
         self.tmp = tempfile.mkdtemp(prefix="cs-check-")
         self.khoa = secrets.token_urlsafe(12)
         self.port = cong_trong()
         env = dict(os.environ, PYTHONUTF8="1", DB_URL="sqlite+aiosqlite:///" + self.tmp.replace("\\", "/") + "/dev.sqlite3", MONGO_URI="",
-                   API_PREFIX="/api/v1", RUN_LOCAL_ENABLED="true", COURSE_ADMIN_KEY=self.khoa, CODESTORE_STORAGE_BACKEND="json",
+                   API_PREFIX=prefix, RUN_LOCAL_ENABLED="true", COURSE_ADMIN_KEY=self.khoa, CODESTORE_STORAGE_BACKEND="json",
                    CODESTORE_JSON_FILE=os.path.join(self.tmp, "codestore.json"), AI_ENABLED="false")
         self.log = open(os.path.join(self.tmp, "uvicorn.log"), "w", encoding="utf-8")
         self.p = subprocess.Popen([PY, "-m", "uvicorn", "src.main:app", "--port", str(self.port), "--log-level", "warning"], cwd=BE, env=env, stdout=self.log, stderr=subprocess.STDOUT)
-        self.api = "http://127.0.0.1:%d/api/v1" % self.port
+        self.api = "http://127.0.0.1:%d%s" % (self.port, prefix)
         self.goc = "http://127.0.0.1:%d/webapp/tranphuc8a/code-studio/" % self.port
         t0 = time.time()
         while time.time() - t0 < 60:
@@ -746,7 +746,7 @@ def tang_trinh_duyet(chup, wasm):
             kiem("dien thoai: nut menu mo thanh ben (ngan keo)", pm.locator(".cs-work.drawer .cs-side").count() == 1)
             vung = ev(pm, "() => { const r = document.querySelector('button[data-cmd=run]').getBoundingClientRect(); return Math.min(r.width, r.height); }")
             kiem("dien thoai: vung cham nut Chay >= 34 px (%.0f)" % vung, vung >= 34)
-            pm.click(".cs-drawer-bg", position={"x": 375, "y": 400})                      # dong ngan keo
+            pm.click(".cs-drawer-bg", position={"x": 375, "y": 400}, force=True)      # dong ngan keo (force: WebKit doi khi bao "not stable" du lop phu dung yen)
             pm.click('.cs-ptab[data-ptab="tests"]')
             pm.click('.cs-thead button:has-text("+ Thêm test")')
             pm.locator(".cs-tc textarea").first.fill("x" * 200 + "\n" + "y" * 100)
@@ -764,6 +764,30 @@ def tang_trinh_duyet(chup, wasm):
             # 1 dong "429" la CO CHU Y: may chu AI gia tra 429 de thu duong loi het luot; Chrome ghi moi phan hoi loi vao console
             loi_that = [l for l in loi_console if not re.search(r"status of 429", l)]
             kiem("khong co loi console / pageerror (ca 3 ngu canh)", not loi_that, "; ".join(loi_that[:4]))
+
+            # ---------------- API_PREFIX RONG (may cua chu du an dat nhu vay trong .env): backend chen apiBase="" nhung van la "co may chu".
+            # Loi cu: app coi chuoi rong la "khong co may chu" -> khong dong bo, khong co noi chay may chu, khong AI/chia se.
+            may0 = May("")
+            try:
+                p0 = ctx.new_page(); p0.set_default_timeout(20000)
+                p0.on("pageerror", lambda e: loi_console.append("[prefix rong] pageerror: " + str(e)[:200]))
+                p0.goto(may0.goc); p0.wait_for_selector(".cse-ta")
+                p0.wait_for_function("() => CS.app.booted === true && CS.app.S.serverTargets !== null")
+                info0 = ev(p0, "() => ({has: CS.app.HAS_API, api: CS.app.API, srv: CS.app.S.serverTargets.length, opts: document.querySelectorAll('#cs-target option').length})")
+                kiem("apiBase rong (API_PREFIX trong): van la 'co may chu' - nap duoc danh sach noi chay cua may chu (%d) va hop 'Noi chay' co nhieu lua chon" % info0["srv"],
+                     info0["has"] is True and info0["api"] == "" and info0["srv"] >= 3 and info0["opts"] >= 3, str(info0))
+                p0.click('.cs-status [data-cmd="storage"]')
+                p0.wait_for_selector("dialog.cs-dlg")
+                hop0 = p0.locator("dialog.cs-dlg").inner_text()
+                kiem("apiBase rong: hop 'Noi luu' KHONG bao 'khong co may chu API' ma cho chon che do dong bo", "không có máy chủ API" not in hop0 and p0.locator("dialog.cs-dlg select").count() >= 1, hop0[:120])
+                p0.locator("dialog.cs-dlg select").first.select_option("server")
+                p0.locator("dialog.cs-dlg button:has-text('Tạo không gian mới')").click()
+                p0.wait_for_selector("dialog.cs-dlg pre")
+                kiem("apiBase rong: tao khong gian dong bo thanh cong (goi /codestore/workspaces o goc may chu)", bool(re.search(r"Mã không gian:\s*\S+", p0.locator("dialog.cs-dlg pre").inner_text())))
+                p0.close()
+            finally:
+                may0.dong()
+
             ctx.close(); br.close()
     finally:
         may.dong()

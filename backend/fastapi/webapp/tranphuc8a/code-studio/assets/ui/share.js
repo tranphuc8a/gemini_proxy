@@ -15,14 +15,14 @@
     var it = A.S.item;
     if (!it) { U.toast("Mở một đoạn mã/dự án trước.", "bad"); return; }
     var sy = sync();
-    if (!A.API || !sy || !A.Store.connected()) {
+    if (!A.HAS_API || !sy || !A.Store.connected()) {
       U.dialog({
         title: "Chia sẻ liên kết chỉ đọc",
         body: h("div", { class: "cs-shd" }, [
           h("p", { text: "Liên kết trỏ tới bản chụp của đoạn mã/dự án trên máy chủ, nên cần bật đồng bộ trước." }),
-          h("p", { class: "cs-note", text: A.API ? "Mở “Nơi lưu & đồng bộ”, chọn kho (MySQL/MongoDB/JSON) và tạo hoặc nối một không gian." : "Code Studio đang mở không qua máy chủ nên không có chỗ lưu liên kết." })
+          h("p", { class: "cs-note", text: A.HAS_API ? "Mở “Nơi lưu & đồng bộ”, chọn kho (MySQL/MongoDB/JSON) và tạo hoặc nối một không gian." : "Code Studio đang mở không qua máy chủ nên không có chỗ lưu liên kết." })
         ]),
-        actions: A.API ? [{ label: "Đóng", value: null }, { label: "Nơi lưu & đồng bộ…", value: "storage", primary: true }] : [{ label: "Đóng", value: null }]
+        actions: A.HAS_API ? [{ label: "Đóng", value: null }, { label: "Nơi lưu & đồng bộ…", value: "storage", primary: true }] : [{ label: "Đóng", value: null }]
       }).then(function (v) { if (v === "storage") A.cmd("storage"); });
       return;
     }

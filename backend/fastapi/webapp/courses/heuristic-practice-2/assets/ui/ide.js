@@ -14,6 +14,9 @@
   var HAN = [[2000, "2 giây"], [5000, "5 giây"], [10000, "10 giây"], [15000, "15 giây (trần máy chủ)"], [30000, "30 giây (chỉ trong trình duyệt)"]];
   var CHAY_OFFLINE = { cpp: 1, c: 1, javascript: 1 };
   var API = String((root.__WEBAPP_CONFIG__ && root.__WEBAPP_CONFIG__.apiBase) || "").replace(/\/+$/, "");
+  /* Backend chèn __WEBAPP_CONFIG__ vào index.html khi phục vụ trang. apiBase có thể RỖNG (API_PREFIX trống: route nằm ở gốc, /run, /codestore…)
+     mà vẫn là "có máy chủ" — nên có-máy-chủ = có cấu hình được chèn, KHÔNG phải apiBase khác rỗng. Trang mở bằng file:// hay máy chủ tĩnh thì không có cấu hình. */
+  var HAS_API = !!root.__WEBAPP_CONFIG__ && typeof root.__WEBAPP_CONFIG__.apiBase === "string";
   var HOI_MAT = "Bấm Chạy để thấy kết quả ở đây.";
 
   var MAU = {
@@ -406,7 +409,7 @@ print("tong =", sum(a), ", lon nhat =", max(a))
       selNoi.title = (ds.filter(function (t) { return t.id === selNoi.value; })[0] || {}).reason || selNoi.title;
     }
     function napMayChu() {
-      if (!API || !CS.runner) return Promise.resolve();
+      if (!HAS_API || !CS.runner) return Promise.resolve();
       return CS.runner.loadServerProviders(API, { fetch: root.fetch.bind(root) }).then(function (ds) { servers = ds || []; if (cur && !huy) veNoiChay(); });
     }
 
@@ -543,7 +546,7 @@ print("tong =", sum(a), ", lon nhat =", max(a))
         h("label", { style: "display:flex;gap:8px;align-items:center" }, giu, "Giữ các dòng gọn một dòng khi định dạng (hàm/vòng lặp ngắn)"),
         h("label", { style: "display:grid;gap:4px;font-weight:600;font-size:.9rem" }, "Piston của bạn (gọi thẳng từ trình duyệt, cần CORS)", piston),
         h("label", { style: "display:grid;gap:4px;font-weight:600;font-size:.9rem" }, "Khoá quản trị (lưu tạm trong phiên, chỉ gửi tới máy chủ của trang)", khoa),
-        h("p", { class: "mut", style: "font-size:.88rem;margin:0", text: API ? "Máy chủ: " + (servers.length ? servers.map(function (s) { return s.label + (s.available ? "" : " (không dùng được)"); }).join(", ") : "đang tải danh sách…") : "Trang đang mở không qua backend nên không có nơi chạy “Máy chủ” — vẫn dùng được chạy trong trình duyệt và Piston của bạn." }),
+        h("p", { class: "mut", style: "font-size:.88rem;margin:0", text: HAS_API ? "Máy chủ: " + (servers.length ? servers.map(function (s) { return s.label + (s.available ? "" : " (không dùng được)"); }).join(", ") : "đang tải danh sách…") : "Trang đang mở không qua backend nên không có nơi chạy “Máy chủ” — vẫn dùng được chạy trong trình duyệt và Piston của bạn." }),
         h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" },
           h("button", { type: "button", class: "btn btn-sm", onclick: function () { napMayChu().then(function () { D.toast("Đã tải lại danh sách nơi chạy", "ok"); }); } }, "Tải lại danh sách nơi chạy"),
           h("button", { type: "button", class: "btn btn-sm", onclick: hopNoiLuu }, "Nơi lưu & đồng bộ…")));
@@ -555,7 +558,7 @@ print("tong =", sum(a), ", lon nhat =", max(a))
       if (sync && sync.dispose) sync.dispose();
       sync = null;
       var lt = ide().luuTru || {};
-      if (lt.mode !== "server" || !API || !CS.store || !CS.store.sync) return Promise.resolve();
+      if (lt.mode !== "server" || !HAS_API || !CS.store || !CS.store.sync) return Promise.resolve();
       sync = CS.store.sync({ library: lib, kv: kv, fetch: root.fetch.bind(root), apiBase: API, backend: lt.backend || "json" });
       if (sync.onStatus) sync.onStatus(capNhatChanTep);
       return Promise.resolve(sync.ready || null).then(function () { if (dongBoNoi()) khoiDongBo(); });
@@ -563,7 +566,7 @@ print("tong =", sum(a), ", lon nhat =", max(a))
     /* chờ khởi động xong (kho + đồng bộ đã dựng) rồi mới mở hộp — bấm quá sớm thì hai bộ đồng bộ đè nhau */
     function hopNoiLuu() { return (san || Promise.resolve()).then(hopNoiLuuThat); }
     function hopNoiLuuThat() {
-      if (!API) return hop("Nơi lưu đoạn mã", h("div", {}, h("p", { text: "Trang đang mở trực tiếp (file:// hoặc máy chủ tĩnh), không có máy chủ API — đoạn mã chỉ lưu trên máy này (có trong sao lưu .json ở trang Hướng dẫn)." }), h("p", { class: "mut", text: "Muốn đồng bộ giữa các thiết bị, mở trang qua backend: /webapp/courses/heuristic-practice-2/." })), [{ ten: "Đóng", gt: true, chinh: true }]);
+      if (!HAS_API) return hop("Nơi lưu đoạn mã", h("div", {}, h("p", { text: "Trang đang mở trực tiếp (file:// hoặc máy chủ tĩnh), không có máy chủ API — đoạn mã chỉ lưu trên máy này (có trong sao lưu .json ở trang Hướng dẫn)." }), h("p", { class: "mut", text: "Muốn đồng bộ giữa các thiết bị, mở trang qua backend: /webapp/courses/heuristic-practice-2/." })), [{ ten: "Đóng", gt: true, chinh: true }]);
       var lt = ide().luuTru || { mode: "local", backend: "json" };
       var mode = h("select", { "aria-label": "Chế độ lưu", style: "width:100%" }, [h("option", { value: "local", text: "Chỉ trên máy này" }), h("option", { value: "server", text: "Máy này + đồng bộ máy chủ" })]); mode.value = lt.mode || "local";
       var back = h("select", { "aria-label": "Kho máy chủ", style: "width:100%" }, [h("option", { value: "json", text: "JSON (tệp trên máy chủ)" }), h("option", { value: "mysql", text: "MySQL" }), h("option", { value: "mongo", text: "MongoDB" })]); back.value = lt.backend || "json";

@@ -5,7 +5,7 @@
 
 const resp = (status, body, headers) => {
   const h = {}; Object.keys(headers || {}).forEach((k) => { h[k.toLowerCase()] = headers[k]; });
-  return { status, ok: status >= 200 && status < 300, headers: { get: (k) => (k.toLowerCase() in h ? h[k.toLowerCase()] : null) }, text: async () => (typeof body === "string" ? body : JSON.stringify(body)) };
+  return { status, ok: status >= 200 && status < 300, headers: { get: (k) => (k.toLowerCase() in h ? h[k.toLowerCase()] : null) }, text: async () => (typeof body === "string" ? body : JSON.stringify(body)), json: async () => (typeof body === "string" ? JSON.parse(body) : body) };
 };
 const fakeFetch = (handler) => { const f = (url, init) => { init = init || {}; const c = { url, method: init.method || "GET", headers: init.headers || {}, body: init.body }; f.calls.push(c); return Promise.resolve().then(() => handler(c, f.calls.length)); }; f.calls = []; return f; };
 const rej = (p) => p.then(() => null, (e) => e);
@@ -130,5 +130,27 @@ module.exports = async function ({ nhom, kiem, bang, CS }) {
     env = await setup(() => resp(200, { items: [], serverTime: 1, more: false }));          // POST …/share trả thân kéo-về: không có token
     const weird = await rej(env.sync.share("it1"));
     kiem("máy chủ trả thiếu token → lỗi bad_response", weird && weird.code === "bad_response");
+  }
+
+  /* ================================================================ apiBase rỗng */
+  nhom("chia sẻ · apiBase RỖNG (API_PREFIX trống: route ở gốc máy chủ) vẫn dựng đúng địa chỉ");
+  {
+    const good = { item: { id: "i", kind: "snippet", name: "A", language: "cpp", files: [{ path: "main.cpp", content: "x" }], meta: {}, updatedAt: 1 }, sharedAt: 2 };
+    const f = fakeFetch(() => resp(200, good));
+    await S.readShared(TOK, { apiBase: "", backend: "json", fetch: f });
+    kiem("readShared: /codestore/shared/{token}?backend=json (không có tiền tố, không thành //)", f.calls[0].url === "/codestore/shared/" + TOK + "?backend=json", f.calls[0].url);
+    const kv = S.kv.memory(), lib = S.library({ kv }); await lib.ready;
+    await kv.set("sync:state", { workspaceId: "ws1", key: "K", backend: "json", cursor: 0 });
+    const g = fakeFetch((c) => (c.method === "GET" && /\/ws1\/shares/.test(c.url) ? resp(200, { shares: [] }) : resp(500, {})));
+    const sync = S.sync({ library: lib, kv, fetch: g, apiBase: "", backend: "json", isOnline: () => true });
+    await sync.ready; await sync.shares();
+    kiem("sync: /codestore/ws1/shares?backend=json từ apiBase rỗng", g.calls[0].url === "/codestore/ws1/shares?backend=json", g.calls[0].url);
+    const h = fakeFetch(() => resp(200, { providers: [{ id: "wandbox", label: "Wandbox", available: true, languages: ["cpp"] }], default: "wandbox" }));
+    const provs = await CS.runner.loadServerProviders("", { fetch: h });
+    kiem("loadServerProviders: /run/providers từ apiBase rỗng, nạp được danh sách", h.calls[0].url === "/run/providers" && provs.length === 1 && provs.defaultId === "wandbox", h.calls[0].url);
+    const aiFetch = fakeFetch(() => resp(200, { enabled: true, allowed: true, needs: null }));
+    const cli = CS.ai.client({ apiBase: "", fetch: aiFetch, storage: null, href: "http://localhost:6789/webapp/tranphuc8a/code-studio/" });
+    await cli.status();
+    kiem("AI: /ai/status từ apiBase rỗng; khoá lưu token theo gốc máy chủ (không có /api/v1)", aiFetch.calls[0].url === "/ai/status" && cli.keys.ai === "ai.phien@http://localhost:6789", aiFetch.calls[0].url + " " + cli.keys.ai);
   }
 };

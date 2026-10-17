@@ -6,6 +6,9 @@
   var CS = root.CS, U = CS.dom, h = U.h, $ = U.$, $$ = U.$$;
   var CFG = root.__WEBAPP_CONFIG__ || {};
   var API = String(CFG.apiBase || "").replace(/\/+$/, "");
+  /* Backend chèn __WEBAPP_CONFIG__ vào index.html khi phục vụ trang. apiBase có thể RỖNG (API_PREFIX trống: route nằm ở gốc, /run, /codestore…)
+     mà vẫn là "có máy chủ" — nên có-máy-chủ = có cấu hình được chèn, KHÔNG phải apiBase khác rỗng. Trang mở bằng file:// hay máy chủ tĩnh thì không có cấu hình. */
+  var HAS_API = typeof CFG.apiBase === "string";
 
   /* ------------------------------------------------------------------ biểu tượng (chuỗi tĩnh) */
   var ICONS = {
@@ -40,7 +43,7 @@
   }
 
   var S = { settings: null, item: null, tabs: [], active: null, views: {}, dirty: false, running: null, diags: [], lastResult: null, serverTargets: null, saveTimer: 0 };
-  var A = { S: S, API: API, ic: ic, ICONS: ICONS };
+  var A = { S: S, API: API, HAS_API: HAS_API, ic: ic, ICONS: ICONS };
   CS.app = A;
   var ed = null, els = {};
 
@@ -62,7 +65,7 @@
     initSync: function () {
       if (Store.sync && Store.sync.dispose) Store.sync.dispose();
       Store.sync = null;
-      if (S.settings.storage.mode !== "server" || !API || !CS.store.sync) return Promise.resolve();
+      if (S.settings.storage.mode !== "server" || !HAS_API || !CS.store.sync) return Promise.resolve();
       Store.sync = CS.store.sync({ library: Store.lib, kv: Store.kv, fetch: root.fetch.bind(root), apiBase: API, backend: S.settings.storage.backend });
       if (Store.sync.onStatus) Store.sync.onStatus(function () { A.renderStatus(); if (A.side) A.side.refreshLibraryFoot && A.side.refreshLibraryFoot(); });
       return Promise.resolve(Store.sync.ready || null);
@@ -381,7 +384,7 @@
   }
   A.renderTargets = renderTargets;
   function loadServerTargets() {
-    if (!API) { S.serverTargets = []; return Promise.resolve(); }
+    if (!HAS_API) { S.serverTargets = []; return Promise.resolve(); }
     var p = CS.runner && CS.runner.loadServerProviders ? CS.runner.loadServerProviders(API, { fetch: root.fetch.bind(root) }) :
       root.fetch(API + "/run/providers").then(function (r) { return r.ok ? r.json() : { providers: [] }; }).then(function (j) { return j.providers || []; });
     return Promise.resolve(p).then(function (list) { S.serverTargets = Array.isArray(list) ? list : (list && list.providers) || []; renderTargets(); A.renderStatus(); }, function () { S.serverTargets = []; });

@@ -46,6 +46,9 @@ Backend: `POST/DELETE /codestore/{ws}/items/{id}/share`, `GET /codestore/{ws}/sh
 Giao diện: menu ⋯ / bảng lệnh "Chia sẻ liên kết chỉ đọc…" (cần đã bật đồng bộ; tạo → lưu + đẩy mục lên → chụp; chép/mở/cập nhật/thu hồi, danh sách các liên kết khác). Liên kết `…/code-studio/index.html#share=<token>&backend=<kho>` — token **sau `#`** (không vào nhật ký/Referer). Mở ra trang **chỉ xem** (không dựng IDE, không đụng thư viện/IndexedDB/localStorage của người xem, đúng một lời gọi `GET shared`, `noindex`, chặn Backspace trên WebKit vì ô chỉ-đọc bị coi là "Quay lại"), nút "Nhân bản về thư viện của tôi" → `#clone=…` → IDE nhập thành mục **mới** (id mới, tên + " (bản chia sẻ)").
 `store.js`: `sync.share/shares/unshare` (khoá không rời bộ đồng bộ), `CS.store.readShared`; thông báo lỗi riêng (`codestore_share_not_found`, `…item_not_found`, `…too_many_shares`).
 
+## Sửa lỗi sau bàn giao: "không có máy chủ API" dù mở qua backend
+Chủ dự án báo hộp "Nơi lưu" nói trang mở trực tiếp, không đồng bộ được. Nguyên nhân: `.env` máy này đặt `API_PREFIX=` (rỗng) nên backend chèn `apiBase: ""`, mà Code Studio (và IDE heuristic) coi **chuỗi rỗng = không có máy chủ** → tắt đồng bộ, danh sách nơi chạy máy chủ, AI, chia sẻ. Lỗi có từ 15/10, bị che vì `check.py` luôn ép `/api/v1`. Sửa: có-máy-chủ = có `__WEBAPP_CONFIG__` được chèn (`A.HAS_API`); `apiBase` rỗng là hợp lệ (route ở gốc). Thêm phép kiểm: node (URL từ apiBase rỗng cho readShared/sync/runner/AI) và `check.py` dựng backend `API_PREFIX=""` (nạp nơi chạy, hộp Nơi lưu, tạo không gian đồng bộ) — Edge/Firefox 103, WebKit 101+1 bỏ qua. Việc cần làm trên máy bạn: mở `http://localhost:6789/webapp/tranphuc8a/code-studio/` (không phải file:// hay Live Server), rồi "Nơi lưu & đồng bộ" → "Máy này + đồng bộ máy chủ" → chọn kho → "Tạo không gian mới".
+
 ## Chạy và kiểm
 ```bash
 node backend/fastapi/webapp/tranphuc8a/code-studio/kiem.js                   # 960 phép (CS_PERF_SLACK=4 nếu máy chậm)

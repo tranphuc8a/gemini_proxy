@@ -46,7 +46,7 @@
       h("a", { href: root.location.pathname, text: "Mở Code Studio" })]);
     app.appendChild(top); app.appendChild(note); app.appendChild(tabs); app.appendChild(host); app.appendChild(input); app.appendChild(foot);
 
-    if (!API && !/^https?:$/.test(root.location.protocol)) { fail("Liên kết chia sẻ cần mở qua máy chủ Code Studio (không mở được bằng file://)."); return; }
+    if (typeof CFG.apiBase !== "string") { fail("Liên kết chia sẻ cần mở qua máy chủ Code Studio (không mở được bằng file://)."); return; }
 
     function fail(msg) {
       title.textContent = "Không mở được bản chia sẻ";

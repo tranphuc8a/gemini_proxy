@@ -197,7 +197,7 @@
   /* ================================================================ nơi lưu & đồng bộ */
   function storage() {
     var st = S().settings, Store = A.Store;
-    if (!A.API) {
+    if (!A.HAS_API) {
       return U.dialog({ title: "Nơi lưu", body: h("div", {}, [h("p", { text: "Trang đang mở trực tiếp (file:// hoặc máy chủ tĩnh), không có máy chủ API — dữ liệu chỉ lưu trên máy này (IndexedDB/localStorage)." }), h("p", { class: "cs-note", text: "Muốn đồng bộ giữa các thiết bị, hãy mở Code Studio qua backend: /webapp/tranphuc8a/code-studio/." })]) });
     }
     var mode = h("select", { class: "sel", "aria-label": "Chế độ lưu", style: { maxWidth: "100%" } }, [h("option", { value: "local", text: "Chỉ trên máy này (localStorage / IndexedDB)" }), h("option", { value: "server", text: "Máy này + đồng bộ máy chủ" })]);
