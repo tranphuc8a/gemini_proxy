@@ -1,0 +1,215 @@
+/* puzzle.css — phần RIÊNG của Logic Puzzle Suite: thẻ loại puzzle, Daily + streak, bàn chơi (khung, đồng hồ, gợi ý, replay), thống kê + biểu đồ, thư viện, trình soạn,
+   cây tìm kiếm, Constraint View, lớp phủ "đang sinh…". Màu chỉ dùng token (tokens.css) hoặc biến --pz-* dưới đây (có bản sáng/tối) để các bàn dùng chung và đủ tương phản.
+   Mọi hộp flex/grid chứa chữ có min-width: 0 — chữ dài bị cắt/ngắt chứ không đẩy khung ra ngoài. */
+
+/* ------------------------------------------------------------------ biến màu cho BÀN (các board-*.css dùng chung) */
+:root {
+  --pz-cell: var(--elev);
+  --pz-cell-given: var(--s2);
+  --pz-line: var(--border-strong);
+  --pz-line-strong: var(--text-2);
+  --pz-given: var(--text);
+  --pz-user: var(--accent-text);
+  --pz-select: rgba(33, 89, 214, 0.20);
+  --pz-same: rgba(33, 89, 214, 0.12);
+  --pz-peer: rgba(33, 89, 214, 0.06);
+  --pz-hint: rgba(180, 83, 9, 0.24);
+  --pz-conflict: rgba(180, 35, 24, 0.20);
+  --pz-conflict-text: #9b1c12;
+  --pz-replay: rgba(17, 122, 69, 0.22);
+  --pz-good: #117a45;
+  --pz-note: var(--text-2);
+}
+:root[data-theme="dark"] {
+  --pz-select: rgba(122, 167, 255, 0.22);
+  --pz-same: rgba(122, 167, 255, 0.14);
+  --pz-peer: rgba(122, 167, 255, 0.07);
+  --pz-hint: rgba(242, 193, 78, 0.20);
+  --pz-conflict: rgba(255, 143, 132, 0.22);
+  --pz-conflict-text: #ff8f84;
+  --pz-replay: rgba(95, 211, 154, 0.20);
+  --pz-good: #5fd39a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --pz-select: rgba(122, 167, 255, 0.22); --pz-same: rgba(122, 167, 255, 0.14); --pz-peer: rgba(122, 167, 255, 0.07); --pz-hint: rgba(242, 193, 78, 0.20);
+    --pz-conflict: rgba(255, 143, 132, 0.22); --pz-conflict-text: #ff8f84; --pz-replay: rgba(95, 211, 154, 0.20); --pz-good: #5fd39a;
+  }
+}
+
+/* ------------------------------------------------------------------ khung theo màn */
+body[data-route="play"] .bottom { display: none; }
+body[data-route="play"] .shell { padding-bottom: 0; }
+.main-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 20px; text-align: center; color: var(--text-2); }
+.main-empty .big, .big { font-size: 20px; font-weight: 700; color: var(--text); }
+.btn-lg { min-height: 52px; padding: 0 22px; font-size: 17px; }
+.btn.static, .chip.static { cursor: default; }
+.empty-note { padding: 18px; border: 1px dashed var(--border-strong); border-radius: var(--radius); color: var(--text-2); text-align: center; }
+.stack-sm { margin-top: 8px; }
+.mono { font-family: var(--mono); }
+.tc-ic { font-size: 1.15em; line-height: 1; }
+
+/* huy hiệu độ khó: viền + chữ cùng màu token (đủ tương phản trên nền sáng/tối) */
+.tier { background: var(--elev); display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; min-height: 24px; border: 1px solid currentColor; border-radius: 999px; font-size: 12.5px; white-space: nowrap; }
+.tier b { font-weight: 700; }
+.tier span { opacity: 0.85; font-variant-numeric: tabular-nums; }
+.t-easy { color: var(--ok); } .t-medium { color: var(--accent-text); } .t-hard { color: var(--star); } .t-expert { color: var(--danger); } .t-custom { color: var(--text-2); }
+
+/* ------------------------------------------------------------------ thẻ loại puzzle */
+.type-grid, .col-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 12px; }
+.type-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); box-shadow: var(--shadow-1); color: var(--text); text-decoration: none; }
+a.type-card.pick:hover { border-color: var(--accent); background: var(--accent-soft); }
+.tc-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tc-head > div { min-width: 0; }
+.tc-head h3 { font-size: 17px; overflow-wrap: anywhere; }
+.tc-head small { color: var(--text-3); }
+.tc-head .tc-ic { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); font-size: 24px; }
+.tc-blurb { color: var(--text-2); font-size: 14.5px; }
+.tc-meta { color: var(--text-2); font-size: 13.5px; overflow-wrap: anywhere; }
+.type-card .btn-row { margin-top: auto; }
+
+/* ------------------------------------------------------------------ Daily + streak */
+.home-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@container main (min-width: 720px) { .home-top { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
+.daily-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--elev); box-shadow: var(--shadow-1); }
+.dc-main { flex: 1 1 240px; min-width: 0; }
+.dc-day { color: var(--text-2); font-weight: 600; }
+.dc-main h2 { display: flex; align-items: center; gap: 10px; margin: 2px 0 4px; font-size: 26px; overflow-wrap: anywhere; }
+.dc-sub { color: var(--text-2); font-size: 14px; }
+.dc-act { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dc-done { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-weight: 700; }
+.streak-card { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--elev); box-shadow: var(--shadow-1); }
+.sc-num { display: flex; flex-direction: column; align-items: center; flex: none; min-width: 74px; }
+.sc-num b { font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.sc-num small { color: var(--text-3); }
+.sc-flame { color: var(--text-3); } .sc-flame .ic { width: 28px; height: 28px; } .sc-flame.on { color: var(--star); } .sc-flame.on .ic { fill: currentColor; }
+.sc-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.goal-bar { height: 10px; border-radius: 6px; background: var(--sunk); overflow: hidden; }
+.goal-bar span { display: block; height: 100%; background: var(--ok); border-radius: 6px; transition: width 300ms; }
+.goal small { color: var(--text-2); }
+.resume-list { display: flex; flex-direction: column; gap: 8px; }
+.resume { display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); }
+.resume-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text); text-decoration: none; flex-wrap: wrap; }
+.rs-ic { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); font-size: 22px; }
+.rs-t { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
+.rs-t b { overflow-wrap: anywhere; } .rs-t small { color: var(--text-3); }
+
+/* ------------------------------------------------------------------ Puzzle mới */
+.seed-row { display: flex; gap: 8px; }
+.seed-row input { flex: 1; min-width: 0; }
+.rules-box { padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); }
+.rules-box summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.rules { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.rules li { color: var(--text-2); }
+
+/* ------------------------------------------------------------------ BÀN CHƠI */
+.play { max-width: 1120px; margin: 0 auto; padding: 10px var(--gutter) 28px; display: flex; flex-direction: column; gap: 12px; }
+.play-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.play-title { min-width: 0; }
+.play-title h1 { font-size: 20px; line-height: 1.25; overflow-wrap: anywhere; display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; }
+.play-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--text-2); font-size: 13.5px; margin-top: 4px; }
+.fav-btn[aria-pressed="true"] { color: var(--star); } .fav-btn[aria-pressed="true"] .ic { fill: currentColor; }
+.play-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+@container main (min-width: 780px) { .play-body { grid-template-columns: minmax(0, 1fr) 320px; } .play-side { position: sticky; top: 8px; } }
+.board-box { position: relative; width: 100%; max-width: 640px; margin: 0 auto; min-width: 0; }
+.board-host { width: 100%; min-width: 0; container-type: inline-size; }
+.pause-cover { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; padding: 20px; text-align: center; border-radius: var(--radius); border: 1px solid var(--border); background: var(--sunk); }
+.pause-cover[hidden] { display: none; }
+.pause-cover > div { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.play-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.hud { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hud-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--elev); font-variant-numeric: tabular-nums; }
+.hud-chip .ic { width: 16px; height: 16px; color: var(--text-2); }
+.hud-time b { font-size: 18px; }
+.hud .btn { margin-left: auto; }          /* cao theo .btn chung (40 px; 44 px khi cảm ứng) — đừng ghi đè min-height ở đây */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+.toolbar .btn { flex: 1 1 auto; }
+.hint-panel { padding: 12px 14px; border: 1px solid var(--star); border-radius: var(--radius); background: var(--accent-soft); display: flex; flex-direction: column; gap: 8px; }
+.hint-panel[hidden], .replay-panel[hidden], .play-status[hidden] { display: none; }
+.hint-level { color: var(--text-2); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.hint-text { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.why { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; color: var(--text-2); }
+.play-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--ok); border-radius: var(--radius); background: var(--elev); }
+.play-status > span { flex: 1 1 200px; min-width: 0; font-weight: 600; }
+.replay-panel { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); }
+.rp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rp-head h2, .rp-head h3 { font-size: 16px; flex: 1; min-width: 0; }
+.rp-count { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.rp-text { min-height: 64px; display: flex; flex-direction: column; gap: 4px; }
+.replay-panel input[type="range"], .mx input[type="range"] { width: 100%; accent-color: var(--accent); }
+.solved-line { font-weight: 700; overflow-wrap: anywhere; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.stat-grid.big { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); min-width: 0; }
+.stat b { font-size: 22px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat small { color: var(--text-2); }
+
+/* ------------------------------------------------------------------ Học, Constraint View, cây tìm kiếm */
+.alg-steps { padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.alg-steps p { color: var(--text-2); margin-top: 2px; }
+.alg-links { margin-top: 10px; color: var(--text-2); }
+.alg-links a, .page a:not(.btn):not(.type-card):not(.resume-main) { color: var(--accent-text); }
+.learn-ex { display: flex; flex-direction: column; gap: 12px; }
+.learn-out, .learn-dlg { min-width: 0; }
+.cv { display: flex; flex-direction: column; gap: 8px; }
+.cv h3 { font-size: 14px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; }
+.cv-scroll, .tv-scroll, .mx-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--sunk); }
+.cv-scroll { max-height: 260px; }
+.cv-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cv-table th, .cv-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.cv-cons { padding-left: 24px; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; max-height: 320px; overflow: auto; }
+.tv { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tv-scroll { max-height: 420px; padding: 4px; }
+.tv-svg { display: block; }
+.tn { stroke: var(--text-3); stroke-width: 1.5; fill: var(--sunk); }
+.tn-solution { fill: var(--ok); stroke: var(--ok); } .tn-ok { fill: var(--accent); stroke: var(--accent); } .tn-dead { fill: var(--text-3); stroke: var(--text-3); } .tn-fail { fill: var(--danger); stroke: var(--danger); } .tn-open { fill: var(--elev); } .tn-root { fill: var(--text-2); stroke: var(--text-2); }
+.te { stroke: var(--border-strong); stroke-width: 1.5; } .te-good { stroke: var(--accent); stroke-width: 2.5; }
+.tl { fill: var(--text-2); font-size: 11px; }
+.tv-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; padding: 0; color: var(--text-2); font-size: 13px; }
+.tv-legend li { display: flex; align-items: center; gap: 6px; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid; }
+.dot.tn-solution { background: var(--ok); border-color: var(--ok); } .dot.tn-ok { background: var(--accent); border-color: var(--accent); } .dot.tn-dead { background: var(--text-3); border-color: var(--text-3); } .dot.tn-fail { background: var(--danger); border-color: var(--danger); } .dot.tn-open { background: var(--elev); border-color: var(--text-3); }
+.tv-note { color: var(--text-2); }
+.mx-scroll { padding: 8px; }
+.mx-table { border-collapse: collapse; font-family: var(--mono); font-size: 14px; margin: 0 auto; }
+.mx-table td { min-width: 26px; padding: 3px 7px; text-align: center; border: 1px solid var(--border); }
+.mx-table td.mx-row { background: var(--accent-soft); } .mx-table td.pivot { background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+
+/* ------------------------------------------------------------------ Tạo puzzle */
+.create-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@container main (min-width: 820px) { .create-body { grid-template-columns: minmax(0, 1fr) 320px; } .create-side { position: sticky; top: 8px; } }
+.editor-host { min-width: 0; container-type: inline-size; }
+.create-side { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); min-width: 0; order: -1; }   /* khung hẹp: kết quả kiểm tra nằm TRÊN bàn soạn để luôn thấy */
+@container main (min-width: 820px) { .create-side { order: 0; } }
+.create-side h2 { font-size: 15px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+.cr-status { display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
+.cr-chip { font-weight: 700; padding: 8px 10px; border-radius: 10px; border: 1px solid currentColor; }
+.cr-chip.c-ok { color: var(--ok); } .cr-chip.c-warn { color: var(--star); } .cr-chip.c-bad { color: var(--danger); }
+.cr-warn { color: var(--star); overflow-wrap: anywhere; }
+.cr-diff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ------------------------------------------------------------------ Thư viện, thống kê */
+.prow-list, .hist { display: flex; flex-direction: column; gap: 8px; }
+.prow, .hrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); min-width: 0; }
+.prow-main, .hrow-main { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; }
+.prow-main b, .hrow-main b { overflow-wrap: anywhere; } .prow-main small, .hrow-main small { color: var(--text-3); }
+.prow-act { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.hrow-nums { display: flex; gap: 10px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.hrow.r-abandoned, .hrow.r-revealed { opacity: 0.88; }
+.col-pick { justify-content: flex-start; }
+.col-pick.on { border-color: var(--ok); color: var(--ok); }
+.tcard { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); min-width: 0; }
+.tier-rows { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; color: var(--text-2); }
+.tier-rows li { display: flex; gap: 10px; flex-wrap: wrap; } .tier-rows b { min-width: 84px; color: var(--text); }
+.chart-box { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); }
+.chart { width: 100%; height: auto; display: block; }
+.ch-axis { stroke: var(--border-strong); } .ch-goal { stroke: var(--text-3); stroke-dasharray: 5 4; }
+.ch-bar { fill: var(--accent); } .ch-bar.ok { fill: var(--ok); }
+.ch-num { fill: var(--text); font-size: 11px; font-weight: 700; } .ch-lab { fill: var(--text-3); font-size: 10px; }
+
+/* ------------------------------------------------------------------ lớp phủ "đang sinh…" */
+.busy-ov { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: var(--scrim); }
+.busy-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 28px; border-radius: var(--radius-lg); background: var(--elev); box-shadow: var(--shadow-2); max-width: min(92vw, 360px); text-align: center; }
+.spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--border-strong); border-top-color: var(--accent); animation: pz-spin 0.9s linear infinite; }
+@keyframes pz-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } .goal-bar span { transition: none; } }

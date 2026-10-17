@@ -1,0 +1,109 @@
+/* board-lightsout.css — bàn Lights Out + trình soạn. Dùng token + --pz-* của puzzle.css; màu riêng của bàn là --pz-lo-* (có bản sáng/tối, đo tương phản trong check_board_lightsout.py).
+   Đèn BẬT = ô vàng hổ phách có quầng + đĩa đặc + 8 tia; đèn TẮT = ô tối + vòng rỗng — khác nhau cả hình dạng, không chỉ màu.
+   Cỡ ô co theo bề rộng khung (container query của .board-host / .editor-host): khoảng cách --gap tính bằng cqw, ô ≤ 104 px. */
+:root {
+  --pz-lo-panel: #dbe3f0;
+  --pz-lo-off: #35465f;
+  --pz-lo-off-edge: #1c283b;
+  --pz-lo-off-ink: #d3deee;
+  --pz-lo-on: #ffb020;
+  --pz-lo-on-hi: #ffe28a;
+  --pz-lo-on-edge: #8a5200;
+  --pz-lo-on-ink: #4a2a00;
+  --pz-lo-glow: rgba(245, 158, 11, 0.55);
+  --pz-lo-xp-fill: rgba(255, 255, 255, 0.22);
+  --pz-lo-xp-ring: #1a4ac0;
+  --pz-lo-xp-in: #ffffff;
+  --pz-lo-hint: var(--star);
+  --pz-lo-replay: var(--pz-good);
+}
+:root[data-theme="dark"] {
+  --pz-lo-panel: #16202e;
+  --pz-lo-off: #26364d;
+  --pz-lo-off-edge: #5d739a;
+  --pz-lo-off-ink: #b4c2d8;
+  --pz-lo-glow: rgba(255, 190, 60, 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --pz-lo-panel: #16202e; --pz-lo-off: #26364d; --pz-lo-off-edge: #5d739a; --pz-lo-off-ink: #b4c2d8; --pz-lo-glow: rgba(255, 190, 60, 0.6);
+  }
+}
+
+.pz-lo { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
+
+/* ---- thông số */
+.pz-lo-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pz-lo-stat { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--elev); color: var(--text); font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pz-lo-stat b { font-size: 18px; line-height: 1.1; }
+
+/* ---- lưới */
+.pz-lo-grid {
+  --w: 5; --h: 5; --gk: 1.3;
+  --gap: clamp(2px, calc(var(--gk) * 1cqw), 9px);
+  display: grid; grid-template-columns: repeat(var(--w), minmax(0, 1fr)); gap: var(--gap); padding: var(--gap);
+  width: 100%; max-width: calc(var(--w) * 104px + (var(--w) + 1) * var(--gap) + 6px); margin: 0 auto;
+  border: 3px solid var(--pz-line-strong); border-radius: 18px; background: var(--pz-lo-panel);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.pz-lo-row { display: contents; }
+.pz-lo-cell {
+  position: relative; display: grid; place-items: center; aspect-ratio: 1; min-width: 0; min-height: 0; border-radius: 28%; outline: none; cursor: pointer;
+  border: 2px solid var(--pz-lo-off-edge); background: var(--pz-lo-off); color: var(--pz-lo-off-ink);
+  box-shadow: 0 0 0 0 transparent;
+  transition: border-color 180ms, color 180ms, box-shadow 180ms;
+}
+.pz-lo-lit { position: absolute; inset: 0; border-radius: 26%; opacity: 0; pointer-events: none; background: radial-gradient(circle at 50% 38%, var(--pz-lo-on-hi), var(--pz-lo-on) 78%); transition: opacity 180ms; }
+.pz-lo-cell svg { position: relative; z-index: 1; width: 74%; height: 74%; pointer-events: none; overflow: visible; }
+.pz-lo-cell .core { fill: transparent; stroke: currentColor; stroke-width: 7; transition: fill 180ms; }
+.pz-lo-cell .rays { fill: none; stroke: currentColor; stroke-width: 6; stroke-linecap: round; opacity: 0; transform: scale(0.55); transform-origin: 50px 50px; transition: opacity 180ms, transform 180ms; }
+.pz-lo-cell.on { border-color: var(--pz-lo-on-edge); color: var(--pz-lo-on-ink); box-shadow: 0 0 calc(var(--gap) * 2.4) calc(var(--gap) * 0.35) var(--pz-lo-glow); }
+.pz-lo-cell.on .pz-lo-lit { opacity: 1; }
+.pz-lo-cell.on .core { fill: currentColor; }
+.pz-lo-cell.on .rays { opacity: 1; transform: scale(1); }
+.pz-lo-cell:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; z-index: 4; }
+.pz-lo-grid.is-solved { border-color: var(--pz-good); }
+.pz-lo-grid.is-locked .pz-lo-cell { cursor: default; }
+
+/* ---- lớp tô phủ: ::before = nền (xem trước chữ thập / tô gợi ý / tô replay), ::after = viền ngoài (gợi ý nét đứt, replay nét liền) */
+.pz-lo-cell::before, .pz-lo-cell::after { content: ""; position: absolute; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 120ms; }
+.pz-lo-cell::before { inset: -2px; z-index: 2; }
+.pz-lo-cell::after { inset: -6px; z-index: 2; border: 4px solid transparent; }
+.pz-lo-cell.xp::before, .pz-lo-cell.xp-c::before { opacity: 1; background: var(--pz-lo-xp-fill); box-shadow: inset 0 0 0 2px var(--pz-lo-xp-in), inset 0 0 0 4px var(--pz-lo-xp-ring); }
+.pz-lo-cell.xp-c::before { box-shadow: inset 0 0 0 3px var(--pz-lo-xp-in), inset 0 0 0 6px var(--pz-lo-xp-ring); }
+.pz-lo-cell.hint, .pz-lo-cell.replay { z-index: 3; }
+.pz-lo-cell.hint::before { opacity: 1; background: var(--pz-hint); }
+.pz-lo-cell.hint::after { opacity: 1; border: 4px dashed var(--pz-lo-hint); }
+.pz-lo-cell.replay::before { opacity: 1; background: var(--pz-replay); }
+.pz-lo-cell.replay::after { opacity: 1; border: 4px solid var(--pz-lo-replay); }
+
+/* ---- bật/tắt lật nhẹ (tắt khi prefers-reduced-motion) */
+@keyframes pz-lo-flip { 0% { transform: scale(0.84); } 55% { transform: scale(1.07); } 100% { transform: scale(1); } }
+@keyframes pz-lo-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@media (prefers-reduced-motion: no-preference) { .pz-lo-cell.flip { animation: pz-lo-flip 260ms ease-out; } .pz-lo-cell.hint::after { animation: pz-lo-pulse 1.5s ease-in-out infinite; } }
+@media (prefers-reduced-motion: reduce) {
+  .pz-lo-cell, .pz-lo-lit, .pz-lo-cell .core, .pz-lo-cell .rays, .pz-lo-cell::before, .pz-lo-cell::after { transition: none; animation: none; }
+}
+
+/* ---- trình soạn */
+.pz-lo-ed-dims { display: flex; flex-wrap: wrap; gap: 12px; }
+.pz-lo-dim { flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pz-lo-dim label { font-weight: 600; font-size: 14px; }
+.pz-lo-dim-row { display: flex; align-items: stretch; gap: 6px; }
+.pz-lo-dim-row select { flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 28px 0 12px; background-position: right 8px center; }
+.pz-lo-step { flex: none; width: 44px; min-height: 44px; padding: 0; }
+.pz-lo-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-lo-tool { flex: 1 1 130px; min-height: 44px; }
+.pz-lo-tool[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.pz-lo-tool:focus-visible, .pz-lo-step:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-lo-ed .pz-lo-grid-host { width: 100%; min-width: 0; }
+.pz-lo-ed .pz-lo-grid { max-width: calc(var(--w) * 72px + (var(--w) + 1) * var(--gap) + 6px); }   /* trình soạn: ô ≤ 72 px để bàn 5×5 không choán hết màn hình */
+.pz-lo-info { font-weight: 600; text-align: center; min-height: 22px; overflow-wrap: anywhere; }
+.pz-lo-tip { font-size: 13.5px; }
+
+@media (forced-colors: active) {
+  .pz-lo-cell { border-color: ButtonText; }
+  .pz-lo-cell.on { background: Highlight; color: HighlightText; forced-color-adjust: none; }
+  .pz-lo-lit { display: none; }
+}
+@container (max-width: 400px) { .pz-lo-stat { font-size: 13px; padding: 4px 10px; } }

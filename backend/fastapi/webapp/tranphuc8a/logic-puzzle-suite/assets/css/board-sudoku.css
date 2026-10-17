@@ -1,0 +1,39 @@
+/* board-sudoku.css — bàn Sudoku. Dùng token + biến --pz-* của puzzle.css (có sáng/tối). Cỡ ô co theo bề rộng khung (container query của .board-host). */
+.pz-su { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.pz-su-grid { display: grid; grid-template-columns: repeat(9, 1fr); width: 100%; aspect-ratio: 1; border: 2px solid var(--pz-line-strong); border-radius: 6px; background: var(--pz-line); gap: 1px; overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.pz-su-cell { position: relative; display: grid; place-items: center; background: var(--pz-cell); color: var(--pz-user); font-variant-numeric: tabular-nums; cursor: pointer; outline: none; min-width: 0; min-height: 0; }
+.pz-su-cell .d { font-size: clamp(14px, 6cqw, 34px); font-weight: 600; line-height: 1; }
+.pz-su-cell.given { background: var(--pz-cell-given); color: var(--pz-given); }
+.pz-su-cell.given .d { font-weight: 800; }
+.pz-su-cell.bl { box-shadow: inset 2px 0 0 var(--pz-line-strong); }
+.pz-su-cell.bt { box-shadow: inset 0 2px 0 var(--pz-line-strong); }
+.pz-su-cell.bl.bt { box-shadow: inset 2px 0 0 var(--pz-line-strong), inset 0 2px 0 var(--pz-line-strong); }
+.pz-su-cell.peer { background-image: linear-gradient(var(--pz-peer), var(--pz-peer)); }
+.pz-su-cell.same { background-image: linear-gradient(var(--pz-same), var(--pz-same)); }
+.pz-su-cell.sel { background-image: linear-gradient(var(--pz-select), var(--pz-select)); outline: 3px solid var(--accent); outline-offset: -3px; z-index: 2; }
+.pz-su-cell.conflict { background-image: linear-gradient(var(--pz-conflict), var(--pz-conflict)); color: var(--pz-conflict-text); }
+.pz-su-cell.hint { background-image: linear-gradient(var(--pz-hint), var(--pz-hint)); box-shadow: inset 0 0 0 2px var(--star); }
+.pz-su-cell.replay { background-image: linear-gradient(var(--pz-replay), var(--pz-replay)); box-shadow: inset 0 0 0 2px var(--pz-good); }
+.pz-su-cell:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; z-index: 3; }
+/* ghi chú: lưới 3×3 nhỏ trong ô */
+.pz-su-cell .nt { position: absolute; inset: 2px; display: none; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); color: var(--pz-note); pointer-events: none; }
+.pz-su-cell.has-notes .nt { display: grid; }
+.pz-su-cell .nt i { display: grid; place-items: center; font-style: normal; font-size: clamp(7px, 2cqw, 12px); line-height: 1; font-weight: 600; }
+.pz-su-cell.conflict .nt { color: var(--pz-note); }
+/* bàn số */
+.pz-su-pad { display: flex; flex-direction: column; gap: 10px; }
+.pz-su-digits { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+.pz-su-num { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 52px; padding: 2px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--elev); color: var(--text); }
+.pz-su-num b { font-size: 21px; line-height: 1.1; }
+.pz-su-num small { font-size: 11px; color: var(--text-2); min-height: 13px; }
+.pz-su-num:hover { background: var(--accent-soft); }
+.pz-su-num.done { opacity: 0.55; }
+.pz-su-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-su-tool { flex: 1 1 120px; }
+.pz-su-tool[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.pz-su.notes-on .pz-su-num { border-style: dashed; }
+.pz-su-num:focus-visible, .pz-su-tool:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@container (max-width: 400px) {
+  .pz-su-digits { grid-template-columns: repeat(5, 1fr); }
+  .pz-su-num { min-height: 48px; }
+}

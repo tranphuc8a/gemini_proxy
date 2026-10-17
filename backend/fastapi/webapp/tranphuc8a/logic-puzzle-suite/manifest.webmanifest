@@ -1,0 +1,28 @@
+{
+  "id": "./index.html",
+  "name": "Logic Puzzle Suite",
+  "short_name": "Puzzle",
+  "description": "Phòng tập tư duy logic: Sudoku, N-Queens, Lights Out, Nonogram, Logic Grid — chơi, nhận gợi ý có giải thích, tự tạo puzzle. Chạy offline.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a0f16",
+  "theme_color": "#2159d6",
+  "categories": ["games", "education"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Puzzle hôm nay", "short_name": "Daily", "description": "Daily Puzzle", "url": "./index.html#/daily", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Puzzle mới", "short_name": "Mới", "description": "Chọn loại, cỡ, độ khó, seed", "url": "./index.html#/new", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Thống kê", "short_name": "Thống kê", "description": "Lịch sử, streak, tiến độ", "url": "./index.html#/stats", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Tạo puzzle", "short_name": "Tạo", "description": "Tự nhập puzzle", "url": "./index.html#/create", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}
