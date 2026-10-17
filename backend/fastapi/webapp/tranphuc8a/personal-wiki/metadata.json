@@ -1,0 +1,7 @@
+{
+  "title": "Personal Wiki",
+  "description": "Hệ tri thức cá nhân (second brain) chạy offline trên điện thoại và máy tính: ghi chú Markdown có tiêu đề, tag, ngày tạo/sửa; liên kết [[tên note]] hai chiều với backlink; quan hệ related_to / depends_on / parent_of / child_of; đồ thị tri thức (zoom, kéo, bấm nút để mở, ẩn/hiện tag, lọc nút); tìm kiếm tiêu đề + toàn văn + tag:x trên hàng trăm nghìn note; ghi chú ngày, ghi chú đọc sách (sách/chương/trích dẫn), flashcard Q:/A: ôn theo lịch lặp ngắt quãng, ghim yêu thích; lưu trữ & thùng rác 30 ngày; xuất JSON / Markdown ZIP / PDF / ảnh PNG; sao lưu backup_YYYYMMDD.zip và khôi phục; bản nháp tự lưu nên tắt máy, hết pin không mất chữ. Cài như ứng dụng (PWA), không thư viện ngoài.",
+  "category": "Ứng dụng",
+  "tags": ["tranphuc8a", "wiki", "ghi-chu", "notes", "second-brain", "markdown", "backlink", "do-thi", "graph", "flashcard", "tim-kiem", "offline", "pwa", "sao-luu", "responsive", "tieng-viet", "khong-thu-vien"],
+  "icon": "🧠"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "./index.html",
+  "name": "Personal Wiki",
+  "short_name": "Wiki",
+  "description": "Hệ tri thức cá nhân: ghi chú Markdown, liên kết [[note]], đồ thị, flashcard — chạy offline.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a0f16",
+  "theme_color": "#2159d6",
+  "categories": ["productivity", "education"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Ghi chú mới", "short_name": "Mới", "description": "Viết ngay một ghi chú", "url": "./index.html#/new", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Ghi chú hôm nay", "short_name": "Hôm nay", "description": "Mở ghi chú ngày", "url": "./index.html#/daily", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Ôn tập", "short_name": "Ôn tập", "description": "Ôn các thẻ đến hạn", "url": "./index.html#/review", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Tìm kiếm", "short_name": "Tìm", "description": "Tìm trong mọi ghi chú", "url": "./index.html#/search", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

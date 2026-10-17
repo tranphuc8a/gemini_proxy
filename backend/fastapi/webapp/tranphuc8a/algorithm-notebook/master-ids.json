@@ -1,0 +1,50 @@
+[
+  { "agent": "ds", "file": "lib-ds.js", "category": "ds", "items": [
+    ["array-prefix-sum", "Mảng & Prefix Sum"], ["difference-array", "Mảng hiệu (Difference Array)"], ["stack", "Ngăn xếp (Stack)"], ["queue", "Hàng đợi & Deque"],
+    ["monotonic-stack", "Monotonic Stack"], ["monotonic-queue", "Monotonic Queue (Sliding Window Max)"], ["heap", "Heap / Priority Queue"], ["dsu", "DSU (Union-Find)"],
+    ["fenwick-tree", "Fenwick Tree (BIT)"], ["segment-tree", "Segment Tree"], ["lazy-segment-tree", "Segment Tree lười (Lazy Propagation)"], ["sparse-table", "Sparse Table"],
+    ["treap", "Treap"], ["sqrt-decomposition", "Sqrt Decomposition"], ["ordered-set", "Ordered Set (pb_ds)"]
+  ] },
+  { "agent": "g1", "file": "lib-graph-1.js", "category": "graph", "items": [
+    ["graph-representation", "Biểu diễn đồ thị"], ["bfs", "BFS"], ["dfs", "DFS"], ["bfs-01", "0-1 BFS"], ["dijkstra", "Dijkstra"], ["bellman-ford", "Bellman-Ford"], ["spfa", "SPFA"],
+    ["floyd-warshall", "Floyd-Warshall"], ["topological-sort", "Sắp xếp topo"], ["kruskal", "MST — Kruskal"], ["prim", "MST — Prim"], ["scc", "Thành phần liên thông mạnh (SCC)"],
+    ["bridges-articulation", "Cầu & khớp"], ["lca", "LCA (Binary Lifting)"], ["tree-diameter", "Đường kính cây"]
+  ] },
+  { "agent": "g2", "file": "lib-graph-2.js", "category": "graph", "items": [
+    ["dinic", "Dinic (luồng cực đại)"], ["edmonds-karp", "Edmonds–Karp"], ["min-cost-flow", "Luồng chi phí nhỏ nhất (Min Cost Flow)"], ["bipartite-matching", "Ghép cặp cực đại (Kuhn)"],
+    ["hopcroft-karp", "Hopcroft–Karp"], ["hungarian", "Hungarian (bài toán phân công)"], ["hld", "Heavy-Light Decomposition"], ["centroid-decomposition", "Centroid Decomposition"],
+    ["euler-path", "Đường đi Euler (Hierholzer)"], ["two-sat", "2-SAT"]
+  ] },
+  { "agent": "str", "file": "lib-string.js", "category": "string", "items": [
+    ["kmp", "KMP"], ["z-function", "Z-function"], ["rolling-hash", "Hash xâu (Rolling Hash)"], ["trie", "Trie"], ["aho-corasick", "Aho-Corasick"], ["suffix-array", "Suffix Array + LCP"],
+    ["manacher", "Manacher"], ["suffix-automaton", "Suffix Automaton"], ["xor-trie", "Binary Trie (XOR lớn nhất)"], ["minimal-rotation", "Dịch vòng nhỏ nhất (Booth / Lyndon)"]
+  ] },
+  { "agent": "dp", "file": "lib-dp.js", "category": "dp", "items": [
+    ["knapsack-01", "Knapsack 0/1"], ["knapsack-unbounded", "Knapsack không giới hạn"], ["knapsack-bounded", "Knapsack có giới hạn số lượng"], ["coin-change", "Đổi tiền (Coin Change)"],
+    ["lis", "Dãy con tăng dài nhất (LIS)"], ["lcs", "Dãy con chung dài nhất (LCS)"], ["edit-distance", "Khoảng cách chỉnh sửa (Edit Distance)"], ["bitmask-dp", "Bitmask DP"],
+    ["digit-dp", "Digit DP"], ["tree-dp", "Tree DP"], ["sos-dp", "SOS DP (tổng trên tập con)"], ["convex-hull-trick", "Convex Hull Trick / Li Chao Tree"],
+    ["divide-conquer-opt", "Tối ưu DP chia để trị"], ["interval-dp", "DP trên đoạn (Interval DP)"], ["kadane", "Kadane (đoạn con lớn nhất)"]
+  ] },
+  { "agent": "math", "file": "lib-math.js", "category": "math", "items": [
+    ["gcd-extgcd", "GCD & Euclid mở rộng"], ["modular-inverse", "Nghịch đảo modulo"], ["fast-pow", "Luỹ thừa nhanh"], ["sieve", "Sàng nguyên tố (Prime Sieve)"], ["miller-rabin", "Miller–Rabin"],
+    ["pollard-rho", "Pollard's Rho"], ["euler-phi", "Hàm phi Euler"], ["crt", "Định lý phần dư Trung Hoa (CRT)"], ["ncr-mod", "Tổ hợp modulo (nCr)"], ["matrix-exponentiation", "Luỹ thừa ma trận"],
+    ["gaussian-elimination", "Khử Gauss"], ["fft", "FFT"], ["ntt", "NTT"], ["discrete-log", "Logarit rời rạc (BSGS)"]
+  ] },
+  { "agent": "tech", "file": "lib-tech.js", "category": "tech", "items": [
+    ["binary-search", "Tìm kiếm nhị phân (và trên đáp án)"], ["ternary-search", "Tìm kiếm tam phân"], ["two-pointers", "Hai con trỏ"], ["sliding-window", "Cửa sổ trượt"], ["sorting", "Sắp xếp (merge / quick / counting)"],
+    ["count-inversions", "Đếm nghịch thế"], ["meet-in-the-middle", "Meet in the Middle"], ["backtracking", "Quay lui (Backtracking)"], ["mo-algorithm", "Thuật toán Mo"],
+    ["coordinate-compression", "Nén toạ độ"], ["greedy-interval-scheduling", "Tham lam — lập lịch khoảng"], ["bit-manipulation", "Thao tác bit"]
+  ] },
+  { "agent": "tech", "file": "lib-tech.js", "category": "geo", "items": [
+    ["convex-hull", "Bao lồi (Convex Hull)"], ["sweep-line", "Quét đường (Sweep Line)"], ["closest-pair", "Cặp điểm gần nhất"], ["point-in-polygon", "Điểm trong đa giác"], ["segment-intersection", "Giao hai đoạn thẳng"]
+  ] },
+  { "agent": "opt", "file": "lib-opt.js", "category": "opt", "items": [
+    ["hill-climbing", "Hill Climbing"], ["simulated-annealing", "Simulated Annealing (SA)"], ["genetic-algorithm", "Thuật toán di truyền (GA)"], ["grasp", "GRASP"], ["beam-search", "Beam Search"],
+    ["tabu-search", "Tabu Search"], ["branch-and-bound", "Nhánh cận (Branch & Bound)"]
+  ] },
+  { "agent": "opt", "file": "lib-sys.js", "category": "sys", "items": [
+    ["lru-cache", "LRU Cache"], ["lfu-cache", "LFU Cache"], ["consistent-hashing", "Băm nhất quán (Consistent Hashing)"], ["bloom-filter", "Bloom Filter"], ["rate-limiter", "Giới hạn tốc độ (Token / Leaky Bucket)"],
+    ["skip-list", "Skip List"], ["b-plus-tree", "B+ Tree"], ["lsm-tree", "LSM Tree"], ["merkle-tree", "Merkle Tree"], ["hyperloglog", "HyperLogLog"], ["raft", "Đồng thuận Raft"],
+    ["two-phase-commit", "Two-Phase Commit (2PC)"], ["vector-clock", "Vector Clock"]
+  ] }
+]

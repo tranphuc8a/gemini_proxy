@@ -156,7 +156,7 @@ class Settings(BaseSettings): # type: ignore
     # Ceiling for one HTTP call to a remote provider, in seconds.
     RUN_HTTP_TIMEOUT_S: float = 30.0
 
-    # Where the rate limits of /run and /codestore are counted. The backend runs
+    # Where the rate limits of /run, /codestore and /wiki are counted. The backend runs
     # on several serverless instances that cannot see each other's memory, so a
     # limit kept in memory only slows an attacker down.
     #   memory   - per process (development, tests)
@@ -185,6 +185,20 @@ class Settings(BaseSettings): # type: ignore
     # public reads of a share one client address may make per minute.
     CODESTORE_MAX_SHARES: int = 50
     CODESTORE_SHARE_READS_PER_MIN: int = 120
+
+    # Personal Wiki store (/wiki/*): notes and flash cards synced between devices.
+    # Same access model as /codestore: a workspace is reached with a secret key
+    # shown once at creation (`X-Wiki-Key`). `json`, `mysql` or `mongo`; the
+    # request may override it with `?backend=`.
+    WIKI_STORAGE_BACKEND: str = "json"
+    WIKI_JSON_FILE: str = "data/wiki.json"
+    # Records (notes, cards and deletion tombstones) one workspace may hold.
+    WIKI_MAX_ITEMS: int = 300_000
+    # New workspaces one client address may create per hour.
+    WIKI_WORKSPACES_PER_HOUR: int = 10
+    # A deletion tombstone is kept this long (so a device that was offline
+    # learns about it), then may be discarded to make room.
+    WIKI_TOMBSTONE_DAYS: int = 90
 
     # Course content (/courses/*): reading is public, writing (import, edit,
     # delete) needs this key — exchanged for a session token like the editors.

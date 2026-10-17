@@ -1,0 +1,7 @@
+{
+  "title": "Algorithm Notebook",
+  "description": "Sổ tay thuật toán cá nhân chạy offline cho sinh viên CNTT, người luyện ICPC / Codeforces / AtCoder và kỹ sư phần mềm: 116 mục dựng sẵn (cấu trúc dữ liệu, đồ thị, xâu, quy hoạch động, toán, kỹ thuật, hình học, heuristic, hệ thống & CSDL) mỗi mục có mô tả, điều kiện áp dụng, độ phức tạp, khi nào dùng / không dùng, lỗi thường gặp, template C++ đã biên dịch và chạy thử, ví dụ vào/ra, bài tập CSES liên quan. Tìm theo tên (gõ dở vẫn ra), tag, độ phức tạp O(logN), use case; So sánh 2–4 thuật toán dạng bảng; Cheat Sheet tra trong 5 giây; Wizard và cây quyết định \"nên dùng thuật toán nào\"; Template Manager (sao chép, xuất .cpp / zip); thư viện cá nhân + ghi chú Markdown; bookmark, trạng thái học và dashboard tiến độ theo nhóm; lộ trình học theo mục tiêu; flashcard lặp ngắt quãng; Quiz chọn thuật toán; trực quan hoá Dijkstra, BFS/DFS, Bellman-Ford, Fenwick, Segment Tree, DSU, KMP, knapsack…; xuất JSON / Markdown / PDF, sao lưu backup_YYYYMMDD.zip. PWA, không thư viện ngoài.",
+  "category": "Ứng dụng",
+  "tags": ["tranphuc8a", "thuat-toan", "algorithm", "cp", "icpc", "codeforces", "handbook", "cheatsheet", "template", "cpp", "decision-tree", "flashcard", "quiz", "visualization", "offline", "pwa", "tieng-viet", "khong-thu-vien"],
+  "icon": "📒"
+}

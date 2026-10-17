@@ -1,4 +1,4 @@
-"""Which counter `RATE_LIMIT_BACKEND` picks, and that `/run` and `/codestore` use it.
+"""Which counter `RATE_LIMIT_BACKEND` picks, and that `/run`, `/codestore` and `/wiki` use it.
 
 `auto` is the part with consequences: a MySQL deployment must end up on the shared
 table without anyone setting a thing, and a laptop, a test run or a SQLite file must
@@ -20,6 +20,7 @@ from src.adapter.factory import rate_limit_factory
 from src.adapter.factory.rate_limit_factory import build_rate_limiter, resolve_backend
 from src.adapter.output.codestore.json_repository import JsonCodestoreRepository
 from src.adapter.output.ratelimit import mongo_rate_limiter
+from src.adapter.output.wiki.json_repository import JsonWikiRepository
 from src.adapter.output.ratelimit.database_rate_limiter import DatabaseRateLimiter
 from src.adapter.output.ratelimit.mongo_rate_limiter import MongoRateLimiter
 from src.application.config.config import settings
@@ -28,6 +29,7 @@ from src.application.ports.output.code_executor_port import CodeExecutorPort
 from src.application.ports.output.rate_limiter_port import RateLimiterPort
 from src.application.usecases.codestore_usecase import CodestoreUseCase
 from src.application.usecases.run_usecase import RunUseCase
+from src.application.usecases.wiki_usecase import WikiUseCase
 from src.application.utils.rate_limiter import FailOpenRateLimiter, MemoryRateLimiter
 from src.domain.vo.run_vo import RunCaller, RunRequestIn, StageResult, finish
 from tests.conftest import arun
@@ -324,3 +326,126 @@ def test_the_codestore_wiring_builds_one_shared_counter_per_purpose(monkeypatch,
         assert codestore_factory._limiter("failures") is built["failures"]            # cached: shared by every backend
     finally:
         codestore_factory.reset_for_tests()
+
+
+# ---------------------------------------------------------------------------
+# /wiki
+# ---------------------------------------------------------------------------
+def wiki_usecase(repository, **limiters):
+    return WikiUseCase(repository, **limiters)
+
+
+def test_wiki_wrong_keys_are_counted_across_instances(tmp_path, name):
+    repository = JsonWikiRepository(file_path=tmp_path / "wiki.json")
+
+    def instance():
+        return wiki_usecase(repository, failure_limiter=DatabaseRateLimiter(name, 3, 600))
+
+    first, second = instance(), instance()
+
+    async def scenario():
+        created = await first.create_workspace("1.1.1.1")
+        workspace_id = created["workspaceId"]
+        outcomes = []
+        for uc in (first, second, first):
+            try:
+                await uc.list_items(workspace_id, "wrong-key", 0, ip="203.0.113.50")
+            except AppException as error:
+                outcomes.append(error.payload["code"])
+        try:
+            await second.list_items(workspace_id, created["key"], 0, ip="203.0.113.50")
+        except AppException as error:
+            outcomes.append(error.payload["code"])
+        other = await second.list_items(workspace_id, created["key"], 0, ip="198.51.100.2")
+        return outcomes, other
+
+    outcomes, other = arun(scenario())
+    assert outcomes == ["wiki_bad_key"] * 3 + ["wiki_rate_limited"]                # the right key waits too
+    assert other["items"] == []
+
+
+def test_wiki_workspace_creation_is_counted_across_instances(tmp_path, name):
+    repository = JsonWikiRepository(file_path=tmp_path / "wiki.json")
+    first = wiki_usecase(repository, workspace_limiter=DatabaseRateLimiter(name, 2, 3600))
+    second = wiki_usecase(repository, workspace_limiter=DatabaseRateLimiter(name, 2, 3600))
+
+    async def scenario():
+        await first.create_workspace("5.5.5.5")
+        await second.create_workspace("5.5.5.5")
+        with pytest.raises(AppException) as caught:
+            await first.create_workspace("5.5.5.5")
+        await second.create_workspace("6.6.6.6")
+        return caught.value
+
+    error = arun(scenario())
+    assert error.status_code == 429 and error.payload["code"] == "wiki_rate_limited"
+    assert error.headers["Retry-After"] == str(error.payload["retryAfter"])
+
+
+def test_wiki_keeps_working_when_the_shared_counters_are_down(tmp_path, caplog):
+    repository = JsonWikiRepository(file_path=tmp_path / "wiki.json")
+
+    def guarded(max_events):
+        return FailOpenRateLimiter(Down(), MemoryRateLimiter(max_events, 600), name="wiki", cooldown_s=30)
+
+    uc = wiki_usecase(repository, workspace_limiter=guarded(2), failure_limiter=guarded(2))
+
+    async def scenario():
+        created = await uc.create_workspace("7.7.7.7")
+        await uc.create_workspace("7.7.7.7")
+        with pytest.raises(AppException) as too_many:
+            await uc.create_workspace("7.7.7.7")
+        for _ in range(2):
+            with pytest.raises(AppException):
+                await uc.list_items(created["workspaceId"], "wrong", 0, ip="7.7.7.7")
+        with pytest.raises(AppException) as blocked:
+            await uc.list_items(created["workspaceId"], created["key"], 0, ip="7.7.7.7")
+        return too_many.value, blocked.value
+
+    with caplog.at_level(logging.WARNING):
+        too_many, blocked = arun(scenario())
+    assert too_many.payload["code"] == "wiki_rate_limited" and blocked.payload["code"] == "wiki_rate_limited"
+    assert "secret" not in caplog.text
+
+
+def test_the_wiki_wiring_builds_one_shared_counter_per_purpose(monkeypatch, tmp_path):
+    from src.adapter.factory import wiki_factory
+
+    fake_mongo.install(monkeypatch, mongo_rate_limiter)
+    wiki_factory.reset_for_tests()
+    monkeypatch.setattr(settings, "RATE_LIMIT_BACKEND", "database")
+    monkeypatch.setattr(settings, "WIKI_JSON_FILE", str(tmp_path / "wiki.json"))
+    try:
+        built = {name: wiki_factory._limiter(name) for name in ("workspaces", "failures")}
+        assert all(isinstance(limiter, FailOpenRateLimiter) for limiter in built.values())
+        names = {limiter._primary._name for limiter in built.values()}
+        assert names == {"wiki_workspaces", "wiki_failures"}                       # apart from codestore's counters
+        assert wiki_factory._limiter("failures") is built["failures"]              # cached: shared by every backend
+    finally:
+        wiki_factory.reset_for_tests()
+
+
+def test_the_wiki_wiring_takes_its_limits_from_the_settings(monkeypatch, tmp_path):
+    from src.adapter.factory import wiki_factory
+
+    wiki_factory.reset_for_tests()
+    monkeypatch.setattr(settings, "RATE_LIMIT_BACKEND", "memory")
+    monkeypatch.setattr(settings, "WIKI_JSON_FILE", str(tmp_path / "wiki.json"))
+    monkeypatch.setattr(settings, "WIKI_WORKSPACES_PER_HOUR", 3)
+    monkeypatch.setattr(settings, "WIKI_MAX_ITEMS", 77)
+    monkeypatch.setattr(settings, "WIKI_TOMBSTONE_DAYS", 5)
+    try:
+        uc = wiki_factory.get_wiki_usecase("json")
+        assert uc is wiki_factory.get_wiki_usecase("json")                          # one per backend, cached
+        assert uc._max_items == 77 and uc._tombstone_ttl_ms == 5 * 24 * 3600 * 1000
+
+        async def scenario():
+            made = [await uc.create_workspace("9.9.9.9") for _ in range(3)]
+            with pytest.raises(AppException) as caught:
+                await uc.create_workspace("9.9.9.9")
+            return made, caught.value
+
+        made, error = arun(scenario())
+        assert len(made) == 3 and error.payload["code"] == "wiki_rate_limited"
+    finally:
+        wiki_factory.reset_for_tests()

@@ -205,9 +205,31 @@ language, files, meta, updatedAt, deleted}` merged last-writer-wins per record, 
 Settings: `CODESTORE_STORAGE_BACKEND`, `CODESTORE_JSON_FILE`, `CODESTORE_MAX_ITEMS` (2000), `CODESTORE_WORKSPACES_PER_HOUR`,
 `CODESTORE_TOMBSTONE_DAYS`, `CODESTORE_MAX_SHARES` (50 active links per workspace), `CODESTORE_SHARE_READS_PER_MIN` (120).
 
+## Personal Wiki: syncing notes (`/wiki`)
+
+**`/wiki`** — a simplified sibling of `/codestore` for the Personal Wiki PWA: workspaces with a secret key (no accounts), records
+`{id, kind: note|card, updatedAt, deleted, data}` merged last-writer-wins per record (a tie goes to a deletion), deletions kept as
+tombstones (their `data` dropped). `data` is the whole note or card and is opaque to the server (a JSON object, ≤ 1,600,000 bytes).
+No share links, no files. `?backend=json|mysql|mongo`, default `WIKI_STORAGE_BACKEND` (tables `wiki_workspaces` / `wiki_items`,
+collections of the same names, created on first use). Answers are bare JSON with `Cache-Control: no-store`; errors carry
+`data.code` prefixed `wiki_`.
+
+| Endpoint | Key | What |
+|---|---|---|
+| `GET /wiki/backends` | — | `{default, backends: [{id, label, available, reason, persistent}]}` |
+| `POST /wiki/workspaces` | — | `201 {workspaceId, key}`; the key is shown once, only its SHA-256 is stored; `WIKI_WORKSPACES_PER_HOUR` per address |
+| `GET /wiki/{id}/items?since=&limit=` | `X-Wiki-Key` or `Authorization: Bearer` | `{items, serverTime, more}` — records whose `serverUpdatedAt > since`, oldest first; send `serverTime` back as `since`; `limit` ≤ 500 (default page 200 records / 3 MB) |
+| `PUT /wiki/{id}/items` | same | `{items: [≤ 200 records, ≤ 1.6 MB of data each, ≤ 4 MB]}` → `{items, serverTime}`: what the server holds for those ids. One bad record refuses the whole request (`400 wiki_bad_item`, `wiki_bad_clock`, `wiki_too_large`, `wiki_workspace_full`; `422` for a malformed id/kind) |
+| `DELETE /wiki/{id}` | same | `{deleted: true}` |
+
+Wrong keys are counted per address (20 in ten minutes, then `429 wiki_rate_limited` with `Retry-After`).
+Settings: `WIKI_STORAGE_BACKEND`, `WIKI_JSON_FILE` (`data/wiki.json`), `WIKI_MAX_ITEMS` (300000 notes + cards + tombstones),
+`WIKI_WORKSPACES_PER_HOUR` (10), `WIKI_TOMBSTONE_DAYS` (90). The JSON backend rewrites its whole file on every write: for a very
+large workspace use MySQL or MongoDB.
+
 **Rate limits and several instances.** On a serverless deployment every instance has its own memory, so a counter kept in
-memory only slows abuse down. The limits of `/run` (`RUN_RATE_PER_MIN`) and `/codestore` (new workspaces, wrong keys, link reads,
-wrong tokens) are counted by a `RateLimiterPort` chosen with `RATE_LIMIT_BACKEND`:
+memory only slows abuse down. The limits of `/run` (`RUN_RATE_PER_MIN`), `/codestore` (new workspaces, wrong keys, link reads,
+wrong tokens) and `/wiki` (new workspaces, wrong keys) are counted by a `RateLimiterPort` chosen with `RATE_LIMIT_BACKEND`:
 
 | Value | Counts in | Notes |
 |---|---|---|

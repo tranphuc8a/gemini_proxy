@@ -1,0 +1,90 @@
+/* tokens.css — màu, bo góc, bóng, kích thước. Mọi cặp chữ/nền dùng trong cổng đều ≥ 4,5:1 (check.py đo lại từ chính tệp này).
+   Giao diện: <html data-theme="light|dark"> do script đầu trang đặt (lựa chọn đã lưu, hoặc theo hệ điều hành).
+   Không chạy JS thì rơi về prefers-color-scheme. */
+:root {
+  color-scheme: light;
+  --bg: #f4f6fb;
+  --elev: #ffffff;
+  --sunk: #e9eef6;
+  --s2: #f0f3f9;
+  --border: #d5dde9;
+  --border-strong: #b4c1d3;
+  --text: #0e1a2b;
+  --text-2: #44546a;
+  --text-3: #566880;
+  --accent: #2159d6;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(33, 89, 214, 0.1);
+  --accent-text: #1a4ac0;
+  --danger: #b42318;
+  --ok: #117a45;
+  --star: #b45309;
+  --mark: #b45309;
+  --shadow-1: 0 1px 2px rgba(15, 26, 43, 0.06), 0 1px 1px rgba(15, 26, 43, 0.04);
+  --shadow-2: 0 10px 30px rgba(15, 26, 43, 0.14);
+  --scrim: rgba(9, 16, 28, 0.5);
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 22px;
+  --tap: 44px;
+  --max: 1440px;
+  --gutter: clamp(12px, 3vw, 28px);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --topbar-h: 112px; /* app.js đo lại thật */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #0a0f16;
+    --elev: #111923;
+    --sunk: #070b11;
+    --s2: #162130;
+    --border: #243246;
+    --border-strong: #35475f;
+    --text: #e7edf6;
+    --text-2: #a8b6c9;
+    --text-3: #8b9bb2;
+    --accent: #7aa7ff;
+    --accent-fg: #08111f;
+    --accent-soft: rgba(122, 167, 255, 0.14);
+    --accent-text: #9dbfff;
+    --danger: #ff8f84;
+    --ok: #5fd39a;
+    --star: #f2c14e;
+    --mark: #f2c14e;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 14px 38px rgba(0, 0, 0, 0.55);
+    --scrim: rgba(2, 5, 10, 0.62);
+  }
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a0f16;
+  --elev: #111923;
+  --sunk: #070b11;
+  --s2: #162130;
+  --border: #243246;
+  --border-strong: #35475f;
+  --text: #e7edf6;
+  --text-2: #a8b6c9;
+  --text-3: #8b9bb2;
+  --accent: #7aa7ff;
+  --accent-fg: #08111f;
+  --accent-soft: rgba(122, 167, 255, 0.14);
+  --accent-text: #9dbfff;
+  --danger: #ff8f84;
+  --ok: #5fd39a;
+  --star: #f2c14e;
+  --mark: #f2c14e;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 14px 38px rgba(0, 0, 0, 0.55);
+  --scrim: rgba(2, 5, 10, 0.62);
+}
