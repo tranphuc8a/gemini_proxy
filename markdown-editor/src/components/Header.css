@@ -275,6 +275,17 @@
   color: var(--text-faint);
 }
 
+/* Until sync merges per document, "Save to backend" replaces the server copy wholesale. */
+.menu-note.is-warning {
+  max-width: 260px;
+  margin: 2px 6px 4px;
+  padding: 6px 8px;
+  line-height: 1.4;
+  color: var(--warning);
+  background-color: var(--warning-soft);
+  border-radius: var(--radius-sm);
+}
+
 .menu-hint {
   margin-left: auto;
   font-size: 11px;

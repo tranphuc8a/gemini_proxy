@@ -10,12 +10,15 @@ import {
   THEME_OPTIONS,
   WIDTH_OPTIONS,
   activeHeadingIndex,
+  activeHeadingIndexSorted,
+  isAscending,
   measureFor,
   readingProgress,
   readingTimeLabel,
   type ReadingTheme
 } from '../lib/reading'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import { useIdleValue } from '../hooks/useIdleValue'
 import MarkdownView from './MarkdownView'
 import Drawer from './Drawer'
 import { IconClose, IconOutline } from './Icons'
@@ -53,10 +56,17 @@ function documentTitle(fileName: string | undefined, headings: Heading[]): strin
  * view exactly -- scroll positions, caret and all. Read-only by design: it
  * works for anonymous visitors, and task boxes cannot be ticked from here.
  */
+/** The first element in `root` with this id -- `querySelector('#id')`, without CSS.escape where it is missing. */
+function elementWithId(root: HTMLElement | null, id: string): HTMLElement | null {
+  if (!root || !id) return null
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return root.querySelector<HTMLElement>(`#${CSS.escape(id)}`)
+  return Array.from(root.querySelectorAll<HTMLElement>('[id]')).find((node) => node.id === id) ?? null
+}
+
 function ReadingView() {
   const content = useEditorStore((state) => state.currentContent)
-  const files = useEditorStore((state) => state.files)
-  const currentFileId = useEditorStore((state) => state.currentFileId)
+  // A name, not the tree: the tree is replaced on every edit made anywhere.
+  const fileName = useEditorStore((state) => findNode(state.files, state.currentFileId)?.name)
 
   const fontSize = useReadingStore((state) => state.fontSize)
   const lineHeight = useReadingStore((state) => state.lineHeight)
@@ -79,6 +89,11 @@ function ReadingView() {
   const jumpTarget = useRef(0)
   const frame = useRef(0)
   const pointerType = useRef('mouse')
+  /** Each outline entry's rendered heading, collected once per render of the article. */
+  const headingEls = useRef<(HTMLElement | null)[]>([])
+  /** Their offsets in the scroll column, re-measured only when the layout changes -- never per scroll frame. */
+  const headingTops = useRef<number[]>([])
+  const topsAscending = useRef(true)
 
   const [progress, setProgress] = useState(0)
   const [scrollable, setScrollable] = useState(false)
@@ -86,25 +101,36 @@ function ReadingView() {
   const [panel, setPanel] = useState<'toc' | 'settings' | null>(null)
   const [activeIndex, setActiveIndex] = useState(-1)
 
-  const headings = useMemo(() => extractHeadings(content), [content])
+  // Outline and counts scan the whole text; they follow it once it settles.
+  const settled = useIdleValue(content, 300)
+  const headings = useMemo(() => extractHeadings(settled), [settled])
   // Indent relative to the shallowest heading, like the editor's outline.
   const baseLevel = headings.length ? Math.min(...headings.map((heading) => heading.level)) : 1
-  const stats = useMemo(() => getDocumentStats(content), [content])
-  const title = documentTitle(findNode(files, currentFileId)?.name, headings)
+  const stats = useMemo(() => getDocumentStats(settled), [settled])
+  const title = documentTitle(fileName, headings)
 
-  /** The rendered element for an outline entry: by its slug, else by position. */
-  const headingElement = useCallback((heading: Heading, index: number): HTMLElement | null => {
+  /**
+   * Finds each outline entry's rendered heading -- by its slug, else by
+   * position -- in one pass over the article. This used to run per heading on
+   * every scroll frame, each time walking every element of the article: on a
+   * 10,000-line document a frame took up to 2.8 s.
+   */
+  const collectHeadings = useCallback(() => {
     const article = articleRef.current
-    if (!article) return null
-    const byId = Array.from(article.querySelectorAll<HTMLElement>('[id]')).find((element) => element.id === READING_ID_PREFIX + heading.slug)
-    return byId ?? article.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')[index] ?? null
-  }, [])
+    if (!article) {
+      headingEls.current = []
+      return
+    }
+    const byId = new Map<string, HTMLElement>()
+    article.querySelectorAll<HTMLElement>('[id]').forEach((element) => {
+      if (!byId.has(element.id)) byId.set(element.id, element)
+    })
+    const rendered = article.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+    headingEls.current = headings.map((heading, index) => byId.get(READING_ID_PREFIX + heading.slug) ?? rendered[index] ?? null)
+  }, [headings])
 
-  /** Looked up inside the article: the preview underneath has its own copies. */
-  const elementById = (id: string): HTMLElement | null =>
-    Array.from(articleRef.current?.querySelectorAll<HTMLElement>('[id]') ?? []).find((node) => node.id === id) ?? null
-
-  const measure = useCallback(() => {
+  /** Where the scroll position stands: progress, and the section being read (binary search, no DOM reads). */
+  const updatePosition = useCallback(() => {
     const scroller = scrollRef.current
     if (!scroller) return
     const { scrollTop, scrollHeight, clientHeight } = scroller
@@ -112,19 +138,29 @@ function ReadingView() {
     const canScroll = scrollHeight - clientHeight > 1
     setProgress(value)
     setScrollable(canScroll)
-
-    const base = scroller.getBoundingClientRect().top - scrollTop
-    const tops = headings.map((heading, index) => {
-      const element = headingElement(heading, index)
-      return element ? element.getBoundingClientRect().top - base : Number.POSITIVE_INFINITY
-    })
     // The "reading line" sits a little below the bar.
     const line = scrollTop + Math.min(clientHeight * 0.3, 160)
-    setActiveIndex(activeHeadingIndex(tops, line, canScroll && value >= 0.999))
-  }, [headingElement, headings])
+    const atEnd = canScroll && value >= 0.999
+    const tops = headingTops.current
+    setActiveIndex(topsAscending.current ? activeHeadingIndexSorted(tops, line, atEnd) : activeHeadingIndex(tops, line, atEnd))
+  }, [])
 
-  // Images, diagrams and maths change the height as they finish rendering.
+  /** Re-measures the heading offsets (the layout changed), then the position. */
+  const measure = useCallback(() => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+    const base = scroller.getBoundingClientRect().top - scroller.scrollTop
+    headingTops.current = headingEls.current.map((element) =>
+      element ? element.getBoundingClientRect().top - base : Number.POSITIVE_INFINITY
+    )
+    topsAscending.current = isAscending(headingTops.current)
+    updatePosition()
+  }, [updatePosition])
+
+  // After every render of the article; images, diagrams and maths then change
+  // the height as they finish rendering.
   useLayoutEffect(() => {
+    collectHeadings()
     measure()
     const article = articleRef.current
     if (!article) return
@@ -137,7 +173,7 @@ function ReadingView() {
       observer.disconnect()
       cancelAnimationFrame(frame.current)
     }
-  }, [measure, fontSize, lineHeight, width])
+  }, [collectHeadings, measure, content, theme, fontSize, lineHeight, width])
 
   // Focus goes to the article so arrows, Page Down and Space scroll it at
   // once; on the way out it goes back to whatever opened reading mode.
@@ -203,7 +239,7 @@ function ReadingView() {
       lastTop.current = top
     }
     cancelAnimationFrame(frame.current)
-    frame.current = requestAnimationFrame(measure)
+    frame.current = requestAnimationFrame(updatePosition)
   }
 
   const scrollToElement = (element: HTMLElement) => {
@@ -225,7 +261,8 @@ function ReadingView() {
 
   const goToHeading = (heading: Heading, index: number) => {
     setPanel(null)
-    const element = headingElement(heading, index)
+    const cached = headingEls.current[index]
+    const element = cached?.isConnected ? cached : elementWithId(articleRef.current, READING_ID_PREFIX + heading.slug)
     if (element) scrollToElement(element)
   }
 
@@ -239,7 +276,8 @@ function ReadingView() {
       const id = decodeURIComponent(link.getAttribute('href')!.slice(1))
       // Headings carry the reading prefix; ids written into the document's own
       // HTML do not.
-      const element = elementById(READING_ID_PREFIX + id) ?? elementById(id)
+      // Looked up inside the article: the preview underneath has its own copies.
+      const element = elementWithId(articleRef.current, READING_ID_PREFIX + id) ?? elementWithId(articleRef.current, id)
       if (element) scrollToElement(element)
       return
     }

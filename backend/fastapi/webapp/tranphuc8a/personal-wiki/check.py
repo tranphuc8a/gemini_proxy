@@ -8,11 +8,20 @@
     ... check.py --song-sot      # tầng 3: sập giữa chừng không mất chữ; offline qua service worker; PWA
     ... check.py --co-gian       # tầng 4: dữ liệu xấu nhất × nhiều bề rộng (không tràn ngang)
     ... check.py --hieu-nang [N] # tầng 5: N note (mặc định 100000) trong IndexedDB thật: tìm kiếm < 1 s? — IN SỐ ĐO THẬT
-    ... check.py --dong-bo       # tầng 6: đồng bộ qua /wiki (cần máy chủ + SQLite tạm)
+    ... check.py --dong-bo       # tầng 6: đồng bộ qua /wiki (cần máy chủ + SQLite tạm) — 3 biến thể: API_PREFIX=/api/v1; API_PREFIX trống
+                                 #         + A mở start_url PWA index.html?source=pwa (Chromium); biến thể đó trên Edge thật (msedge)
     ... check.py --tat-ca
 
 Máy chủ: FastAPI thật trên SQLite tạm (K.MayChuThu), nên đường dẫn /webapp/tranphuc8a/personal-wiki/, kiểu MIME và phạm vi service worker
-đúng như khi triển khai. Trả exit code ≠ 0 khi có phép sai."""
+đúng như khi triển khai; MONGO_URI="" để không ping MongoDB thật trong .env. Trả exit code ≠ 0 khi có phép sai.
+
+Kiểm đột biến (chứng minh bộ kiểm bắt được lỗi cũ — phải ĐỎ):
+    PW_HOAN_NGUYEN=may-chu   ... check.py --dong-bo --song-sot   # máy chủ không chèn cấu hình cho …/index.html gọi đích danh (22/10)
+    PW_HOAN_NGUYEN=may-khach ... check.py --dong-bo              # sync.js coi apiBase "" là "không có máy chủ" (22/10)
+    PW_HOAN_NGUYEN=tieu-de   ... check.py --chuc-nang --dong-bo  # ô tiêu đề note mới điền sẵn "Chưa đặt tên" (gốc chỗ tầng 6 chập chờn, 23/10)
+    PW_HOAN_NGUYEN=dem-moi-phim  ... check.py --chuc-nang        # mỗi phím lại đếm từ + thẻ ôn trên cả note (perf-md W1, W2 23/10)
+    PW_HOAN_NGUYEN=bieu-ngu-chet ... check.py --chuc-nang --dong-bo  # lỗi đồng bộ dừng hẳn không lên biểu ngữ (mã chết cũ, W2 23/10)
+"""
 
 from __future__ import annotations
 
@@ -32,8 +41,98 @@ sys.path.insert(0, os.path.join(WEBAPP, "courses", "engine"))
 import kiem_khoa_hoc as K  # noqa: E402
 
 PATH = "/webapp/tranphuc8a/personal-wiki/"
+START_URL = "index.html?source=pwa"                         # start_url của manifest: PWA đã cài mở đúng địa chỉ này
+SYNC_SECTION = ".settings section.set:has(h2:text-is('Đồng bộ giữa các thiết bị'))"
 OK = FAIL = 0
 ERRORS: list = []
+
+# Máy chủ thử không chạm dịch vụ thật: .env có thể đặt MONGO_URI thật, và /wiki/backends (Cài đặt → Đồng bộ) sẽ PING nó.
+ENV_AN_TOAN = {"MONGO_URI": ""}
+
+# ---------------------------------------------------------------- kiểm đột biến: tạm gỡ một bản sửa để chứng minh bộ kiểm bắt được lỗi cũ
+# PW_HOAN_NGUYEN=may-chu   máy chủ thử chạy với việc 1 bị gỡ: …/index.html gọi đích danh KHÔNG được chèn __WEBAPP_CONFIG__ (vá lúc nạp bằng
+#                          sitecustomize.py trong thư mục tạm qua PYTHONPATH — không sửa tệp nào của repo).
+# PW_HOAN_NGUYEN=may-khach trang nhận BẢN SAO sync.js với việc 2 bị gỡ: apiBase "" lại bị coi là "không có máy chủ" (thay bằng route).
+# PW_HOAN_NGUYEN=tieu-de   trang nhận BẢN SAO editor.js với bản sửa 23/10 bị gỡ: ô tiêu đề note mới lại điền sẵn "Chưa đặt tên" (route) —
+#                          --chuc-nang đỏ CHẮC CHẮN (không còn phụ thuộc may rủi về nhịp), --dong-bo dừng ở "A: tạo ghi chú 1".
+# Khi đặt biến này, các tầng nói trên PHẢI đỏ. Bình thường không đặt.
+HOAN_NGUYEN = os.environ.get("PW_HOAN_NGUYEN", "").strip()
+
+SITECUSTOMIZE_HOAN_NGUYEN = r'''
+import importlib.abc, importlib.util, sys
+_TEN = "src.adapter.input.controllers.webapp_controller"
+class _GoBanSua(importlib.abc.MetaPathFinder):
+    def find_spec(self, name, path=None, target=None):
+        if name != _TEN:
+            return None
+        sys.meta_path.remove(self)
+        spec = importlib.util.find_spec(name)
+        goc = spec.loader.exec_module
+        def exec_module(module):
+            goc(module)
+            module._is_entry_document = lambda target: False
+            sys.stderr.write("[PW_HOAN_NGUYEN=may-chu] index.html goi dich danh KHONG duoc chen cau hinh\n")
+        spec.loader.exec_module = exec_module
+        return spec
+sys.meta_path.insert(0, _GoBanSua())
+'''
+
+
+def env_may_chu(extra=None):
+    """Biến môi trường cho K.MayChuThu: luôn chặn MongoDB thật; thêm bản vá hoàn nguyên nếu PW_HOAN_NGUYEN=may-chu."""
+    env = dict(ENV_AN_TOAN)
+    env.update(extra or {})
+    if HOAN_NGUYEN == "may-chu":
+        d = tempfile.mkdtemp(prefix="wiki-hoan-nguyen-")
+        with io.open(os.path.join(d, "sitecustomize.py"), "w", encoding="utf-8") as f:
+            f.write(SITECUSTOMIZE_HOAN_NGUYEN)
+        env["PYTHONPATH"] = d + (os.pathsep + os.environ["PYTHONPATH"] if os.environ.get("PYTHONPATH") else "")
+    return env
+
+
+def sync_js_hoan_nguyen():
+    """Bản sao sync.js với việc 2 bị gỡ (biểu thức cũ `available: !!apiBase`)."""
+    s = io.open(os.path.join(HERE, "assets", "js", "data", "sync.js"), encoding="utf-8").read()
+    for a, b in (("available: hasApi,", "available: !!apiBase,"), ("var hasApi = opt.apiBase != null;", "var hasApi = !!opt.apiBase;")):
+        if s.count(a) != 1:
+            raise SystemExit("PW_HOAN_NGUYEN=may-khach: không tìm thấy đúng một chỗ " + a)
+        s = s.replace(a, b)
+    return s
+
+
+def editor_js_hoan_nguyen():
+    """Bản sao editor.js với bản sửa 23/10 bị gỡ (ô tiêu đề note mới / nháp tiêu đề trống lại thành "Chưa đặt tên")."""
+    s = io.open(os.path.join(HERE, "assets", "js", "ui", "editor.js"), encoding="utf-8").read()
+    for pat in (r'\n[ \t]*if \(!String\(query\.title \|\| ""\)\.trim\(\)\) note\.title = "";[^\n]*', r'\n[ \t]*if \(!String\(d\.note\.title \|\| ""\)\.trim\(\)\) dn\.title = "";[^\n]*'):
+        s, n = re.subn(pat, "", s)
+        if n != 1:
+            raise SystemExit("PW_HOAN_NGUYEN=tieu-de: không tìm thấy đúng một chỗ " + pat)
+    return s
+
+
+def _ban_sao(rel, cu, moi, ten):
+    """Bản sao một tệp của app với đúng MỘT chỗ `cu` thay bằng `moi` (kiểm đột biến)."""
+    s = io.open(os.path.join(HERE, *rel.split("/")), encoding="utf-8").read()
+    if s.count(cu) != 1:
+        raise SystemExit("PW_HOAN_NGUYEN=%s: không tìm thấy đúng một chỗ %s" % (ten, cu))
+    return s.replace(cu, moi)
+
+
+def setup_hoan_nguyen(ctx):
+    """Gắn route thay tệp của chế độ đột biến (gọi cho MỌI trang do lớp Page mở, trước lần tải đầu tiên)."""
+    def thay(pat, body):
+        ctx.route(pat, lambda route: route.fulfill(status=200, content_type="text/javascript; charset=utf-8", body=body))
+    if HOAN_NGUYEN == "dem-moi-phim":                        # W2/perf W1 bị gỡ: mỗi phím lại đếm từ + thẻ ôn (quét cả note)
+        thay("**/personal-wiki/assets/js/ui/editor.js*", _ban_sao("assets/js/ui/editor.js", "function changed() { queueDraft(); setDirtyState(); countsSoon(); schedulePreview(); }",
+                                                                  "function changed() { queueDraft(); setStatus(); schedulePreview(); }", HOAN_NGUYEN))
+    elif HOAN_NGUYEN == "bieu-ngu-chet":                     # W2 bị gỡ: biểu ngữ "sync" lại là mã chết (lỗi đồng bộ chỉ thấy trong Cài đặt)
+        thay("**/personal-wiki/assets/js/ui/app.js*", _ban_sao("assets/js/ui/app.js", 'else if (syncStop) showBanner("sync", syncStop);', "", HOAN_NGUYEN))
+    if HOAN_NGUYEN == "may-khach":
+        src = sync_js_hoan_nguyen()
+        ctx.route("**/personal-wiki/assets/js/data/sync.js*", lambda route: route.fulfill(status=200, content_type="text/javascript; charset=utf-8", body=src))
+    elif HOAN_NGUYEN == "tieu-de":
+        src_ed = editor_js_hoan_nguyen()
+        ctx.route("**/personal-wiki/assets/js/ui/editor.js*", lambda route: route.fulfill(status=200, content_type="text/javascript; charset=utf-8", body=src_ed))
 
 
 def check(cond, msg, detail=""):
@@ -184,10 +283,13 @@ def tang_1():
 class Page:
     """Một trang Playwright + gom lỗi console/pageerror."""
 
-    def __init__(self, pw_browser, url, name, **ctx_kw):
+    def __init__(self, pw_browser, url, name, setup=None, **ctx_kw):
         ctx_kw.setdefault("service_workers", "block")
         ctx_kw.setdefault("accept_downloads", True)
         self.ctx = pw_browser.new_context(**ctx_kw)
+        setup_hoan_nguyen(self.ctx)                          # kiểm đột biến (PW_HOAN_NGUYEN); bình thường không làm gì
+        if setup:
+            setup(self.ctx)                                  # vd chặn/thay tệp bằng route — phải có trước lần mở trang đầu tiên
         self.pg = self.ctx.new_page()
         self.name = name
         self.errors = []
@@ -219,19 +321,96 @@ class Page:
         self.ctx.close()
 
 
-def new_note(P, title, body, tags=()):
-    P.pg.click("#newBtn" if P.pg.is_visible("#newBtn") else "#topNew")
-    P.pg.wait_for_selector(".ed-title")
-    P.pg.fill(".ed-title", title)
-    P.pg.fill(".ed-ta", body)
+# ---------------------------------------------------------------- tạo ghi chú mới (dùng ở mọi tầng)
+# Kẽ hở cũ (tầng 6 đỏ/xanh chập chờn, 23/10 — đã bắt tận tay bằng log sự kiện trang khi chạy song song có tải):
+#  · GỐC: editor.js tự focus sau 30 ms vào (ô tiêu đề nếu trống, không thì ô nội dung); ô tiêu đề note mới lại bị điền sẵn "Chưa đặt tên"
+#    (đã sửa ở editor.js) nên nhịp đó focus Ô NỘI DUNG. fill của Playwright = focus+select rồi MỘT lượt CDP insertText: nhịp 30 ms rơi vào
+#    giữa là "Đồng bộ hai" vào ô nội dung, fill nội dung ghi đè, tiêu đề còn "Chưa đặt tên" → B thiếu "Đồng bộ hai", liên kết mờ.
+#  · Báo "thành công" bằng toast "Đã lưu" — toast của ghi chú TRƯỚC sống 4,5 s (dom.js), nên ghi chú sau "đạt" mà chưa hề lưu/lưu sai.
+#  · fill('.ed-title') / fill('.ed-ta') theo selector toàn trang, chỉ đòi có một .ed-title mới — không ràng buộc vào CHÍNH trình soạn mới.
+# Cách làm bây giờ: đánh dấu mọi .ed-title/.toast đang có → bấm "Ghi chú mới" → chờ trang chỉ còn ĐÚNG MỘT .ed-title và nó mới, hash là
+# #/n/<id>?new=1, ô đó đã nhận focus (nhịp 30 ms đã chạy) → điền qua handle của CHÍNH trình soạn đó → đọc lại giá trị → Ctrl+S → chờ
+# trạng thái ĐÃ LƯU của chính ghi chú đó: hash thành #/n/<id> (save() gọi replaceState), .ed-status "✓ Đã lưu", tiêu đề trong ô = tiêu đề
+# đã lưu (save() ghi lại từ bản đã lưu), và một toast "Đã lưu" MỚI.
+MARK_OLD_JS = "() => { document.querySelectorAll('.ed-title, .toast').forEach(e => { e.__cu = true; }); return location.hash; }"
+NEW_EDITOR_JS = """prev => {
+  const ts = [...document.querySelectorAll('.ed-title')], m = location.hash.match(/^#\\/n\\/([^?]+)\\?(?:.*&)?new=1(?:&|$)/);
+  if (location.hash === prev || !m || ts.length !== 1 || ts[0].__cu) return false;
+  const ed = ts[0].closest('.ed');
+  return ed && document.activeElement === ts[0] ? { ed: ed, id: decodeURIComponent(m[1]) } : false;
+}"""
+NEW_EDITOR_STATE_JS = """() => { const ts = [...document.querySelectorAll('.ed-title')];
+  return { hash: location.hash, titles: ts.length, moi: ts.filter(e => !e.__cu).length, focus: document.activeElement ? (document.activeElement.className || document.activeElement.tagName) : null }; }"""
+READ_EDITOR_JS = """ed => ({ connected: ed.isConnected, title: ed.querySelector('.ed-title').value, body: ed.querySelector('.ed-ta').value,
+  tags: [...ed.querySelectorAll('.tagchip .tagname')].map(b => b.textContent.replace(/^#/, '')),
+  status: (ed.querySelector('.ed-status .st') || {}).textContent || '' })"""
+SAVED_JS = """([ed, id, title]) => {
+  const st = ed.querySelector('.ed-status .st.ok');
+  return ed.isConnected && location.hash === '#/n/' + id && !!st && st.textContent.includes('Đã lưu')
+    && ed.querySelector('.ed-title').value === title
+    && [...document.querySelectorAll('.toast')].some(t => !t.__cu && t.textContent.includes('Đã lưu'));
+}"""
+
+
+BLANK_NOTE_JS = """() => { const t = document.querySelector('.ed-title'), a = document.activeElement;
+  return { title: t.value, ph: t.placeholder, focus: a ? (a.className || a.tagName) : null, save: document.querySelector('.ed .save').disabled,
+           status: (document.querySelector('.ed-status .st') || {}).textContent || '' }; }"""
+
+
+def _note_fail(P, what, detail):
+    print("    (new_note ở %s: %s — %s)" % (getattr(P, "name", "trang"), what, json.dumps(detail, ensure_ascii=False)[:400]))
+    return False
+
+
+def new_note(P, title, body, tags=(), timeout=10000):
+    """Tạo + lưu một ghi chú qua giao diện. True chỉ khi CHÍNH ghi chú vừa tạo đã lưu với đúng tiêu đề/nội dung/tag (xem ghi chú ở trên)."""
+    pg = P.pg
+    prev = pg.evaluate(MARK_OLD_JS)
+    pg.click("#newBtn" if pg.is_visible("#newBtn") else "#topNew")
+    try:
+        h = pg.wait_for_function(NEW_EDITOR_JS, arg=prev, timeout=timeout)
+    except Exception:
+        return _note_fail(P, "không thấy đúng một trình soạn MỚI đã nhận focus", pg.evaluate(NEW_EDITOR_STATE_JS))
+    ed = h.get_property("ed").as_element()
+    note_id = h.get_property("id").json_value()
+    ed.query_selector(".ed-title").fill(title)
+    ed.query_selector(".ed-ta").fill(body)
+    tag_in = ed.query_selector(".tag-in")
     for t in tags:
-        P.pg.fill(".tag-in", t)
-        P.pg.press(".tag-in", "Enter")
-    P.pg.focus(".ed-ta")
-    P.pg.keyboard.press("Control+s")
-    ok = P.toast("Đã lưu")
-    P.pg.wait_for_timeout(200)
-    return ok
+        tag_in.fill(t)
+        tag_in.press("Enter")
+    got = ed.evaluate(READ_EDITOR_JS)
+    want = {"connected": True, "title": title, "body": body, "tags": list(tags)}
+    if any(got[k] != v for k, v in want.items()):
+        return _note_fail(P, "giá trị trong trình soạn khác giá trị đã điền", {"muốn": want, "có": got})
+    ed.query_selector(".ed-ta").focus()
+    pg.keyboard.press("Control+s")
+    try:
+        pg.wait_for_function(SAVED_JS, arg=[ed, note_id, title.strip()], timeout=timeout)
+    except Exception:
+        return _note_fail(P, "chưa thấy trạng thái đã lưu của ghi chú " + note_id[:8], dict(ed.evaluate(READ_EDITOR_JS), hash=pg.evaluate("location.hash")))
+    return True
+
+
+SAVED_OPEN_JS = """() => { const eds = document.querySelectorAll('.ed'), st = eds.length === 1 && eds[0].querySelector('.ed-status .st.ok');
+  return !!st && st.textContent.includes('Đã lưu') && [...document.querySelectorAll('.toast')].some(t => !t.__cu && t.textContent.includes('Đã lưu')); }"""
+
+
+def luu(P, bam=None, timeout=10000):
+    """Lưu ghi chú đang mở (Ctrl+S trong ô nội dung, hoặc bấm `bam`) và chờ CHÍNH lần lưu này xong: .ed-status "✓ Đã lưu" và một toast
+    "Đã lưu" MỚI — toast của lần lưu trước còn sống 4,5 s nên không được tính."""
+    pg = P.pg
+    pg.evaluate("() => document.querySelectorAll('.toast').forEach(e => { e.__cu = true; })")
+    if bam:
+        pg.click(bam)
+    else:
+        pg.focus(".ed-ta")
+        pg.keyboard.press("Control+s")
+    try:
+        pg.wait_for_function(SAVED_OPEN_JS, timeout=timeout)
+        return True
+    except Exception:
+        return _note_fail(P, "lưu ghi chú đang mở chưa xong", {"hash": pg.evaluate("location.hash"), "status": pg.evaluate("(document.querySelector('.ed-status') || {}).textContent || null")})
 
 
 PROBE = "document.querySelector('.gv')._probe()"
@@ -252,31 +431,251 @@ def graph_settled(pg, tries=40):
 
 
 class Bare:
-    """Chỉ cần .pg và .toast cho new_note khi trang không do lớp Page tạo."""
+    """Bọc một trang không do lớp Page tạo để dùng với new_note/luu (cần .pg; .name để in chẩn đoán)."""
 
-    def __init__(self, pg):
+    def __init__(self, pg, name="trang"):
         self.pg = pg
+        self.name = name
 
-    def toast(self, text, timeout=4000):
-        return _wait_toast(self.pg, text, timeout)
+
+TITLES_JS = """() => ({ rows: [...document.querySelectorAll('.nrow .nr-title')].map(e => e.textContent), hash: location.hash,
+  q: (document.querySelector('#q') || {}).value || '', sync: Wiki.sync.instance ? Wiki.sync.instance.state() : null })"""
 
 
 def open_row(P, title):
-    """Mở ghi chú theo tiêu đề từ danh sách và CHỜ tới khi trình soạn đúng ghi chú đó (danh sách vẽ lại khi đồng bộ đổi dữ liệu)."""
+    """Mở ghi chú theo tiêu đề từ danh sách và CHỜ tới khi trình soạn đúng ghi chú đó (danh sách vẽ lại khi đồng bộ đổi dữ liệu).
+
+    Không ném ngoại lệ: khi không mở được thì ghi một phép SAI (kèm trạng thái thật của trang) và trả False — người gọi dừng phần
+    phụ thuộc nhưng các tầng/biến thể sau vẫn chạy và dòng tổng vẫn được in."""
+    row = ".nrow:has(.nr-title:text-is('%s'))" % title
+    try:
+        P.pg.wait_for_selector(row, timeout=10000)
+    except Exception:
+        return check(False, "%s: mở ghi chú '%s' từ danh sách" % (P.name, title),
+                     "không có dòng đó — " + json.dumps(P.pg.evaluate(TITLES_JS), ensure_ascii=False)[:600])
     for _ in range(3):
-        P.pg.locator(".nrow:has(.nr-title:text-is('%s'))" % title).click()
+        P.pg.locator(row).click()
         try:
             P.pg.wait_for_function("t => { const i = document.querySelector('.ed-title'); return !!i && i.value === t; }", arg=title, timeout=4000)
-            return
+            return True
         except Exception:
             P.pg.evaluate("location.hash = '#/notes'")
             P.pg.wait_for_selector(".nrow")
-    raise AssertionError("không mở được ghi chú " + title)
+    return check(False, "%s: mở ghi chú '%s' từ danh sách" % (P.name, title), "bấm 3 lần, trình soạn không hiện đúng ghi chú đó")
 
 
 def menu_click(P, label):
     P.pg.click(".ed .more")
     P.pg.click(".popmenu button:has-text('%s')" % label)
+
+
+# ---------------------------------------------------------------- perf-md W1: mỗi phím chỉ làm việc rẻ, đếm từ/thẻ trễ 300 ms
+# Bất biến không phụ thuộc máy: số lần gọi Wiki.flash.extractCards trong một tràng phím (bản cũ: MỘT lần MỖI phím), và khoảng cách từ phím cuối tới
+# lần số đếm đổi (≥ debounce). Đếm qua móc vào đối tượng Wiki.flash (editor.js gọi F.extractCards lúc chạy nên móc có hiệu lực).
+W1_HOOK_JS = """() => { const F = Wiki.flash; if (!F.__goc) F.__goc = F.extractCards; window.__ec = 0;
+  F.extractCards = function () { window.__ec++; return F.__goc.apply(this, arguments); };
+  const ta = document.querySelector('.ed-ta'), cnt = document.querySelector('.ed-status .cnt');
+  window.__lastInput = 0; window.__cntAt = 0;
+  ta.addEventListener('input', () => { window.__lastInput = performance.now(); });
+  new MutationObserver(() => { window.__cntAt = performance.now(); }).observe(cnt, { childList: true, characterData: true, subtree: true }); }"""
+W1_STATE_JS = """() => ({ st: document.querySelector('.ed-status .st').textContent, cnt: document.querySelector('.ed-status .cnt').textContent, ec: window.__ec,
+  save: document.querySelector('.ed .save').disabled, gap: window.__cntAt && window.__lastInput ? window.__cntAt - window.__lastInput : null })"""
+# số từ hiển thị phải đúng định nghĩa cũ (regex \\p{L}\\p{N}) trên nội dung hiện tại của ô soạn
+W1_COUNT_OK_JS = """(cards) => { const v = document.querySelector('.ed-ta').value, n = (v.match(/[\\p{L}\\p{N}]+/gu) || []).length;
+  return document.querySelector('.ed-status .cnt').textContent === n.toLocaleString('vi-VN') + ' từ' + (cards ? ' · ' + cards + ' thẻ ôn' : ''); }"""
+
+
+def editor_status_w1(P):
+    section(" · trình soạn: mỗi phím chỉ cập nhật 'Chưa lưu'; số từ + thẻ ôn đếm trễ 300 ms sau phím cuối (perf-md W1)")
+    pg = P.pg
+    pg.wait_for_selector(".ed-status .cnt")
+    goc = pg.input_value(".ed-ta")
+    check(pg.evaluate(W1_COUNT_OK_JS, 0), "mở ghi chú: số từ đếm ngay, đúng định nghĩa cũ", pg.locator(".ed-status").inner_text())
+    pg.evaluate(W1_HOOK_JS)
+    pg.click(".ed-ta")
+    pg.keyboard.press("Control+End")
+    pg.keyboard.type(" một hai ba bốn", delay=25)
+    s = pg.evaluate(W1_STATE_JS)
+    check("Chưa lưu" in s["st"] and s["save"] is False, "gõ: 'Chưa lưu' + nút Lưu bật ngay (việc rẻ chạy mỗi phím)", s)
+    check(s["ec"] <= 2, "tràng 15 phím cách 25 ms: đếm thẻ ôn %d lần (bản cũ: 15 lần — mỗi phím quét cả note)" % s["ec"], s)
+    try:
+        pg.wait_for_function(W1_COUNT_OK_JS, arg=0, timeout=4000)
+        ok_cnt = True
+    except Exception:
+        ok_cnt = False
+    s = pg.evaluate(W1_STATE_JS)
+    check(ok_cnt and s["gap"] is not None and s["gap"] >= 250, "ngừng gõ: số từ cập nhật đúng, %s ms sau phím cuối (≥ 300 ms debounce)" % (round(s["gap"]) if s["gap"] else "?"), s)
+    pg.keyboard.type("\nQ: Câu hỏi W1?\nA: Đáp án W1", delay=10)
+    try:
+        pg.wait_for_function(W1_COUNT_OK_JS, arg=1, timeout=4000)
+        ok_card = True
+    except Exception:
+        ok_card = False
+    check(ok_card, "thêm Q:/A: → sau khi ngừng gõ hiện '· 1 thẻ ôn' (thẻ đếm trễ cùng số từ)", pg.evaluate(W1_STATE_JS))
+    pg.fill(".ed-ta", goc)                                   # trả nội dung về như đã lưu: không để lại nháp/thẻ ảnh hưởng các phần sau
+    s = pg.evaluate(W1_STATE_JS)
+    check("Đã lưu" in s["st"] and s["save"] is True, "trả chữ về như bản đã lưu: trạng thái về '✓ Đã lưu' ngay, nút Lưu tắt", s)
+    try:
+        pg.wait_for_function(W1_COUNT_OK_JS, arg=0, timeout=4000)
+        ok_back = True
+    except Exception:
+        ok_back = False
+    check(ok_back, "…số từ/thẻ trở lại như cũ sau 300 ms", pg.evaluate(W1_STATE_JS))
+    pg.evaluate("() => { const F = Wiki.flash; if (F.__goc) { F.extractCards = F.__goc; delete F.__goc; } }")
+
+
+# ---------------------------------------------------------------- W2: đồng bộ dễ tìm + thông điệp đúng tình huống (máy chủ /wiki GIẢ qua route)
+# Luồng đồng bộ thật (hai thiết bị, máy chủ FastAPI) nằm ở tầng 6; ở đây chỉ dựng đúng các tình huống khó tạo bằng máy chủ thật:
+# kho tạm, mất kho, địa chỉ không có API, mở file://, trang thiếu cấu hình.
+class FakeWiki:
+    """Máy chủ /wiki giả cho một ngữ cảnh trình duyệt (ctx.route("**/wiki/**", fake.handle)). items: ok | lost | no_api."""
+
+    BEN = {"default": "json", "backends": [{"id": "json", "label": "Tệp JSON", "available": True, "persistent": True, "reason": ""},
+                                           {"id": "mysql", "label": "MySQL", "available": True, "persistent": True, "reason": ""},
+                                           {"id": "mongo", "label": "MongoDB", "available": False, "persistent": True, "reason": "Máy chủ chưa cấu hình MongoDB"}]}
+    TAM = {"default": "json", "backends": [{"id": "json", "label": "Tệp JSON", "available": True, "persistent": False, "reason": "Thư mục tạm"},
+                                           {"id": "mysql", "label": "MySQL", "available": False, "persistent": True, "reason": "Không kết nối được MySQL"},
+                                           {"id": "mongo", "label": "MongoDB", "available": False, "persistent": True, "reason": "Máy chủ chưa cấu hình MongoDB"}]}
+    TRON = {"default": "json", "backends": [TAM["backends"][0], BEN["backends"][1], BEN["backends"][2]]}
+
+    def __init__(self, backends=None):
+        self.backends = backends or self.BEN
+        self.items = "ok"
+        self.calls = []
+
+    def handle(self, route):
+        import urllib.parse
+        req = route.request
+        p = urllib.parse.urlparse(req.url).path
+        rest = p[p.find("/wiki/") + 6:]
+        self.calls.append(req.method + " " + rest)
+
+        def js(status, body):
+            route.fulfill(status=status, content_type="application/json", body=json.dumps(body, ensure_ascii=False))
+        if rest == "backends":
+            return js(200, self.backends)
+        if rest == "workspaces":
+            return js(201, {"workspaceId": "wk_fake", "key": "khoa-gia"})
+        if self.items == "lost":
+            return js(404, {"status_code": 404, "message": "Không gian làm việc không tồn tại", "data": {"code": "wiki_not_found"}})
+        if self.items == "no_api":
+            return js(404, {"detail": "Not Found"})
+        if req.method == "PUT":
+            return js(200, {"items": (json.loads(req.post_data or "{}") or {}).get("items", []), "serverTime": 2})
+        return js(200, {"items": [], "serverTime": 1, "more": False})
+
+
+SEED_SYNC_JS = """async (c) => { const s = await Wiki.store.openBest('personal-wiki'); const r = Wiki.repo.create(s); await r.open();
+  await r.setMeta('sync', c); await r.setMeta('syncCursor', 0); await r.setMeta('syncLast', 0); }"""
+CHIP_JS = """() => { const c = document.querySelector('#syncChip'); return c ? { hidden: c.hidden, visible: !!c.offsetParent, kind: c.dataset.kind,
+  text: c.querySelector('.sc-t').textContent, label: c.getAttribute('aria-label') } : null; }"""
+BANNER_JS = """() => { const b = document.querySelector('#banner'); return { hidden: b.hidden, text: b.innerText, sync: !!b.querySelector('[data-bn=sync]') }; }"""
+
+
+def _sync_box(pg):
+    return re.sub(r"\s+", " ", pg.locator(SYNC_SECTION).inner_text())
+
+
+def tang_2_dong_bo(br, P, url, may):
+    section(" · đồng bộ: dễ tìm (đầu Cài đặt, neo #/settings/sync, chỉ báo ở thanh bên) + thông điệp đúng từng tình huống (W2)")
+    pg = P.pg
+    P.go("#/notes")
+    pg.wait_for_function("() => { const c = document.querySelector('#syncChip'); return c && c.dataset.kind === 'off'; }", timeout=5000)
+    ch = pg.evaluate(CHIP_JS)
+    check(ch["visible"] and ch["text"] == "Bật đồng bộ", "thanh bên (1366 px): chỉ báo đồng bộ 'Bật đồng bộ' khi chưa nối kho", ch)
+    pg.click("#syncChip")
+    pg.wait_for_selector(SYNC_SECTION + " .sync-backend", timeout=8000)
+    st = pg.evaluate("""() => ({ hash: location.hash, first: (document.querySelector('.settings section.set h2') || {}).textContent,
+      focus: document.activeElement ? document.activeElement.id : '', top: Math.round(document.querySelector('#set-sync').getBoundingClientRect().top) })""")
+    check(st["hash"] == "#/settings/sync" and st["first"] == "Đồng bộ giữa các thiết bị", "bấm chỉ báo → #/settings/sync; mục Đồng bộ là mục ĐẦU của Cài đặt", st)
+    check(st["focus"] == "set-sync-h", "neo #/settings/sync đưa focus tới tiêu đề mục Đồng bộ (trình đọc màn hình đọc đúng chỗ)", st)
+    sel = pg.input_value(SYNC_SECTION + " .sync-backend")
+    check(sel == "json" and pg.locator(SYNC_SECTION + " [data-sync=ephemeral]").count() == 0,
+          "máy chủ thật (JSON bền là mặc định): chọn sẵn 'json', không cảnh báo kho tạm", (sel, _sync_box(pg)[:160]))
+
+    # ---- kho tạm / chọn kho bền (máy chủ giả)
+    fake = FakeWiki(FakeWiki.TAM)
+    Q = Page(br, url + "#/settings/sync", "desk-dong-bo", setup=lambda c: c.route("**/wiki/**", fake.handle), viewport={"width": 1366, "height": 820})
+    q = Q.pg
+    q.wait_for_selector(SYNC_SECTION + " [data-sync=ephemeral]", timeout=8000)
+    txt = _sync_box(q)
+    check("chỉ có kho tạm" in txt and "Hãy sao lưu" in txt and q.input_value(SYNC_SECTION + " .sync-backend") == "json",
+          "máy chủ CHỈ có kho tạm: cảnh báo 'chỉ có kho tạm … Hãy sao lưu', vẫn chọn được JSON", txt[:200])
+    q.click(SYNC_SECTION + " button:has-text('Tạo kho đồng bộ mới')")
+    q.wait_for_selector("dialog[open]")
+    dlg = re.sub(r"\s+", " ", q.locator("dialog[open]").inner_text())
+    check("Tạo kho tạm?" in dlg and "KHO TẠM" in dlg and q.locator("dialog[open] button:has-text('Vẫn tạo kho tạm')").count() == 1,
+          "bấm Tạo khi chỉ có kho tạm: hộp xác nhận nói rõ 'KHO TẠM' (nút 'Vẫn tạo kho tạm')", dlg[:200])
+    q.click("dialog[open] button:has-text('Huỷ')")
+    q.wait_for_timeout(200)
+    check(not any(c.startswith("POST workspaces") for c in fake.calls), "Huỷ → không tạo kho nào", fake.calls)
+    fake.backends = FakeWiki.TRON
+    Q.go("#/notes")
+    Q.go("#/settings/sync")
+    q.wait_for_selector(SYNC_SECTION + " .sync-backend", timeout=8000)
+    check(q.input_value(SYNC_SECTION + " .sync-backend") == "mysql" and q.locator(SYNC_SECTION + " [data-sync=ephemeral]").count() == 0,
+          "mặc định của máy chủ là kho tạm nhưng có MySQL bền → chọn sẵn MySQL, không cảnh báo", q.input_value(SYNC_SECTION + " .sync-backend"))
+    q.select_option(SYNC_SECTION + " .sync-backend", "json")
+    q.wait_for_selector(SYNC_SECTION + " [data-sync=ephemeral]", timeout=3000)
+    check("Nơi lưu này là kho tạm" in _sync_box(q), "tự chọn JSON (kho tạm) → cảnh báo 'Nơi lưu này là kho tạm'", _sync_box(q)[:200])
+
+    # ---- mất kho thật → biểu ngữ + thông điệp 'nối lại'; địa chỉ không có API → 'thử lại'; sửa xong → hết biểu ngữ
+    q.evaluate(SEED_SYNC_JS, {"ws": "wk_fake", "key": "khoa-gia", "backend": "json"})
+    fake.items = "lost"
+    Q.go("#/notes")
+    q.reload()
+    q.wait_for_function("document.body.classList.contains('ready')")
+    q.wait_for_function("Wiki.sync.instance.state().fatal === true", timeout=10000)
+    q.wait_for_timeout(100)
+    bn, ch = q.evaluate(BANNER_JS), q.evaluate(CHIP_JS)
+    check(not bn["hidden"] and "Đồng bộ đã dừng" in bn["text"] and "nối lại" in bn["text"] and bn["sync"],
+          "kho mất thật (404 wiki_not_found): BIỂU NGỮ 'Đồng bộ đã dừng … nối lại' có nút 'Mở Đồng bộ' (trước đây lỗi chỉ thấy trong Cài đặt)", bn)
+    check(ch["kind"] == "fatal" and ch["text"] == "Mất kho đồng bộ", "chỉ báo thanh bên: 'Mất kho đồng bộ'", ch)
+    if bn["sync"]:
+        q.click("#banner [data-bn=sync]")
+    else:                                                    # (đột biến bieu-ngu-chet) không có nút: tự tới neo để các phép sau vẫn chạy
+        Q.go("#/settings/sync")
+    q.wait_for_selector(SYNC_SECTION + " [data-sync=lost]", timeout=5000)
+    txt = _sync_box(q)
+    check(Q.hash() == "#/settings/sync" and q.locator(SYNC_SECTION + " button:has-text('Nối lại bằng mã')").count() == 1 and "vẫn còn nguyên" in txt,
+          "bấm 'Mở Đồng bộ' → #/settings/sync: thông điệp mất kho + nút 'Nối lại bằng mã…' + 'ghi chú trên máy vẫn còn nguyên'", (Q.hash(), txt[:200]))
+    fake.items = "no_api"
+    q.evaluate("Wiki.sync.instance.now()")
+    q.wait_for_selector(SYNC_SECTION + " [data-sync=no_api]", timeout=8000)
+    bn, txt = q.evaluate(BANNER_JS), _sync_box(q)
+    check("không có API đồng bộ" in bn["text"] and "không có API đồng bộ" in txt and q.locator(SYNC_SECTION + " button:has-text('Thử lại')").count() == 1
+          and q.locator(SYNC_SECTION + " button:has-text('Nối lại bằng mã')").count() == 0,
+          "địa chỉ không có API (404 không mã): biểu ngữ + mục Đồng bộ nói 'không có API đồng bộ', nút 'Thử lại', KHÔNG mời nối lại", (bn["text"][:120], txt[:200]))
+    fake.items = "ok"
+    q.click(SYNC_SECTION + " button:has-text('Thử lại')")
+    q.wait_for_function("() => { const s = Wiki.sync.instance.state(); return s.phase === 'idle' && !s.fatal && s.last > 0; }", timeout=10000)
+    q.wait_for_timeout(100)
+    bn, ch = q.evaluate(BANNER_JS), q.evaluate(CHIP_JS)
+    check(bn["hidden"] and ch["kind"] == "ok" and "đồng bộ" in ch["text"].lower(), "máy chủ trả lời bình thường lại + 'Thử lại' → biểu ngữ tắt, chỉ báo '%s'" % ch["text"], (bn, ch))
+    # 404 do chính máy chủ giả trả (mất kho / không có API) làm trình duyệt ghi "Failed to load resource" — cố ý, không phải lỗi của app
+    Q.errors = [e for e in Q.errors if "status of 404" not in e]
+    Q.close()
+
+    # ---- mở bằng file:// → nói đúng lý do
+    from pathlib import Path
+    F = Page(br, Path(HERE, "index.html").as_uri() + "#/settings/sync", "file", viewport={"width": 1366, "height": 820})
+    F.pg.wait_for_selector(SYNC_SECTION + " [data-sync=file]", timeout=8000)
+    txt, ch = _sync_box(F.pg), F.pg.evaluate(CHIP_JS)
+    check("mở tệp trực tiếp (file://)" in txt and "/webapp/tranphuc8a/personal-wiki/" in txt and ch["hidden"],
+          "mở bằng file://: 'Bạn đang mở tệp trực tiếp (file://) … mở app qua máy chủ …/personal-wiki/'; không hiện chỉ báo đồng bộ", (txt[:200], ch))
+    F.close()
+
+    # ---- http(s) nhưng trang KHÔNG có cấu hình (vd máy chủ tĩnh khác) → 'thiếu cấu hình' + Tải lại + ./
+    raw = io.open(os.path.join(HERE, "index.html"), "rb").read()
+    G = Page(br, url + "#/settings/sync", "no-config", setup=lambda c: c.route(url, lambda r: r.fulfill(status=200, content_type="text/html; charset=utf-8", body=raw)),
+             viewport={"width": 1366, "height": 820})
+    G.pg.wait_for_selector(SYNC_SECTION + " [data-sync=no_config]", timeout=8000)
+    txt = _sync_box(G.pg)
+    check(G.pg.evaluate("typeof window.__WEBAPP_CONFIG__") == "undefined" and "không nhận được địa chỉ API" in txt
+          and G.pg.locator(SYNC_SECTION + " button:has-text('Tải lại trang')").count() == 1 and G.pg.locator(SYNC_SECTION + " a[href='./']").count() == 1,
+          "http không có cấu hình máy chủ: 'Trang không nhận được địa chỉ API' + nút 'Tải lại trang' + liên kết ./ (khác thông điệp file://)", txt[:200])
+    check("file://" not in txt and "ngoại tuyến" not in txt, "…không lẫn với thông điệp file:// hay ngoại tuyến", txt[:200])
+    G.close()
 
 
 # ============================================================================================ tầng 2 — chức năng
@@ -292,12 +691,40 @@ def tang_2(may):
 
         section(" · khởi động + ghi chú cơ bản")
         check(pg.evaluate("document.body.dataset.route") == "home" and pg.locator(".welcome").count() == 1, "trang chủ rỗng: có lời mời tạo ghi chú")
+
+        # Lỗi cũ (có từ lúc tạo app): ô tiêu đề của note mới điền sẵn chữ "Chưa đặt tên" (normalizeNote) → note chưa gõ gì đã "Chưa lưu",
+        # rời đi thì giữ nháp; nhịp focus 30 ms nhảy sang ô nội dung; lưu chỉ nội dung thì tiêu đề thành "Chưa đặt tên" thay vì dòng đầu.
+        # Đó cũng là gốc chỗ tầng 6 đỏ chập chờn: fill tiêu đề của Playwright bị nhịp focus đó cắt ngang, chữ rơi vào ô nội dung.
+        section(" · ghi chú mới: ô tiêu đề trống + con trỏ ở tiêu đề; chưa gõ gì thì không có gì để lưu; chỉ nội dung → tiêu đề lấy dòng đầu")
+        pg.click("#newBtn")
+        pg.wait_for_selector(".ed-title")
+        pg.wait_for_timeout(250)                             # qua nhịp tự focus 30 ms của editor.js
+        st0 = pg.evaluate(BLANK_NOTE_JS)
+        check(st0["title"] == "" and st0["ph"] == "Tiêu đề" and st0["focus"] == "ed-title",
+              "ghi chú mới: ô tiêu đề TRỐNG (chữ mờ 'Tiêu đề', không điền sẵn 'Chưa đặt tên'), con trỏ ở ô tiêu đề", st0)
+        check(st0["save"] is True and "trống" in st0["status"], "ghi chú mới chưa gõ gì: nút Lưu tắt, trạng thái 'Ghi chú trống' (không phải 'Chưa lưu')", st0)
+        P.go("#/")
+        pg.wait_for_timeout(400)
+        check(pg.locator(".toast:has-text('bản nháp')").count() == 0 and pg.locator(".welcome").count() == 1, "rời ghi chú mới chưa gõ gì: không giữ bản nháp, không tạo ghi chú")
+        Q = Page(br, url, "desk-tieu-de", viewport={"width": 1366, "height": 820})   # ngữ cảnh riêng (IndexedDB riêng): không đụng dữ liệu của P
+        Q.pg.click("#newBtn")
+        Q.pg.wait_for_selector(".ed-title")
+        Q.pg.wait_for_timeout(250)                           # qua nhịp tự focus 30 ms (điền trước nhịp đó thì focus có thể nhảy giữa chừng)
+        Q.pg.fill(".ed-ta", "Dòng đầu thành tiêu đề\n\nphần thân của ghi chú")
+        check(luu(Q) and Q.pg.input_value(".ed-title") == "Dòng đầu thành tiêu đề",
+              "lưu ghi chú chỉ có nội dung: tiêu đề tự lấy từ dòng đầu (không thành 'Chưa đặt tên')", Q.pg.input_value(".ed-title"))
+        Q.close()
+
         check(new_note(P, "Alpha note", "# Alpha\n\nHello world quokka. Links to [[Beta note]] and [[depends_on::Gamma note]].\n\nQ: Capital of France?\nA: Paris\n", ["x", "y"]), "tạo + lưu ghi chú (Ctrl+S) hiện thông báo")
         check(re.match(r"#/n/[0-9a-f-]{36}$", P.hash()) is not None, "sau khi lưu, địa chỉ là #/n/<id> (bỏ ?new=1)", P.hash())
         alpha = P.hash().split("/")[-1]
         check(pg.locator(".nrow").count() == 1 and "Alpha note" in pg.locator(".nrow").first.inner_text(), "danh sách hiện ghi chú vừa tạo")
         check("Đã lưu" in pg.locator(".ed-status").inner_text(), "thanh trạng thái: Đã lưu")
-        check(pg.locator(".ed-prev a.wl.ghost").count() == 2, "xem trước: 2 liên kết mờ (note chưa có)")
+        try:                                                 # bản xem trước vẽ lại 140 ms sau thay đổi cuối (thêm tag) — Ctrl+S có thể xong trước nhịp đó
+            pg.wait_for_function("document.querySelectorAll('.ed-prev a.wl.ghost').length === 2", timeout=3000)
+        except Exception:
+            pass
+        check(pg.locator(".ed-prev a.wl.ghost").count() == 2, "xem trước: 2 liên kết mờ (note chưa có)", pg.locator(".ed-prev a.wl.ghost").count())
         check(pg.locator(".tagchip").count() == 2, "tag hiện thành chip (#x, #y)")
 
         section(" · liên kết [[…]], backlink, quan hệ")
@@ -305,9 +732,7 @@ def tang_2(may):
         pg.wait_for_selector(".ed-title")
         check(pg.input_value(".ed-title") == "Beta note", "bấm liên kết mờ → mở note mới với tiêu đề đã điền", pg.input_value(".ed-title"))
         pg.fill(".ed-ta", "Beta body about quokka. See [[Alpha note]].")
-        pg.focus(".ed-ta")
-        pg.keyboard.press("Control+s")
-        check(P.toast("Đã lưu"), "lưu Beta")
+        check(luu(P), "lưu Beta")
         beta = P.hash().split("/")[-1]
         pg.wait_for_timeout(300)
         back = pg.locator(".ed-side .sp").first.inner_text()
@@ -435,9 +860,7 @@ def tang_2(may):
         P.go("#/daily")
         pg.wait_for_selector(".ed-ta")
         pg.fill(".ed-ta", pg.input_value(".ed-ta") + "\nHôm nay học cấu trúc dữ liệu.\n")
-        pg.focus(".ed-ta")
-        pg.keyboard.press("Control+s")
-        check(P.toast("Đã lưu"), "viết vào ghi chú ngày rồi lưu")
+        check(luu(P), "viết vào ghi chú ngày rồi lưu")
         P.go("#/notes")
         pg.wait_for_timeout(300)
         check(pg.locator(".nrow").count() == 2, "ghi chú ngày xuất hiện trong danh sách")
@@ -477,6 +900,7 @@ def tang_2(may):
 
         section(" · đồ thị")
         check(new_note(P, "Delta note", "Nối tới [[Alpha note]] để có cạnh trong đồ thị.", ["x"]), "tạo Delta nối tới Alpha")
+        editor_status_w1(P)
         P.go("#/graph")
         pg.wait_for_function("document.querySelector('.gv') && document.querySelector('.gv')._probe().nodes.length >= 2", timeout=8000)
         pr = graph_settled(pg)
@@ -498,10 +922,17 @@ def tang_2(may):
         p2 = pg.evaluate("document.querySelector('.gv')._probe()")
         check(p2["x"] != pr["x"] or p2["y"] != pr["y"], "kéo thả để di chuyển (pan)")
         pg.click("[data-a=fit]")
-        p3 = graph_settled(pg)
-        n3 = next(n for n in p3["nodes"] if n["title"] == "Alpha note")
-        pg.mouse.click(box["x"] + n3["x"], box["y"] + n3["y"])
-        pg.wait_for_function("location.hash.includes('/n/')", timeout=3000)
+        # Vùng bấm của một nút chỉ 6 px: bố cục còn nhích (máy bận) giữa lúc đo và lúc bấm là trượt. Đo lại + bấm lại tối đa 3 lần
+        # (chập chờn có từ trước W2: 1/3 lượt đỏ khi máy đang chạy bộ kiểm khác song song, 23/10).
+        for _ in range(3):
+            p3 = graph_settled(pg)
+            n3 = next(n for n in p3["nodes"] if n["title"] == "Alpha note")
+            pg.mouse.click(box["x"] + n3["x"], box["y"] + n3["y"])
+            try:
+                pg.wait_for_function("location.hash.includes('/n/')", timeout=3000)
+                break
+            except Exception:
+                pass
         check(P.hash().endswith(alpha), "bấm vào nút → mở đúng ghi chú", P.hash())
         P.go("#/graph")
         pg.wait_for_selector(".gv-chips .chip")
@@ -575,6 +1006,8 @@ def tang_2(may):
             menu_click(P, "Tải Markdown")
         check(d.value.suggested_filename.endswith(".md"), "xuất một ghi chú ra .md", d.value.suggested_filename)
 
+        tang_2_dong_bo(br, P, url, may)
+
         section(" · cài đặt: giao diện bền qua tải lại")
         P.go("#/settings")
         pg.wait_for_selector(".settings")
@@ -616,8 +1049,7 @@ def tang_2(may):
             mp_.fill(".ed-title", "Ghi từ điện thoại")
             mp_.fill(".ed-ta", "Nội dung gõ trên điện thoại với #tag và [[Liên kết]].")
             mp_.focus(".ed-ta")
-            mp_.click(".save")
-            check(M.toast("Đã lưu"), "lưu bằng nút Lưu")
+            check(luu(M, bam=".save"), "lưu bằng nút Lưu")
             check(not mp_.is_visible(".modes button[data-mode=split]") and mp_.evaluate("document.querySelector('.ed-main').dataset.mode") != "split", "điện thoại: không có chế độ chia đôi")
             mp_.click(".modes button[data-mode=preview]")
             mp_.wait_for_selector(".ed-prev a.wl.ghost")
@@ -635,6 +1067,17 @@ def tang_2(may):
                 check(mp_.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "%s không tràn ngang" % hsh)
             small = mp_.evaluate("""() => [...document.querySelectorAll('button, a.nav, a.bn, .icon-btn, input, select')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.height < 32) && getComputedStyle(e).visibility !== 'hidden'; }).map(e => (e.className || e.tagName) + ' ' + Math.round(e.getBoundingClientRect().height)).slice(0, 8)""")
             check(not small, "vùng chạm ở màn cài đặt ≥ 32px (nút/ô nhập)", small)
+            # điện thoại không có thanh bên: trạng thái đồng bộ nằm trong menu "Thêm", bấm là tới mục Đồng bộ (W2)
+            M.go("#/notes")
+            mp_.click("#moreBtn")
+            item = mp_.locator(".popmenu button:has-text('Đồng bộ:')")
+            itxt = item.inner_text() if item.count() else ""
+            check("Đồng bộ: Bật đồng bộ" in itxt, "menu Thêm có mục 'Đồng bộ: Bật đồng bộ'", itxt)
+            if item.count():
+                item.click()
+                mp_.wait_for_selector(SYNC_SECTION, timeout=5000)
+                check(M.hash() == "#/settings/sync" and mp_.evaluate("document.querySelector('.settings section.set h2').textContent") == "Đồng bộ giữa các thiết bị",
+                      "bấm mục đó → #/settings/sync, Đồng bộ là mục đầu", M.hash())
             M.close()
             b2.close()
         br.close()
@@ -698,9 +1141,7 @@ def tang_3(may):
             p.wait_for_timeout(300)
             check(p.input_value(".ed-title") == "Chưa kịp lưu" and "gõ xong rồi sập nguồn" in p.input_value(".ed-ta"), "ghi chú MỚI chưa lưu: tiêu đề + nội dung được khôi phục nguyên vẹn", (p.input_value(".ed-title"), p.input_value(".ed-ta")[:50]))
             check("Chưa lưu" in p.locator(".ed-status").inner_text(), "trạng thái vẫn là 'Chưa lưu' (không tự coi là đã lưu)")
-            p.focus(".ed-ta")
-            p.keyboard.press("Control+s")
-            check(_wait_toast(p, "Đã lưu"), "lưu bản đã khôi phục")
+            check(luu(Bare(p, "sập")), "lưu bản đã khôi phục")
         # ghi chú đã lưu + sửa dở rồi sập
         p.evaluate("location.hash = '#/notes'")
         p.wait_for_selector(".nrow")
@@ -758,6 +1199,10 @@ def tang_3(may):
         for need in ("index.html", "manifest.webmanifest", "assets/js/ui/app.js", "assets/js/core/graph-worker.js", "assets/css/app.css", "assets/icons/icon-192.png"):
             check(any(u.endswith(PATH + need) for u in urls), "cache có " + need)
         check(not any("/api/" in u for u in urls), "cache KHÔNG có API nào (đồng bộ không bao giờ bị lưu đệm)")
+        # PWA mở bằng bản index.html worker lưu lúc cài: bản đó phải mang cấu hình máy chủ, nếu không app tưởng không có máy chủ (lỗi gốc 22/10)
+        cached = pg.evaluate("([n, u]) => caches.open(n).then(c => c.match(u)).then(r => r ? r.text() : '')", [mine[0], may.goc + PATH + "index.html"])
+        check("__WEBAPP_CONFIG__" in cached, "bản index.html service worker lưu lúc cài CÓ __WEBAPP_CONFIG__ (PWA mở offline vẫn biết có máy chủ)",
+              "bản lưu không có cấu hình" if cached else "không thấy index.html trong cache")
         check(pg.evaluate("window.Wiki.ui.pwa.installState()") in ("menu", "ready", "installed"), "trạng thái cài đặt hợp lệ trên localhost (secure context)", pg.evaluate("Wiki.ui.pwa.installState()"))
         check(new_note(Bare(pg), "Viết khi còn mạng", "nội dung online"), "tạo ghi chú khi còn mạng")
         ctx.set_offline(True)
@@ -765,6 +1210,8 @@ def tang_3(may):
         pg.wait_for_function("document.body.classList.contains('ready')", timeout=15000)
         check(pg.locator(".boot").count() == 0 and pg.evaluate("document.body.dataset.route") in ("home", "notes", "n"), "TẮT MẠNG rồi tải lại: ứng dụng vẫn mở được từ cache")
         check("ngoại tuyến" in pg.locator("#banner").inner_text(), "hiện biểu ngữ 'đang ngoại tuyến'", pg.locator("#banner").inner_text())
+        check(pg.evaluate("typeof window.__WEBAPP_CONFIG__ === 'object' && Wiki.sync.instance.state().available === true"),
+              "offline: trang lấy từ cache vẫn có cấu hình máy chủ (đồng bộ available, chờ có mạng)")
         pg.evaluate("location.hash = '#/notes'")
         pg.wait_for_selector(".nrow")
         check(pg.locator(".nrow").count() == 1, "ghi chú đã tạo vẫn còn khi offline (IndexedDB)")
@@ -772,9 +1219,22 @@ def tang_3(may):
         pg.evaluate("location.hash = '#/graph'")
         pg.wait_for_function("document.querySelector('.gv') && document.querySelector('.gv')._probe().nodes.length >= 2", timeout=8000)
         check(True, "đồ thị (dùng Web Worker) dựng được khi offline")
-        pg.goto(may.goc + PATH + "index.html", wait_until="domcontentloaded")
+        pg.goto(may.goc + PATH + START_URL, wait_until="domcontentloaded")
         pg.wait_for_function("document.body.classList.contains('ready')", timeout=15000)
-        check(True, "mở bằng địa chỉ .../index.html khi offline cũng được")
+        check(True, "mở bằng start_url của PWA (.../%s) khi offline cũng được" % START_URL)
+        st = pg.evaluate("() => ({ cfg: typeof window.__WEBAPP_CONFIG__ === 'object' && window.__WEBAPP_CONFIG__ ? window.__WEBAPP_CONFIG__.apiBase : null, "
+                         "available: !!(Wiki.sync.instance && Wiki.sync.instance.state().available), has: !!(Wiki.api && Wiki.api.has) })")
+        check(st["cfg"] == may.api_prefix and st["available"] and st["has"],
+              "offline qua start_url PWA: trang có cấu hình apiBase=%r, Wiki.api.has, đồng bộ available" % may.api_prefix, st)
+        pg.evaluate("location.hash = '#/settings'")
+        pg.wait_for_selector(SYNC_SECTION)
+        try:                                                 # bảng chờ đọc xong khoá kho trên máy rồi mới vẽ (W2: state().loaded)
+            pg.wait_for_selector(SYNC_SECTION + " [data-sync]", timeout=5000)
+        except Exception:
+            pass
+        txt = pg.locator(SYNC_SECTION).inner_text()
+        check("ngoại tuyến" in txt and "Cần mở app qua máy chủ" not in txt,
+              "offline: Cài đặt → Đồng bộ báo 'ngoại tuyến', KHÔNG báo 'Cần mở app qua máy chủ'", re.sub(r"\s+", " ", txt)[:160])
         api_ok = pg.evaluate("""() => fetch('/health/').then(() => true, () => false)""")
         check(api_ok is False, "khi offline, gọi API ngoài phạm vi thất bại thật (worker không trả bản cũ)")
         ctx.set_offline(False)
@@ -963,19 +1423,90 @@ def _http(method, url, key=None, body=None):
             return e.code, {k.lower(): v for k, v in e.headers.items()}, raw
 
 
-def tang_6():
-    section("TẦNG 6 — đồng bộ: hai thiết bị + máy chủ FastAPI thật (kho JSON ở thư mục tạm, không đụng database thật)")
+# Đếm listener "online" gắn SAU lúc móc (app.js, pwa.js, sync.js đã gắn lúc khởi động nên không tính): gắn thêm → +1, gỡ → -1.
+ONLINE_HOOK_JS = """() => { const add = window.addEventListener, rm = window.removeEventListener; window.__online = new Set();
+  window.addEventListener = function (t, f, o) { if (t === 'online') window.__online.add(f); return add.call(this, t, f, o); };
+  window.removeEventListener = function (t, f, o) { if (t === 'online') window.__online.delete(f); return rm.call(this, t, f, o); }; }"""
+
+
+def _tieu_de_may_chu(api, key):
+    """[(tiêu đề, đã xoá)] của mọi bản ghi trong kho — để chẩn đoán; không ném ngoại lệ khi máy chủ trả lỗi/thân không phải JSON."""
+    try:
+        st, _, body = _http("GET", api + "/items?since=0", key)
+    except Exception as e:
+        return "không đọc được kho: %s" % e
+    if not isinstance(body, dict) or not isinstance(body.get("items"), list):
+        return "HTTP %s: %s" % (st, str(body)[:120])
+    return [((i.get("data") or {}).get("title"), i.get("deleted")) for i in body["items"]]
+
+
+CONFIG_PROBE = ("() => ({ cfg: typeof window.__WEBAPP_CONFIG__ === 'object' && window.__WEBAPP_CONFIG__ ? window.__WEBAPP_CONFIG__.apiBase : null, "
+                "available: !!(Wiki.sync.instance && Wiki.sync.instance.state().available), has: !!(Wiki.api && Wiki.api.has), base: Wiki.api ? Wiki.api.base : null })")
+
+# Các biến thể của tầng 6. (2) là đúng cấu hình máy thật (.env để API_PREFIX trống) + PWA đã cài (mở start_url index.html?source=pwa):
+# hai lỗi gốc 22/10 chỉ lộ ra ở đây — bản cũ của tầng 6 chỉ chạy (1) nên xanh dù đồng bộ hỏng.
+BIEN_THE_6 = [
+    ("/api/v1", "", None, "biến thể 1 — API_PREFIX=/api/v1, A và B mở …/personal-wiki/ (Chromium)"),
+    ("", START_URL, None, "biến thể 2 — API_PREFIX trống (như .env), A mở start_url PWA …/%s, B mở …/ (Chromium)" % START_URL),
+    ("", START_URL, "msedge", "biến thể 2 trên Edge thật (channel=msedge)"),
+]
+
+
+def tang_6(api_prefix="/api/v1", start_a="", channel=None, nhan=""):
+    section("TẦNG 6 — đồng bộ: hai thiết bị + máy chủ FastAPI thật (kho JSON ở thư mục tạm, không đụng database thật)" + ("\n  " + nhan if nhan else ""))
     from playwright.sync_api import sync_playwright
     tmp = tempfile.mkdtemp(prefix="wiki-sync-")
-    may = K.MayChuThu([], env={"WIKI_STORAGE_BACKEND": "json", "WIKI_JSON_FILE": os.path.join(tmp, "wiki.json")}).__enter__()
+    may = K.MayChuThu([], api_prefix=api_prefix, env=env_may_chu({"WIKI_STORAGE_BACKEND": "json", "WIKI_JSON_FILE": os.path.join(tmp, "wiki.json")})).__enter__()
     try:
         url = may.goc + PATH
         with sync_playwright() as pw:
-            br = pw.chromium.launch()
-            A = Page(br, url, "sync-A", viewport={"width": 1366, "height": 820})
+            try:
+                br = pw.chromium.launch(channel=channel) if channel else pw.chromium.launch()
+            except Exception as e:                           # Edge chưa cài: nói rõ, không lặng lẽ bỏ qua
+                check(False, "mở được trình duyệt %s" % channel, str(e).splitlines()[0])
+                return
+            A = Page(br, url + start_a, "sync-A", viewport={"width": 1366, "height": 820})
             B = Page(br, url, "sync-B", viewport={"width": 1366, "height": 820})
-            check(new_note(A, "Đồng bộ một", "nối tới [[Đồng bộ hai]]\n\nQ: Thủ đô của Pháp?\nA: Paris\n", ["sync"]), "A: tạo ghi chú 1")
-            check(new_note(A, "Đồng bộ hai", "nội dung hai quokka", ["sync"]), "A: tạo ghi chú 2")
+
+            def dung(ly_do=""):
+                """Dừng biến thể này sớm (phép SAI đã được ghi): đóng trang, gom lỗi console; biến thể sau vẫn chạy."""
+                if ly_do:
+                    print("    (dừng biến thể: %s)" % ly_do)
+                A.close()
+                B.close()
+                br.close()
+
+            wiki_reqs = []
+            for P in (A, B):
+                P.pg.on("request", lambda r: wiki_reqs.append(r.url[len(may.goc):].split("?")[0]) if "/wiki/" in r.url and r.url.startswith(may.goc) else None)
+            # trước mọi thao tác: cả hai trang biết có máy chủ, đúng gốc API (lỗi gốc: apiBase "" → "không có máy chủ"; index.html không có cấu hình)
+            probes = [(P, P.pg.evaluate(CONFIG_PROBE)) for P in (A, B)]
+            ready = True
+            for P, st in probes:
+                where = ("…/" + start_a) if P is A and start_a else "…/personal-wiki/"
+                ready &= check(st["cfg"] == api_prefix, "%s mở %s: trang nhận __WEBAPP_CONFIG__.apiBase = %r" % (P.name, where, api_prefix), st)
+                ready &= check(st["has"] and st["base"] == api_prefix and st["available"], "%s: Wiki.api = {has: true, base: %r}, đồng bộ available" % (P.name, api_prefix), st)
+            if not ready:
+                A.go("#/settings")
+                A.pg.wait_for_selector(SYNC_SECTION)
+                print("    (Cài đặt → Đồng bộ ở A: %s)" % re.sub(r"\s+", " ", A.pg.locator(SYNC_SECTION).inner_text())[:160])
+                return dung()
+            st, hd, bk = _http("GET", may.api + "/wiki/backends")
+            mongo = next((b for b in (bk or {}).get("backends", []) if b.get("id") == "mongo"), {}) if isinstance(bk, dict) else {}
+            check(st == 200 and mongo.get("available") is False and "chưa cấu hình" in mongo.get("reason", ""),
+                  "máy chủ thử không cấu hình MongoDB (MONGO_URI=\"\") — /wiki/backends không ping MongoDB thật trong .env", (st, mongo))
+            # mở Cài đặt nhiều lần không dồn listener "online" của bảng đồng bộ (trước đây mỗi lần mở gắn thêm một, chỉ gỡ ở sự kiện online kế tiếp)
+            A.pg.evaluate(ONLINE_HOOK_JS)
+            for _ in range(3):
+                A.go("#/settings")
+                A.pg.wait_for_selector(SYNC_SECTION)
+                A.go("#/notes")
+            n_on = A.pg.evaluate("window.__online.size")
+            check(n_on == 1, "mở Cài đặt 3 lần: bảng đồng bộ giữ đúng 1 listener 'online' (không dồn theo số lần mở)", n_on)
+            # new_note chỉ đạt khi CHÍNH ghi chú đó đã lưu đúng tiêu đề/nội dung (không còn dựa vào toast "Đã lưu" của ghi chú trước)
+            if not (check(new_note(A, "Đồng bộ một", "nối tới [[Đồng bộ hai]]\n\nQ: Thủ đô của Pháp?\nA: Paris\n", ["sync"]), "A: tạo ghi chú 1")
+                    and check(new_note(A, "Đồng bộ hai", "nội dung hai quokka", ["sync"]), "A: tạo ghi chú 2")):
+                return dung("A chưa tạo được đủ 2 ghi chú — mọi phép đồng bộ phía sau dựa vào chúng")
             A.go("#/settings")
             A.pg.wait_for_selector("button:has-text('Tạo kho đồng bộ mới')")
             check("Đồng bộ giữa các thiết bị" in A.pg.locator(".settings").inner_text(), "Cài đặt có mục đồng bộ")
@@ -983,9 +1514,26 @@ def tang_6():
             A.pg.click(".dlg .btn-primary")
             A.pg.wait_for_selector(".code-in")
             code = A.pg.input_value(".code-in")
-            check(re.match(r"^default\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$", code) is not None, "tạo kho: nhận mã nối dạng default.<kho>.<khoá>", code[:20] + "…")
+            # máy chủ thử mặc định kho json → mã nối ghi rõ "json." (đổi WIKI_STORAGE_BACKEND về sau, mã cũ vẫn trỏ đúng kho)
+            check(re.match(r"^json\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$", code) is not None, "tạo kho: nhận mã nối ghi rõ nơi lưu json.<kho>.<khoá>", code[:20] + "…")
+            # W2 (việc 5): liên kết nối + mã QR trong hộp mã nối; liên kết luôn là địa chỉ THƯ MỤC (A ở biến thể 2 đang mở index.html?source=pwa)
+            link = A.pg.input_value(".code-dlg .link-in")
+            check(link == url + "#/join/" + code, "hộp mã nối có liên kết …/personal-wiki/#/join/<mã> (địa chỉ thư mục, không index.html, không ?source=pwa)", link[:90])
+            qr = A.pg.evaluate("() => { const s = document.querySelector('.code-dlg .qr-box svg'); return s ? { paths: s.querySelectorAll('path').length, vb: s.getAttribute('viewBox'), w: Math.round(s.getBoundingClientRect().width) } : null; }")
+            check(bool(qr) and qr["paths"] == 1 and qr["w"] >= 120, "hộp mã nối có mã QR của liên kết (SVG một đường, rộng %s px)" % (qr or {}).get("w"), qr)
+            A.pg.set_viewport_size({"width": 320, "height": 640})
+            A.pg.wait_for_timeout(250)
+            r = A.pg.evaluate("() => { const m = document.querySelector('dialog[open]').getBoundingClientRect(), q = document.querySelector('.code-dlg .qr-box svg').getBoundingClientRect(); return [m.left, m.right, innerWidth, document.documentElement.scrollWidth, q.left, q.right]; }")
+            check(r[0] >= -0.5 and r[1] <= r[2] + 0.5 and r[3] <= r[2] + 1 and r[4] >= r[0] and r[5] <= r[1],
+                  "màn 320 px: hộp mã nối và mã QR nằm gọn trong bề ngang, trang không cuộn ngang", [round(x) for x in r])
+            A.pg.set_viewport_size({"width": 1366, "height": 820})
             A.pg.click(".dlg [data-close]")
             A.pg.wait_for_function(SYNC_IDLE, timeout=20000)
+            A.pg.wait_for_timeout(100)
+            ch = A.pg.evaluate(CHIP_JS)
+            check(bool(ch) and ch["kind"] == "ok" and not ch["hidden"] and "đồng bộ" in ch["text"].lower(), "A: chỉ báo ở thanh bên '%s' sau khi đồng bộ xong" % (ch or {}).get("text"), ch)
+            want = api_prefix + "/wiki/"
+            check(wiki_reqs and all(u.startswith(want) for u in wiki_reqs), "mọi yêu cầu đồng bộ của trang đi tới %s… (đúng API_PREFIX của máy chủ)" % want, sorted(set(wiki_reqs))[:6])
             ws = code.split(".")[1]
             key = code.split(".", 2)[2]
             api = may.api + "/wiki/" + ws
@@ -1006,16 +1554,43 @@ def tang_6():
             B.pg.wait_for_selector(".nrow")
             B.pg.wait_for_timeout(300)
             check(B.pg.locator(".nrow").count() == 2, "B nối kho: kéo về đủ 2 ghi chú")
-            open_row(B, "Đồng bộ một")
+
+            # W2 (việc 5): thiết bị C nối bằng LIÊN KẾT (như quét mã QR): hộp "Nối" điền sẵn, địa chỉ đã xoá mã, không tự nối — bấm Nối mới nối
+            C = Page(br, link, "sync-C", viewport={"width": 1366, "height": 820})
+            try:
+                C.pg.wait_for_selector("#ff-code", timeout=8000)
+                hop = True
+            except Exception:
+                hop = False
+            sc = C.pg.evaluate("() => ({ hash: location.hash, href: location.href, val: (document.querySelector('#ff-code') || {}).value || '', configured: Wiki.sync.instance.state().configured })")
+            check(hop and sc["val"] == code and sc["hash"] == "#/settings/sync" and code not in sc["href"] and not sc["configured"],
+                  "C mở liên kết nối: hộp 'Nối' điền sẵn đúng mã, địa chỉ thành #/settings/sync (mã không nằm lại), CHƯA tự nối", {k: (v if k != "val" else v[:12] + "…") for k, v in sc.items()})
+            if hop:
+                C.pg.click(".dlg button[type=submit]")
+                C.pg.wait_for_function(SYNC_IDLE, timeout=20000)
+                C.go("#/notes")
+                C.pg.wait_for_selector(".nrow")
+                C.pg.wait_for_timeout(300)
+                check(C.pg.locator(".nrow").count() == 2, "C bấm Nối: kéo về đủ 2 ghi chú (nối bằng liên kết)")
+            C.close()
+
+            if not open_row(B, "Đồng bộ một"):
+                return dung("B không mở được ghi chú đã kéo về")
             B.pg.wait_for_selector(".ed-prev a.wl")
-            check(B.pg.locator(".ed-prev a.wl:not(.ghost)").count() == 1, "B: liên kết [[Đồng bộ hai]] đã được giải")
+            try:                                             # bản xem trước vẽ lại sau ~debounce: cho nó một nhịp trước khi kết luận
+                B.pg.wait_for_selector(".ed-prev a.wl:not(.ghost)", timeout=3000)
+            except Exception:
+                pass
+            linked = B.pg.locator(".ed-prev a.wl:not(.ghost)").count() == 1
+            check(linked, "B: liên kết [[Đồng bộ hai]] đã được giải",
+                  "" if linked else "B: %s · máy chủ: %s" % (
+                      json.dumps(B.pg.evaluate("() => Wiki.sync.instance && [...document.querySelectorAll('.nrow .nr-title')].map(e => e.textContent)"), ensure_ascii=False),
+                      _tieu_de_may_chu(api, key)))
             B.pg.fill("#q", "")
 
             # B sửa → A nhận
             B.pg.fill(".ed-ta", B.pg.input_value(".ed-ta") + "\nB đã thêm zebraquartz\n")
-            B.pg.focus(".ed-ta")
-            B.pg.keyboard.press("Control+s")
-            B.toast("Đã lưu")
+            check(luu(B), "B: lưu bản sửa (trạng thái ✓ Đã lưu của chính lần lưu này)")
             B.pg.wait_for_function(SYNC_IDLE, timeout=20000)
             B.pg.evaluate("Wiki.sync.instance.now()")
             B.pg.wait_for_function(SYNC_IDLE, timeout=20000)
@@ -1033,12 +1608,12 @@ def tang_6():
             B.pg.wait_for_timeout(300)
             B.go("#/notes")
             B.pg.wait_for_selector(".nrow")
-            open_row(B, "Đồng bộ hai")
+            if not open_row(B, "Đồng bộ hai"):
+                B.ctx.set_offline(False)
+                return dung("B không mở được ghi chú để sửa khi offline")
             B.pg.wait_for_selector(".ed-ta")
             B.pg.fill(".ed-ta", "viết khi B offline quokka")
-            B.pg.focus(".ed-ta")
-            B.pg.keyboard.press("Control+s")
-            B.toast("Đã lưu")
+            check(luu(B), "B offline: lưu bản sửa vào máy")
             check(B.pg.evaluate("Wiki.sync.instance.state().phase") in ("offline", "idle", "error"), "B offline: vẫn lưu được, đồng bộ chờ")
             pend = B.pg.evaluate("Wiki.sync.instance.state().pending")
             B.ctx.set_offline(False)
@@ -1051,7 +1626,8 @@ def tang_6():
             # xoá ở A (thùng rác rồi xoá hẳn) → B xoá theo
             A.go("#/notes")
             A.pg.wait_for_selector(".nrow")
-            open_row(A, "Đồng bộ một")
+            if not open_row(A, "Đồng bộ một"):
+                return dung("A không mở được ghi chú để xoá")
             A.pg.wait_for_selector(".ed .more")
             menu_click(A, "Chuyển vào thùng rác")
             A.pg.click(".dlg .btn-danger-solid")
@@ -1098,8 +1674,20 @@ def tang_6():
             check(A.pg.locator(".nrow").count() >= 2, "sau khi xoá kho trên máy chủ, ghi chú trên máy A còn nguyên")
             B.pg.evaluate("Wiki.sync.instance.now()")
             B.pg.wait_for_function("Wiki.sync.instance.state().fatal === true", timeout=15000)
-            B.go("#/settings")
-            B.pg.wait_for_selector(".settings")
+            # W2: lỗi dừng hẳn hiện NGOÀI Cài đặt (trước đây nhánh biểu ngữ 'sync' là mã chết — chỉ thấy lỗi khi tự mở Cài đặt)
+            B.go("#/notes")
+            B.pg.wait_for_timeout(150)
+            bn = B.pg.evaluate(BANNER_JS)
+            check(not bn["hidden"] and "Đồng bộ đã dừng" in bn["text"] and bn["sync"], "B đang ở danh sách: biểu ngữ 'Đồng bộ đã dừng …' có nút 'Mở Đồng bộ'", bn)
+            ch = B.pg.evaluate(CHIP_JS)
+            check(bool(ch) and ch["kind"] == "fatal" and ch["text"] == "Mất kho đồng bộ", "B: chỉ báo thanh bên 'Mất kho đồng bộ'", ch)
+            if bn["sync"]:
+                B.pg.click("#banner [data-bn=sync]")
+            else:
+                B.go("#/settings/sync")
+            B.pg.wait_for_selector(SYNC_SECTION + " [data-sync=lost]", timeout=8000)
+            check(B.hash() == "#/settings/sync" and B.pg.locator(SYNC_SECTION + " button:has-text('Nối lại bằng mã')").count() == 1,
+                  "bấm 'Mở Đồng bộ' → #/settings/sync: thông điệp mất kho + nút 'Nối lại bằng mã…'", B.hash())
             check("nối lại" in B.pg.locator(".settings").inner_text(), "B được báo kho đã mất và cần nối lại (không lặp thử vô hạn)")
             A.close()
             B.close()
@@ -1108,14 +1696,6 @@ def tang_6():
         may.__exit__(None, None, None)
         import shutil
         shutil.rmtree(tmp, ignore_errors=True)
-
-
-def _wait_toast(pg, text, timeout=4000):
-    try:
-        pg.wait_for_selector(".toast:has-text('%s')" % text, timeout=timeout)
-        return True
-    except Exception:
-        return False
 
 
 # ============================================================================================ tầng 5 — hiệu năng thật (IndexedDB)
@@ -1225,6 +1805,17 @@ def tang_5(may, n):
         br.close()
 
 
+def chay(ten, fn, *args):
+    """Chạy một tầng/biến thể; ngoại lệ không lường trước (vd Playwright hết giờ chờ) thành một phép SAI có vết lỗi, thay vì làm main()
+    dừng giữa chừng — các tầng/biến thể còn lại vẫn chạy và dòng tổng "N đạt, M sai" luôn được in."""
+    try:
+        fn(*args)
+    except Exception as e:
+        import traceback
+        vet = ["%s:%d" % (f.name, f.lineno) for f in traceback.extract_tb(e.__traceback__) if os.path.basename(f.filename) == os.path.basename(__file__)]
+        check(False, "%s chạy hết không ném ngoại lệ" % ten, "%s: %s · tại %s" % (type(e).__name__, (str(e).splitlines() or [""])[0][:300], " ← ".join(reversed(vet[-4:]))))
+
+
 def main():
     args = sys.argv[1:]
     todo = set(a for a in args if a.startswith("--"))
@@ -1232,22 +1823,27 @@ def main():
     default = not todo
     if tat_ca or default or "--tinh" in todo:
         tang_1()
-    needs_server = tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang", "--dong-bo"}
+    if HOAN_NGUYEN:
+        print("!! PW_HOAN_NGUYEN=%s — kiểm đột biến: một bản sửa bị gỡ tạm, phép kiểm mới PHẢI đỏ" % HOAN_NGUYEN)
+        if HOAN_NGUYEN not in ("may-chu", "may-khach", "tieu-de", "dem-moi-phim", "bieu-ngu-chet"):
+            raise SystemExit("PW_HOAN_NGUYEN chỉ nhận may-chu, may-khach, tieu-de, dem-moi-phim hoặc bieu-ngu-chet")
+    needs_server = tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang"}
     if needs_server:
-        may = K.MayChuThu([]).__enter__()
+        may = K.MayChuThu([], env=env_may_chu()).__enter__()
         try:
             if tat_ca or default or "--chuc-nang" in todo:
-                tang_2(may)
+                chay("tầng 2", tang_2, may)
             if "--song-sot" in todo or tat_ca:
-                tang_3(may)
+                chay("tầng 3", tang_3, may)
             if "--co-gian" in todo or tat_ca:
-                tang_4(may)
+                chay("tầng 4", tang_4, may)
             if "--hieu-nang" in todo or tat_ca:
-                tang_5(may, next((int(a) for a in args if a.isdigit()), 100000))
+                chay("tầng 5", tang_5, may, next((int(a) for a in args if a.isdigit()), 100000))
         finally:
             may.__exit__(None, None, None)
     if "--dong-bo" in todo or tat_ca:
-        tang_6()
+        for prefix, start, channel, nhan in BIEN_THE_6:
+            chay("tầng 6 (%s)" % nhan.split(" — ")[0], tang_6, prefix, start, channel, nhan)
     print("\n%d đạt, %d sai" % (OK, FAIL))
     return 1 if FAIL else 0
 

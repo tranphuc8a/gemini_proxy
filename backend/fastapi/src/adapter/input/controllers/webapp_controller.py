@@ -56,15 +56,19 @@ def _guess_media_type(path: Path) -> Optional[str]:
     mt, _ = mimetypes.guess_type(str(path))
     return mt or "application/octet-stream"
 
+_INDEX_CANDIDATES: List[str] = [
+    "index.html",
+    "index.htm",
+    "Index.html",
+    "home.html",
+]
+# Suffixes an index candidate can have (lower-cased): a cheap filter for `_is_entry_document`.
+_ENTRY_SUFFIXES = frozenset(Path(name).suffix.lower() for name in _INDEX_CANDIDATES)
+
+
 def _find_index_file(folder: Path) -> Optional[Path]:
     """Return a suitable index file if present in folder."""
-    candidates: List[str] = [
-        "index.html",
-        "index.htm",
-        "Index.html",
-        "home.html",
-    ]
-    for name in candidates:
+    for name in _INDEX_CANDIDATES:
         p = folder / name
         if p.exists() and p.is_file():
             return p
@@ -202,6 +206,30 @@ def _html_with_config(index_file: Path, app_path: Path) -> HTMLResponse:
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to read index file")
     return HTMLResponse(content=_inject_runtime_config(html, _runtime_config(app_path)))
+
+
+def _is_entry_document(target: Path) -> bool:
+    """True when `target` is the index file of the folder that holds it.
+
+    That is the same document `…/<app>/` serves, just asked for by name: an
+    installed PWA opens its `start_url` (often `./index.html?source=pwa`) and
+    a service worker precaches `index.html`. Both must see the runtime config,
+    or the app behaves as if no server were there. Other `.html` files in the
+    folder (`portal.html`, sub-pages) are not entry documents and stay as is.
+
+    Every asset request passes through here, so anything that cannot be an
+    index file (scripts, styles, images…) is turned away by its suffix before
+    the folder is probed: no extra `stat` calls on the hot path.
+    """
+    if target.suffix.lower() not in _ENTRY_SUFFIXES:
+        return False
+    index_file = _find_index_file(target.parent)
+    if index_file is None:
+        return False
+    try:
+        return index_file.samefile(target)
+    except OSError:
+        return False
 
 
 def _app_stamp(folder: Path, index_file: Path) -> tuple:
@@ -468,5 +496,8 @@ async def serve_asset(app_name: str, asset_path: str, request: Request):
 
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="Asset not found")
+    if _is_entry_document(target):
+        # `…/<app>/index.html` is the same entry document as `…/<app>/`.
+        return _html_with_config(target, target.parent)
     media_type = _guess_media_type(target)
     return FileResponse(str(target), media_type=media_type)

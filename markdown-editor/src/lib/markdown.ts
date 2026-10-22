@@ -99,31 +99,151 @@ export function extractHeadings(markdown: string): Heading[] {
   return headings
 }
 
+/**
+ * Exactly the characters JavaScript's `\s` (and `String.prototype.trim`)
+ * treat as white space, so the counts below match the regex definitions they
+ * replaced: words are runs of non-space, paragraphs are split by a run of
+ * space holding at least two line feeds.
+ */
+function isSpace(code: number): boolean {
+  if (code <= 32) return code === 32 || (code >= 9 && code <= 13)
+  if (code < 160) return false
+  return (
+    code === 160 ||
+    code === 5760 ||
+    (code >= 8192 && code <= 8202) ||
+    code === 8232 ||
+    code === 8233 ||
+    code === 8239 ||
+    code === 8287 ||
+    code === 12288 ||
+    code === 65279
+  )
+}
+
+const HEADING_LINE = /^ {0,3}(#{1,6})\s+(.*?)\s*#*\s*$/
+/**
+ * Without `[`/`(` no link is removed, so a character outside these survives
+ * stripInlineMarkdown. (The reverse does not hold: a lone `~` or `*` stays.)
+ */
+const MAY_LOSE_TEXT = /[[(]/
+const PLAIN_TEXT = /[^\s*_~`<>]/
+
+/** Whether a heading's text is non-empty once stripped; skips the seven replaces in the common case. */
+function headingHasText(raw: string): boolean {
+  if (!MAY_LOSE_TEXT.test(raw) && PLAIN_TEXT.test(raw)) return true
+  return stripInlineMarkdown(raw) !== ''
+}
+
+/**
+ * Word, line and block counts in one pass over the text -- no `split`, no
+ * per-word array. Same results as the regex version it replaced (pinned by
+ * tests against that version), at a fraction of the cost: it ran on every
+ * keystroke and took 129 ms on a 30,000-line document.
+ */
 export function getDocumentStats(markdown: string): DocumentStats {
-  const lines = markdown.split('\n')
-  const words = markdown.trim() ? markdown.trim().split(/\s+/).length : 0
-  const scanned = scanLines(markdown)
+  const length = markdown.length
+  let words = 0
+  let spaces = 0
+  let lines = 1
+  let paragraphs = 0
+  let seenText = false
+  let gapNewlines = 0
+  let inWord = false
+
+  for (let index = 0; index < length; index += 1) {
+    const code = markdown.charCodeAt(index)
+    if (isSpace(code)) {
+      spaces += 1
+      inWord = false
+      if (code === 10) {
+        lines += 1
+        gapNewlines += 1
+      }
+    } else {
+      if (!inWord) {
+        words += 1
+        inWord = true
+      }
+      // A blank line between two runs of text ends a paragraph.
+      if (seenText && gapNewlines >= 2) paragraphs += 1
+      seenText = true
+      gapNewlines = 0
+    }
+  }
+  if (seenText) paragraphs += 1
+
+  // Headings and fenced blocks: only lines that could open one are examined.
+  let headings = 0
+  let codeBlocks = 0
+  let fence: string | null = null
+  let previousInCode = false
+  let start = 0
+  while (start <= length) {
+    let end = markdown.indexOf('\n', start)
+    if (end === -1) end = length
+    let inCode = fence !== null
+    // The first non-space character within the first four decides it.
+    let probe = start
+    while (probe < end && probe - start < 4 && isSpace(markdown.charCodeAt(probe))) probe += 1
+    // 96 is a backtick, 126 a tilde, 35 a hash.
+    const lead = probe < end && probe - start < 4 ? markdown.charCodeAt(probe) : 0
+    if (lead === 96 || lead === 126 || lead === 35) {
+      const line = markdown.slice(start, end)
+      const match = FENCE.exec(line)
+      if (match) {
+        const marker = match[1][0]
+        if (fence === null) {
+          fence = marker
+          inCode = true
+        } else if (fence === marker) {
+          fence = null
+          inCode = true
+        }
+      }
+      if (!inCode && lead === 35) {
+        const heading = HEADING_LINE.exec(line)
+        if (heading && headingHasText(heading[2])) headings += 1
+      }
+    }
+    // Count entries into a fenced block rather than fence lines: a nested
+    // ``` inside a ~~~ block is content, not a new block.
+    if (inCode && !previousInCode) codeBlocks += 1
+    previousInCode = inCode
+    start = end + 1
+  }
 
   return {
     words,
-    characters: markdown.length,
-    charactersNoSpaces: markdown.replace(/\s/g, '').length,
-    lines: lines.length,
-    paragraphs: markdown.split(/\n\s*\n/).filter((block) => block.trim()).length,
-    headings: extractHeadings(markdown).length,
-    // Count entries into a fenced block rather than fence lines: a nested
-    // ``` inside a ~~~ block is content, not a new block.
-    codeBlocks: scanned.filter((entry, index) => entry.inCode && !scanned[index - 1]?.inCode).length,
+    characters: length,
+    charactersNoSpaces: length - spaces,
+    lines,
+    paragraphs,
+    headings,
+    codeBlocks,
     readingMinutes: Math.max(1, Math.ceil(words / 200))
   }
 }
 
-/** 1-based line number containing `offset`. */
+/** Number of lines, as `text.split('\n').length` would say, without building the array. */
+export function countLines(text: string): number {
+  let lines = 1
+  let at = text.indexOf('\n')
+  while (at !== -1) {
+    lines += 1
+    at = text.indexOf('\n', at + 1)
+  }
+  return lines
+}
+
+/** 1-based line number containing `offset`. Counts line feeds with indexOf, not character by character. */
 export function lineAtOffset(value: string, offset: number): number {
   const clamped = Math.max(0, Math.min(offset, value.length))
   let line = 1
-  for (let index = 0; index < clamped; index += 1) {
-    if (value[index] === '\n') line += 1
+  let at = value.indexOf('\n')
+  while (at !== -1 && at < clamped) {
+    line += 1
+    at = value.indexOf('\n', at + 1)
   }
   return line
 }

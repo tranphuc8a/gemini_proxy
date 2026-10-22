@@ -1,7 +1,10 @@
 /* ui/app.js — khởi động, định tuyến theo địa chỉ (#/…), khung giao diện (thanh bên / thanh dưới), phím tắt toàn cục, đồng bộ giữa các thẻ trình duyệt.
 
    Địa chỉ:  #/ (trang chủ) · #/notes?status=&tag=&sort=&fav= · #/search?q= · #/n/<id> · #/new?title= · #/daily[/<ngày>] · #/graph?c=&d= · #/review · #/books · #/book/<id> · #/tags · #/settings
-   Điện thoại: mỗi lúc một màn (danh sách HOẶC ghi chú). Máy tính ≥ 900px: danh sách cạnh ghi chú. */
+             · #/settings/sync (Cài đặt, cuộn tới mục Đồng bộ) · #/join/<mã nối> (liên kết nối thiết bị: giữ mã trong bộ nhớ, thay địa chỉ bằng #/settings/sync
+               để mã không nằm lại trong lịch sử, rồi mở hộp "Nối" điền sẵn — người dùng tự bấm Nối)
+   Điện thoại: mỗi lúc một màn (danh sách HOẶC ghi chú). Máy tính ≥ 900px: danh sách cạnh ghi chú.
+   Đồng bộ luôn thấy được: chỉ báo trạng thái ở chân thanh bên (máy tính) / mục "Đồng bộ" trong menu Thêm (điện thoại), biểu ngữ khi đồng bộ dừng hẳn. */
 (function (root) {
   "use strict";
   var W = root.Wiki, T = W.text, N = W.notes, U = W.ui, h = U.h, icon = U.icon, $ = U.$, doc = root.document;
@@ -11,6 +14,7 @@
   ];
   var TITLES = { home: "Trang chủ", notes: "Ghi chú", search: "Tìm kiếm", graph: "Đồ thị", review: "Ôn tập", books: "Sách", book: "Sách", tags: "Tag", settings: "Cài đặt", n: "Ghi chú", daily: "Hôm nay" };
   var repo, ctx, listPane, current = null, listState = {}, dueCount = 0, chan = null, mainEl, bannerEl;
+  var pendingJoin = "", syncView = { kind: "none", text: "", title: "" }, syncStop = "";
 
   // ------------------------------------------------------------------------------------------------- định tuyến
   function parse() {
@@ -47,6 +51,7 @@
     var r = parse(), key = viewKey(r);
     if (r.name === "new") { var id = T.uid(); return go("#/n/" + id + qstr(Object.assign({ new: "1" }, r.q)), true); }
     if (r.name === "daily") { var dk = T.isDateKey(r.arg) ? r.arg : T.dateKey(repo.now()); return go("#/n/" + N.dailyId(dk) + "?daily=" + dk, true); }
+    if (r.name === "join") { pendingJoin = r.arg; return go("#/settings/sync", true); }          // replaceState: mã nối không nằm lại trong địa chỉ / lịch sử
     var layout = /^(notes|search)$/.test(r.name) ? "list" : r.name === "n" ? "both" : "main";
     doc.body.dataset.route = r.name === "search" ? "notes" : r.name; doc.body.dataset.pane = layout;
     if (layout === "list") { listState = listStateOf(Object.assign({}, r.q, r.name === "search" ? {} : { q: "" })); listPane.setState(listState); }
@@ -67,11 +72,11 @@
         else if (r.name === "books") view = U.views.books(ctx, mainEl);
         else if (r.name === "book") view = U.views.book(ctx, mainEl, r.arg);
         else if (r.name === "tags") view = U.views.tags(ctx, mainEl);
-        else if (r.name === "settings") view = U.settings.open(ctx, mainEl);
+        else if (r.name === "settings") view = U.settings.open(ctx, mainEl, r.arg);
         else { mainEl.append(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Không có trang này" }), h("a", { class: "btn btn-primary", href: "#/", text: "Về trang chủ" }))); }
       } catch (e) { mainEl.replaceChildren(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Có lỗi khi mở màn này" }), h("p", { class: "faint", text: String(e && e.message || e) }))); if (root.console) root.console.error(e); }
       current = { key: key, view: view };
-      if (r.name !== "n") { mainEl.scrollTop = 0; root.scrollTo(0, 0); }
+      if (r.name !== "n" && !(r.name === "settings" && r.arg)) { mainEl.scrollTop = 0; root.scrollTo(0, 0); }   // #/settings/sync: settings.js đã cuộn tới mục
     });
   }
 
@@ -99,7 +104,42 @@
     bottom.replaceChildren.apply(bottom, main.map(function (n) {
       var a = h("a", { class: "bn", href: n.hash, dataset: { nav: n.id } }); a.innerHTML = icon(n.icon) + "<span>" + T.esc(n.label) + "</span>" + (n.id === "review" ? '<b class="nbadge" id="badgeB" hidden></b>' : "");
       return a;
-    }).concat([(function () { var b = h("button", { type: "button", class: "bn", id: "moreBtn", "aria-haspopup": "menu", "aria-label": "Thêm" }); b.innerHTML = icon("menu") + "<span>Thêm</span>"; b.addEventListener("click", function () { U.menu(b, [{ label: "Sách", icon: "book", run: function () { go("#/books"); } }, { label: "Tag", icon: "tag", run: function () { go("#/tags"); } }, { label: "Tìm kiếm", icon: "search", run: function () { go("#/search"); setTimeout(function () { listPane.focusSearch(); }, 80); } }, { sep: true }, { label: "Cài đặt", icon: "settings", run: function () { go("#/settings"); } }]); }); return b; })()]));
+    }).concat([(function () {
+      var b = h("button", { type: "button", class: "bn", id: "moreBtn", "aria-haspopup": "menu", "aria-label": "Thêm" }); b.innerHTML = icon("menu") + "<span>Thêm</span>";
+      b.addEventListener("click", function () {
+        var items = [{ label: "Sách", icon: "book", run: function () { go("#/books"); } }, { label: "Tag", icon: "tag", run: function () { go("#/tags"); } }, { label: "Tìm kiếm", icon: "search", run: function () { go("#/search"); setTimeout(function () { listPane.focusSearch(); }, 80); } }, { sep: true }];
+        // điện thoại không có thanh bên: trạng thái đồng bộ nằm ở đây (chữ đọc lúc mở menu), bấm là tới mục Đồng bộ
+        if (syncView.kind !== "none") items.push({ label: "Đồng bộ: " + syncView.text, icon: "cloud", run: function () { go("#/settings/sync"); } });
+        items.push({ label: "Cài đặt", icon: "settings", run: function () { go("#/settings"); } });
+        U.menu(b, items);
+      });
+      return b;
+    })()]));
+    // chỉ báo đồng bộ ở chân thanh bên (máy tính); thanh bên dạng icon (900–1199px) chỉ còn biểu tượng + chấm màu
+    var chip = h("a", { class: "syncchip", id: "syncChip", href: "#/settings/sync", hidden: true, dataset: { kind: "none" } });
+    chip.innerHTML = icon("cloud") + '<span class="sc-dot" aria-hidden="true"></span><span class="sc-t"></span>';
+    $("#side").insertBefore(chip, $("#side .side-foot"));
+  }
+
+  // ------------------------------------------------------------------------------------------------- đồng bộ: chỉ báo + biểu ngữ
+  function drawSync(s) {
+    var v = W.sync.statusView(s, Date.now()), chip = $("#syncChip");
+    syncView = v;
+    if (chip) {
+      chip.hidden = v.kind === "none";
+      if (chip.dataset.kind !== v.kind) chip.dataset.kind = v.kind;
+      var t = chip.querySelector(".sc-t"); if (t.textContent !== v.text) t.textContent = v.text;
+      chip.title = v.title || v.text; chip.setAttribute("aria-label", "Đồng bộ: " + v.text + (v.title && v.title !== v.text ? " — " + v.title : ""));
+    }
+    var mb = $("#moreBtn"); if (mb) mb.classList.toggle("alert", v.kind === "fatal");
+    var stop = s && s.fatal ? (s.error || "Đồng bộ đã dừng.") : "";      // chỉ lỗi DỪNG HẲN mới lên biểu ngữ; lỗi tự thử lại chỉ hiện ở chỉ báo
+    if (stop !== syncStop) { syncStop = stop; chooseBanner(); }
+  }
+  function watchSync() {
+    var inst = W.sync && W.sync.instance;
+    if (!inst) return;
+    inst.on(drawSync); drawSync(inst.state());
+    root.setInterval(function () { if (doc.visibilityState === "visible" && syncView.kind === "ok") drawSync(inst.state()); }, 30000);   // "2 phút trước" tự cập nhật
   }
   function refreshShell() {
     var s = repo.stats(), c = $("#countS"); if (c) c.textContent = s.active ? s.active.toLocaleString("vi-VN") : "";
@@ -120,11 +160,13 @@
     if (kind === "update") html = '<span>Có bản mới của ứng dụng.</span><button type="button" class="btn" data-bn="update">Tải lại</button>';
     else if (kind === "volatile") html = "<span><b>Không lưu được lâu dài:</b> trình duyệt đang chặn IndexedDB (chế độ riêng tư?). Dữ liệu sẽ mất khi đóng thẻ — hãy mở ở cửa sổ thường.</span>";
     else if (kind === "offline") html = "<span>Bạn đang ngoại tuyến — mọi thứ vẫn hoạt động, dữ liệu lưu trên máy.</span>";
-    else if (kind === "sync") html = "<span>" + T.esc(extra || "") + "</span>";
+    else if (kind === "sync") html = "<span><b>Đồng bộ đã dừng:</b> " + T.esc(extra || "") + '</span><button type="button" class="btn" data-bn="sync">Mở Đồng bộ</button>';
     b.innerHTML = html; b.hidden = !html;
   }
   function chooseBanner() {
-    if (U.pwa.updateReady()) showBanner("update"); else if (repo.store.volatile) showBanner("volatile"); else if (!U.pwa.isOnline()) showBanner("offline"); else { bannerKind = ""; bannerEl.hidden = true; }
+    if (!bannerEl || !repo) return;
+    if (U.pwa.updateReady()) showBanner("update"); else if (repo.store.volatile) showBanner("volatile"); else if (syncStop) showBanner("sync", syncStop);
+    else if (!U.pwa.isOnline()) showBanner("offline"); else { bannerKind = ""; bannerEl.hidden = true; }
   }
 
   // ------------------------------------------------------------------------------------------------- phím tắt
@@ -172,7 +214,8 @@
       repo = W.repo.create(store);
       return repo.open();
     }).then(function () {
-      ctx = { repo: repo, toast: U.toast, confirm: U.confirmBox, route: route, listRoute: listRoute, newNote: newNote, samples: function () { return U.views.samples(ctx); }, emptyTrash: emptyTrash, open: function (id) { go("#/n/" + id); } };
+      ctx = { repo: repo, toast: U.toast, confirm: U.confirmBox, route: route, listRoute: listRoute, newNote: newNote, samples: function () { return U.views.samples(ctx); }, emptyTrash: emptyTrash, open: function (id) { go("#/n/" + id); },
+        takeJoin: function () { var c = pendingJoin; pendingJoin = ""; return c; } };                  // bảng Đồng bộ lấy (một lần) mã từ liên kết #/join/<mã>
       listPane = U.list.create(Object.assign({}, ctx, { route: listRoute }));
       $("#listPane").append(listPane.el);
       buildNav();
@@ -181,7 +224,7 @@
       $("#topNew").addEventListener("click", function () { newNote({}); });
       $("#topSearch").addEventListener("click", focusSearch);
       $("#topBack").addEventListener("click", function () { go(parse().name === "book" ? "#/books" : "#/notes"); });
-      bannerEl.addEventListener("click", function (e) { if (e.target.closest('[data-bn="update"]')) U.pwa.applyUpdate(); });
+      bannerEl.addEventListener("click", function (e) { if (e.target.closest('[data-bn="update"]')) U.pwa.applyUpdate(); else if (e.target.closest('[data-bn="sync"]')) go("#/settings/sync"); });
       doc.addEventListener("keydown", keys);
       root.addEventListener("hashchange", handle);
       U.pwa.onChange(chooseBanner); root.addEventListener("online", chooseBanner); root.addEventListener("offline", chooseBanner);
@@ -196,7 +239,7 @@
       handle();
       afterStart();
       doc.body.classList.add("ready");
-      if (root.Wiki.sync && root.Wiki.sync.start) root.Wiki.sync.start(ctx);
+      if (root.Wiki.sync && root.Wiki.sync.start) { root.Wiki.sync.start(ctx); watchSync(); }
     }).catch(function (e) {
       doc.body.classList.add("ready");
       $("#main").replaceChildren(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Không khởi động được" }), h("p", { class: "faint", text: String(e && e.message || e) })));

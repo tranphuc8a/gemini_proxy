@@ -1,6 +1,6 @@
 # Bàn giao — đợt cải tiến web app (22–23/10/2026)
 
-**Trạng thái: xong pha HIỂU + THIẾT KẾ, chưa sửa dòng mã nào. Đang chờ chủ dự án chốt Q1–Q8 trong `ke-hoach.md` §3.**
+**Trạng thái: xong pha thiết kế; Q1–Q8 đã chốt (ke-hoach.md §6) — tất cả theo đề xuất. Đang thi công đợt 1 (ke-hoach.md §7).**
 
 ## Yêu cầu gốc (tóm tắt)
 - Markdown Editor Pro: toán `\[ \]`; link chia sẻ chỉ đọc cho người ẩn danh; PlantUML; thêm định dạng toán/ký hiệu/sơ đồ của Gemini/Claude/ChatGPT; version + đồng bộ chỉ gửi phần đổi.

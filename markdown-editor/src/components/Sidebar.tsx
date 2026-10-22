@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useEditorStore } from '../store'
-import { countNodes } from '../lib/tree'
+import { countNodes, treeShape } from '../lib/tree'
 import FileTree from './FileTree'
 import Outline from './Outline'
 import { IconClose, IconFile, IconFolder, IconOutline, IconPlus, IconSearch } from './Icons'
@@ -18,7 +18,8 @@ function Sidebar({ width, variant = 'docked', onClose }: SidebarProps) {
   const tab = useEditorStore((state) => state.sidebarTab)
   const setTab = useEditorStore((state) => state.setSidebarTab)
   const isAdmin = useEditorStore((state) => state.isAdmin)
-  const files = useEditorStore((state) => state.files)
+  // The shape, not the tree: contents change on every keystroke, the counts do not.
+  const files = useEditorStore((state) => treeShape(state.files))
   const selectedFolderId = useEditorStore((state) => state.selectedFolderId)
   const createFile = useEditorStore((state) => state.createFile)
   const createFolder = useEditorStore((state) => state.createFolder)

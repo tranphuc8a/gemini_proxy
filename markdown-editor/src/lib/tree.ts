@@ -198,6 +198,71 @@ export function filterTree(nodes: FileNode[], query: string): FileNode[] {
   return walk(nodes)
 }
 
+/**
+ * The tree without file contents: what the file tree, the sidebar counts and
+ * the command palette's file list actually depend on.
+ */
+export interface TreeShapeNode {
+  id: string
+  name: string
+  type: 'file' | 'folder'
+  parentId?: string
+  children?: TreeShapeNode[]
+}
+
+/** Shapes already built, by node object: an untouched file keeps its object across edits. */
+const shapeByNode = new WeakMap<FileNode, TreeShapeNode>()
+/** The last shape seen per id, reused when nothing but contents changed underneath it. */
+let shapeById = new Map<string, TreeShapeNode>()
+let lastShapeRoot: TreeShapeNode[] = []
+let lastShapeFiles: FileNode[] | null = null
+
+function sameChildren(a: TreeShapeNode[] | undefined, b: TreeShapeNode[] | undefined): boolean {
+  if (a === b) return true
+  if (!a || !b || a.length !== b.length) return false
+  for (let index = 0; index < a.length; index += 1) if (a[index] !== b[index]) return false
+  return true
+}
+
+function shapeOf(node: FileNode, seen: Map<string, TreeShapeNode>): TreeShapeNode {
+  const cached = shapeByNode.get(node)
+  if (cached && !node.children) {
+    seen.set(node.id, cached)
+    return cached
+  }
+  const children = node.children?.map((child) => shapeOf(child, seen))
+  const previous = shapeById.get(node.id)
+  const shape =
+    previous &&
+    previous.name === node.name &&
+    previous.type === node.type &&
+    previous.parentId === node.parentId &&
+    sameChildren(previous.children, children)
+      ? previous
+      : { id: node.id, name: node.name, type: node.type, parentId: node.parentId, children }
+  shapeByNode.set(node, shape)
+  seen.set(node.id, shape)
+  return shape
+}
+
+/**
+ * `files` minus contents, structurally shared: as long as no node was added,
+ * removed, renamed or moved, the very same array comes back. Typing replaces
+ * the `files` tree on every keystroke (setNodeContent), so selecting this
+ * instead keeps the tree, the sidebar and the palette from re-rendering.
+ */
+export function treeShape(files: FileNode[]): TreeShapeNode[] {
+  // Every subscriber (each row of the file tree among them) asks with the same array after a store update.
+  if (files === lastShapeFiles) return lastShapeRoot
+  lastShapeFiles = files
+  const seen = new Map<string, TreeShapeNode>()
+  const roots = files.map((node) => shapeOf(node, seen))
+  shapeById = seen
+  if (sameChildren(lastShapeRoot, roots)) return lastShapeRoot
+  lastShapeRoot = roots
+  return roots
+}
+
 /** Repairs parentId links, and keeps `children`/`content` on the right node kind. */
 export function normalizeTree(nodes: FileNode[], parentId?: string): FileNode[] {
   return nodes.map((node) => {

@@ -15,6 +15,7 @@ import InstallModal from './components/InstallModal'
 import SmartFormatModal from './components/SmartFormatModal'
 import CommandPalette from './components/CommandPalette'
 import Toasts from './components/Toasts'
+import StorageBanner from './components/StorageBanner'
 import { useViewport } from './hooks/useViewport'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { emitJump } from './lib/paneSync'
@@ -28,6 +29,13 @@ type Drag = 'pane' | 'sidebar' | null
 const INBOX_SESSION_WAIT_MS = 4000
 
 function App() {
+  // The stored workspace is loaded before anything below renders, so the first
+  // frame shows the stored document. Loading it in a layout effect was too late:
+  // the panes subscribe to the store only after paint, so the built-in welcome
+  // text was painted first and the real document arrived a frame -- or, on a
+  // long file, seconds -- later. Runs once; the session check it starts is
+  // awaited by the inbox below.
+  const [sessionChecked] = useState(() => useEditorStore.getState().hydrate())
   const theme = useEditorStore((state) => state.theme)
   const viewMode = useEditorStore((state) => state.viewMode)
   const editorWidth = useEditorStore((state) => state.editorWidth)
@@ -37,7 +45,6 @@ function App() {
   const sidebarCollapsed = useEditorStore((state) => state.sidebarCollapsed)
   const fullscreen = useEditorStore((state) => state.fullscreen)
   const fontSize = useEditorStore((state) => state.fontSize)
-  const hydrate = useEditorStore((state) => state.hydrate)
   const flushPersist = useEditorStore((state) => state.flushPersist)
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const drawerOpen = useEditorStore((state) => state.drawerOpen)
@@ -59,14 +66,13 @@ function App() {
   const stackedRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Before paint, so the first frame is already the stored document, in the
-  // right layout -- and, for ?read=1, already in reading mode.
+  // Before paint, so the first frame is already in the right layout -- and,
+  // for ?read=1, already in reading mode.
   useLayoutEffect(() => {
     setLayout(layout)
   }, [layout, setLayout])
 
   useLayoutEffect(() => {
-    const sessionChecked = hydrate()
     // ?read=1 opens straight into reading mode, e.g. from a shared link.
     if (hasReadFlag(window.location.href)) useReadingStore.getState().openReading()
     // Opened by another app with a document waiting (?import=1). Imported once
@@ -79,7 +85,7 @@ function App() {
     void Promise.race([sessionChecked.catch(() => undefined), settled]).then(() =>
       useEditorStore.getState().importInbox(doc)
     )
-  }, [hydrate])
+  }, [sessionChecked])
 
   // Apply the resolved theme to <html> so tokens, form controls and the
   // browser's own scrollbars all follow it.
@@ -102,10 +108,17 @@ function App() {
   // Nothing is lost if the tab closes mid-debounce.
   useEffect(() => {
     const flush = () => flushPersist()
-    window.addEventListener('beforeunload', flush)
+    // With the quota full, the last save did not land and a reload brings back an older copy: ask first.
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      flush()
+      if (useEditorStore.getState().storageFailure !== 'quota') return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
     document.addEventListener('visibilitychange', flush)
     return () => {
-      window.removeEventListener('beforeunload', flush)
+      window.removeEventListener('beforeunload', onBeforeUnload)
       document.removeEventListener('visibilitychange', flush)
       flush()
     }
@@ -235,6 +248,7 @@ function App() {
       </div>
 
       {readingOpen && <ReadingView />}
+      <StorageBanner />
       <Toasts />
     </>
   )

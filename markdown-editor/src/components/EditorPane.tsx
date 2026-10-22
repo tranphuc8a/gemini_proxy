@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { useEditorStore } from '../store'
-import { columnAtOffset, lineAtOffset, offsetAtLine, type SearchMatch } from '../lib/markdown'
+import { columnAtOffset, countLines, lineAtOffset, offsetAtLine, type SearchMatch } from '../lib/markdown'
 import {
   continueList,
   deleteLines,
@@ -29,6 +29,51 @@ import './EditorPane.css'
 /** Beyond this a per-line mirror costs more than the alignment is worth. */
 const MAX_MEASURED_LINES = 6000
 
+interface Metrics {
+  tops: number[]
+  height: number
+}
+
+const NO_METRICS: Metrics = { tops: [], height: 0 }
+
+function sameMetrics(a: Metrics, b: Metrics): boolean {
+  if (a.height !== b.height || a.tops.length !== b.tops.length) return false
+  for (let index = 0; index < a.tops.length; index += 1) if (a.tops[index] !== b.tops[index]) return false
+  return true
+}
+
+interface GutterProps {
+  count: number
+  tops: number[]
+  height: number
+  current: number
+}
+
+/**
+ * The line numbers. Memoised on what it draws, so typing inside a line --
+ * which changes neither the line count, the line positions nor the caret
+ * line -- no longer rebuilds one element per line of the document.
+ */
+const Gutter = memo(function Gutter({ count, tops, height, current }: GutterProps) {
+  const rows: ReactElement[] = []
+  for (let index = 0; index < count; index += 1) {
+    rows.push(
+      <div
+        key={index}
+        className={`gutter-line${index + 1 === current ? ' is-current' : ''}`}
+        style={tops[index] === undefined ? undefined : { top: tops[index] }}
+      >
+        {index + 1}
+      </div>
+    )
+  }
+  return (
+    <div className="gutter-inner" style={height ? { height } : undefined}>
+      {rows}
+    </div>
+  )
+})
+
 function EditorPane() {
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const content = useEditorStore((state) => state.currentContent)
@@ -52,10 +97,12 @@ function EditorPane() {
 
   const [find, setFind] = useState<{ open: boolean; replace: boolean }>({ open: false, replace: false })
   const [caret, setCaret] = useState({ line: 1, column: 1 })
-  const [metrics, setMetrics] = useState<{ tops: number[]; height: number }>({ tops: [], height: 0 })
+  const [metrics, setMetrics] = useState<Metrics>(NO_METRICS)
 
-  const lines = useMemo(() => content.split('\n'), [content])
-  const measured = lines.length <= MAX_MEASURED_LINES
+  const lineCount = useMemo(() => countLines(content), [content])
+  const measured = lineCount <= MAX_MEASURED_LINES
+  // Only the mirror needs the lines themselves, and only up to MAX_MEASURED_LINES.
+  const lines = useMemo(() => (measured ? content.split('\n') : []), [content, measured])
   const readOnly = !isAdmin
 
   /**
@@ -75,13 +122,14 @@ function EditorPane() {
     // already sits at padding-top. Rebasing on it makes every offset relative
     // to the start of the text, which is what both consumers expect.
     const base = children[0]?.offsetTop ?? 0
-    const tops = children.map((child) => child.offsetTop - base)
-    setMetrics({ tops, height: mirror.scrollHeight - base })
+    const next = { tops: children.map((child) => child.offsetTop - base), height: mirror.scrollHeight - base }
+    // Same positions keep the same object, so the gutter and the anchors stay put.
+    setMetrics((current) => (sameMetrics(current, next) ? current : next))
   }, [])
 
   useLayoutEffect(() => {
     if (!measured) {
-      setMetrics({ tops: [], height: 0 })
+      setMetrics(NO_METRICS)
       return
     }
     const frame = requestAnimationFrame(measure)
@@ -103,7 +151,11 @@ function EditorPane() {
     const textarea = textareaRef.current
     if (!textarea) return
     const offset = textarea.selectionStart
-    setCaret({ line: lineAtOffset(textarea.value, offset), column: columnAtOffset(textarea.value, offset) + 1 })
+    const value = textarea.value
+    const line = lineAtOffset(value, offset)
+    const column = columnAtOffset(value, offset) + 1
+    // keyup, click and select all land here; an unchanged caret is not a re-render.
+    setCaret((current) => (current.line === line && current.column === column ? current : { line, column }))
   }, [])
 
   /** Applies a pure command and restores the selection it asks for. */
@@ -499,17 +551,7 @@ function EditorPane() {
       <div className={`editor-body${wordWrap ? '' : ' no-wrap'}`}>
         {showLineNumbers && (
           <div className="editor-gutter" ref={gutterRef} aria-hidden="true">
-            <div className="gutter-inner" style={metrics.height ? { height: metrics.height } : undefined}>
-              {lines.map((_, index) => (
-                <div
-                  key={index}
-                  className={`gutter-line${index + 1 === caret.line ? ' is-current' : ''}`}
-                  style={metrics.tops[index] === undefined ? undefined : { top: metrics.tops[index] }}
-                >
-                  {index + 1}
-                </div>
-              ))}
-            </div>
+            <Gutter count={lineCount} tops={metrics.tops} height={metrics.height} current={caret.line} />
           </div>
         )}
 

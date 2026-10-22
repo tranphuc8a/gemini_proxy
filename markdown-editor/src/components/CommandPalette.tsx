@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEditorStore } from '../store'
 import { useReadingStore } from '../readingStore'
-import { flatten, getPath } from '../lib/tree'
+import { flatten, getPath, treeShape } from '../lib/tree'
 import { extractHeadings } from '../lib/markdown'
 import { emitJump } from '../lib/paneSync'
 import { exportMarkdown } from '../lib/exporters'
@@ -37,11 +37,14 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const files = useEditorStore((state) => state.files)
-  const content = useEditorStore((state) => state.currentContent)
+  // Always mounted, so it subscribes only to what it shows: the tree's shape (unchanged while typing) and,
+  // only while open, the document for its heading list. It used to rebuild every command on every keystroke.
+  const files = useEditorStore((state) => treeShape(state.files))
+  const content = useEditorStore((state) => (open ? state.currentContent : ''))
   const currentFileId = useEditorStore((state) => state.currentFileId)
 
   const commands = useMemo<Command[]>(() => {
+    if (!open) return []
     const state = useEditorStore.getState()
     const fileName = flatten(files).find((node) => node.id === currentFileId)?.name ?? 'document.md'
 
@@ -72,7 +75,7 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
         ? [{ id: 'smart-format', label: 'Smart format with AI…', group: 'Commands' as const, hint: 'Raw text → readable Markdown', run: state.openSmartFormat }]
         : []),
       { id: 'save', label: 'Save now', group: 'Commands', shortcut: 'Ctrl+S', run: state.flushPersist },
-      { id: 'export-md', label: 'Export as Markdown', group: 'Commands', run: () => exportMarkdown(fileName, content) },
+      { id: 'export-md', label: 'Export as Markdown', group: 'Commands', run: () => exportMarkdown(fileName, useEditorStore.getState().currentContent) },
       { id: 'print', label: 'Print or save as PDF', group: 'Commands', shortcut: 'Ctrl+P', run: () => window.print() },
       { id: 'help', label: 'Open help and shortcuts', group: 'Commands', shortcut: 'Ctrl+/', run: onOpenHelp }
     ]
@@ -110,7 +113,7 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
     }))
 
     return [...actions, ...fileCommands, ...headingCommands]
-  }, [content, currentFileId, files, onOpenHelp])
+  }, [open, content, currentFileId, files, onOpenHelp])
 
   const results = useMemo(() => rankBySearch(commands, query), [commands, query])
 

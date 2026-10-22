@@ -17,6 +17,11 @@ import './Preview.css'
 
 /** Keeps typing responsive: re-parsing on every keystroke stutters on long files. */
 const RENDER_DEBOUNCE_MS = 120
+/**
+ * A document longer than this is first rendered just after the first paint,
+ * so the editor appears at once instead of waiting for the whole preview.
+ */
+const DEFER_FIRST_RENDER_CHARS = 20_000
 
 function Preview() {
   const content = useEditorStore((state) => state.currentContent)
@@ -30,35 +35,60 @@ function Preview() {
   const articleRef = useRef<HTMLElement>(null)
   const lockRef = useRef(createSyncLock())
   const anchorsRef = useRef<LineAnchor[]>([])
+  const anchorFrame = useRef(0)
 
-  const [debounced, setDebounced] = useState(content)
+  // null until a long document's first render, which waits for the first paint.
+  const [debounced, setDebounced] = useState<string | null>(() => (content.length > DEFER_FIRST_RENDER_CHARS ? null : content))
+  const pending = debounced === null
 
   useEffect(() => {
+    if (pending) {
+      // After the frame that shows the editor: rAF runs before that paint, the timeout after it.
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const frame = requestAnimationFrame(() => {
+        timer = setTimeout(() => setDebounced(content), 0)
+      })
+      return () => {
+        cancelAnimationFrame(frame)
+        if (timer) clearTimeout(timer)
+      }
+    }
     const timer = setTimeout(() => setDebounced(content), RENDER_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [content])
+  }, [content, pending])
 
-  const refreshAnchors = useCallback(() => {
-    if (scrollRef.current) anchorsRef.current = collectPreviewAnchors(scrollRef.current)
+  /**
+   * Re-reads the line anchors at most once per frame. Every image that loads
+   * and every resize asks for it, and each read walks thousands of elements.
+   */
+  const scheduleAnchors = useCallback(() => {
+    if (anchorFrame.current) return
+    anchorFrame.current = requestAnimationFrame(() => {
+      anchorFrame.current = 0
+      if (scrollRef.current) anchorsRef.current = collectPreviewAnchors(scrollRef.current)
+    })
   }, [])
 
   // Anchors move as images load and diagrams finish rendering.
   useEffect(() => {
-    const frame = requestAnimationFrame(refreshAnchors)
+    scheduleAnchors()
     const container = scrollRef.current
-    if (!container) return () => cancelAnimationFrame(frame)
+    const cancel = () => {
+      cancelAnimationFrame(anchorFrame.current)
+      anchorFrame.current = 0
+    }
+    if (!container) return cancel
 
-    const observer = new ResizeObserver(refreshAnchors)
+    const observer = new ResizeObserver(scheduleAnchors)
     observer.observe(container)
-    const onLoad = () => refreshAnchors()
-    container.addEventListener('load', onLoad, true)
+    container.addEventListener('load', scheduleAnchors, true)
 
     return () => {
-      cancelAnimationFrame(frame)
+      cancel()
       observer.disconnect()
-      container.removeEventListener('load', onLoad, true)
+      container.removeEventListener('load', scheduleAnchors, true)
     }
-  }, [debounced, refreshAnchors])
+  }, [debounced, scheduleAnchors])
 
   useEffect(() => {
     const offScroll = onScrollSync((event) => {
@@ -114,8 +144,14 @@ function Preview() {
 
       <div ref={scrollRef} className="preview-scroll" onScroll={onScroll} onDoubleClick={onDoubleClick} onClick={onClick}>
         <article ref={articleRef} className="markdown-body">
-          <MarkdownView source={debounced} theme={theme} />
-          {!debounced.trim() && <p className="preview-empty">Nothing to preview yet — start writing in the editor.</p>}
+          {pending ? (
+            <p className="preview-empty">Rendering preview…</p>
+          ) : (
+            <>
+              <MarkdownView source={debounced} theme={theme} />
+              {!debounced.trim() && <p className="preview-empty">Nothing to preview yet — start writing in the editor.</p>}
+            </>
+          )}
         </article>
       </div>
     </section>

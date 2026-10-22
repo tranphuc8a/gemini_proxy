@@ -1,0 +1,42 @@
+/* Floats above the workspace instead of taking a grid row in .app, and sits
+   outside it, so it also shows over reading mode. */
+.storage-banner {
+  position: fixed;
+  top: calc(var(--header-height, 48px) + 8px);
+  left: 50%;
+  z-index: 70;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  width: min(760px, calc(100vw - 32px));
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #fff;
+  background-color: var(--danger);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
+}
+
+.storage-banner-text {
+  flex: 1 1 320px;
+  margin: 0;
+}
+
+.storage-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.storage-banner .storage-banner-btn {
+  color: #fff;
+  border-color: rgb(255 255 255 / 70%);
+}
+
+.storage-banner .storage-banner-btn:hover:not(:disabled) {
+  color: var(--danger);
+  background-color: #fff;
+}

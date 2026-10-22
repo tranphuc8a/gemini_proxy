@@ -453,18 +453,26 @@ async function sharedStoreTests() {
   off();
 }
 
-function fakeServer() {
-  var spaces = {}, stamp = 1000, calls = [], srv = { reject: {}, down: false, pageCap: 0, calls: calls, spaces: spaces };
+/* Máy chủ /wiki giả. `prefix` = API_PREFIX của nó ("/api" mặc định; "" = API ở gốc như .env thật). Gọi ngoài <prefix>/wiki/… thì trả
+   404 KHÔNG có mã /wiki (như trang 404 của FastAPI khi sai tiền tố). srv.urls ghi đường dẫn thật đã gọi. */
+function fakeServer(prefix) {
+  var base = (prefix == null ? "/api" : prefix) + "/wiki";
+  var spaces = {}, stamp = 1000, calls = [], urls = [], srv = { reject: {}, down: false, pageCap: 0, calls: calls, urls: urls, spaces: spaces };
   function res(status, body, headers) { return { ok: status < 400, status: status, headers: { get: function (k) { return (headers || {})[k] || null; } }, text: function () { return Promise.resolve(body === undefined ? "" : JSON.stringify(body)); } }; }
   function err(status, code, extra) { return res(status, { status_code: status, message: "lỗi " + code, data: Object.assign({ code: code }, extra || {}) }); }
   function wins(n, o) { return n.updatedAt !== o.updatedAt ? n.updatedAt > o.updatedAt : !!(n.deleted && !o.deleted); }
   srv.fetch = function (url, init) {
     if (srv.down) return Promise.reject(new TypeError("Failed to fetch"));
-    var u = new URL(url, "http://x"), parts = u.pathname.replace(/^\/api\/wiki\/?/, "").split("/").filter(Boolean), method = (init && init.method) || "GET", key = init && init.headers && init.headers["X-Wiki-Key"];
+    var u = new URL(url, "http://x"), method = (init && init.method) || "GET", key = init && init.headers && init.headers["X-Wiki-Key"];
+    urls.push(u.pathname);
+    if (u.pathname !== base && u.pathname.indexOf(base + "/") !== 0) { calls.push(method + " !" + u.pathname); return Promise.resolve(res(404, { detail: "Not Found" })); }
+    var parts = u.pathname.slice(base.length).split("/").filter(Boolean);
     var body = init && init.body ? JSON.parse(init.body) : null;
     calls.push(method + " /" + parts.join("/") + (u.search || ""));
-    if (parts[0] === "backends") return Promise.resolve(res(200, { default: "json", backends: [{ id: "json", label: "JSON", available: true, persistent: true, reason: "" }] }));
+    if (parts[0] === "backends") return Promise.resolve(res(200, { default: srv.defaultBackend || "json", backends: [{ id: "json", label: "JSON", available: true, persistent: true, reason: "" }] }));
     if (parts[0] === "workspaces" && method === "POST") { var id = "ws" + (Object.keys(spaces).length + 1), k = "key-" + id; spaces[id] = { key: k, items: new Map() }; return Promise.resolve(res(201, { workspaceId: id, key: k })); }
+    var be = u.searchParams.get("backend");
+    if (be && srv.missingIn && srv.missingIn[be]) return Promise.resolve(err(404, "wiki_not_found"));   // kho không nằm ở nơi lưu này
     var ws = spaces[parts[0]];
     if (!ws) return Promise.resolve(err(404, "wiki_not_found"));
     if (ws.key !== key) return Promise.resolve(err(401, "wiki_unauthorized"));
@@ -621,6 +629,203 @@ async function syncTests() {
   se.stop();
 }
 
+/* "Có máy chủ" = có cấu hình. API_PREFIX trống (apiBase "") là CÓ máy chủ — lỗi gốc 22/10: `available: !!apiBase` khoá đồng bộ khi .env để
+   API_PREFIX rỗng. 404 không mã ≠ mất kho. Mã nối ghi rõ nơi lưu. Wiki.api là chỗ duy nhất đọc gốc API (W3 dùng cho AI). */
+async function apiTests() {
+  sec("có máy chủ hay không (API_PREFIX trống, thiếu cấu hình, sai tiền tố)");
+  var Y = require(path.join(J, "data/sync.js"));
+  var A = W.api, tick = 1.9e12, timers = [];
+  var mk = async function () { var r = W.repo.create(W.store.memory(), { now: function () { return (tick += 1000); } }); await r.open(); return r; };
+  var mkSync = function (repo, srv, apiBase) { return Y.create(repo, { fetch: srv.fetch, apiBase: apiBase, now: function () { return tick; }, setTimeout: function (f, ms) { timers.push(ms); return timers.length; }, clearTimeout: function () {} }); };
+
+  kiem("Wiki.api.read: apiBase \"\" (API_PREFIX trống) = CÓ máy chủ, API ở gốc cùng origin", bang(A.read({ apiBase: "" }), { has: true, base: "" }));
+  kiem("Wiki.api.read: bỏ '/' cuối; không có cấu hình / apiBase null / không phải chuỗi = KHÔNG có máy chủ",
+    bang(A.read({ apiBase: "/api/v1/" }), { has: true, base: "/api/v1" }) && !A.read(undefined).has && !A.read(null).has && !A.read({}).has && !A.read({ apiBase: null }).has && !A.read({ apiBase: 5 }).has && !A.read("x").has);
+
+  // (a) API_PREFIX trống: máy chủ phục vụ /wiki/* ở gốc
+  var rootSrv = fakeServer("");
+  var R = await mk(), sr = mkSync(R, rootSrv, "");
+  await sr.load();
+  kiem("apiBase \"\": available = true (trước đây false → Cài đặt chỉ báo 'Cần mở app qua máy chủ')", sr.state().available === true);
+  await R.save({ title: "Ở gốc", content: "x" });
+  var bk = await sr.backends(), codeR = await sr.create("");
+  kiem("apiBase \"\": gọi đúng /wiki/backends rồi /wiki/workspaces (không thêm tiền tố)", rootSrv.urls[0] === "/wiki/backends" && rootSrv.urls[1] === "/wiki/workspaces" && bk.default === "json", rootSrv.urls.join(" "));
+  await sr.cycle();
+  kiem("apiBase \"\": chu kỳ đồng bộ đầy đủ (đẩy lên, hàng đợi rỗng, idle)", sr.state().phase === "idle" && rootSrv.spaces.ws1.items.size === 1 && (await R.pendingCount()) === 0 && rootSrv.urls.indexOf("/wiki/ws1/items") !== -1);
+  kiem("mã nối ghi rõ nơi lưu mặc định đã biết (json.<kho>.<khoá>) và tạo kho với ?backend=json", /^json\.ws1\.key-ws1$/.test(codeR) && rootSrv.calls.indexOf("POST /workspaces?backend=json") !== -1 && sr.state().backend === "json", codeR + " · " + rootSrv.calls.join(" | "));
+  var R2 = await mk(), sr2 = mkSync(R2, rootSrv, ""); await sr2.load(); await sr2.join(codeR); await sr2.cycle();
+  kiem("thiết bị khác nối bằng mã json.…: kéo về đủ, gọi kèm ?backend=json", R2.size() === 1 && sr2.state().backend === "json" && rootSrv.calls.some(function (c) { return /^GET \/ws1\/items\?backend=json&since=/.test(c); }));
+  var R3 = await mk(), sr3 = mkSync(R3, rootSrv, ""); await sr3.load(); await sr3.join("default.ws1.key-ws1"); await sr3.cycle();
+  kiem("mã nối cũ default.<kho>.<khoá> vẫn nối được (nơi lưu mặc định của máy chủ)", R3.size() === 1 && sr3.state().backend === "");
+  var e0 = await loi(function () { return sr3.join("sqlite.ws1.key-ws1"); });
+  kiem("mã nối với nơi lưu lạ bị từ chối trước khi gọi máy chủ", !!e0 && e0.code === "bad_code");
+
+  // (b) không có cấu hình (file://): không gọi mạng
+  var none = fakeServer("");
+  var N1 = await mk(), sNo = mkSync(N1, none, undefined), sNull = mkSync(N1, none, null);
+  await sNo.load();
+  var e1 = await loi(function () { return sNo.create(""); }), e2 = await loi(function () { return sNull.backends(); }), ranNo = await sNo.cycle();
+  kiem("apiBase undefined / null: available = false", sNo.state().available === false && sNull.state().available === false);
+  kiem("không có máy chủ: tạo kho / hỏi máy chủ bị từ chối (no_server), chu kỳ không chạy, KHÔNG có yêu cầu mạng nào", !!e1 && e1.code === "no_server" && !!e2 && e2.code === "no_server" && ranNo === false && none.urls.length === 0);
+
+  // (c) sai tiền tố: trang nghĩ API ở /api/v1, máy chủ phục vụ ở gốc → 404 không mã
+  var wrong = fakeServer("");
+  var Wr = await mk(), sw = mkSync(Wr, wrong, "/api/v1"); await sw.load();
+  var e3 = await loi(function () { return sw.backends(); });
+  kiem("404 KHÔNG mã (sai tiền tố API) → code wiki_no_api, báo 'không có API đồng bộ', không nói 'kho đã bị xoá'", !!e3 && e3.status === 404 && e3.code === "wiki_no_api" && /không có API đồng bộ/.test(e3.message) && !/nối lại|bị xoá/.test(e3.message), e3 && (e3.code + " " + e3.message));
+  var e4 = await loi(function () { return sw.join("json.ws1.key-ws1"); });
+  kiem("nối kho khi địa chỉ không có API: lỗi wiki_no_api, không lưu khoá", !!e4 && e4.code === "wiki_no_api" && !sw.state().configured && (await Wr.getMeta("sync")) == null);
+  var sBad = mkSync(R, wrong, "/api/v1"); await sBad.load(); timers.length = 0; await sBad.cycle();
+  kiem("chu kỳ gặp 404 không mã: dừng (fatal), errorCode wiki_no_api, KHÔNG bảo nối lại, không hẹn thử lại", sBad.state().fatal === true && sBad.state().errorCode === "wiki_no_api" && /không có API đồng bộ/.test(sBad.state().error) && !/nối lại/.test(sBad.state().error) && timers.length === 0, JSON.stringify(sBad.state()));
+  kiem("…và vẫn giữ khoá kho trên máy (không coi là mất kho)", sBad.state().configured === true && !!(await R.getMeta("sync")));
+
+  // (d) 404 + wiki_not_found = kho mất thật → dừng, bảo nối lại
+  delete rootSrv.spaces.ws1; timers.length = 0;
+  await R.save({ title: "Sau khi kho mất", content: "y" }); await sr.cycle();
+  kiem("404 + wiki_not_found (kho không còn trên máy chủ) → fatal, errorCode wiki_not_found, thông báo 'nối lại'", sr.state().fatal === true && sr.state().errorCode === "wiki_not_found" && /nối lại/.test(sr.state().error) && timers.length === 0);
+
+  // (e) Wiki.sync.start đọc window.__WEBAPP_CONFIG__ qua Wiki.api
+  var had = Object.prototype.hasOwnProperty.call(globalThis, "__WEBAPP_CONFIG__"), saved = globalThis.__WEBAPP_CONFIG__;
+  var S1 = await mk();
+  globalThis.__WEBAPP_CONFIG__ = { apiBase: "", webappBase: "/webapp" };
+  await Y.start({ repo: S1 }); var st1 = Y.instance.state(); Y.instance.stop();
+  kiem("Wiki.sync.start với cấu hình apiBase \"\": available = true; Wiki.api = {has: true, base: \"\"}; url('/wiki/backends') = '/wiki/backends'", st1.available === true && W.api.has === true && W.api.base === "" && W.api.url("/wiki/backends") === "/wiki/backends");
+  globalThis.__WEBAPP_CONFIG__ = { apiBase: "/api/v1/" };
+  await Y.start({ repo: S1 }); var st2 = Y.instance.state(); Y.instance.stop();
+  kiem("Wiki.sync.start với apiBase '/api/v1/': available, Wiki.api.base = '/api/v1'", st2.available === true && W.api.base === "/api/v1" && W.api.url("/ai/wiki") === "/api/v1/ai/wiki");
+  delete globalThis.__WEBAPP_CONFIG__;
+  await Y.start({ repo: S1 }); var st3 = Y.instance.state(); Y.instance.stop();
+  kiem("Wiki.sync.start KHÔNG có cấu hình (mở file://): available = false, Wiki.api.has = false", st3.available === false && W.api.has === false && W.api.base === "");
+  if (had) globalThis.__WEBAPP_CONFIG__ = saved;
+  Y.instance = null;
+}
+
+/* W2 (23/10): giao diện đồng bộ dựa trên các hàm thuần của sync.js — thông điệp phân biệt file:// / thiếu cấu hình / ngoại tuyến / mất kho,
+   chọn sẵn nơi lưu bền, liên kết nối, chữ của chỉ báo trạng thái, mã nối không phụ thuộc "default.". */
+async function syncUxTests() {
+  sec("đồng bộ — hàm thuần cho giao diện (W2)");
+  var Y = require(path.join(J, "data/sync.js"));
+  kiem("blocker: file:// → 'file'; http(s) không cấu hình → 'no_config' (kể cả khi offline); có máy chủ + offline → 'offline'; dùng được → ''",
+    Y.blocker({ available: false, protocol: "file:", online: true }) === "file" && Y.blocker({ available: false, protocol: "http:", online: true }) === "no_config" &&
+    Y.blocker({ available: false, protocol: "https:", online: false }) === "no_config" && Y.blocker({ available: true, protocol: "http:", online: false }) === "offline" &&
+    Y.blocker({ available: true, protocol: "https:", online: true }) === "" && Y.blocker(undefined) === "no_config");
+
+  var J_TAM = { id: "json", label: "JSON", available: true, persistent: false }, J_BEN = { id: "json", label: "JSON", available: true, persistent: true };
+  var MY = { id: "mysql", label: "MySQL", available: true, persistent: true }, MY_HONG = { id: "mysql", label: "MySQL", available: false, persistent: true }, MO = { id: "mongo", label: "MongoDB", available: true, persistent: true };
+  kiem("chooseBackend: mặc định của máy chủ bền → chọn nó", bang(Y.chooseBackend({ default: "json", backends: [J_BEN, MY] }), { id: "json", ephemeral: false, none: false }));
+  kiem("chooseBackend: mặc định là kho TẠM (JSON ở /tmp) nhưng có MySQL bền → chọn MySQL, không cảnh báo", bang(Y.chooseBackend({ default: "json", backends: [J_TAM, MY, MO] }), { id: "mysql", ephemeral: false, none: false }));
+  kiem("chooseBackend: mặc định không dùng được → kho bền dùng được đầu tiên", Y.chooseBackend({ default: "mysql", backends: [J_TAM, MY_HONG, MO] }).id === "mongo");
+  kiem("chooseBackend: chỉ còn kho tạm → vẫn chọn, ephemeral = true (giao diện cảnh báo)", bang(Y.chooseBackend({ default: "json", backends: [J_TAM, MY_HONG] }), { id: "json", ephemeral: true, none: false }));
+  kiem("chooseBackend: không nơi lưu nào dùng được / dữ liệu rác / nơi lưu lạ → none",
+    Y.chooseBackend({ default: "json", backends: [MY_HONG] }).none && Y.chooseBackend(null).none && Y.chooseBackend({ backends: "x" }).none && Y.chooseBackend({ default: "sqlite", backends: [{ id: "sqlite", available: true, persistent: true }] }).none);
+  kiem("isEphemeral: chỉ đúng với nơi lưu dùng được mà không bền", Y.isEphemeral({ backends: [J_TAM, MY] }, "json") && !Y.isEphemeral({ backends: [J_TAM, MY] }, "mysql") && !Y.isEphemeral({ backends: [MY_HONG] }, "mysql") && !Y.isEphemeral(null, "json"));
+
+  kiem("joinLink: dựng từ địa chỉ THƯ MỤC (bỏ index.html, ?source=pwa, #…) + #/join/<mã>",
+    Y.joinLink("https://h.vn/webapp/tranphuc8a/personal-wiki/index.html?source=pwa#/settings/sync", "json.wk_A-b.k_9-x") === "https://h.vn/webapp/tranphuc8a/personal-wiki/#/join/json.wk_A-b.k_9-x" &&
+    Y.joinLink("http://127.0.0.1:5000/webapp/tranphuc8a/personal-wiki/#/notes", "mysql.a.b") === "http://127.0.0.1:5000/webapp/tranphuc8a/personal-wiki/#/join/mysql.a.b" &&
+    Y.joinLink("http://x/a/", "a b/c") === "http://x/a/#/join/a%20b%2Fc");
+
+  var t0 = 1.95e12, V = function (s) { return Y.statusView(Object.assign({ available: true, loaded: true, configured: true, online: true, phase: "idle", last: 0, pending: 0, done: 0, total: 0, error: "", fatal: false, lost: false }, s), t0); };
+  kiem("statusView: không có máy chủ → ẩn; chưa đọc cài đặt → loading; chưa nối kho → 'Bật đồng bộ'",
+    V({ available: false }).kind === "none" && V({ loaded: false }).kind === "loading" && V({ configured: false }).kind === "off" && V({ configured: false }).text === "Bật đồng bộ");
+  kiem("statusView: đã đồng bộ → 'Đã đồng bộ 2 phút trước'; chưa lần nào → chờ", V({ last: t0 - 2 * 60e3 }).kind === "ok" && V({ last: t0 - 2 * 60e3 }).text === "Đã đồng bộ 2 phút trước" && V({}).kind === "busy", V({ last: t0 - 2 * 60e3 }).text);
+  kiem("statusView: đang gửi còn N; đang nhận; ngoại tuyến (phase hoặc trình duyệt offline) kèm số thay đổi chờ gửi",
+    V({ phase: "push", total: 12, done: 2 }).text === "Đang gửi 10…" && V({ phase: "pull" }).kind === "busy" && V({ phase: "offline" }).kind === "offline" &&
+    V({ online: false, last: t0, pending: 3 }).kind === "offline" && /còn 3 thay đổi/.test(V({ online: false, last: t0, pending: 3 }).title));
+  kiem("statusView: lỗi tự thử lại → 'error' (không phải fatal); mất kho → 'Mất kho đồng bộ'; địa chỉ không có API → 'Đồng bộ đã dừng'",
+    V({ phase: "error", error: "Chưa kết nối được máy chủ — sẽ thử lại." }).kind === "error" && V({ phase: "error", fatal: true, lost: true, error: "x" }).text === "Mất kho đồng bộ" &&
+    V({ phase: "error", fatal: true, errorCode: "wiki_no_api", error: Y.NO_API }).text === "Đồng bộ đã dừng" && V({ phase: "error", fatal: true, lost: true, error: "abc" }).title === "abc");
+
+  // state(): loaded, lost
+  var tick = 1.96e12, mk = async function () { var r = W.repo.create(W.store.memory(), { now: function () { return (tick += 1000); } }); await r.open(); return r; };
+  var mkSync = function (repo, srv) { return Y.create(repo, { fetch: srv.fetch, apiBase: "", now: function () { return tick; }, setTimeout: function () { return 1; }, clearTimeout: function () {} }); };
+  var srv = fakeServer(""), A = await mk(), sa = mkSync(A, srv);
+  kiem("state().loaded = false trước khi đọc khoá kho trên máy (giao diện chưa mời 'Tạo kho'), true sau load()", sa.state().loaded === false && (await sa.load(), sa.state().loaded === true));
+  await A.save({ title: "Một", content: "x" }); await sa.create(""); await sa.cycle();
+  delete srv.spaces.ws1; await A.save({ title: "Hai", content: "y" }); await sa.cycle();
+  kiem("kho mất thật (404 wiki_not_found) → state().lost = true, fatal", sa.state().lost === true && sa.state().fatal === true);
+  srv.down = true; await sa.now();
+  kiem("Đồng bộ ngay sau đó gặp lỗi mạng → lost về false (lỗi tạm, không phải mất kho)", sa.state().lost === false && sa.state().fatal === false && sa.state().errorCode === "network");
+  srv.down = false;
+  var wrong = fakeServer(""), Bw = await mk(), sw = Y.create(Bw, { fetch: wrong.fetch, apiBase: "/api/v1", setTimeout: function () { return 1; }, clearTimeout: function () {} });
+  await sw.load(); await Bw.setMeta("sync", { ws: "ws1", key: "k", backend: "json" }); await sw.load(); await sw.cycle();
+  kiem("địa chỉ không có API (404 không mã) → fatal nhưng lost = false (giao diện không bảo nối lại)", sw.state().fatal === true && sw.state().lost === false && sw.state().errorCode === "wiki_no_api");
+
+  // fullCode: mã cũ "default." → ghi hẳn nơi lưu
+  var s2 = fakeServer(""), C = await mk(), sc = mkSync(C, s2), D = await mk(), sd = mkSync(D, s2);
+  await sc.load(); await sd.load();
+  kiem("fullCode khi chưa nối kho → ''", (await sc.fullCode()) === "");
+  await C.save({ title: "C", content: "c" }); await sc.create(""); await sc.cycle();        // chưa hỏi backends() → mã "default.ws1.key-ws1"
+  kiem("(tiền đề) kho tạo khi chưa biết nơi lưu mặc định có mã default.", sc.code() === "default.ws1.key-ws1");
+  await sd.join("default.ws1.key-ws1");
+  s2.urls.length = 0; s2.calls.length = 0;
+  var full = await sd.fullCode();
+  kiem("fullCode: mã default.<kho>.<khoá> → hỏi nơi lưu mặc định, xác nhận kho Ở ĐÓ (?backend=json, limit=1) → json.<kho>.<khoá>",
+    full === "json.ws1.key-ws1" && sd.code() === full && sd.state().backend === "json" && s2.calls.some(function (c) { return /^GET \/ws1\/items\?backend=json&since=0&limit=1$/.test(c); }), full + " · " + s2.calls.join(" | "));
+  kiem("…và ghi bền vào khoá kho trên máy (khởi động lại vẫn là json.)", (await D.getMeta("sync")).backend === "json" && (await (async function () { var again = mkSync(D, s2); await again.load(); return again.code(); })()) === "json.ws1.key-ws1");
+  s2.calls.length = 0; await sd.fullCode();
+  kiem("fullCode lần sau: không gọi máy chủ nữa", s2.calls.length === 0);
+  var E = await mk(), se = mkSync(E, s2); await se.load(); await se.join("default.ws1.key-ws1");
+  s2.defaultBackend = "mongo"; s2.missingIn = { mongo: true };
+  var kept = await se.fullCode();
+  kiem("fullCode: kho KHÔNG nằm ở nơi lưu mặc định hiện tại (máy chủ đã đổi mặc định) → giữ nguyên mã default., không ghi sai nơi lưu", kept === "default.ws1.key-ws1" && se.state().backend === "" && (await E.getMeta("sync")).backend === "");
+  s2.defaultBackend = ""; s2.missingIn = null; s2.down = true;
+  kiem("fullCode: mất mạng → giữ nguyên mã cũ, không ném lỗi", (await se.fullCode()) === "default.ws1.key-ws1");
+  s2.down = false;
+}
+
+/* Mã QR: bản chép trong wiki (assets/js/core/qr.js, không gian tên Wiki.qr) phải cho ĐÚNG ma trận như bản gốc của cổng (_portal) trên cùng đầu vào. */
+function qrTests() {
+  sec("mã QR — bản chép so với bản gốc của cổng");
+  var mine = require(path.join(J, "core/qr.js")), orig = require(path.join(__dirname, "..", "..", "_portal", "assets", "js", "core", "qr.js"));
+  kiem("Wiki.qr là bản chép (không dùng chung đối tượng với Portal.qr)", W.qr === mine && mine !== orig && typeof mine.encode === "function");
+  var seed = 20261023, rnd = function () { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  var ALPHA = "abcxyzABCXYZ0189-_.~/:#?&=%ăâđêôơưếộữ €😀中文 ";
+  var inputs = ["", "a", "http://x/", "https://wiki.example.vn/webapp/tranphuc8a/personal-wiki/#/join/json.wk_AbCdEfGhIjKlMnOp.q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6",
+    "http://127.0.0.1:51234/webapp/tranphuc8a/personal-wiki/#/join/mysql.wk_x.y", "Tiếng Việt có dấu — ắằẳẵặ", "😀".repeat(30)];
+  for (var n = 1; n <= 271; n += (n < 40 ? 1 : 7)) { var s = ""; for (var i = 0; i < n; i++) s += "abcdefghijklmnopqrstuvwxyz0123456789/:.#-_"[Math.floor(rnd() * 42)]; inputs.push(s); }
+  var AL = Array.from(ALPHA);                                          // theo điểm mã: không cắt đôi cặp thay thế của emoji
+  for (var k = 0; k < 60; k++) { var t = "", len = 1 + Math.floor(rnd() * 70); for (var j = 0; j < len; j++) t += AL[Math.floor(rnd() * AL.length)]; inputs.push(t); }
+  var bad = [], same = 0;
+  inputs.forEach(function (x) {
+    var a = null, b = null, ea = null, eb = null;
+    try { a = mine.encode(x); } catch (e) { ea = e.message; }
+    try { b = orig.encode(x); } catch (e) { eb = e.message; }
+    if (ea || eb) { if (ea !== eb) bad.push(JSON.stringify(x).slice(0, 40) + ": lỗi khác nhau " + ea + " / " + eb); else same++; return; }
+    if (a.size !== b.size || a.version !== b.version || a.ecl !== b.ecl || a.mask !== b.mask || JSON.stringify(a.modules) !== JSON.stringify(b.modules) || mine.toSvg(a, 4) !== orig.toSvg(b, 4)) bad.push(JSON.stringify(x).slice(0, 40));
+    else same++;
+  });
+  kiem("cùng " + inputs.length + " đầu vào (1–271 byte, ASCII, tiếng Việt, emoji, CJK, liên kết nối thật): ma trận + phiên bản + mức sửa lỗi + mặt nạ + SVG trùng khớp bản gốc", !bad.length && same === inputs.length, bad.slice(0, 4).join(" ; "));
+  var tooLong = null, tooLong2 = null; try { mine.encode("x".repeat(272)); } catch (e) { tooLong = e.message; } try { orig.encode("x".repeat(272)); } catch (e) { tooLong2 = e.message; }
+  kiem("quá sức chứa (272 byte): cả hai ném cùng lỗi tiếng Việt", !!tooLong && tooLong === tooLong2, tooLong);
+  var link = Wiki.sync ? Wiki.sync.joinLink("https://a-very-long-production-host.example.com/webapp/tranphuc8a/personal-wiki/index.html?source=pwa", "mysql.wk_" + "A".repeat(16) + "." + "k".repeat(32)) : "";
+  kiem("liên kết nối dài nhất thực tế (~150 byte) vừa một mã QR (≤ phiên bản 10)", !!link && mine.encode(link).version <= 10, link.length + " byte");
+}
+
+/* Đếm từ (editor.js, perf-md W1): bản quét mã ký tự phải cho đúng số như định nghĩa cũ `s.match(/[\p{L}\p{N}]+/gu).length`, và rẻ hơn. */
+function wordTests() {
+  sec("đếm từ của trình soạn (perf W1)");
+  W.ui = W.ui || {};                                                   // editor.js là tệp giao diện: chỉ đọc W.ui khi dựng, không chạm DOM lúc nạp
+  require(path.join(J, "ui/editor.js"));
+  var wc = W.ui.editor && W.ui.editor.wordCount, old = function (s) { var m = String(s).match(/[\p{L}\p{N}]+/gu); return m ? m.length : 0; };
+  kiem("Wiki.ui.editor.wordCount có", typeof wc === "function");
+  if (typeof wc !== "function") return;
+  var fixed = ["", " ", "một", "Đồ thị — LƯU trữ", "a1 b2", "x_y-z.w", "é café", "中文字 日本語", "😀 hi 😀", "𝒜𝒷 𐐷x", "٣٤ ½ ² x²", "\uD800 lẻ \uDC00 cặp 𝒜", "tab\tnewline\nend", "C++ và C#", "[[Liên kết]] `code` **đậm**"];
+  var badF = fixed.filter(function (s) { return wc(s) !== old(s); });
+  kiem("khớp định nghĩa cũ trên " + fixed.length + " ca khó (dấu rời NFD, CJK, emoji, chữ ngoài BMP, chữ số Ả Rập, ½ ², nửa cặp thay thế)", !badF.length, badF.map(function (s) { return JSON.stringify(s) + " " + wc(s) + "≠" + old(s); }).join(" ; "));
+  var seed = 7, rnd = function () { seed = (seed * 48271) % 2147483647; return seed / 2147483647; };
+  var POOL = ["a", "Z", "9", " ", "\n", ".", ",", "-", "_", "ắ", "đ", "Ư", "́", "̣", "中", "語", "😀", "🧠", "𝒜", "𐐷", "\uD800", "\uDC00", "٣", "½", "²", "€", " ", "​", "ـ", "ß", "ﬁ", "Ⅻ", "①"];
+  var badR = 0, firstBad = "";
+  for (var k = 0; k < 3000; k++) { var s = "", len = Math.floor(rnd() * 40); for (var i = 0; i < len; i++) s += POOL[Math.floor(rnd() * POOL.length)]; if (wc(s) !== old(s)) { badR++; if (!firstBad) firstBad = JSON.stringify(s) + " " + wc(s) + "≠" + old(s); } }
+  kiem("khớp định nghĩa cũ trên 3.000 chuỗi ngẫu nhiên đủ loại ký tự", badR === 0, badR + " lệch, vd " + firstBad);
+  var big = ""; while (big.length < 400000) big += "Tiếng Việt có dấu: thuật toán 42 bước, cấu trúc dữ liệu — cây nhị phân (BST) và đồ thị; mã `x = y + 1`. 中文 😀\n";
+  kiem("note 400k ký tự: cùng số từ", wc(big) === old(big), wc(big) + " ≠ " + old(big));
+  function med(f) { var ts = []; for (var r = 0; r < 3; r++) { var t0 = process.hrtime.bigint(); f(big); ts.push(Number(process.hrtime.bigint() - t0) / 1e6); } ts.sort(function (a, b) { return a - b; }); return ts[1]; }
+  med(wc); med(old);
+  var tNew = med(wc), tOld = med(old);
+  kiem("note 400k ký tự: bản mới nhanh hơn bản cũ (trung vị 3 lần: " + tNew.toFixed(1) + " ms so với " + tOld.toFixed(1) + " ms)", tNew < tOld);
+}
+
 (async function main() {
   try {
     await zipTests();
@@ -628,6 +833,10 @@ async function syncTests() {
     await backupTests(ctx);
     await sharedStoreTests();
     await syncTests();
+    await apiTests();
+    await syncUxTests();
+    qrTests();
+    wordTests();
   } catch (e) { sai++; console.log("  [SAI] ngoại lệ không bắt: " + (e && e.stack || e)); }
   console.log("\n" + "=".repeat(58));
   if (sai) { console.log("SAI " + sai + " / " + (ok + sai) + " phép kiểm"); process.exit(1); }

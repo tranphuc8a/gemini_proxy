@@ -154,7 +154,8 @@ const initialState: EditorState = {
   layout: 'desktop',
   drawerOpen: false,
   phonePane: null,
-  smartFormat: null
+  smartFormat: null,
+  storageFailure: null
 }
 
 /** Timers live outside the store so they never end up serialised. */
@@ -202,7 +203,8 @@ function settingsOf(state: EditorState): Settings {
 export const useEditorStore = create<StoreState>((set, get) => {
   /** Persist on a debounce, then settle the save indicator. */
   const schedulePersist = () => {
-    set({ saveState: 'saving' })
+    // Only when it changes: a second store update on every keystroke re-ran every subscriber for nothing.
+    if (get().saveState !== 'saving') set({ saveState: 'saving' })
     if (persistTimer) clearTimeout(persistTimer)
     persistTimer = setTimeout(() => get().flushPersist(), AUTOSAVE_DEBOUNCE_MS)
   }
@@ -565,6 +567,11 @@ export const useEditorStore = create<StoreState>((set, get) => {
       schedulePersist()
     },
 
+    /**
+     * Replaces the whole local tree with the server's copy. The menu asks for
+     * confirmation first (see Header): nothing is merged, so local edits that
+     * were never saved to the backend are gone afterwards.
+     */
     loadBackendStorage: async () => {
       const files = await loadMarkdownFiles(get().backendStorageType)
       if (!files.length) {
@@ -616,13 +623,16 @@ export const useEditorStore = create<StoreState>((set, get) => {
         persistTimer = null
       }
       const state = get()
-      const okFiles = saveFiles({
+      const filesFailure = saveFiles({
         files: state.files,
         currentFileId: state.currentFileId,
         expandedFolders: state.expandedFolders
       })
-      const okSettings = saveSettings(settingsOf(state))
-      set({ saveState: okFiles && okSettings ? 'saved' : 'error', lastSavedAt: Date.now() })
+      const settingsFailure = saveSettings(settingsOf(state))
+      const failure = filesFailure ?? settingsFailure
+      // A full quota is worse than "not saved": the copy on disk is the one from before the limit was
+      // hit, and a reload brings that one back. The banner (StorageBanner) says so until a save succeeds.
+      set({ saveState: failure ? 'error' : 'saved', lastSavedAt: Date.now(), storageFailure: failure })
     },
 
     pushToast: (message, tone = 'info') => {

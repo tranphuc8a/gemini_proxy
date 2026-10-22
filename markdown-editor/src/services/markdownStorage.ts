@@ -1,6 +1,7 @@
 import type { FileNode, StorageBackend } from '../types'
 import { normalizeTree } from '../lib/tree'
 import { resolveApiBase } from './runtimeConfig'
+import { startResponsiveTimeout } from '../lib/responsiveTimeout'
 
 /**
  * Endpoint of the shared document store.
@@ -197,7 +198,9 @@ async function describeFailure(response: Response): Promise<string> {
 
 async function request(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  // Counts only time the page could have handled the reply: a long render on startup must not cancel the
+  // session check whose answer is already waiting (see lib/responsiveTimeout).
+  const stop = startResponsiveTimeout(TIMEOUT_MS, () => controller.abort())
   try {
     return await fetch(url, { ...init, signal: controller.signal })
   } catch (error) {
@@ -206,7 +209,7 @@ async function request(url: string, init?: RequestInit): Promise<Response> {
     }
     throw new Error('Cannot reach the backend - check that the API is running')
   } finally {
-    clearTimeout(timer)
+    stop()
   }
 }
 

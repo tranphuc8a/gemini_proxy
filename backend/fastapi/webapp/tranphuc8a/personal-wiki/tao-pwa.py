@@ -114,4 +114,8 @@ def main():
 
 
 if __name__ == "__main__":
+    try:                                     # in tiếng Việt được cả khi stdout là ống/tệp (Windows mặc định cp1252 → UnicodeEncodeError)
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     sys.exit(main())

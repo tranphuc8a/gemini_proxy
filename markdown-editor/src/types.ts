@@ -1,4 +1,5 @@
 import type { Layout, Pane } from './lib/responsive'
+import type { StorageFailure } from './lib/persistence'
 
 export interface FileNode {
   id: string
@@ -61,4 +62,6 @@ export interface EditorState extends Settings {
   phonePane: Pane | null
   /** The AI "smart format" dialog: null when closed, else the selection it was opened with. */
   smartFormat: { start: number; end: number } | null
+  /** Why the last local save failed, or null once one succeeds; 'quota' raises the red banner. */
+  storageFailure: StorageFailure | null
 }

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useEditorStore } from '../store'
 import { getDocumentStats } from '../lib/markdown'
 import { findNode } from '../lib/tree'
+import { useIdleValue } from '../hooks/useIdleValue'
 import { IconCheck, IconCloud, IconCollapse, IconHelp, IconLock, IconEye } from './Icons'
 import './StatusBar.css'
 
@@ -11,8 +12,8 @@ interface StatusBarProps {
 
 function StatusBar({ onOpenHelp }: StatusBarProps) {
   const content = useEditorStore((state) => state.currentContent)
-  const files = useEditorStore((state) => state.files)
-  const currentFileId = useEditorStore((state) => state.currentFileId)
+  // A name, not the tree: the tree is replaced on every keystroke.
+  const fileName = useEditorStore((state) => findNode(state.files, state.currentFileId)?.name ?? 'No file open')
   const saveState = useEditorStore((state) => state.saveState)
   const lastSavedAt = useEditorStore((state) => state.lastSavedAt)
   const isAdmin = useEditorStore((state) => state.isAdmin)
@@ -22,8 +23,9 @@ function StatusBar({ onOpenHelp }: StatusBarProps) {
   const fullscreen = useEditorStore((state) => state.fullscreen)
   const toggleFullscreen = useEditorStore((state) => state.toggleFullscreen)
 
-  const stats = useMemo(() => getDocumentStats(content), [content])
-  const fileName = findNode(files, currentFileId)?.name ?? 'No file open'
+  // Counting scans the whole document, so it follows the text once typing pauses.
+  const settled = useIdleValue(content, 400)
+  const stats = useMemo(() => getDocumentStats(settled), [settled])
 
   return (
     <footer className="app-statusbar">

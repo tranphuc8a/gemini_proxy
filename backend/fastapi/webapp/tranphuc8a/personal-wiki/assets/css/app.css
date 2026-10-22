@@ -70,6 +70,24 @@ body[data-pane="list"] .fab { display: grid; }
 .side-foot { margin-top: auto; padding: 12px; font-size: 13px; }
 .side-foot a { color: var(--text-2); }
 
+/* chỉ báo đồng bộ (chân thanh bên) — data-kind: loading | off | ok | busy | offline | error | fatal */
+.syncchip { position: relative; display: flex; align-items: center; gap: 10px; min-height: 40px; margin-top: auto; padding: 0 12px; border-radius: 12px; color: var(--text-2); text-decoration: none; font-size: 13.5px; font-weight: 600; min-width: 0; }
+.syncchip[hidden] { display: none; }
+.syncchip + .side-foot { margin-top: 0; }
+.syncchip:hover { background: var(--accent-soft); color: var(--text); }
+.syncchip .ic { flex: none; }
+.sc-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-dot { position: absolute; left: 26px; top: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--text-3); box-shadow: 0 0 0 2px var(--elev); }
+.syncchip[data-kind="ok"] .sc-dot { background: var(--ok); }
+.syncchip[data-kind="busy"] .sc-dot, .syncchip[data-kind="loading"] .sc-dot { background: var(--accent); }
+.syncchip[data-kind="error"] .sc-dot { background: var(--mark); }
+.syncchip[data-kind="fatal"] .sc-dot { background: var(--danger); }
+.syncchip[data-kind="fatal"] { color: var(--danger); }
+.syncchip[data-kind="off"] .sc-dot { background: transparent; box-shadow: inset 0 0 0 2px var(--text-3), 0 0 0 2px var(--elev); }
+@media (prefers-reduced-motion: no-preference) { .syncchip[data-kind="busy"] .sc-dot { animation: sc-pulse 1.2s ease-in-out infinite; } }
+@keyframes sc-pulse { 50% { opacity: 0.35; } }
+#moreBtn.alert::after { content: ""; position: absolute; top: 7px; left: calc(50% + 7px); width: 9px; height: 9px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px var(--elev); }
+
 /* ≥900px: thanh bên (rail), danh sách cạnh nội dung */
 @media (min-width: 900px) {
   .side { display: flex; flex-direction: column; flex: none; width: 76px; padding: calc(var(--safe-t) + 12px) 10px 12px; gap: 2px; background: var(--elev); border-right: 1px solid var(--border); overflow: hidden auto; }
@@ -81,6 +99,9 @@ body[data-pane="list"] .fab { display: grid; }
   .newbtn { width: 52px; padding: 0; justify-content: center; margin: 4px auto 8px; }
   .nav { justify-content: center; padding: 0; width: 52px; margin: 0 auto; }
   .nav .nbadge { position: absolute; top: 3px; right: 2px; }
+  .syncchip { justify-content: center; width: 52px; padding: 0; margin-left: auto; margin-right: auto; }
+  .syncchip .sc-t { display: none; }
+  .syncchip .sc-dot { left: 30px; }
   .pane-list { flex: none; width: var(--list-w); border-right: 1px solid var(--border); }
   body[data-pane="main"] .pane-list { display: none; }
   body[data-pane="both"] .pane-list { display: flex; }
@@ -99,6 +120,9 @@ body[data-pane="list"] .fab { display: grid; }
   .nav { justify-content: flex-start; padding: 0 12px; width: auto; margin: 0; }
   .nav .nbadge { position: static; }
   .nav span { display: block; }
+  .syncchip { justify-content: flex-start; width: auto; padding: 0 12px; margin-left: 0; margin-right: 0; }
+  .syncchip .sc-t { display: block; }
+  .syncchip .sc-dot { left: 26px; }
 }
 
 /* ------------------------------------------------------------------ danh sách ghi chú */
@@ -234,8 +258,16 @@ button.chip:hover { background: var(--s2); }
 .busy { padding: 10px 14px; border-radius: var(--radius-sm); background: var(--accent-soft); font-weight: 600; }
 .dur, .set-app { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .about { text-align: center; }
-.code-in { width: 100%; font: 600 13px var(--mono); }
+.code-in, .link-in { width: 100%; min-width: 0; font: 600 13px var(--mono); }
 .set-body .warn { display: block; margin-top: 4px; }
+.set-sync h2:focus { outline: none; }
+.set-sync h2:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.sync-line { display: flex; flex-direction: column; gap: 4px; }
+.set-sync code { overflow-wrap: anywhere; }
+.code-lb { display: block; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.qr-box { display: grid; place-items: center; margin: 4px 0 6px; }
+.qr-box[hidden] { display: none; }
+.qr-box svg { display: block; width: min(232px, 62vw); height: auto; border-radius: 6px; }
 
 /* ------------------------------------------------------------------ trình soạn ghi chú */
 .ed-loading { padding: 40px 20px; color: var(--text-3); text-align: center; }

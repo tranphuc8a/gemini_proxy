@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { resolveTheme, useEditorStore } from '../store'
 import { useReadingStore } from '../readingStore'
-import { findNode, getPath } from '../lib/tree'
+import { countNodes, findNode, getPath } from '../lib/tree'
 import { exportHtml, exportImage, exportMarkdown, exportPdf } from '../lib/exporters'
 import { listBackends, type BackendInfo } from '../services/markdownStorage'
 import { TOUCH_TEXT_QUERY, showsInline, type HeaderTier } from '../lib/responsive'
@@ -90,9 +91,12 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
   const theme = useEditorStore((state) => state.theme)
   const scrollSync = useEditorStore((state) => state.scrollSync)
   const viewMode = useEditorStore((state) => state.viewMode)
-  const files = useEditorStore((state) => state.files)
-  const currentFileId = useEditorStore((state) => state.currentFileId)
-  const currentContent = useEditorStore((state) => state.currentContent)
+  // Names, not the tree or the text: both change on every keystroke, and the
+  // header re-rendered with them. The text is read when an export runs.
+  const fileName = useEditorStore((state) => findNode(state.files, state.currentFileId)?.name ?? 'Untitled')
+  const breadcrumb = useEditorStore(
+    useShallow((state) => (state.currentFileId ? getPath(state.files, state.currentFileId).map((node) => node.name) : ['Untitled']))
+  )
   const sidebarCollapsed = useEditorStore((state) => state.sidebarCollapsed)
   const layout = useEditorStore((state) => state.layout)
   const drawerOpen = useEditorStore((state) => state.drawerOpen)
@@ -140,8 +144,6 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
       cancelled = true
     }
   }, [])
-  const fileName = findNode(files, currentFileId)?.name ?? 'Untitled'
-  const breadcrumb = currentFileId ? getPath(files, currentFileId).map((node) => node.name) : ['Untitled']
   const docked = layout === 'desktop'
   const sidebarShown = docked ? !sidebarCollapsed : drawerOpen
   const dark = resolveTheme(theme) === 'dark'
@@ -175,6 +177,17 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
   }
 
   const syncBackend = async (action: 'load' | 'save') => {
+    // Loading replaces the whole local workspace -- nothing is merged -- so it
+    // is never a single click away from losing unsaved local edits.
+    if (action === 'load') {
+      const count = countNodes(useEditorStore.getState().files).files
+      const local = count === 1 ? 'the 1 document' : `all ${count} documents`
+      const confirmed = window.confirm(
+        `Load from backend replaces ${local} in this browser with the copy on the server.\n\n` +
+          'Local changes that were never saved to the backend will be lost. Continue?'
+      )
+      if (!confirmed) return
+    }
     setBusy(action)
     try {
       if (action === 'load') await loadBackendStorage()
@@ -260,7 +273,7 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
         Import Markdown…
         <input type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={onImport} />
       </label>
-      <button className="menu-item" onClick={() => exportMarkdown(fileName, currentContent)}>
+      <button className="menu-item" onClick={() => exportMarkdown(fileName, useEditorStore.getState().currentContent)}>
         <IconDownload size={14} />
         Export Markdown
       </button>
@@ -335,6 +348,10 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
       <button className="menu-item" disabled={!backendStorage || !isAdmin || busy !== null} onClick={() => void syncBackend('save')}>
         Save to backend {busy === 'save' && <span className="menu-hint">working…</span>}
       </button>
+      <p className="menu-note is-warning" role="note">
+        Save to backend overwrites the whole server copy with this browser&apos;s documents, including changes made
+        from other devices.
+      </p>
       {!isAdmin && <p className="menu-note">Saving to the backend needs admin access.</p>}
     </>
   )

@@ -38,12 +38,27 @@ function readRaw(key: string): unknown {
   }
 }
 
-function writeRaw(key: string, value: unknown): boolean {
+/**
+ * Why a write did not land: the origin's storage quota is used up, or storage
+ * is not usable at all (blocked, private mode). The difference matters: a full
+ * quota leaves the *previous* copy in place, which a reload then brings back.
+ */
+export type StorageFailure = 'quota' | 'unavailable'
+
+/** QuotaExceededError in Chromium/WebKit (code 22), NS_ERROR_DOM_QUOTA_REACHED in Firefox (code 1014). */
+export function isQuotaError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const { name, code } = error as { name?: unknown; code?: unknown }
+  return name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED' || code === 22 || code === 1014
+}
+
+/** null when the value was stored. */
+function writeRaw(key: string, value: unknown): StorageFailure | null {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-    return true
-  } catch {
-    return false
+    return null
+  } catch (error) {
+    return isQuotaError(error) ? 'quota' : 'unavailable'
   }
 }
 
@@ -78,7 +93,8 @@ export function loadFiles(): FilesPayload | null {
   return null
 }
 
-export function saveFiles(payload: Omit<FilesPayload, 'version'>): boolean {
+/** Stores the whole tree. Returns null on success, otherwise why it failed. */
+export function saveFiles(payload: Omit<FilesPayload, 'version'>): StorageFailure | null {
   return writeRaw(FILES_KEY, { version: 2, ...payload })
 }
 
@@ -109,7 +125,8 @@ function pickKnown(stored: Partial<Settings>): Partial<Settings> {
   return result
 }
 
-export function saveSettings(settings: Settings): boolean {
+/** Returns null on success, otherwise why it failed. */
+export function saveSettings(settings: Settings): StorageFailure | null {
   return writeRaw(SETTINGS_KEY, settings)
 }
 

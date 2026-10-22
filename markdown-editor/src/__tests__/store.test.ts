@@ -40,7 +40,8 @@ function reset() {
     isAdmin: false,
     toasts: [],
     saveState: 'idle',
-    lastSavedAt: null
+    lastSavedAt: null,
+    storageFailure: null
   })
 }
 
@@ -399,6 +400,73 @@ describe('persistence', () => {
     expect(spy).toHaveBeenCalled()
     expect(store().saveState).toBe('saved')
     spy.mockRestore()
+  })
+})
+
+describe('storage failures (M1 safety patch)', () => {
+  const quotaError = () => new DOMException('The quota has been exceeded.', 'QuotaExceededError')
+
+  it('tells a full quota apart from storage that is merely unavailable', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw quotaError()
+    })
+    act(() => store().flushPersist())
+    expect(store().saveState).toBe('error')
+    expect(store().storageFailure).toBe('quota')
+
+    spy.mockImplementation(() => {
+      throw new DOMException('Access denied', 'SecurityError')
+    })
+    act(() => store().flushPersist())
+    expect(store().saveState).toBe('error')
+    expect(store().storageFailure).toBe('unavailable')
+    spy.mockRestore()
+  })
+
+  it('also recognises the Firefox name and the legacy code', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw Object.assign(new Error('quota'), { name: 'NS_ERROR_DOM_QUOTA_REACHED' })
+    })
+    act(() => store().flushPersist())
+    expect(store().storageFailure).toBe('quota')
+    spy.mockImplementation(() => {
+      throw Object.assign(new Error('quota'), { code: 22 })
+    })
+    act(() => store().flushPersist())
+    expect(store().storageFailure).toBe('quota')
+    spy.mockRestore()
+  })
+
+  it('clears the failure as soon as a save goes through', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw quotaError()
+    })
+    act(() => store().flushPersist())
+    expect(store().storageFailure).toBe('quota')
+    spy.mockRestore()
+    act(() => store().flushPersist())
+    expect(store().storageFailure).toBeNull()
+    expect(store().saveState).toBe('saved')
+  })
+})
+
+describe('keystroke path (M1)', () => {
+  it('marks the document as saving once per burst, not on every keystroke', () => {
+    const states: string[] = []
+    let updates = 0
+    const off = useEditorStore.subscribe((state, previous) => {
+      updates += 1
+      if (state.saveState !== previous.saveState) states.push(state.saveState)
+    })
+    act(() => {
+      store().setContent('a')
+      store().setContent('ab')
+      store().setContent('abc')
+    })
+    off()
+    expect(states).toEqual(['saving'])
+    // One update per keystroke, plus the single switch to 'saving'.
+    expect(updates).toBe(4)
   })
 })
 

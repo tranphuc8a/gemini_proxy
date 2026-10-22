@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { findMatches, type SearchMatch, type SearchOptions } from '../lib/markdown'
+import { useIdleValue } from '../hooks/useIdleValue'
 import { IconChevron, IconClose } from './Icons'
 import './FindReplace.css'
 
@@ -20,7 +21,11 @@ function FindReplace({ value, showReplace, canEdit, onClose, onSelectMatch, onRe
   const [index, setIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const matches = useMemo(() => findMatches(value, query, options), [value, query, options])
+  // Searching the whole document on every keystroke in the editor is wasted work; the count follows once
+  // typing pauses. Anything that acts on a match (`current()`) re-searches the live text, never stale offsets.
+  const settled = useIdleValue(value, 150)
+  const matches = useMemo(() => findMatches(settled, query, options), [settled, query, options])
+  const current = () => (settled === value ? matches : findMatches(value, query, options))
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -33,10 +38,11 @@ function FindReplace({ value, showReplace, canEdit, onClose, onSelectMatch, onRe
   }, [matches.length])
 
   const go = (delta: number) => {
-    if (matches.length === 0) return
-    const next = (index + delta + matches.length) % matches.length
+    const live = current()
+    if (live.length === 0) return
+    const next = (Math.min(index, live.length - 1) + delta + live.length) % live.length
     setIndex(next)
-    onSelectMatch(matches[next])
+    onSelectMatch(live[next])
   }
 
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -132,8 +138,11 @@ function FindReplace({ value, showReplace, canEdit, onClose, onSelectMatch, onRe
             className="btn btn-outline"
             disabled={!canEdit || !matches.length}
             onClick={() => {
-              onReplace(matches[index], replacement)
-              setIndex((current) => (current >= matches.length - 1 ? 0 : current))
+              const live = current()
+              if (!live.length) return
+              const at = Math.min(index, live.length - 1)
+              onReplace(live[at], replacement)
+              setIndex(at >= live.length - 1 ? 0 : at)
             }}
           >
             Replace
@@ -142,7 +151,10 @@ function FindReplace({ value, showReplace, canEdit, onClose, onSelectMatch, onRe
             type="button"
             className="btn btn-outline"
             disabled={!canEdit || !matches.length}
-            onClick={() => onReplaceAll(matches, replacement)}
+            onClick={() => {
+              const live = current()
+              if (live.length) onReplaceAll(live, replacement)
+            }}
           >
             All
           </button>

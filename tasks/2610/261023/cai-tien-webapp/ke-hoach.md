@@ -362,3 +362,40 @@ Không tính là dependency: BigInt (Safari ≥ 14), IndexedDB, Worker từ Blob
 3. **Render theo khối gặp toán/sơ đồ nhiều dòng** có thể hiển thị sai mà không báo lỗi (cắt giữa `\begin{align}` có dòng trống, front matter, `@startuml`). Giảm bằng: bất biến concat, kho ca dùng chung, footnote đi đường cũ, công tắc `render=full`.
 4. **Vỏ chung của puzzle và Daily** — có thể làm hỏng 5 loại cũ, liên kết seed, Daily. Giảm bằng: làm P1 một lần, có mẫu vàng, chạy `check.py --tat-ca`, dùng ORDER có phiên bản.
 5. **Khối lượng:** ~173 việc (~16 cỡ L/XL) so với chu trình duyệt từng bước, cộng nguy cơ làm sai nhãn CW/V. Giảm bằng: Q8 chọn (b), chốt Q7 trước P3.
+
+---
+
+## 6. Quyết định đã chốt (chủ dự án, 23/10/2026)
+
+| # | Chốt |
+|---|---|
+| Q1 | **Kho markdown mặc định ĐÓNG** (`MARKDOWN_PUBLIC_READ` mặc định false): đọc `/files`, `/sync/changes`, `/docs/{id}` cần quyền quản trị; lịch sử/thùng rác/danh sách link chỉ quản trị; gia cố khoá (`compare_digest`, sai 20 lần/10 phút → 429, từ chối khoá mặc định ngoài dev). |
+| Q2 | Tạo bảng lúc chạy (CREATE TABLE IF NOT EXISTS) như /wiki; kho mặc định trên Vercel là mysql. Agent chỉ test SQLite; DDL thật chỉ chạy khi chủ dự án deploy. |
+| Q3 | Gói đồng bộ markdown đầy đủ + IndexedDB (delta/bản vá dòng, merge 3 chiều hỏi khi đụng, lịch sử 50 bản + 1/ngày 90 ngày + bản đặt tên, khôi phục = bản mới, tự đồng bộ nền, PUT cũ → 409). |
+| Q4 | PlantUML dịch offline sang Mermaid + nút "Vẽ chính xác" qua `/diagram` → Kroki công khai (phần /diagram thuộc nhóm hoãn). Trang chia sẻ chỉ vẽ offline. |
+| Q5 | Luật pandoc đầy đủ + mhchem; Wiki/Notebook chép KaTeX cục bộ nạp lười (ngân sách vendor riêng); mermaid nạp lười từ cdnjs. |
+| Q6 | Quyết CodeMirror 6 sau M5 dựa trên số đo lại; JSON Editor không thư viện (Xem ảo > 1,5 MB, nháp lớn ở IndexedDB). |
+| Q7 | Cách hiểu CW1/CW2/CW3, lạc đà V1/V2, xe máy (cách hiểu A mặc định) là đúng; đưa 5 loại mới vào Daily bằng ORDER có phiên bản theo ngày. |
+| Q8 | **Cốt lõi trước.** Hoãn: M10 (`/diagram`, share live), md-share V13/V17b/V18, M8 (đồng bộ P2), perf 15–18, JSON việc 24 + phần khó RFC 9535/regex-sinh, Lights Out D5–D6, lạc đà V2, coinscale chế độ kế hoạch. |
+
+Các mặc định ngầm ở cuối §3 coi như đã chấp nhận.
+
+## 7. Kế hoạch thi công theo làn
+- **Làn A** (markdown-editor/ + frontend/ + backend /markdown): M0 → M1 → M2 → M2b → M3 → M4a → M4b → M5 → M6 → M7 (phần offline).
+- **Làn B** (app viết tay + backend /wiki, /ai/wiki): W1 → W2 → J1 → P1 → P2 → W3 → J2 → J3 → W4 → W5 → P3 → J4 → P4 → P5 → W6 → P6 → P7 (cốt lõi) → P8 (cốt lõi).
+- Đợt 1 = M0–M2b ∥ W1, W2, J1, P1, P2. Mỗi đợt con: agent cài → agent kiểm độc lập → sửa (≤ 2 vòng). Không commit nếu chủ dự án chưa yêu cầu.
+
+### 7.1 Ghi chú chuyển tiếp giữa các đợt (agent đợt sau BẮT BUỘC đọc)
+- **Mọi đợt:** đọc bàn giao các đợt trước cùng làn ở `dot/*.md` trước khi bắt đầu.
+- **M1** (từ `dot/M0.md`):
+  - Đầu đợt, TRƯỚC khi sửa mã, ghi lại mốc bằng `kiem-hieu-nang.py --ghi-moc` (trung vị 3 lần, doc-2k/10k). Mốc M0 đo lúc làn B làm CPU 100 % và điều kiện "yên" đã sửa sau khi ghi. Số trước/sau của M1 phải đo trong cùng điều kiện.
+  - Nâng `DOT_HIEN_TAI='M1'` để bật ngưỡng M1; cuối đợt chạy `--ghi-moc`.
+  - Sửa thêm 2 lỗi app M0 phát hiện (có bằng chứng trong M0.md):
+    1. khung welcome.md vẽ trước khi hydrate;
+    2. `restoreAdminSession` bị TIMEOUT_MS 10 s huỷ khi luồng chính bận lúc mở tài liệu rất lớn, nên app rơi về chỉ-xem.
+  - Cổng `--nguong`: dùng trung vị 3 lần; nhiễu ±35 %. Nếu chỉ vượt trong khoảng nhiễu thì ghi rõ, đừng sửa ngưỡng cho vừa.
+- **M2, M5:** perf 8–11 phải xem lại `SAN_SANG`/`cho_yen` trong kiem-hieu-nang.py. Lý do: khi mermaid chờ IntersectionObserver, `.mermaid-loading` không bao giờ hết.
+- **M4b:** `NAP` trong kiem-hieu-nang.py và kiem-pwa.py phải đổi khi kho chuyển sang IndexedDB. Chuyển kiem-pwa sang `_kiem_chung.py` lúc đó.
+- **W2, W3** (từ `dot/W1.md`):
+  - Dùng `Wiki.api` (`has/base/url/refresh/read`), không đọc `__WEBAPP_CONFIG__` lần nữa.
+  - Tầng 6 `--dong-bo` chạy 3 biến thể và có cơ chế đột biến `PW_HOAN_NGUYEN`. Phải giữ cả hai.

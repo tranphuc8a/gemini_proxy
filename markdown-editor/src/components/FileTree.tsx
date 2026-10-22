@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEditorStore } from '../store'
 import type { FileNode } from '../types'
-import { canMove, filterTree, sortTree } from '../lib/tree'
+import { canMove, filterTree, sortTree, treeShape } from '../lib/tree'
 import { IconChevron, IconCopy, IconFile, IconFolder, IconFolderOpen, IconPencil, IconTrash } from './Icons'
 import './FileTree.css'
 
@@ -10,7 +10,9 @@ interface FileTreeProps {
 }
 
 function FileTree({ query }: FileTreeProps) {
-  const files = useEditorStore((state) => state.files)
+  // The shape of the tree, which stays the same object while a file is being typed into: selecting
+  // `files` itself re-rendered every row of the tree on every keystroke.
+  const files = useEditorStore((state) => treeShape(state.files))
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const moveNode = useEditorStore((state) => state.moveNode)
   const [dragId, setDragId] = useState<string | null>(null)
@@ -72,7 +74,7 @@ interface TreeNodeProps {
 
 function TreeNode({ node, depth, forceExpanded, dragId, setDragId, dropTarget, setDropTarget }: TreeNodeProps) {
   const isAdmin = useEditorStore((state) => state.isAdmin)
-  const files = useEditorStore((state) => state.files)
+  const files = useEditorStore((state) => treeShape(state.files))
   const currentFileId = useEditorStore((state) => state.currentFileId)
   const selectedFolderId = useEditorStore((state) => state.selectedFolderId)
   const expandedFolders = useEditorStore((state) => state.expandedFolders)

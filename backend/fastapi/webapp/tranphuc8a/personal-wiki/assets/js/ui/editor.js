@@ -9,7 +9,25 @@
 
   function snapshot(n) { return { title: n.title, content: n.content, tags: n.tags.slice(), fav: !!n.fav, kind: n.kind, rel: n.rel.map(function (r) { return { t: r.t, id: r.id }; }), meta: Object.assign({}, n.meta) }; }
   function same(a, b) { return a.title === b.title && a.content === b.content && a.fav === b.fav && a.kind === b.kind && a.tags.join("\u0001") === b.tags.join("\u0001") && JSON.stringify(a.rel) === JSON.stringify(b.rel) && JSON.stringify(a.meta) === JSON.stringify(b.meta); }
-  function words(s) { var m = String(s).match(/[\p{L}\p{N}]+/gu); return m ? m.length : 0; }
+  /** Số từ = số đoạn liền [\p{L}\p{N}]+ (đúng định nghĩa cũ `s.match(/[\p{L}\p{N}]+/gu).length`) nhưng KHÔNG tạo mảng mọi từ:
+      quét mã ký tự một lượt, bảng tra lười cho BMP (mỗi mã chỉ hỏi biểu thức chính quy một lần). Note 407k ký tự: ~43 ms → ~5 ms (node).
+      kiem.js so với định nghĩa cũ trên chuỗi ngẫu nhiên đủ loại chữ (Việt, CJK, emoji, dấu rời NFD, nửa cặp thay thế). */
+  var WORD_CP = /^[\p{L}\p{N}]$/u, wordTbl = null;
+  function wordCount(s) {
+    s = String(s == null ? "" : s);
+    if (!wordTbl) wordTbl = new Uint8Array(65536);                         // 0 chưa biết · 1 chữ/số · 2 khác
+    var n = 0, inWord = false, i, c, d, w, len = s.length;
+    for (i = 0; i < len; i++) {
+      c = s.charCodeAt(i);
+      if (c < 128) w = (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+      else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < len && (d = s.charCodeAt(i + 1)) >= 0xDC00 && d <= 0xDFFF) { w = WORD_CP.test(s.slice(i, i + 2)); i++; }
+      else { w = wordTbl[c]; if (!w) { w = WORD_CP.test(s.charAt(i)) ? 1 : 2; wordTbl[c] = w; } w = w === 1; }
+      if (w && !inWord) n++;
+      inWord = w;
+    }
+    return n;
+  }
+  var words = wordCount;
 
   /** Chèn chữ giữ được Hoàn tác (Ctrl+Z) của trình duyệt. */
   function insertAt(ta, text) {
@@ -45,8 +63,11 @@
       if (!isDirty()) return repo.dropDraft(id);
       return repo.saveDraft({ id: id, note: st.cur, base: st.base ? st.base.updated_at : 0 });
     }
-    var queueDraft = U.debounce(function () { saveDraftNow(); setStatus(); }, 500);
-    function changed() { queueDraft(); setStatus(); schedulePreview(); }
+    var queueDraft = U.debounce(function () { saveDraftNow(); setDirtyState(); }, 500);
+    // Mỗi phím chỉ làm việc rẻ (nhãn "Chưa lưu" + nút Lưu). Đếm từ + thẻ ôn quét cả note (44 ms/phím ở note 407k ký tự) nên chạy trễ 300 ms sau
+    // phím cuối, và chạy ngay khi mở / nạp lại / lưu (setStatus).
+    var countsSoon = U.debounce(function () { if (!st.destroyed) updateCounts(); }, 300);
+    function changed() { queueDraft(); setDirtyState(); countsSoon(); schedulePreview(); }
 
     // ------------------------------------------------------------------------------------------- nạp
     function load() {
@@ -60,6 +81,9 @@
           var rel = []; if (query.rel && W.text.UUID_RE.test(query.rel) && query.rt) rel.push({ t: query.rt, id: query.rel });
           note = N.normalizeNote({ id: id, title: query.title || "", content: query.content || "", tags: query.tag ? [query.tag] : [], kind: query.kind || "note", rel: rel, created_at: now, updated_at: now }, now, { newId: true });
           note.id = id;
+          // normalizeNote điền "Chưa đặt tên" cho tiêu đề trống (dành cho bản LƯU). Ô soạn của note mới phải TRỐNG: hiện chữ mờ "Tiêu đề", con trỏ vào
+          // ô tiêu đề (nhịp focus 30 ms ở build), note chưa gõ gì không bị coi là "chưa lưu", và lúc lưu tiêu đề trống tự lấy từ dòng đầu nội dung.
+          if (!String(query.title || "").trim()) note.title = "";
         }
         return [note, draft];
       }).then(function (r) {
@@ -67,6 +91,7 @@
         var d = r[1];
         if (d && d.note) {
           var dn = N.normalizeNote(Object.assign({ id: id, created_at: st.base.created_at, updated_at: st.base.updated_at }, d.note), now, { newId: true });
+          if (!String(d.note.title || "").trim()) dn.title = "";            // nháp có tiêu đề trống: khôi phục đúng như đã gõ (không thành "Chưa đặt tên")
           if (!same(snapshot(dn), st.cur)) {
             if (st.isNew || st.virtual) { st.cur = snapshot(dn); } else st.banner = "draft:" + d.saved_at;
             st.draft = snapshot(dn);
@@ -95,7 +120,9 @@
       var suggest = h("div", { class: "suggest", role: "listbox", hidden: true, "aria-label": "Gợi ý note" });
       prev = h("article", { class: "md ed-prev", "aria-label": "Xem trước" });
       var side = h("aside", { class: "ed-side", "aria-label": "Liên kết và mục lục" });
-      var status = h("p", { class: "ed-status", role: "status", "aria-live": "polite" });
+      // trạng thái lưu (đọc cho trình đọc màn hình khi đổi) + số đếm (không đọc — đổi theo từng lần ngừng gõ). Hai span dựng MỘT lần, chỉ đổi chữ khi khác.
+      var stState = h("span", { class: "st ok", role: "status", "aria-live": "polite" }), stCounts = h("span", { class: "cnt" });
+      var status = h("p", { class: "ed-status" }, stState, stCounts);
       var banner = h("div", { class: "ed-banner", hidden: true, role: "status" });
       var dl = h("datalist", { id: "tag-list" });
       el = h("div", { class: "ed" },
@@ -106,7 +133,7 @@
           side),
         dl);
       host.replaceChildren(el);
-      el._refs = { saveBtn: saveBtn, fav: fav, banner: banner, tagsBox: tagsBox, tagIn: tagIn, suggest: suggest, side: side, status: status, modes: modes, dl: dl, more: more, tools: tools };
+      el._refs = { saveBtn: saveBtn, fav: fav, banner: banner, tagsBox: tagsBox, tagIn: tagIn, suggest: suggest, side: side, status: status, stState: stState, stCounts: stCounts, modes: modes, dl: dl, more: more, tools: tools };
       renderTags(); renderBanner(); applyMode(); schedulePreview(true); refreshPanel(); setStatus();
       dl.replaceChildren.apply(dl, repo.tags().slice(0, 200).map(function (t) { return h("option", { value: t.tag }); }));
 
@@ -204,13 +231,27 @@
       if (!isDirty()) repo.get(id).then(function (n) { if (n) { st.base = n; st.cur = snapshot(n); fill(); ctx.toast("Ghi chú vừa được cập nhật từ thiết bị khác"); } });
       else { st.banner = "remote"; renderBanner(); }
     }
-    function setStatus() {
+    /** Việc rẻ, chạy MỖI PHÍM: chỉ isDirty() + nhãn trạng thái + nút Lưu; không đụng DOM khi không có gì đổi. */
+    function setDirtyState() {
       if (!el) return;
-      var r = el._refs, dirty = isDirty(), cards = F.extractCards(id, st.cur.content).length, w = words(st.cur.content);
-      r.status.innerHTML = '<span class="st ' + (dirty ? "dirty" : "ok") + '">' + (dirty ? "● Chưa lưu — bản nháp đã được giữ" : st.saved ? "✓ Đã lưu" + (st.savedAt ? " " + T.esc(T.fmtDateTime(st.savedAt).slice(11)) : "") : "Ghi chú trống") + "</span>" +
-        "<span>" + w.toLocaleString("vi-VN") + " từ" + (cards ? " · " + cards + " thẻ ôn" : "") + "</span>";
-      r.saveBtn.disabled = !dirty || st.status === "trashed";
+      var r = el._refs, dirty = isDirty();
+      var text = dirty ? "● Chưa lưu — bản nháp đã được giữ" : st.saved ? "✓ Đã lưu" + (st.savedAt ? " " + T.fmtDateTime(st.savedAt).slice(11) : "") : "Ghi chú trống";
+      var cls = "st " + (dirty ? "dirty" : "ok"), off = !dirty || st.status === "trashed";
+      if (r.stState.textContent !== text) r.stState.textContent = text;
+      if (r.stState.className !== cls) r.stState.className = cls;
+      if (r.saveBtn.disabled !== off) r.saveBtn.disabled = off;
     }
+    /** Việc đắt (quét cả note): số từ + số thẻ ôn. Bỏ qua khi nội dung y như lần đếm trước. */
+    var countedFor = null;
+    function updateCounts() {
+      if (!el) return;
+      var c = st.cur.content;
+      if (c === countedFor) return;
+      countedFor = c;
+      var cards = F.extractCards(id, c).length, w = words(c);
+      el._refs.stCounts.textContent = w.toLocaleString("vi-VN") + " từ" + (cards ? " · " + cards + " thẻ ôn" : "");
+    }
+    function setStatus() { countsSoon.flush(); setDirtyState(); updateCounts(); }
 
     // ------------------------------------------------------------------------------------------- lưu / thao tác
     function save() {
@@ -402,7 +443,7 @@
       isDirty: isDirty, save: save,
       destroy: function () {
         if (st.destroyed) return;
-        queueDraft.flush();
+        queueDraft.flush(); countsSoon.flush();
         var was = isDirty();
         var p = saveDraftNow();
         st.destroyed = true;
@@ -413,5 +454,5 @@
     };
   }
 
-  U.editor = { open: open };
+  U.editor = { open: open, wordCount: wordCount };
 })(typeof globalThis !== "undefined" ? globalThis : this);

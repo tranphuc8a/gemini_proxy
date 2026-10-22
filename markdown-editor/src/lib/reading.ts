@@ -159,6 +159,31 @@ export function activeHeadingIndex(tops: number[], position: number, atEnd = fal
   return active
 }
 
+/** True when `tops` never decreases, so `activeHeadingIndexSorted` may be used on it. */
+export function isAscending(tops: number[]): boolean {
+  for (let index = 1; index < tops.length; index += 1) if (!(tops[index] >= tops[index - 1])) return false
+  return true
+}
+
+/**
+ * `activeHeadingIndex` for tops in ascending order, by binary search: it runs
+ * on every scroll frame of reading mode. Same answer as the linear version on
+ * such input (pinned by a test).
+ */
+export function activeHeadingIndexSorted(tops: number[], position: number, atEnd = false): number {
+  if (tops.length === 0) return -1
+  if (atEnd) return tops.length - 1
+  // Number of tops <= position, minus one.
+  let low = 0
+  let high = tops.length
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if (tops[middle] <= position) low = middle + 1
+    else high = middle
+  }
+  return low - 1
+}
+
 /**
  * Ctrl+Alt+V (⌘⌥V on a Mac) toggles reading mode.
  *

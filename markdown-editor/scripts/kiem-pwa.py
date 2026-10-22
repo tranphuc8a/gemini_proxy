@@ -15,6 +15,11 @@ Kịch bản (một trình duyệt, một origin, để service worker và local
   6. tải lại offline lần nữa → nội dung vừa sửa còn nguyên
   7. máy chủ chạy lại với khoá KHÁC (mô phỏng đổi khoá) rồi có mạng → phiên bị từ chối → về chế độ chỉ xem, có thông báo
   8. khách (chưa mở khoá) offline: đọc được, KHÔNG sửa được
+  9. (đợt M1, ngữ cảnh mới, máy chủ chạy lại) khung hình đầu là tài liệu đã lưu chứ không phải welcome.md; khối code tô màu
+     bằng class (không style màu inline) và "Export HTML" giữ luật màu; menu Sync có dòng cảnh báo "ghi đè cả kho";
+     "Load from backend" hỏi xác nhận (huỷ thì giữ nguyên, đồng ý thì nạp); localStorage đầy → banner đỏ + hỏi trước khi
+     rời trang, dọn chỗ rồi lưu lại thì banner tắt; chế độ đọc tài liệu dài: cuộn cập nhật tiến độ + mục đang đọc, bấm
+     mục lục nhảy đúng tiêu đề; luồng chính bận 9,9 s khi đang kiểm phiên, trả lời về sau 10,5 s → vẫn là quản trị
 
 AN TOÀN: máy chủ chạy với DB_URL trỏ SQLite trong thư mục tạm và MONGO_URI rỗng (ghi đè .env); khoá quản trị trong
 phép kiểm là chuỗi giả của chính script này, không phải khoá thật.
@@ -24,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -157,6 +163,8 @@ def main() -> int:
             print(f"Markdown Editor Pro — PWA offline ({which}) · {srv.base}{APP_PATH}")
             try:
                 run(browser, srv, shots)
+                srv.start(KEY_A)
+                run_m1(browser, srv, shots)
             finally:
                 browser.close()
     finally:
@@ -292,6 +300,244 @@ def run(browser, srv: Server, shots: str | None) -> None:
     check("khách offline KHÔNG sửa được (vẫn chỉ-đọc, không có token để tin)", page.get_attribute(".editor-input", "readonly") is not None and page.locator("button.role-chip.is-admin").count() == 0)
 
     check("không lỗi console/pageerror bất ngờ suốt phiên (trừ lỗi mạng chủ ý)", not errors, " | ".join(errors[:3]))
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# 9. Đợt M1 (perf-md 2–5 + vá tạm mất dữ liệu ke-hoach §1.3 + hai lỗi M0 phát hiện)
+# ---------------------------------------------------------------------------------------------------------------------
+STORED_DOC = "# Tài liệu đã lưu\n\nViết từ lần trước.\n\n```ts\nconst answer: number = 42 // chú thích\nexport function f() { return 'chuỗi' }\n```\n"
+
+SEED_JS = """(doc) => {
+  if (!sessionStorage.getItem('__m1_seeded')) {
+    sessionStorage.setItem('__m1_seeded', '1');
+    localStorage.setItem('markdown-editor:files', JSON.stringify({version: 2, currentFileId: 'mine', expandedFolders: ['root'],
+      files: [{id: 'root', name: 'Docs', type: 'folder', children: [{id: 'mine', name: 'mine.md', type: 'file', parentId: 'root', content: doc}]}]}));
+  }
+  // What the first frames show: rAF runs right before a paint, so the first value seen here is the first painted.
+  window.__first = {};
+  const tick = () => {
+    const ta = document.querySelector('.editor-input');
+    if (ta && window.__first.editor === undefined) window.__first.editor = ta.value;
+    const pv = document.querySelector('.preview-scroll .markdown-body');
+    if (pv && pv.textContent.trim() && window.__first.preview === undefined) window.__first.preview = pv.textContent;
+    if (window.__first.editor === undefined || window.__first.preview === undefined) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}"""
+
+# Mô phỏng dot/M0.md mục 6 (mở tài liệu rất lớn trên máy bận): ngay sau khi gửi yêu cầu kiểm phiên, luồng chính bận
+# 9,9 s, và trả lời về lúc ~10,5 s (máy chủ cũng chậm vì máy bận). Hẹn giờ 10 s kiểu cũ đếm cả lúc bận nên huỷ yêu cầu
+# ở giây thứ 10 → chỉ xem; hẹn giờ mới chỉ đếm lúc trang rảnh (~2 s) nên đợi được trả lời.
+BUSY_MS = 9900
+REPLY_DELAY_S = 10.5
+BUSY_JS = """() => {
+  const original = window.fetch;
+  window.fetch = function (input, init) {
+    const url = String((input && input.url) || input);
+    const pending = original.apply(this, arguments);
+    if (url.includes('/markdown/admin/session') && !window.__busyDone) {
+      window.__busyDone = true;
+      setTimeout(() => { const t = performance.now(); while (performance.now() - t < __BUSY_MS__) {} window.__busyEnd = Date.now(); }, 0);
+    }
+    return pending;
+  };
+}"""
+
+FILL_STORAGE_JS = """() => {
+  let i = 0;
+  const big = 'x'.repeat(512 * 1024);
+  try { for (;;) { localStorage.setItem('__junk' + i, big); i++; } } catch (e) {}
+  let size = 256 * 1024;
+  while (size >= 256) {
+    try { localStorage.setItem('__junk' + i, 'x'.repeat(size)); i++; } catch (e) { size = Math.floor(size / 2); }
+  }
+  return i;
+}"""
+
+CLEAR_JUNK_JS = """() => { for (const k of Object.keys(localStorage)) if (k.startsWith('__junk')) localStorage.removeItem(k); }"""
+
+
+def run_m1(browser, srv: Server, shots: str | None) -> None:
+    import _tai_lieu_thu as T
+
+    print("  · đợt M1: khung đầu, tô màu bằng class, xuất HTML, menu Sync, quota, chế độ đọc, phiên khi luồng chính bận")
+    url = srv.base + APP_PATH
+    ctx = browser.new_context(viewport={"width": 1280, "height": 800}, service_workers="block", accept_downloads=True)
+    ctx.add_init_script(f"({SEED_JS})({json.dumps(STORED_DOC)})")
+    page = ctx.new_page()
+    errors: list[str] = []
+    dialogs: list[tuple[str, str]] = []
+    page.on("console", lambda m: errors.append(f"{m.type}: {m.text}") if m.type == "error" and not any(n in m.text for n in EXPECTED_NOISE) else None)
+    page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
+    answer = {"accept": False}
+
+    def on_dialog(d):
+        dialogs.append((d.type, d.message))
+        d.accept() if answer["accept"] else d.dismiss()
+
+    page.on("dialog", on_dialog)
+
+    def snap(name):
+        if shots:
+            page.screenshot(path=os.path.join(shots, name + ".png"))
+
+    # --- khung hình đầu (lỗi M0 #1)
+    page.goto(url, wait_until="load")
+    page.wait_for_function("() => window.__first && window.__first.editor !== undefined && window.__first.preview !== undefined", timeout=20000)
+    first = page.evaluate("() => window.__first")
+    check("khung hình đầu: ô soạn đã là tài liệu đã lưu (không vẽ welcome.md trước)", first["editor"] == STORED_DOC, repr(first["editor"][:60]))
+    check("khung hình đầu: preview đã là tài liệu đã lưu", "Tài liệu đã lưu" in first["preview"] and "Welcome to Markdown Editor" not in first["preview"], first["preview"][:60])
+
+    # --- đăng nhập
+    page.click("button.role-chip")
+    page.fill("#admin-key", KEY_A)
+    page.click('button:has-text("Unlock")')
+    page.wait_for_selector("button.role-chip.is-admin", timeout=10000)
+
+    # --- khối code: class + bảng màu sinh từ theme (perf-md việc 2)
+    page.wait_for_selector(".preview-scroll .code-block span.token.keyword", timeout=20000)
+    code = page.evaluate("""() => {
+      const block = document.querySelector('.preview-scroll .code-block');
+      const wrap = block.querySelector('.prismjs');
+      const tokens = Array.from(block.querySelectorAll('span.token'));
+      const kw = block.querySelector('span.token.keyword');
+      const cm = block.querySelector('span.token.comment');
+      return {
+        scope: Array.from(wrap.classList).find((c) => c.startsWith('prism-')) || '',
+        inline: tokens.filter((t) => /color/.test(t.getAttribute('style') || '')).length,
+        tokens: tokens.length,
+        kw: getComputedStyle(kw).color, base: getComputedStyle(wrap).color,
+        cmStyle: cm ? getComputedStyle(cm).fontStyle : '',
+        sheet: !!document.querySelector('style[data-prism]'),
+      };
+    }""")
+    check("khối code: token là span.token có class, KHÔNG có màu inline; có <style data-prism> của theme",
+          code["tokens"] > 5 and code["inline"] == 0 and code["sheet"] and code["scope"].startswith("prism-"), json.dumps(code))
+    check("khối code: màu token lấy từ bảng màu (từ khoá khác màu chữ thường, chú thích in nghiêng)",
+          code["kw"] != code["base"] and code["cmStyle"] == "italic", json.dumps(code))
+
+    # --- Export HTML giữ luật màu
+    page.get_by_role("button", name="File", exact=False).first.click()
+    with page.expect_download(timeout=20000) as dl:
+        page.get_by_role("button", name="Export HTML").click()
+    html = open(dl.value.path(), encoding="utf-8").read()
+    check("Export HTML: tệp xuất có luật màu .prism-… .token.keyword và span class=\"token keyword\"",
+          re.search(r"\.prism-[a-z0-9-]+ \.token\.keyword", html) is not None and 'class="token keyword"' in html, html[:200])
+
+    # --- menu Sync: cảnh báo + Save to backend (máy chủ thật, kho json tạm)
+    page.get_by_role("button", name=re.compile(r"^Sync")).click()
+    page.get_by_role("button", name=re.compile(r"Backend sync")).click()   # bật đồng bộ (lệnh đóng menu)
+    page.get_by_role("button", name=re.compile(r"^Sync")).click()
+    note = page.get_by_role("note").inner_text()
+    check("menu Sync có dòng cảnh báo 'Save to backend overwrites the whole server copy…'", "overwrites the whole server copy" in note, note)
+    page.get_by_role("button", name=re.compile(r"Save to backend")).click()
+    page.wait_for_selector("text=Saved files to backend", timeout=15000)
+    check("Save to backend (máy chủ thật) chạy được", True)
+
+    # --- Load from backend hỏi trước
+    page.fill(".editor-input", STORED_DOC + "\nSửa cục bộ chưa lưu lên máy chủ.\n")
+    page.keyboard.press("Control+s")
+    answer["accept"] = False
+    dialogs.clear()
+    page.get_by_role("button", name=re.compile(r"^Sync")).click()
+    page.get_by_role("button", name=re.compile(r"Load from backend")).click()
+    page.wait_for_timeout(500)
+    asked = [m for t, m in dialogs if t == "confirm"]
+    check("Load from backend hỏi xác nhận trước (nói rõ thay mọi tài liệu cục bộ, sửa chưa lưu sẽ mất)",
+          len(asked) == 1 and "replaces" in asked[0] and "will be lost" in asked[0], repr(dialogs))
+    check("bấm Huỷ: tài liệu cục bộ giữ nguyên", "Sửa cục bộ chưa lưu" in page.input_value(".editor-input"))
+    answer["accept"] = True
+    page.get_by_role("button", name=re.compile(r"^Sync")).click()
+    page.get_by_role("button", name=re.compile(r"Load from backend")).click()
+    page.wait_for_selector("text=Loaded files from backend", timeout=15000)
+    check("bấm Đồng ý: nạp bản trên máy chủ", True)
+    answer["accept"] = False
+
+    # --- localStorage đầy → banner đỏ (vá tạm §1.3)
+    page.get_by_text("mine.md").first.click()
+    page.wait_for_function("() => document.querySelector('.editor-input').value.includes('Tài liệu đã lưu')", timeout=10000)
+    filled = page.evaluate(FILL_STORAGE_JS)
+    page.fill(".editor-input", STORED_DOC + "\n" + ("Thêm nhiều chữ để vượt hạn mức. " * 300))
+    page.wait_for_selector('[role="alert"].storage-banner', timeout=10000)
+    banner = page.inner_text('[role="alert"].storage-banner')
+    check(f"localStorage đầy ({filled} khoá rác): banner đỏ 'Browser storage is full — … not saved' hiện ra",
+          "Browser storage is full" in banner and "not saved" in banner, banner)
+    bg = page.evaluate("() => getComputedStyle(document.querySelector('.storage-banner')).backgroundColor")
+    check("banner có nền đỏ (token --danger)", bg.replace(" ", "") in ("rgb(207,34,46)", "rgb(248,81,73)"), bg)
+    snap("05-banner-quota")
+    dialogs.clear()
+    page.close(run_before_unload=True)
+    page.wait_for_timeout(800)
+    check("đang lỗi quota: rời trang thì trình duyệt hỏi trước (beforeunload), huỷ thì ở lại",
+          any(t == "beforeunload" for t, _ in dialogs) and not page.is_closed(), repr(dialogs))
+    page.evaluate(CLEAR_JUNK_JS)
+    page.get_by_role("button", name="Try saving again").click()
+    page.wait_for_selector('[role="alert"].storage-banner', state="detached", timeout=5000)
+    saved = page.evaluate("() => localStorage.getItem('markdown-editor:files') || ''")
+    check("dọn chỗ rồi 'Try saving again': banner tắt, bản mới đã nằm trong localStorage", "vượt hạn mức" in saved)
+
+    # --- chế độ đọc tài liệu dài (perf-md việc 4)
+    md = T.sinh("doc-2k")
+    page.fill(".editor-input", md)
+    page.get_by_role("button", name="Reading mode").click()
+    page.wait_for_function("() => document.querySelectorAll('.reading-article h2').length > 30", timeout=60000)
+    page.wait_for_timeout(1500)
+    page.mouse.move(640, 450)
+    for _ in range(12):
+        page.mouse.wheel(0, 800)
+        page.wait_for_timeout(60)
+    page.wait_for_timeout(600)
+    pos = page.evaluate("""() => ({
+      progress: Number(document.querySelector('.reading-progress').getAttribute('aria-valuenow')),
+    })""")
+    # The bar steps aside while scrolling down; the pointer near the top brings it back, as for a reader.
+    page.mouse.move(640, 8)
+    page.wait_for_selector(".reading:not(.is-bar-hidden)", timeout=5000)
+    page.wait_for_timeout(400)
+    page.get_by_role("button", name="Table of contents").click()
+    toc = page.evaluate("""() => {
+      const items = Array.from(document.querySelectorAll('.reading-toc-item'));
+      return { count: items.length, active: items.findIndex((b) => b.getAttribute('aria-current') === 'location') };
+    }""")
+    check("chế độ đọc: cuộn xuống thì tiến độ tăng và mục đang đọc trong mục lục chuyển xuống",
+          pos["progress"] > 0 and toc["active"] > 0, json.dumps({**pos, **toc}))
+    target = min(30, toc["count"] - 1)
+    label = page.locator(".reading-toc-item").nth(target).inner_text()
+    page.locator(".reading-toc-item").nth(target).click()
+    page.wait_for_timeout(1500)
+    landed = page.evaluate("""(label) => {
+      const scroller = document.querySelector('.reading-scroll');
+      const h = Array.from(document.querySelectorAll('.reading-article h1, .reading-article h2, .reading-article h3'))
+        .find((el) => el.textContent.includes(label.trim()));  // the heading also holds its hover anchor
+      return h ? Math.round(h.getBoundingClientRect().top - scroller.getBoundingClientRect().top) : null;
+    }""", label)
+    check(f"chế độ đọc: bấm mục lục '{label[:30]}…' → tiêu đề nằm ở đầu khung đọc", landed is not None and 0 <= landed <= 200, str(landed))
+    page.keyboard.press("Escape")
+
+    # --- phiên quản trị khi luồng chính bận (lỗi M0 #2)
+    token = page.evaluate("() => localStorage.getItem('markdown-editor:admin-session')")
+    page2 = ctx.new_page()
+    page2.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
+    page2.add_init_script("(" + BUSY_JS.replace("__BUSY_MS__", str(BUSY_MS)) + ")()")
+    sent = {}
+
+    def slow_session(route):
+        sent["t"] = time.time()
+        reply = route.fetch()
+        time.sleep(max(0.0, REPLY_DELAY_S - (time.time() - sent["t"])))
+        route.fulfill(response=reply)
+
+    page2.route("**/markdown/admin/session", slow_session)
+    page2.goto(url, wait_until="load")
+    page2.wait_for_function("() => window.__busyEnd !== undefined", timeout=40000)
+    page2.wait_for_timeout(3000)
+    admin = page2.locator("button.role-chip.is-admin").count() == 1
+    check(f"luồng chính bận {BUSY_MS / 1000:g} s, trả lời kiểm phiên về sau {REPLY_DELAY_S:g} s: vẫn là quản trị (hẹn giờ chỉ đếm lúc trang rảnh)",
+          bool(token) and admin, f"token={'có' if token else 'không'} admin={admin}")
+    page2.close()
+
+    check("đợt M1: không lỗi console/pageerror bất ngờ", not errors, " | ".join(errors[:3]))
     ctx.close()
 
 

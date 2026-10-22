@@ -65,45 +65,63 @@ export interface LineAnchor {
  * Interpolates a pixel offset for `line` from sparse anchors. Anchors must be
  * sorted by line. Between two anchors the position is interpolated linearly so
  * scrolling inside a long paragraph still tracks smoothly.
+ *
+ * Binary search: it runs on every scroll event, against up to ~10,000 anchors.
+ * It picks the same segment the former linear scan did -- the first anchor at
+ * or past `line` closes it -- so results are identical, ties included.
  */
 export function offsetForLine(anchors: LineAnchor[], line: number): number {
   if (anchors.length === 0) return 0
   if (line <= anchors[0].line) return anchors[0].top
+  const last = anchors.length - 1
+  if (line > anchors[last].line) return anchors[last].top
 
-  for (let index = 0; index < anchors.length - 1; index += 1) {
-    const current = anchors[index]
-    const next = anchors[index + 1]
-    if (line >= current.line && line <= next.line) {
-      const span = next.line - current.line
-      if (span === 0) return current.top
-      const ratio = (line - current.line) / span
-      return current.top + ratio * (next.top - current.top)
-    }
+  // Smallest index >= 1 whose line is >= `line`.
+  let low = 1
+  let high = last
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if (anchors[middle].line >= line) high = middle
+    else low = middle + 1
   }
-
-  return anchors[anchors.length - 1].top
+  const current = anchors[low - 1]
+  const next = anchors[low]
+  const span = next.line - current.line
+  if (span === 0) return current.top
+  const ratio = (line - current.line) / span
+  return current.top + ratio * (next.top - current.top)
 }
 
-/** The inverse of `offsetForLine`: which source line sits at `top`. */
+/**
+ * The inverse of `offsetForLine`: which source line sits at `top`. Anchors
+ * must also be sorted by `top` (collectPreviewAnchors keeps them so).
+ */
 export function lineForOffset(anchors: LineAnchor[], top: number): number {
   if (anchors.length === 0) return 1
   if (top <= anchors[0].top) return anchors[0].line
+  const last = anchors.length - 1
+  if (top > anchors[last].top) return anchors[last].line
 
-  for (let index = 0; index < anchors.length - 1; index += 1) {
-    const current = anchors[index]
-    const next = anchors[index + 1]
-    if (top >= current.top && top <= next.top) {
-      const span = next.top - current.top
-      if (span === 0) return current.line
-      const ratio = (top - current.top) / span
-      return Math.round(current.line + ratio * (next.line - current.line))
-    }
+  // Smallest index >= 1 whose top is >= `top`.
+  let low = 1
+  let high = last
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if (anchors[middle].top >= top) high = middle
+    else low = middle + 1
   }
-
-  return anchors[anchors.length - 1].line
+  const current = anchors[low - 1]
+  const next = anchors[low]
+  const span = next.top - current.top
+  if (span === 0) return current.line
+  const ratio = (top - current.top) / span
+  return Math.round(current.line + ratio * (next.line - current.line))
 }
 
-/** Reads `data-line` anchors out of a rendered preview. */
+/**
+ * Reads `data-line` anchors out of a rendered preview, sorted by line and by
+ * position -- the two binary searches above rely on both.
+ */
 export function collectPreviewAnchors(container: HTMLElement): LineAnchor[] {
   const anchors: LineAnchor[] = []
   const elements = container.querySelectorAll<HTMLElement>('[data-line]')
@@ -114,8 +132,9 @@ export function collectPreviewAnchors(container: HTMLElement): LineAnchor[] {
     if (!Number.isFinite(line)) return
     const top = element.getBoundingClientRect().top - containerTop
     const previous = anchors[anchors.length - 1]
-    // Keep anchors monotonic; nested blocks can report a smaller line.
-    if (previous && line <= previous.line) return
+    // Keep anchors monotonic: nested blocks can report a smaller line, and a
+    // float or an absolutely placed element a smaller top.
+    if (previous && (line <= previous.line || top < previous.top)) return
     anchors.push({ line, top })
   })
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 // The full `Prism` build bundles every grammar (~660 kB). The async-light
 // build ships the core and fetches one grammar per language actually used.
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-async-light'
@@ -6,6 +6,7 @@ import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/pris
 import { copyToClipboard } from '../lib/exporters'
 import { withContrast } from '../lib/contrast'
 import { prismLanguage } from '../lib/codeLanguages'
+import { ensurePrismSheet, prismScope, prismThemeToCss } from '../lib/prismCss'
 import { IconCheck, IconCopy } from './Icons'
 
 interface CodeBlockProps {
@@ -19,23 +20,32 @@ interface CodeBlockProps {
   contrastBackground?: string
 }
 
-/** One adjusted sheet per theme and background, shared by every block. */
-const adjusted = new Map<string, typeof oneLight>()
+/** One scope class per theme and background, its stylesheet installed on first use. */
+const scopes = new Map<string, string>()
 
-function styleFor(theme: 'light' | 'dark', background?: string) {
-  const base = theme === 'dark' ? oneDark : oneLight
-  if (!background) return base
-  const key = `${theme}|${background}`
-  let sheet = adjusted.get(key)
-  if (!sheet) {
-    sheet = withContrast(base, background)
-    adjusted.set(key, sheet)
+function scopeFor(theme: 'light' | 'dark', background?: string): string {
+  const key = `${theme}|${background ?? ''}`
+  let scope = scopes.get(key)
+  if (!scope) {
+    const base = theme === 'dark' ? oneDark : oneLight
+    const sheet = background ? withContrast(base, background) : base
+    scope = prismScope(theme, background)
+    ensurePrismSheet(scope, prismThemeToCss(sheet, scope))
+    scopes.set(key, scope)
   }
-  return sheet
+  return scope
 }
 
+const CUSTOM_STYLE = { margin: 0, background: 'transparent', padding: '14px 16px', fontSize: '0.85em' }
+
+/**
+ * A highlighted code block. Tokens carry classes (`span.token.keyword`) and a
+ * per-theme stylesheet colours them -- inline styles cost ~0.3 ms per token.
+ * Memoised: a preview render re-highlights only the blocks whose code changed.
+ */
 function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockProps) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
+  const scope = scopeFor(theme, contrastBackground)
 
   const onCopy = async () => {
     const ok = await copyToClipboard(source)
@@ -59,9 +69,11 @@ function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockPro
       </div>
       <SyntaxHighlighter
         language={prismLanguage(language)}
-        style={styleFor(theme, contrastBackground)}
+        useInlineStyles={false}
+        className={scope}
         PreTag="div"
-        customStyle={{ margin: 0, background: 'transparent', padding: '14px 16px', fontSize: '0.85em' }}
+        customStyle={CUSTOM_STYLE}
+        // Fresh each render: the highlighter writes into codeTagProps.style.
         codeTagProps={{ style: { fontFamily: 'var(--font-mono)' } }}
       >
         {source}
@@ -70,4 +82,4 @@ function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockPro
   )
 }
 
-export default CodeBlock
+export default memo(CodeBlock)

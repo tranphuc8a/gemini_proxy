@@ -37,7 +37,6 @@ function explain(error: unknown): string {
 function SmartFormatModal() {
   const request = useEditorStore((state) => state.smartFormat)
   const close = useEditorStore((state) => state.closeSmartFormat)
-  const content = useEditorStore((state) => state.currentContent)
   const themePreference = useEditorStore((state) => state.theme)
   const setContent = useEditorStore((state) => state.setContent)
   const commitHistory = useEditorStore((state) => state.commitHistory)
@@ -66,6 +65,9 @@ function SmartFormatModal() {
   // Take the snapshot, and ask the server what this visitor may do, each time the dialog opens.
   useEffect(() => {
     if (!request) return
+    // Read here rather than subscribed: the dialog is always mounted, and a subscription re-rendered it on
+    // every keystroke just to keep a value it only needs at this moment.
+    const content = useEditorStore.getState().currentContent
     setSnapshot(content)
     setScope(chooseTarget(content, request.start, request.end).scope)
     setResult(null)

@@ -1,4 +1,4 @@
-/* ui/settings.js — Cài đặt: giao diện, độ bền dữ liệu, sao lưu & khôi phục, xuất/nhập, đồng bộ, dữ liệu mẫu, xoá. */
+/* ui/settings.js — Cài đặt: đồng bộ (đầu trang, neo #/settings/sync), giao diện, độ bền dữ liệu, sao lưu & khôi phục, xuất/nhập, dữ liệu mẫu, xoá. */
 (function (root) {
   "use strict";
   var W = root.Wiki, T = W.text, B = W.backup, U = W.ui, h = U.h, icon = U.icon, $ = U.$;
@@ -13,7 +13,7 @@
   function $$(s, f) { return U.$$(s, f); }
   function fileTime(ms) { return ms ? T.fmtDateTime(ms) : "chưa bao giờ"; }
 
-  function open(ctx, host) {
+  function open(ctx, host, anchor) {
     var repo = ctx.repo, st = { destroyed: false }, el = h("div", { class: "page settings" });
     host.replaceChildren(el);
     var prefs = U.prefs(), busy = h("p", { class: "busy", role: "status", "aria-live": "polite", hidden: true });
@@ -138,9 +138,15 @@
       });
     }
 
+    // Đồng bộ đứng ĐẦU trang (trước đây nằm gần cuối, sau Giao diện / Lưu trữ / Sao lưu / Xuất — khó tìm). Neo #/settings/sync cuộn + đưa focus tới đây
+    // (chỉ báo đồng bộ ở thanh bên, mục "Đồng bộ" trong menu Thêm và biểu ngữ lỗi đồng bộ đều trỏ vào neo này).
     var sync = W.ui.syncPanel ? W.ui.syncPanel(ctx) : null;
-    el.append(W.ui.views.pageHead("Cài đặt"), busy, look, durRow, backup, exp, sync, appGroup, data,
+    el.append(W.ui.views.pageHead("Cài đặt"), busy, sync, look, durRow, backup, exp, appGroup, data,
       h("p", { class: "faint about" }, "Personal Wiki · dữ liệu lưu trên máy bạn · ", h("a", { href: "../../_portal/portal.html", text: "về cổng ứng dụng" })));
+    if (anchor === "sync" && sync) {
+      sync.scrollIntoView({ block: "start" });
+      var hd = sync.querySelector("h2"); if (hd) { try { hd.focus({ preventScroll: true }); } catch (e) { hd.focus(); } }
+    }
     var off = repo.on(function () { if (!st.destroyed) drawDur(); });
     var offPwa = inst && inst.onChange ? inst.onChange(drawApp) : null;
     return { destroy: function () { st.destroyed = true; if (off) off(); } };

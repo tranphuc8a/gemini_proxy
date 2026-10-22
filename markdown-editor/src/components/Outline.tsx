@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react'
 import { useEditorStore } from '../store'
 import { extractHeadings } from '../lib/markdown'
 import { emitJump } from '../lib/paneSync'
+import { useIdleValue } from '../hooks/useIdleValue'
 import { IconHash } from './Icons'
 import './Outline.css'
 
 function Outline() {
   const content = useEditorStore((state) => state.currentContent)
-  const headings = useMemo(() => extractHeadings(content), [content])
+  // Rebuilt once typing pauses: on a long document every keystroke re-drew hundreds of entries.
+  const settled = useIdleValue(content, 300)
+  const headings = useMemo(() => extractHeadings(settled), [settled])
   const [active, setActive] = useState<number | null>(null)
 
   if (headings.length === 0) {
