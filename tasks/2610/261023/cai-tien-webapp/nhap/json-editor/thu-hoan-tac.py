@@ -1,0 +1,36 @@
+import os, sys, json, pathlib
+sys.stdout.reconfigure(encoding="utf-8")
+from playwright.sync_api import sync_playwright
+url = pathlib.Path(r"C:/Users/tranphuc8a/Desktop/gemini_proxy/backend/fastapi/webapp/tranphuc8a/json-editor/index.html").as_uri()
+with sync_playwright() as pw:
+    tb = pw.chromium.launch(channel="msedge")
+    p = tb.new_page()
+    p.goto(url)
+    p.evaluate("() => { try { localStorage.clear(); } catch(e){} }")
+    p.reload()
+    p.click("#nhap")
+    p.keyboard.type('{"b":1,"a":[1,2]}')
+    p.wait_for_timeout(300)
+    truoc = p.input_value("#nhap")
+    p.click("#nut-dinh-dang")
+    sau_dd = p.input_value("#nhap")
+    p.click("#nhap")
+    p.keyboard.press("Control+z")
+    p.wait_for_timeout(200)
+    sau_z = p.input_value("#nhap")
+    print(json.dumps({"truoc": truoc, "sau_dinh_dang": sau_dd, "sau_ctrl_z_trong_soan": sau_z,
+                      "hoan_tac_duoc": sau_z == truoc}, ensure_ascii=False))
+    # nut hoan tac o tab cay
+    p.click('.tab-n[data-o="cay"]')
+    p.click("#cay-hoan-tac")
+    print("sau nut Hoan tac (tab Cay):", json.dumps(p.input_value("#nhap")))
+    # file:// : xem truoc nhanh gap
+    p.click('.tab-n[data-o="soan"]')
+    p.fill("#nhap", '[{"id":1,"name":"Phúc","tags":[1,2]},{"id":2,"name":"An"}]')
+    p.dispatch_event("#nhap", "input")
+    p.wait_for_timeout(400)
+    p.click('.tab-n[data-o="cay"]')
+    p.wait_for_timeout(200)
+    print("xem truoc:", p.eval_on_selector_all("#cay .xem-truoc", "els => els.map(e => e.textContent)"))
+    print("dem:", p.eval_on_selector_all("#cay .dem", "els => els.map(e => e.textContent)"))
+    tb.close()
