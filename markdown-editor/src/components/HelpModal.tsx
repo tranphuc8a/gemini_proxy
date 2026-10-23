@@ -111,9 +111,17 @@ function HelpModal({ open, onClose }: HelpModalProps) {
           <section className="help-section">
             <h3>What renders</h3>
             <p className="help-text">
-              GitHub-flavoured Markdown: tables, task lists, footnotes and strikethrough, plus KaTeX maths (
-              <code>$…$</code> and <code>$$…$$</code>), Mermaid diagrams in a <code>mermaid</code> code fence, syntax
-              highlighting for fenced code, and sanitised inline HTML.
+              GitHub-flavoured Markdown: tables, task lists, footnotes and strikethrough, plus KaTeX maths, Mermaid
+              diagrams in a <code>mermaid</code> code fence, syntax highlighting for fenced code, and sanitised inline
+              HTML.
+            </p>
+            <p className="help-text">
+              Maths is written the way chat assistants write it: <code>$…$</code>, <code>\(…\)</code> inline;{' '}
+              <code>$$…$$</code>, <code>\[…\]</code> or a bare <code>\begin{'{align}'}…\end{'{align}'}</code> for
+              display (a <code>$$x$$</code> alone on its line is shown as a block). Chemistry with{' '}
+              <code>\ce{'{H2O}'}</code> and units with <code>\pu{'{…}'}</code>. A single <code>$</code> only opens maths
+              when the next character is not a space and closes before a non-digit, so prices like <code>$5 and $10</code>{' '}
+              stay text; write <code>\$</code> for a literal dollar.
             </p>
           </section>
 

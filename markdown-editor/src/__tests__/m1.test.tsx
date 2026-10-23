@@ -50,6 +50,7 @@ beforeEach(() => {
     saveState: 'idle',
     lastSavedAt: null,
     storageFailure: null,
+    storageFailureScope: null,
     backendStorage: true,
     backendStorageType: 'json'
   })
@@ -126,9 +127,26 @@ describe('StorageBanner', () => {
     Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() })
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
     render(<StorageBanner />)
-    await userEvent.click(screen.getByRole('button', { name: 'Export this document' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Export open document' }))
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect(click).toHaveBeenCalledTimes(1)
+    // And it says the other changed documents are at risk too, not only the open one.
+    expect(screen.getByRole('alert')).toHaveTextContent(/every document changed since/)
+  })
+
+  it('says only the settings are unsaved when the documents went in', () => {
+    const setItem = Storage.prototype.setItem
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (key.includes('settings')) throw new DOMException('full', 'QuotaExceededError')
+      setItem.call(this, key, value)
+    })
+    render(<StorageBanner />)
+    act(() => useEditorStore.getState().flushPersist())
+    expect(useEditorStore.getState().storageFailureScope).toBe('settings')
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent(/your settings are not saved/)
+    expect(alert).not.toHaveTextContent(/latest changes/)
+    expect(within(alert).queryByRole('button', { name: 'Export open document' })).not.toBeInTheDocument()
   })
 })
 
@@ -141,6 +159,15 @@ describe('StatusBar on the keystroke path', () => {
     expect(screen.getByText(/^8 words/)).toBeInTheDocument()
     act(() => vi.advanceTimersByTime(450))
     expect(screen.getByText(/^12 words/)).toBeInTheDocument()
+  })
+
+  it("shows the counts of a newly opened file at once, never the previous file's", () => {
+    vi.useFakeTimers()
+    render(<StatusBar onOpenHelp={vi.fn()} />)
+    expect(screen.getByText(/^8 words/)).toBeInTheDocument()
+    act(() => useEditorStore.getState().setCurrentFile('b'))
+    expect(screen.getByText('beta.md')).toBeInTheDocument()
+    expect(screen.getByText(/^1 words?/)).toBeInTheDocument()
   })
 
   it('follows a rename of the open file (it selects the name, not the tree)', () => {

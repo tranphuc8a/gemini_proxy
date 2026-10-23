@@ -16,10 +16,18 @@ Kịch bản (một trình duyệt, một origin, để service worker và local
   7. máy chủ chạy lại với khoá KHÁC (mô phỏng đổi khoá) rồi có mạng → phiên bị từ chối → về chế độ chỉ xem, có thông báo
   8. khách (chưa mở khoá) offline: đọc được, KHÔNG sửa được
   9. (đợt M1, ngữ cảnh mới, máy chủ chạy lại) khung hình đầu là tài liệu đã lưu chứ không phải welcome.md; khối code tô màu
-     bằng class (không style màu inline) và "Export HTML" giữ luật màu; menu Sync có dòng cảnh báo "ghi đè cả kho";
+     bằng class (không style màu inline) và "Export HTML" giữ luật màu; màu từng token (cả token lồng nhau của HTML/JSX/bash/
+     C++/CSS/PHP) ở preview VÀ trong tệp Export HTML trùng y hệt màu chế độ inline cũ gán cho đúng danh sách lớp đó
+     (đáp án: scripts/mau-token-inline.cjs, dùng createStyleObject của thư viện);
+     menu Sync có dòng cảnh báo "ghi đè cả kho";
      "Load from backend" hỏi xác nhận (huỷ thì giữ nguyên, đồng ý thì nạp); localStorage đầy → banner đỏ + hỏi trước khi
      rời trang, dọn chỗ rồi lưu lại thì banner tắt; chế độ đọc tài liệu dài: cuộn cập nhật tiến độ + mục đang đọc, bấm
      mục lục nhảy đúng tiêu đề; luồng chính bận 9,9 s khi đang kiểm phiên, trả lời về sau 10,5 s → vẫn là quản trị
+ 10. (đợt M2, toán kiểu LLM + chặn style) tài liệu có \\( \\), \\[ \\], \\begin{align} trần, $$x$$ một dòng, "$$ chữ"
+     hai dòng, mhchem, \\eqref, giá $5/$10: preview đủ số công thức hiển thị/nội dòng, 0 katex-error, giá tiền là chữ;
+     khối toán là div.math-block[data-line] đúng dòng nguồn, nhấp đúp khối toán → con trỏ editor về đúng dòng, tiêu đề
+     sau toán giữ data-line; style="background-image:url(…)" bị bỏ (0 yêu cầu tới máy theo dõi) còn màu giữ,
+     position:fixed bị bỏ; chế độ đọc và tệp Export HTML có cùng công thức; welcome.md (ngữ cảnh mới) có ví dụ toán
 
 AN TOÀN: máy chủ chạy với DB_URL trỏ SQLite trong thư mục tạm và MONGO_URI rỗng (ghi đè .env); khoá quản trị trong
 phép kiểm là chuỗi giả của chính script này, không phải khoá thật.
@@ -165,6 +173,7 @@ def main() -> int:
                 run(browser, srv, shots)
                 srv.start(KEY_A)
                 run_m1(browser, srv, shots)
+                run_m2(browser, srv, shots)
             finally:
                 browser.close()
     finally:
@@ -326,6 +335,75 @@ SEED_JS = """(doc) => {
   requestAnimationFrame(tick);
 }"""
 
+# Màu token: tài liệu có nhiều token LỒNG NHAU (lá mang lớp của cha lẫn của nó: "token tag attr-name", "token macro
+# property directive keyword"…). Bản M1 đầu tiên làm đổi màu 45/99 token loại này; đáp án là chế độ inline gốc.
+COLOUR_BLOCKS = [
+    ("html", '<!DOCTYPE html>\n<div class="box" id=\'main\' data-x=1><a href="/x?a=1&amp;b=2">link</a><br/></div>\n<style>.a { color: red; }</style>\n<script>const x = 1; if (x) { alert("hi") }</script>\n<!-- chú thích -->'),
+    ("bash", 'echo "hi $HOME"; cd /tmp && export X=1\ntest -f a && printf \'%s\' b\nfor f in *.md; do wc -l "$f"; done # đếm'),
+    ("jsx", 'const A = () => <div className="a" onClick={() => go(1)}>{name}<B x={2} {...rest} /></div>'),
+    ("cpp", '#include <vector>\n#define MAX(a, b) ((a) > (b) ? (a) : (b))\ntemplate <typename T> class Box { public: T v; };\nint main() { std::vector<int> v{1, 2}; return MAX(v[0], 3); }'),
+    ("css", '@media (max-width: 600px) { .a > b:hover, #id::before { color: #fff !important; content: "x"; } }'),
+    ("php", '<?php\nfunction f(int $x): string { return "v=$x" . strtoupper(\'a\'); }\n?>'),
+]
+COLOUR_DOC = "# Màu khối code\n\n" + "\n\n".join(f"```{fence}\n{src}\n```" for fence, src in COLOUR_BLOCKS) + "\n"
+
+# Lớp của từng span trong từng khối (bỏ lớp luật prism-tN) — đầu vào của đáp án.
+COLOUR_CLASSES_JS = """(selector) => Array.from(document.querySelectorAll(selector)).map((block) =>
+  Array.from(block.querySelectorAll('.prismjs code span')).map((s) => s.className.split(' ').filter((c) => c && !c.startsWith('prism-t'))))"""
+
+# So từng token: Edge tính màu token của app, rồi tính màu một span "thăm dò" mang đúng style inline cũ đặt ngay cạnh
+# (cùng cha nên cùng kế thừa) — hai bên phải trùng. Khung khối code so riêng với một div thăm dò mang style inline cũ.
+COLOUR_PROBE_JS = """([selector, answer]) => {
+  const props = ['color', 'font-style', 'font-weight', 'text-decoration-line', 'background-color', 'cursor', 'opacity'];
+  const wprops = ['color', 'font-family', 'font-size', 'line-height', 'white-space', 'tab-size', 'direction', 'text-align',
+                  'word-break', 'word-spacing', 'hyphens', 'padding-left', 'overflow-x', 'border-top-left-radius', 'text-shadow'];
+  const read = (el, list) => { const cs = getComputedStyle(el); return list.map((p) => cs.getPropertyValue(p)).join(' | '); };
+  const blocks = Array.from(document.querySelectorAll(selector));
+  const out = { blocks: blocks.length, tokens: 0, nested: 0, styled: 0, diffs: [], wrapper: [] };
+  blocks.forEach((block, b) => {
+    const styles = answer.blocks[b];
+    const wrap = block.querySelector('.prismjs');
+    const spans = Array.from(wrap.querySelectorAll('code span'));
+    if (!styles || spans.length !== styles.length) { out.diffs.push('block ' + b + ': ' + spans.length + ' span, đáp án ' + (styles || []).length); return; }
+    const pw = document.createElement('div');
+    pw.setAttribute('style', answer.wrapper);
+    wrap.parentNode.insertBefore(pw, wrap);
+    if (read(pw, wprops) !== read(wrap, wprops)) out.wrapper.push('block ' + b + ': ' + read(wrap, wprops) + ' ≠ ' + read(pw, wprops));
+    pw.remove();
+    spans.forEach((span, i) => {
+      out.tokens += 1;
+      if (styles[i]) out.styled += 1;
+      if (span.className.split(' ').filter((c) => c && c !== 'token' && !c.startsWith('prism-t')).length > 1) out.nested += 1;
+      if (span.getAttribute('style')) out.diffs.push('[' + span.className + '] có style inline');
+      const probe = document.createElement('span');
+      probe.setAttribute('style', styles[i]);
+      probe.textContent = span.textContent;
+      span.parentNode.insertBefore(probe, span);
+      const got = read(span, props), want = read(probe, props);
+      probe.remove();
+      if (got !== want) out.diffs.push('[' + span.className + '] ' + JSON.stringify(span.textContent) + ': ' + got + ' ≠ ' + want);
+    });
+  });
+  return out;
+}"""
+
+
+def inline_answer(theme: str, class_lists: list) -> dict:
+    """Style chế độ inline gốc cho từng danh sách lớp (react-syntax-highlighter trong node_modules của markdown-editor)."""
+    payload = json.dumps({"theme": theme, "blocks": class_lists})
+    done = subprocess.run(["node", os.path.join(HERE, "mau-token-inline.cjs")], input=payload, capture_output=True,
+                          text=True, encoding="utf-8", timeout=120)
+    if done.returncode != 0:
+        raise RuntimeError("mau-token-inline.cjs: " + done.stderr[-500:])
+    return json.loads(done.stdout)
+
+
+def colour_report(res: dict) -> str:
+    return (f"{res['blocks']} khối, {res['tokens']} token ({res['nested']} lồng nhau), lệch {len(res['diffs'])}"
+            + (": " + " | ".join(res["diffs"][:4]) if res["diffs"] else "")
+            + (" | khung: " + " | ".join(res["wrapper"][:2]) if res["wrapper"] else ""))
+
+
 # Mô phỏng dot/M0.md mục 6 (mở tài liệu rất lớn trên máy bận): ngay sau khi gửi yêu cầu kiểm phiên, luồng chính bận
 # 9,9 s, và trả lời về lúc ~10,5 s (máy chủ cũng chậm vì máy bận). Hẹn giờ 10 s kiểu cũ đếm cả lúc bận nên huỷ yêu cầu
 # ở giây thứ 10 → chỉ xem; hẹn giờ mới chỉ đếm lúc trang rảnh (~2 s) nên đợi được trả lời.
@@ -422,8 +500,35 @@ def run_m1(browser, srv: Server, shots: str | None) -> None:
     with page.expect_download(timeout=20000) as dl:
         page.get_by_role("button", name="Export HTML").click()
     html = open(dl.value.path(), encoding="utf-8").read()
-    check("Export HTML: tệp xuất có luật màu .prism-… .token.keyword và span class=\"token keyword\"",
-          re.search(r"\.prism-[a-z0-9-]+ \.token\.keyword", html) is not None and 'class="token keyword"' in html, html[:200])
+    kw_rule = re.search(r'class="token keyword (prism-t\d+)"', html)
+    check("Export HTML: tệp xuất có span class=\"token keyword prism-tN\" và luật màu .prism-… .prism-tN đi kèm",
+          kw_rule is not None and re.search(r"\.prism-[a-z0-9_-]+ \." + kw_rule.group(1) + r"\b", html) is not None, html[:200])
+
+    # --- màu từng token (cả token lồng nhau) == chế độ inline cũ: preview và tệp Export HTML
+    page.fill(".editor-input", COLOUR_DOC)
+    page.wait_for_function(f"() => document.querySelectorAll('.preview-scroll .code-block').length === {len(COLOUR_BLOCKS)} && "
+                           "Array.from(document.querySelectorAll('.preview-scroll .code-block')).every((b) => b.querySelector('span.token'))",
+                           timeout=30000)
+    page.wait_for_timeout(500)
+    scope = page.evaluate("() => Array.from(document.querySelector('.preview-scroll .prismjs').classList).find((c) => c.startsWith('prism-'))")
+    colour_theme = "dark" if scope.startswith("prism-dark") else "light"
+    answer_colours = inline_answer(colour_theme, page.evaluate(COLOUR_CLASSES_JS, ".preview-scroll .code-block"))
+    res = page.evaluate(COLOUR_PROBE_JS, [".preview-scroll .code-block", answer_colours])
+    check(f"preview: màu từng token (HTML/bash/JSX/C++/CSS/PHP) trùng y hệt chế độ inline cũ — {res['tokens']} token, {res['nested']} lồng nhau",
+          res["blocks"] == len(COLOUR_BLOCKS) and res["tokens"] > 150 and res["nested"] > 40 and res["styled"] > 100 and not res["diffs"] and not res["wrapper"],
+          colour_report(res))
+    page.get_by_role("button", name="File", exact=False).first.click()
+    with page.expect_download(timeout=20000) as dl:
+        page.get_by_role("button", name="Export HTML").click()
+    exported = open(dl.value.path(), encoding="utf-8").read()
+    viewer = ctx.new_page()
+    viewer.set_content(exported, wait_until="load")
+    res = viewer.evaluate(COLOUR_PROBE_JS, [".code-block", inline_answer(colour_theme, viewer.evaluate(COLOUR_CLASSES_JS, ".code-block"))])
+    viewer.close()
+    check(f"Export HTML: mở tệp xuất, màu từng token vẫn trùng y hệt chế độ inline cũ — {res['tokens']} token",
+          res["blocks"] == len(COLOUR_BLOCKS) and res["tokens"] > 150 and not res["diffs"] and not res["wrapper"], colour_report(res))
+    page.fill(".editor-input", STORED_DOC)
+    page.wait_for_timeout(300)
 
     # --- menu Sync: cảnh báo + Save to backend (máy chủ thật, kho json tạm)
     page.get_by_role("button", name=re.compile(r"^Sync")).click()
@@ -538,6 +643,140 @@ def run_m1(browser, srv: Server, shots: str | None) -> None:
     page2.close()
 
     check("đợt M1: không lỗi console/pageerror bất ngờ", not errors, " | ".join(errors[:3]))
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# 10. Đợt M2 (md-render 1, 2, 3, 7: toán kiểu LLM, luật pandoc, mhchem, khối toán có data-line, chặn style nguy hiểm)
+# ---------------------------------------------------------------------------------------------------------------------
+# Dòng nguồn (1-based): 5 \[ … \], 9 \begin{align} trần, 14 $$x$$ một dòng, 16 "$$ x^2 +" … "y^2 = z^2 $$", 25 tiêu đề sau.
+M2_DOC = r"""# Toán kiểu LLM
+
+Năng lượng \( E = mc^2 \) và giá $5 và $10 vẫn là chữ.
+
+\[
+\int_0^1 x^2 \, dx = \frac{1}{3}
+\]
+
+\begin{align}
+a &= b \\
+c &= d
+\end{align}
+
+$$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$$
+
+$$ x^2 +
+y^2 = z^2 $$
+
+Hoá học $\ce{2H2 + O2 -> 2H2O}$, nhãn \(\eqref{eq:a}\), giữa câu \[ a^2 \] vẫn hiển thị.
+
+<span id="sg" style="color: rgb(200, 0, 0); background-image: url(https://tracker.invalid/p.png)">kiểu chữ đỏ</span>
+
+<div id="fx" style="position: fixed; top: 0; left: 0; width: 100%">lớp phủ giả</div>
+
+## Sau toán
+"""
+M2_BLOCK_LINES = ["5", "9", "14", "16"]
+M2_DISPLAY = 5   # 4 khối + \[ a^2 \] giữa câu
+M2_INLINE = 3    # \( E = mc^2 \), \ce, \eqref
+
+M2_COUNT_JS = """(root) => {
+  const el = document.querySelector(root);
+  if (!el) return null;
+  const display = el.querySelectorAll('.katex-display').length;
+  return {
+    display, inline: el.querySelectorAll('.katex').length - display,
+    errors: el.querySelectorAll('.katex-error').length + (el.innerHTML.includes('#cc0000') ? 1 : 0),
+    blocks: Array.from(el.querySelectorAll('div.math-block')).map((b) => b.getAttribute('data-line')),
+    blocksWithKatex: Array.from(el.querySelectorAll('div.math-block')).filter((b) => b.querySelector('.katex-display')).length,
+    h2: (Array.from(el.querySelectorAll('h2')).find((h) => h.textContent.includes('Sau toán')) || {getAttribute: () => null}).getAttribute('data-line'),
+    text: el.textContent,
+    ce: Array.from(el.querySelectorAll('annotation')).some((a) => a.textContent.includes('\\\\ce{')),
+  };
+}"""
+
+
+def run_m2(browser, srv: Server, shots: str | None) -> None:
+    print("  · đợt M2: toán kiểu LLM (\\( \\), \\[ \\], align trần, $$ một dòng, mhchem, giá tiền), khối toán có data-line, chặn style")
+    url = srv.base + APP_PATH
+    ctx = browser.new_context(viewport={"width": 1280, "height": 800}, service_workers="block", accept_downloads=True)
+    ctx.add_init_script(f"({SEED_JS})({json.dumps(M2_DOC)})")
+    page = ctx.new_page()
+    errors: list[str] = []
+    tracker: list[str] = []
+    page.on("console", lambda m: errors.append(f"{m.type}: {m.text}") if m.type == "error" and not any(n in m.text for n in EXPECTED_NOISE) else None)
+    page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
+    ctx.on("request", lambda r: tracker.append(r.url) if "tracker.invalid" in r.url else None)
+
+    def snap(name):
+        if shots:
+            page.screenshot(path=os.path.join(shots, name + ".png"))
+
+    page.goto(url, wait_until="load")
+    page.wait_for_function(f"() => document.querySelectorAll('.preview-scroll .katex-display').length >= {M2_DISPLAY}", timeout=30000)
+    page.wait_for_timeout(300)
+    got = page.evaluate(M2_COUNT_JS, ".preview-scroll .markdown-body")
+    summary = json.dumps({k: v for k, v in (got or {}).items() if k != "text"}, ensure_ascii=False)
+    check(f"preview: {M2_DISPLAY} công thức hiển thị (\\[ \\], align trần, $$x$$ một dòng, \"$$ chữ\" hai dòng, \\[ \\] giữa câu) + {M2_INLINE} nội dòng, 0 katex-error",
+          bool(got) and got["display"] == M2_DISPLAY and got["inline"] == M2_INLINE and got["errors"] == 0, summary)
+    check("preview: giá tiền \"$5 và $10\" vẫn là chữ (luật pandoc), \\ce (mhchem) vẽ được",
+          bool(got) and "giá $5 và $10 vẫn là chữ" in got["text"] and got["ce"], summary)
+    check(f"preview: mỗi khối toán là div.math-block[data-line] đúng dòng nguồn {M2_BLOCK_LINES}; tiêu đề sau toán giữ data-line 25",
+          bool(got) and got["blocks"] == M2_BLOCK_LINES and got["blocksWithKatex"] == len(M2_BLOCK_LINES) and got["h2"] == "25", summary)
+    snap("06-toan-llm")
+
+    # Nhấp đúp một khối toán → con trỏ editor về đúng dòng nguồn (cần data-line trên khối; trước M2 KaTeX xoá mất).
+    page.locator('.preview-scroll div.math-block[data-line="9"]').dblclick()
+    page.wait_for_timeout(400)
+    line = page.evaluate("() => { const t = document.querySelector('.editor-input'); return t.value.slice(0, t.selectionStart).split('\\n').length; }")
+    check("nhấp đúp khối toán (align, dòng 9) → con trỏ editor nhảy tới dòng 9", line == 9, f"dòng {line}")
+
+    style = page.evaluate("""() => {
+      const span = document.getElementById('sg');
+      const div = Array.from(document.querySelectorAll('.preview-scroll div')).find((d) => d.textContent === 'lớp phủ giả');
+      return {
+        color: span && getComputedStyle(span).color, bg: span && getComputedStyle(span).backgroundImage,
+        attr: span && span.getAttribute('style'), pos: div && getComputedStyle(div).position, divAttr: div && div.getAttribute('style'),
+      };
+    }""")
+    check("style=\"…url(…)\" trong HTML thô: bỏ khai báo url (không tải ảnh theo dõi), giữ màu chữ",
+          style["color"] == "rgb(200, 0, 0)" and style["bg"] == "none" and "url" not in (style["attr"] or "") and not tracker,
+          json.dumps({**style, "tracker": tracker[:2]}, ensure_ascii=False))
+    check("style=\"position: fixed…\" bị bỏ (không phủ được giao diện app)", style["pos"] == "static", json.dumps(style, ensure_ascii=False))
+
+    # Chế độ đọc dùng chung pipeline.
+    page.get_by_role("button", name="Reading mode").click()
+    page.wait_for_function(f"() => document.querySelectorAll('.reading-article .katex-display').length >= {M2_DISPLAY}", timeout=30000)
+    rd = page.evaluate(M2_COUNT_JS, ".reading-article")
+    check("chế độ đọc: cùng số công thức, khối toán có data-line, 0 katex-error",
+          bool(rd) and rd["display"] == M2_DISPLAY and rd["inline"] == M2_INLINE and rd["errors"] == 0 and rd["blocks"] == M2_BLOCK_LINES,
+          json.dumps({k: v for k, v in (rd or {}).items() if k != "text"}, ensure_ascii=False))
+    snap("07-toan-che-do-doc")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+
+    # Export HTML chép DOM đã vẽ: công thức đi theo, ảnh theo dõi thì không.
+    page.get_by_role("button", name="File", exact=False).first.click()
+    with page.expect_download(timeout=20000) as dl:
+        page.get_by_role("button", name="Export HTML").click()
+    exported = open(dl.value.path(), encoding="utf-8").read()
+    n_display = exported.count('class="katex-display"')
+    check("Export HTML: tệp xuất có đủ công thức (katex-display, math-block) và không có URL theo dõi",
+          n_display >= M2_DISPLAY and 'class="math-block"' in exported and "tracker.invalid" not in exported, f"katex-display={n_display}")
+
+    # welcome.md của ngữ cảnh mới (chưa lưu gì) có ví dụ toán và vẽ không lỗi.
+    fresh = browser.new_context(viewport={"width": 1280, "height": 800}, service_workers="block")
+    wp = fresh.new_page()
+    wp.on("pageerror", lambda e: errors.append(f"pageerror (welcome): {e}"))
+    wp.goto(url, wait_until="load")
+    wp.wait_for_function("() => document.querySelectorAll('.preview-scroll .katex-display').length >= 2", timeout=30000)
+    wc = wp.evaluate(M2_COUNT_JS, ".preview-scroll .markdown-body")
+    check("welcome.md (ngữ cảnh mới): mục Math vẽ \\( \\), \\[ \\], align trần, \\ce, giá tiền là chữ — 0 katex-error",
+          bool(wc) and wc["display"] == 2 and wc["inline"] == 3 and wc["errors"] == 0 and wc["ce"] and "Prices stay prices: $5 and $10." in wc["text"],
+          json.dumps({k: v for k, v in (wc or {}).items() if k != "text"}, ensure_ascii=False))
+    fresh.close()
+
+    check("đợt M2: không lỗi console/pageerror bất ngờ", not errors, " | ".join(errors[:3]))
     ctx.close()
 
 

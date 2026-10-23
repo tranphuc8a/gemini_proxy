@@ -15,7 +15,7 @@ var only = process.argv[2] || "";
 var SLACK = Number(process.env.PUZ_PERF_SLACK || 1) || 1;
 
 function load(rel) { var p = path.join(ROOT, rel); require(p); }
-["assets/js/core/text.js", "assets/js/core/rng.js", "assets/js/core/util.js", "assets/js/core/csp.js", "assets/js/core/types.js", "assets/js/core/game.js"].forEach(load);
+["assets/js/core/text.js", "assets/js/core/rng.js", "assets/js/core/util.js", "assets/js/core/csp.js", "assets/js/core/types.js", "assets/js/core/grade.js", "assets/js/core/plan.js", "assets/js/core/game.js"].forEach(load);
 ["assets/js/data/schema.js", "assets/js/data/store.js", "assets/js/data/zip.js", "assets/js/data/user.js", "assets/js/data/backup.js"].forEach(function (rel) { if (fs.existsSync(path.join(ROOT, rel))) load(rel); });
 var Puz = globalThis.Puz;
 

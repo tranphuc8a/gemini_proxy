@@ -108,7 +108,8 @@ def tang_1():
     section("TẦNG 1 — tĩnh")
     files = js_files()
     bad = []
-    for f in files + [os.path.join(HERE, "sw.js"), os.path.join(HERE, "kiem.js")] + [os.path.join(HERE, "kiem", n) for n in os.listdir(os.path.join(HERE, "kiem"))]:
+    kiem_js = [os.path.join(dp, n) for dp, _, ns in os.walk(os.path.join(HERE, "kiem")) for n in ns if n.endswith(".js")]      # gồm kiem/mau/ (loại giả của mục 11)
+    for f in files + [os.path.join(HERE, "sw.js"), os.path.join(HERE, "kiem.js")] + kiem_js:
         r = subprocess.run(["node", "--check", f], capture_output=True, text=True)
         if r.returncode:
             bad.append(os.path.relpath(f, HERE) + ": " + r.stderr.strip().splitlines()[0])
@@ -304,6 +305,10 @@ def tuong_loai(P, tid, label):
     check(g0 and g0["type"] == tid and g0["seed"] == SEED and g0["status"] == "playing", "%s: seed 20261017 → vào ván, đồng hồ chạy" % d["name"], g0 and {k: g0[k] for k in ("type", "seed", "status")})
     check(d["name"] in pg.inner_text(".play-title") and "20261017" in pg.inner_text(".play-sub"), "%s: tiêu đề + seed hiển thị" % d["name"])
     check(pg.locator(".board-host *").count() > 8 and pg.evaluate("document.querySelector('.board-host').getBoundingClientRect().height") > 100, "%s: bàn được vẽ" % d["name"])
+    hud = pg.evaluate("""(id => { const t = Puz.types.get(id), titles = [...document.querySelectorAll('.hud .hud-chip')].map(e => e.title);
+        return { mist: titles.includes(t.mistakeLabel || 'Số lần điền sai'), moves: titles.includes(t.moveLabel || 'Số nước đi'), score: document.querySelectorAll('.hud-score').length,
+                 wantScore: Puz.types.kindOf(t) === 'optimize' && typeof t.grade === 'function' ? 1 : 0 }; })""", tid)
+    check(hud["mist"] and hud["moves"] and hud["score"] == hud["wantScore"], "%s: HUD dùng nhãn của loại (hoặc nhãn mặc định), ô giá trị chỉ có ở loại optimize (mục 11)" % d["name"], hud)
     # --- cùng seed → cùng puzzle; khác seed → khác puzzle
     start(P, tid, size, tier, SEED)
     g1 = P.game()
@@ -365,6 +370,10 @@ def tuong_loai(P, tid, label):
     check(True, "%s: hộp thoại 'Đã giải!' hiện" % d["name"])
     stats = pg.inner_text("dialog[open] .stat-grid")
     check("Thời gian" in stats and "Lỗi" in stats and "Gợi ý" in stats and "Độ khó" in stats, "%s: hộp thoại có thời gian, lỗi, gợi ý, độ khó" % d["name"], stats.replace("\n", " "))
+    if pg.evaluate("typeof Puz.types.get('%s').grade === 'function'" % tid):
+        check("Điểm tối ưu" in stats and re.search("[★☆]{3}", stats), "%s: hộp thoại có ô 'Điểm tối ưu' (sao + giá trị / tối ưu)" % d["name"], stats.replace("\n", " "))
+    else:
+        check("Điểm tối ưu" not in stats and pg.locator("dialog[open] .stat-grid .stat").count() == 4, "%s: loại không chấm điểm → hộp thoại giữ đúng 4 ô cũ" % d["name"], stats.replace("\n", " "))
     check(not junk(pg, "dialog[open]"), "%s: hộp thoại 'Đã giải' không có chữ rác" % d["name"], junk(pg, "dialog[open]"))
     h = [r for r in P.history() if r["type"] == tid]
     check(len(h) == 1 and h[0]["result"] == "solved" and h[0]["hints"] >= 3 and h[0]["time"] > 0, "%s: lịch sử ghi 1 ván 'solved' kèm số gợi ý và thời gian" % d["name"], h)
@@ -582,6 +591,157 @@ def di_dong(P, types, label):
         P.go("#/", 150)
 
 
+# Chèn hai loại giả của kiem/mau/loai-gia.js vào trang thật: một <script data-pz> từ Blob (trang VÀ worker sinh đề cùng nạp — gen.js đọc danh sách
+# data-pz lúc khởi động worker, nên huỷ worker cũ để lần sinh kế tiếp dựng worker mới) + bàn chơi/trình soạn tối giản cho loại optimize.
+HOP_DONG_JS = r"""
+(src) => new Promise((ok, no) => {
+  const board = `
+  if (self.document && self.Puz.boards && !self.Puz.boards.giatoiuu) self.Puz.boards.giatoiuu = {
+    mount: function (host, env) {
+      var g = env.game, p = env.puzzle, h = env.U.h, L = Puz.plan.layout(p.data.w.length, 1, 0), wrap = h("div", { class: "pz-gia", role: "group", "aria-label": "Ba lô" });
+      function draw() {
+        var chosen = Puz.plan.read(g.state, L).map(function (r) { return r[0] - 1; });
+        wrap.replaceChildren.apply(wrap, p.data.w.map(function (w, i) {
+          return h("button", { type: "button", class: "btn pz-gia-mon" + (chosen.indexOf(i) >= 0 ? " on" : ""), "data-i": String(i), "aria-pressed": String(chosen.indexOf(i) >= 0), "aria-label": env.type.describeCell(p, g.state, i),
+            disabled: env.readOnly ? true : null, on: { click: function () { g.act({ k: "pick", i: i }); } }, text: "Món " + (i + 1) + " · nặng " + w + " · giá trị " + p.data.val[i] });
+        }).concat([h("button", { type: "button", class: "btn btn-primary pz-gia-nop", disabled: env.readOnly ? true : null, on: { click: function () { g.act({ k: "submit" }); } }, text: "Nộp lựa chọn" })]));
+      }
+      draw(); host.append(wrap);
+      var off = g.on(function (ev) { if (ev.type === "change") draw(); });
+      return { destroy: function () { off(); }, refresh: draw, highlight: function () { }, focus: function () { } };
+    },
+    editor: function (host, env) {
+      var input = { cap: 10, w: [5, 4, 6], val: [5, 20, 15] };
+      host.append(env.U.h("p", { class: "pz-gia-ed", text: "Trình soạn giả: ba lô 10, ba món." }));
+      return { getInput: function () { return input; }, destroy: function () { } };
+    }
+  };`;
+  const code = src + "\n;(function () { var m = self.PuzLoaiGia(self.Puz); if (!self.Puz.types.get('giatoiuu')) { self.Puz.types.register(m.giatoiuu); self.Puz.types.register(m.giadoan); }\n" + board + "\n})();";
+  const s = document.createElement("script");
+  s.src = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+  s.setAttribute("data-pz", "");
+  s.onload = () => { Puz.gen.cancel(); ok(Puz.types.all().map(t => t.id)); };
+  s.onerror = () => no(new Error("không nạp được loại giả"));
+  document.body.append(s);
+})
+"""
+
+
+def hop_dong(pw, url):
+    """Hợp đồng HUONG-DAN-ENGINE.md mục 11 trên giao diện THẬT (Edge, channel="msedge"): options + liên kết o=, nhãn sizeLabel/moveLabel/mistakeLabel,
+    ô giá trị trên HUD, hint(…, settings), ô 'Điểm tối ưu' + record.grade, sao trong lịch sử, statusText ở màn Tạo puzzle; loại cũ không đổi."""
+    section(" · hợp đồng mục 11 trên giao diện (loại giả 'Ba lô mini' optimize: options, o=, nhãn, HUD, Điểm tối ưu, lịch sử, Tạo puzzle)")
+    try:
+        br, kenh = pw.chromium.launch(channel="msedge"), "Edge"
+    except Exception as e:                                                   # máy không cài Edge: vẫn kiểm bằng Chromium của Playwright, nói rõ
+        br, kenh = pw.chromium.launch(), "Chromium (không mở được Edge: %s)" % str(e).splitlines()[0][:80]
+    print("    (trình duyệt: %s)" % kenh)
+    P = Page(br, url, "hopdong", viewport={"width": 1280, "height": 860})
+    pg = P.pg
+    src = io.open(os.path.join(HERE, "kiem", "mau", "loai-gia.js"), encoding="utf-8").read()
+    ids = pg.evaluate(HOP_DONG_JS, src)
+    check("giatoiuu" in ids and "giadoan" in ids and pg.evaluate("!!Puz.boards.giatoiuu"), "chèn loại giả vào trang (Blob <script data-pz>): đăng ký + có bàn", ids)
+    # --- loại cũ: không có hàng tuỳ chọn, nhãn cũ, liên kết seed y hệt dạng cũ
+    P.go("#/new/sudoku", 300)
+    check(pg.locator(".ng-opt").count() == 0 and pg.locator(".ng-kind").count() == 0 and pg.inner_text(".set .field label >> nth=0") == "Cỡ bàn", "Puzzle mới (Sudoku): không hàng tuỳ chọn, không ghi chú loại, nhãn 'Cỡ bàn' như cũ")
+    old_hash = pg.evaluate("Puz.ui.pz.seedHash({ type: 'sudoku', seed: 5, sizeId: '9', tier: 'easy', data: {}, initial: { v: [] } })")
+    check(old_hash == "#/new/sudoku?size=9&tier=easy&seed=5&go=1", "liên kết seed của loại cũ y hệt dạng cũ (không có o=)", old_hash)
+    # --- Puzzle mới của loại có options
+    P.go("#/new/giatoiuu", 300)
+    labels = pg.locator(".set .field > label").all_inner_texts()
+    check(labels[:2] == ["Phiên bản", "Số món"], "Puzzle mới: nhãn cỡ = sizeLabel ('Phiên bản'), có hàng tuỳ chọn 'Số món'", labels)
+    check(pg.locator(".ng-opt[data-opt='so'] .chips[aria-label='Số món'] .chip").count() == 2 and pg.locator(".ng-opt .chip.on").inner_text() == "5 món", "hàng tuỳ chọn có 2 chip, mặc định '5 món' được chọn")
+    check("Puzzle tối ưu" in pg.inner_text(".ng-kind") and "Tổng giá trị" in pg.inner_text(".ng-kind"), "ghi chú loại optimize nêu tiêu chí chấm (objective.label)", pg.inner_text(".ng-kind"))
+    check("tuỳ chọn" in pg.inner_text("#ng-seed-hint"), "gợi ý seed nói 'cùng … + tuỳ chọn + seed → cùng puzzle'")
+    pg.click(".ng-opt .chip:has-text('7 món')")
+    check(pg.locator(".ng-opt .chip.on").inner_text() == "7 món" and "nhiều lựa chọn hơn" in pg.inner_text(".ng-opt"), "chọn '7 món' → chip bật, hiện ghi chú của lựa chọn")
+    pg.fill("#ng-seed", str(SEED))
+    pg.click(".set button:has-text('Bắt đầu')")
+    pg.wait_for_function("/#\\/play\\//.test(location.hash)", timeout=30000)
+    pg.wait_for_selector(".board-host .pz-gia")
+    info = pg.evaluate("""() => { const g = Puz.ui.app.ctx().getGame(decodeURIComponent(/#\\/play\\/([^?]+)/.exec(location.hash)[1])), p = g.puzzle,
+        ref = Puz.types.get('giatoiuu').generate(%d, { sizeId: 'nho', tier: 'easy', options: { so: '7' } });
+        return { options: p.options, n: p.data.w.length, so: p.data.so, id: p.id, ref: ref.id, worker: Puz.gen.status(), hash: Puz.ui.pz.seedHash(p), gid: g.id }; }""" % SEED)
+    check(info["options"] == {"so": "7"} and info["n"] == 7 and info["so"] == "7" and info["id"] == info["ref"], "Bắt đầu với '7 món': puzzle.options = {so:7}, data ghi lựa chọn, đúng puzzle như engine sinh trực tiếp", info)
+    check(info["worker"] == "ready", "puzzle có options được sinh trong Web Worker (worker nạp cả tệp data-pz chèn thêm)", info["worker"])
+    check("o=so%3A7" in info["hash"] and info["hash"].endswith("&go=1"), "liên kết seed mang lựa chọn khác mặc định: o=so:7", info["hash"])
+    # --- HUD: nhãn tuỳ chọn + ô giá trị
+    hud = pg.evaluate("[...document.querySelectorAll('.hud .hud-chip')].map(e => [e.title, e.textContent.trim()])")
+    titles = [t for t, _ in hud]
+    check("Số món đã chọn" in titles and "Nước làm mất tối ưu" in titles and "Số lần điền sai" not in titles, "HUD dùng moveLabel / mistakeLabel của loại", titles)
+    check(pg.locator(".hud-score").count() == 1 and pg.get_attribute(".hud-score", "title") == "Tổng giá trị (điểm)" and pg.inner_text(".hud-score").strip() == "0", "HUD loại optimize có ô giá trị hiện có (0 lúc đầu), không lộ tối ưu", pg.inner_text(".hud-score"))
+    first_val = pg.evaluate("Puz.ui.app.ctx().getGame(%s).puzzle.data.val[0]" % json.dumps(info["gid"]))
+    pg.click(".pz-gia-mon[data-i='0']")
+    check(pg.inner_text(".hud-score").strip() == str(first_val) and P.game()["moves"] == 1, "chọn món 1 → ô giá trị cập nhật (%d), 1 nước" % first_val, pg.inner_text(".hud-score"))
+    pg.click(".toolbar button:has-text('Hoàn tác')")
+    check(pg.inner_text(".hud-score").strip() == "0", "Hoàn tác → ô giá trị về 0")
+    # --- mở lại liên kết seed có o= → đúng puzzle đó (tiếp ván dở); bỏ o= → puzzle mặc định khác
+    P.go("#/", 300)
+    P.go(info["hash"], 100)
+    pg.wait_for_function("/#\\/play\\//.test(location.hash)", timeout=30000)
+    pg.wait_for_selector(".board-host .pz-gia")
+    check(P.game()["id"] == info["gid"], "mở liên kết seed có o=so:7 → về đúng ván/puzzle đó (cùng puzzle)")
+    P.go(info["hash"].replace("&o=so%3A7", ""), 100)
+    pg.wait_for_function("(gid) => /#\\/play\\//.test(location.hash) && !location.hash.includes(encodeURIComponent(gid))", arg=info["gid"], timeout=30000)
+    pg.wait_for_selector(".board-host .pz-gia")
+    g_def = pg.evaluate("(() => { const g = Puz.ui.app.ctx().getGame(decodeURIComponent(/#\\/play\\/([^?]+)/.exec(location.hash)[1])); return { n: g.puzzle.data.w.length, options: g.puzzle.options, id: g.puzzle.id }; })()")
+    check(g_def["n"] == 5 and g_def["options"] == {} and g_def["id"] != info["id"], "liên kết KHÔNG có o= → lựa chọn mặc định (5 món), puzzle khác", g_def)
+    # --- gợi ý qua giao diện: settings tới được engine (tham số thứ 4), ba mức, áp dụng
+    pg.click(".toolbar button:has-text('Gợi ý')")
+    pg.wait_for_selector(".hint-panel:not([hidden]) .hint-text")
+    lvl = pg.text_content(".hint-panel .hint-level")                        # text_content: .hint-level in hoa bằng CSS
+    check("(có cài đặt)" in lvl, "gợi ý: engine nhận settings của ván (tham số thứ 4 của hint)", lvl)
+    pg.click(".hint-panel button:has-text('Chi tiết hơn')")
+    pg.click(".hint-panel button:has-text('Chi tiết hơn')")
+    m0 = P.game()["moves"]
+    pg.click(".hint-panel button:has-text('Áp dụng nước này')")
+    check(P.game()["moves"] == m0 + 1, "gợi ý mức 3 'Áp dụng' = một nước")
+    # --- giải tối ưu bằng gợi ý → hộp thoại có 'Điểm tối ưu' ★★★, lịch sử ghi grade
+    n = solve_by_hints(P)
+    check(n > 0, "lặp gợi ý mức 3 tới khi nộp (bước cuối là 'Nộp lựa chọn', %d bước)" % n, n)
+    pg.wait_for_selector("dialog[open] h2:has-text('Đã giải')", timeout=10000)
+    stats = pg.inner_text("dialog[open] .stat-grid")
+    check(all(k in stats for k in ("Thời gian", "Lỗi", "Gợi ý", "Độ khó")) and pg.locator("dialog[open] .stat-grid .stat").count() == 5, "hộp thoại 'Đã giải': giữ 4 ô cũ + 1 ô mới", stats.replace("\n", " | "))
+    gstat = pg.inner_text("dialog[open] .stat-grade")
+    check("Điểm tối ưu" in gstat and "★★★" in gstat and re.search(r"(\d+)\s/\s\1\s+điểm", gstat), "ô 'Điểm tối ưu': ★★★ và 'giá trị / tối ưu điểm' bằng nhau", gstat.replace("\n", " | "))
+    check(pg.inner_text("dialog[open] .grade-line") == "Tối ưu!" and pg.get_attribute("dialog[open] .stat-grade b", "aria-label") == "3/3 sao", "dòng 'Tối ưu!' và nhãn đọc màn hình '3/3 sao'")
+    check(not junk(pg, "dialog[open]"), "hộp thoại không có chữ rác", junk(pg, "dialog[open]"))
+    rec = pg.evaluate("Puz.ui.app.ctx().user.history().filter(r => r.type === 'giatoiuu')")
+    check(len(rec) == 1 and rec[0]["result"] == "solved" and rec[0]["grade"]["stars"] == 3 and rec[0]["grade"]["quality"] == 1, "lịch sử: record.grade (3★, quality 1) lưu trong IndexedDB", rec and rec[0].get("grade"))
+    pg.keyboard.press("Escape")
+    check("Điểm tối ưu ★★★" in pg.inner_text(".play-status"), "dòng trạng thái sau khi xong nêu điểm tối ưu", pg.inner_text(".play-status"))
+    # --- nộp lựa chọn chưa tối ưu → ít sao hơn
+    seed2 = pg.evaluate("""() => { const d = Puz.types.get('giatoiuu');
+        for (let s = 1; s < 200; s++) { const p = d.generate(s, { sizeId: 'nho', tier: 'easy' }), s0 = d.newState(p);
+          for (let i = 0; i < p.data.w.length; i++) { const df = d.moveFor(p, s0, { k: 'pick', i }); if (df && d.mistakes(p, s0, df) === 1) return [s, i]; } } return null; }""")
+    P.go("#/new/giatoiuu?size=nho&tier=easy&seed=%d&go=1" % seed2[0], 100)
+    pg.wait_for_function("/#\\/play\\//.test(location.hash)", timeout=30000)
+    pg.wait_for_selector(".board-host .pz-gia")
+    pg.click(".pz-gia-mon[data-i='%d']" % seed2[1])
+    check(P.game()["mistakes"] == 1, "chọn món làm mất tối ưu → HUD đếm 1 'nước làm mất tối ưu'")
+    pg.click(".pz-gia-nop")
+    pg.wait_for_selector("dialog[open] h2:has-text('Đã giải')", timeout=10000)
+    gstat2 = pg.inner_text("dialog[open] .stat-grade")
+    check(re.search("★{0,2}☆+", gstat2.split("\n")[0]) and "Đạt" in pg.inner_text("dialog[open] .grade-line"), "nộp lựa chọn chưa tối ưu → < 3 sao, 'Đạt x % mức tối ưu'", gstat2.replace("\n", " | "))
+    rec2 = pg.evaluate("Puz.ui.app.ctx().user.history().filter(r => r.type === 'giatoiuu' && r.seed === %d)[0]" % seed2[0])
+    check(rec2 and rec2["grade"]["quality"] < 1 and rec2["grade"]["stars"] < 3, "lịch sử ghi grade thấp hơn cho ván chưa tối ưu", rec2 and rec2.get("grade"))
+    pg.keyboard.press("Escape")
+    # --- Thống kê: sao trong dòng lịch sử
+    P.go("#/stats", 400)
+    stars = pg.locator(".hrow-grade").all_inner_texts()
+    check(len(stars) == 2 and "★★★" in stars, "Thống kê: dòng lịch sử của loại chấm điểm hiện sao", stars)
+    # --- Tạo puzzle: statusText/statusKind thay cho 'Có đúng một nghiệm'
+    P.go("#/create/giatoiuu", 300)
+    pg.wait_for_selector(".cr-chip", timeout=15000)
+    chip = pg.inner_text(".cr-chip")
+    check("Biết giá trị tối ưu: 35 điểm" in chip and "nghiệm" not in chip and pg.locator(".cr-chip.c-ok").count() == 1, "Tạo puzzle: engine tự nói trạng thái (statusText/statusKind), không in 'nghiệm duy nhất'", chip)
+    # --- Daily không đổi khi có loại mới đăng ký
+    same = pg.evaluate("(() => { const d = Puz.util.dayKey(); return Puz.daily.forDay(d).type === Puz.daily.forDay(d, ['sudoku','nqueens','lightsout','nonogram','logicgrid']).type; })()")
+    check(same, "Daily hôm nay không đổi khi có loại mới đăng ký (loại chưa vào lịch đứng sau)")
+    P.close()
+    br.close()
+
+
 def tang_2(may):
     section("TẦNG 2 — chức năng (trình duyệt thật)")
     from playwright.sync_api import sync_playwright
@@ -636,6 +796,7 @@ def tang_2(may):
         di_dong(P, types, "Pixel 5 (Chromium)")
         P.close()
         br.close()
+        hop_dong(pw, url)
         try:
             wb = pw.webkit.launch()
         except Exception as e:
@@ -690,7 +851,9 @@ def tang_3(may):
         Pg = Page.__new__(Page)
         Pg.pg, Pg.ctx, Pg.name, Pg.errors, Pg.url = p, c, "crash", [], url
         start(Pg, tid, size, "easy", SEED + 31)
-        p.evaluate("""() => { const c = Puz.ui.app.ctx(), id = decodeURIComponent(/#\\/play\\/([^?]+)/.exec(location.hash)[1]), g = c.getGame(id); for (let i = 0; i < 4; i++) g.applyHint(g.hint(3)); }""")
+        # áp min(4, số bước replay − 1) gợi ý: loại có lời giải ngắn (cân xu, Bachet…) không được giải xong trước khi "sập" (HUONG-DAN-ENGINE.md mục 11)
+        n4 = p.evaluate("""() => { const c = Puz.ui.app.ctx(), id = decodeURIComponent(/#\\/play\\/([^?]+)/.exec(location.hash)[1]), g = c.getGame(id);
+          const n = Math.max(1, Math.min(4, Puz.types.get(g.puzzle.type).replay(g.puzzle).length - 1)); for (let i = 0; i < n; i++) g.applyHint(g.hint(3)); return n; }""")
         before = Pg.game()
         p.wait_for_timeout(900)                          # debounce 400 ms + dư
         _crash(p)
@@ -702,10 +865,10 @@ def tang_3(may):
         p.click(".resume .resume-main")
         p.wait_for_selector(".board-host > *")
         after = Pg.game()
-        check(after["v"] == before["v"] and after["moves"] == before["moves"] == 4 and after["hints"] == before["hints"] and after["undo"] == before["undo"], "sau khi sập: ván khôi phục đúng nguyên trạng (4 nước, 4 gợi ý, lịch sử hoàn tác)", (before["moves"], after["moves"]))
+        check(after["v"] == before["v"] and after["moves"] == before["moves"] == n4 and after["hints"] == before["hints"] and after["undo"] == before["undo"], "sau khi sập: ván khôi phục đúng nguyên trạng (%d nước, %d gợi ý, lịch sử hoàn tác)" % (n4, n4), (before["moves"], after["moves"]))
         check(after["elapsed"] >= before["elapsed"] - 1500, "… đồng hồ giữ phần thời gian đã chơi (mất tối đa vài giây) — trước %d ms, sau %d ms" % (before["elapsed"], after["elapsed"]))
         p.click(".toolbar button:has-text('Hoàn tác')")
-        check(Pg.game()["moves"] == 4 and Pg.game()["undo"] == 3, "… và hoàn tác vẫn dùng được trên ván khôi phục")
+        check(Pg.game()["moves"] == n4 and Pg.game()["undo"] == n4 - 1, "… và hoàn tác vẫn dùng được trên ván khôi phục")
         check(solve_by_hints(Pg) > 0, "… giải tiếp tới cùng sau khi khôi phục")
         p.wait_for_selector("dialog[open] h2:has-text('Đã giải')")
         check(p.evaluate("Puz.ui.app.ctx().user.history().filter(r => r.result === 'solved').length") == 1, "… và ván được ghi vào lịch sử")

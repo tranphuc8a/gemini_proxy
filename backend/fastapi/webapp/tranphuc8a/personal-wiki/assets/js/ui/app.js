@@ -51,7 +51,14 @@
     var r = parse(), key = viewKey(r);
     if (r.name === "new") { var id = T.uid(); return go("#/n/" + id + qstr(Object.assign({ new: "1" }, r.q)), true); }
     if (r.name === "daily") { var dk = T.isDateKey(r.arg) ? r.arg : T.dateKey(repo.now()); return go("#/n/" + N.dailyId(dk) + "?daily=" + dk, true); }
-    if (r.name === "join") { pendingJoin = r.arg; return go("#/settings/sync", true); }          // replaceState: mã nối không nằm lại trong địa chỉ / lịch sử
+    if (r.name === "join") {
+      pendingJoin = r.arg;
+      // Thẻ đang ở ĐÚNG #/settings/sync (vd dán liên kết vào thanh địa chỉ của chính thẻ này — chỉ đổi hash, không tải lại trang): buộc dựng lại
+      // màn để bảng Đồng bộ lấy mã ngay. Không thì nhánh "cùng màn" bên dưới bỏ qua, mã treo lại tới lần mở Cài đặt sau rồi bật hộp "Nối" bất ngờ.
+      if (current && current.key === "settings/sync") current.key = "";
+      return go("#/settings/sync", true);                                                           // replaceState: mã nối không nằm lại trong địa chỉ / lịch sử
+    }
+    if (key !== "settings/sync") pendingJoin = "";                // mã từ liên kết chỉ dành cho màn #/settings/sync ngay sau #/join; rời đi là bỏ
     var layout = /^(notes|search)$/.test(r.name) ? "list" : r.name === "n" ? "both" : "main";
     doc.body.dataset.route = r.name === "search" ? "notes" : r.name; doc.body.dataset.pane = layout;
     if (layout === "list") { listState = listStateOf(Object.assign({}, r.q, r.name === "search" ? {} : { q: "" })); listPane.setState(listState); }
@@ -75,8 +82,9 @@
         else if (r.name === "settings") view = U.settings.open(ctx, mainEl, r.arg);
         else { mainEl.append(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Không có trang này" }), h("a", { class: "btn btn-primary", href: "#/", text: "Về trang chủ" }))); }
       } catch (e) { mainEl.replaceChildren(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Có lỗi khi mở màn này" }), h("p", { class: "faint", text: String(e && e.message || e) }))); if (root.console) root.console.error(e); }
+      if (key === "settings/sync") pendingJoin = "";      // bảng Đồng bộ vừa dựng đã lấy mã (nếu có thể) — không để mã treo lại cho lần mở sau
       current = { key: key, view: view };
-      if (r.name !== "n" && !(r.name === "settings" && r.arg)) { mainEl.scrollTop = 0; root.scrollTo(0, 0); }   // #/settings/sync: settings.js đã cuộn tới mục
+      if (r.name !== "n" && key !== "settings/sync") { mainEl.scrollTop = 0; root.scrollTo(0, 0); }   // #/settings/sync: settings.js đã cuộn tới mục
     });
   }
 

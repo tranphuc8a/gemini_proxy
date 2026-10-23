@@ -24,6 +24,17 @@
     var cons = cv.constraints || [];
     box.append(h("h3", { text: "Constraints" }), h("ol", { class: "cv-cons" }, cons.slice(0, 80).map(function (c) { return h("li", { class: "mono", text: c }); })));
     if (cons.length > 80) box.append(h("p", { class: "faint", text: "… và " + (cons.length - 80) + " ràng buộc nữa." }));
+    // mục thêm TUỲ CHỌN của loại: cv.sections = [{ title, note?, items: [chuỗi | { text, grid?: ["#.#", …] }] }] (vd Lights Out: mẫu bấm im lặng, mọi lời giải, bất biến)
+    (Array.isArray(cv.sections) ? cv.sections : []).slice(0, 8).forEach(function (sec) {
+      if (!sec || typeof sec.title !== "string") return;
+      var items = Array.isArray(sec.items) ? sec.items : [], wrap = h("section", { class: "cv-sec" }, h("h3", { text: sec.title }), typeof sec.note === "string" && sec.note ? h("p", { class: "cv-note", text: sec.note }) : null);
+      if (items.length) wrap.append(h("ol", { class: "cv-items" }, items.slice(0, 40).map(function (it) {
+        var text = typeof it === "string" ? it : it && typeof it.text === "string" ? it.text : "", grid = it && Array.isArray(it.grid) ? it.grid.filter(function (g) { return typeof g === "string"; }).slice(0, 20) : null;
+        return h("li", {}, h("span", { text: text }), grid && grid.length ? h("pre", { class: "cv-grid mono", "aria-hidden": "true", text: grid.map(function (g) { return g.slice(0, 20).split("").join(" "); }).join("\n") }) : null);
+      })));
+      if (items.length > 40) wrap.append(h("p", { class: "faint", text: "… và " + (items.length - 40) + " mục nữa." }));
+      box.append(wrap);
+    });
     return box;
   }
 
@@ -63,7 +74,7 @@
     function exControls() {
       var sz = P.types.sizeOf(def, st.size), avail = sz.tiers || P.util.TIERS.map(function (t) { return t.id; });
       return h("div", { class: "stack" },
-        Z.chips(def.sizes.map(function (s) { return { id: s.id, label: s.label }; }), st.size, function (id) { st.size = id; if ((P.types.sizeOf(def, id).tiers || avail).indexOf(st.tier) < 0) st.tier = P.daily.tierFor(P.types.sizeOf(def, id), st.tier); drawEx(); }, "Cỡ"),
+        Z.chips(def.sizes.map(function (s) { return { id: s.id, label: s.label }; }), st.size, function (id) { st.size = id; if ((P.types.sizeOf(def, id).tiers || avail).indexOf(st.tier) < 0) st.tier = P.daily.tierFor(P.types.sizeOf(def, id), st.tier); drawEx(); }, def.sizeLabel || "Cỡ"),
         Z.chips(P.util.TIERS.map(function (t) { return { id: t.id, label: t.name, disabled: avail.indexOf(t.id) < 0 }; }), st.tier, function (id) { st.tier = id; drawEx(); }, "Độ khó"),
         h("div", { class: "btn-row" }, h("button", { type: "button", class: "btn btn-primary", on: { click: gen }, html: icon("play") + "<span>Sinh puzzle ví dụ</span>" })));
     }

@@ -61,7 +61,7 @@ K.utf8_console()
 # Ngưỡng — chỉnh ở đây khi mỗi đợt mở cổng của mình
 # ---------------------------------------------------------------------------------------------------------------------
 DOT = ["M0", "M1", "M2", "M2b", "M3", "M4a", "M4b", "M5", "M6", "M7", "M8", "M9", "M10"]
-DOT_HIEN_TAI = "M1"  # đợt đang thi công. Đợt nào đạt ngưỡng của mình thì nâng giá trị này (ke-hoach §2, luồng M).
+DOT_HIEN_TAI = "M2"  # đợt đang thi công. Đợt nào đạt ngưỡng của mình thì nâng giá trị này (ke-hoach §2, luồng M).
 MOC_PATH = os.path.join(K.HERE, "hieu-nang-moc.json")
 DUNG_SAI = 0.10
 

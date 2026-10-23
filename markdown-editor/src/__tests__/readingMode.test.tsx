@@ -206,6 +206,73 @@ describe('ReadingView', () => {
     expect(reading().open).toBe(false)
   })
 
+  it('re-measures after the article grows even when a scroll comes before the next frame', async () => {
+    // Six sections. Images, diagrams and maths then load and push them far apart while the reader scrolls.
+    const doc = ['# Intro', ...[1, 2, 3, 4, 5].map((n) => `## Part ${n}\n\nText ${n}.`)].join('\n\n')
+    useEditorStore.setState({ currentContent: doc })
+    let layout = [0, 100, 200, 300, 400, 500]
+    let scrollTop = 0
+
+    const frames = new Map<number, FrameRequestCallback>()
+    let nextFrame = 1
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frames.set(nextFrame, callback)
+      return nextFrame++
+    })
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id))
+    const runFrames = () =>
+      act(() => {
+        const pending = Array.from(frames.values())
+        frames.clear()
+        pending.forEach((callback) => callback(performance.now()))
+      })
+    let resized: (() => void) | null = null
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          resized = callback
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    )
+    const rects = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const index = /^H[1-6]$/.test(this.tagName) ? Array.from(document.querySelectorAll('.reading-article h1, .reading-article h2')).indexOf(this) : -1
+      const top = index >= 0 ? layout[index] - scrollTop : 0
+      return { top, bottom: top + 20, left: 0, right: 0, width: 0, height: 20, x: 0, y: top, toJSON: () => ({}) } as DOMRect
+    })
+
+    try {
+      render(<ReadingView />)
+      const scroller = document.querySelector<HTMLElement>('.reading-scroll')!
+      Object.defineProperty(scroller, 'scrollTop', { configurable: true, get: () => scrollTop })
+      Object.defineProperty(scroller, 'scrollHeight', { configurable: true, get: () => 10_000 })
+      Object.defineProperty(scroller, 'clientHeight', { configurable: true, get: () => 500 })
+      await userEvent.click(screen.getByRole('button', { name: 'Table of contents' }))
+      runFrames()
+      const current = () => document.querySelector('.reading-toc-item[aria-current="location"]')?.textContent
+
+      // The article grows; before its re-measure runs, the reader scrolls to Part 2 (now at 2,000 px).
+      layout = [0, 1000, 2000, 3000, 4000, 5000]
+      act(() => resized!())
+      scrollTop = 2050
+      fireEvent.scroll(scroller)
+      runFrames()
+      expect(current()).toBe('Part 2')
+
+      // And a scroll on its own still follows, without a layout change.
+      scrollTop = 3500
+      fireEvent.scroll(scroller)
+      runFrames()
+      expect(current()).toBe('Part 3')
+    } finally {
+      rects.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('is read-only: a task box cannot be ticked from here, even by an admin', () => {
     useEditorStore.setState({ isAdmin: true })
     render(<ReadingView />)

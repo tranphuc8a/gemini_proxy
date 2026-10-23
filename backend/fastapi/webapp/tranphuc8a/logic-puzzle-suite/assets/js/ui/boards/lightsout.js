@@ -1,6 +1,8 @@
 /* ui/boards/lightsout.js — bàn LIGHTS OUT: lưới w×h "đèn" (bật = sáng vàng + tia + quầng, tắt = tối + vòng rỗng — khác nhau cả hình dạng chứ không chỉ màu) và trình soạn bàn đầu.
    Hành động gửi cho engine (assets/js/puzzles/lightsout.js): {k:"press", i} — bấm ô i, đảo chữ thập 5 ô (tự nghịch đảo). state.v[i] = 1 đèn BẬT, 0 TẮT; mục tiêu: tắt hết.
    Đầu vào của trình soạn (type.fromInput): { w, h, v:[w*h số 0/1] }.
+   Đợt P2: chip "Par K lần bấm"; công tắc kiểu gợi ý (Ít bấm nhất / Đuổi đèn → game.setSettings({loHint}), nhớ ở localStorage "puz:lo-hint");
+   trình soạn tô nhóm ô bất biến (viền chấm) khi bàn không giải được — type.lib.obstruction.
 
    Bàn phím (focus trong lưới, roving tabindex): mũi tên di chuyển · Home/End đầu/cuối hàng · PageUp/PageDown đầu/cuối cột · Space hoặc Enter = bấm ô.
    Chuột/cảm ứng (Pointer Events): bấm = nhả chuột/ngón tay trên đúng ô vừa nhấn; kéo > 10 px hoặc cuộn trang thì huỷ (không bấm nhầm khi cuộn).
@@ -66,6 +68,14 @@
     return { grid: grid, cells: cells };
   }
 
+  // ---- kiểu gợi ý (B5): "min" = ít bấm nhất (mặc định), "chase" = đuổi đèn. Lựa chọn đi vào settings của ván (type.hint nhận làm tham số thứ 4)
+  //      và được nhớ trên máy này (localStorage — tiện ích của từng người xem, bị chặn thì vẫn chạy, chỉ không nhớ).
+  var HINT_KEY = "puz:lo-hint", HINT_STYLES = [
+    { id: "min", label: "Ít bấm nhất", title: "Gợi ý ô thuộc lời giải ngắn nhất (tính bằng khử Gauss)" },
+    { id: "chase", label: "Đuổi đèn", title: "Gợi ý theo cách giải bằng tay: tắt từng hàng từ trên xuống, rồi tra bảng hàng cuối" }];
+  function loadHintStyle() { try { var s = root.localStorage.getItem(HINT_KEY); return s === "chase" ? "chase" : "min"; } catch (e) { return "min"; } }
+  function saveHintStyle(s) { try { root.localStorage.setItem(HINT_KEY, s); } catch (e) { /* cửa sổ riêng tư: chỉ không nhớ */ } }
+
   // =================================================================================================================== bàn chơi
   function mount(host, env) {
     var game = env.game, puzzle = env.puzzle, type = env.type, ro = !!env.readOnly;
@@ -78,9 +88,22 @@
     var stats = h("div", { class: "pz-lo-stats", role: "group", "aria-label": "Thông tin bàn" },
       h("span", { class: "pz-lo-stat", title: "Số đèn đang sáng — tắt hết là thắng" }, litB, " đèn sáng"),
       h("span", { class: "pz-lo-stat", title: "Số lần bạn đã bấm" }, movesB, " lần bấm"),
-      K ? h("span", { class: "pz-lo-stat", title: "Số lần bấm tối thiểu để tắt hết đèn (chỉ là độ khó, không cho biết ô nào)" }, "Ít nhất ", h("b", { text: String(K) }), " lần bấm") : null);
+      K ? h("span", { class: "pz-lo-stat pz-lo-par", title: "Par = số lần bấm ít nhất để tắt hết đèn (không cho biết ô nào). Đúng par: ★★★; hơn par không quá " + Math.ceil(K / 4) + " lần: ★★; còn lại ★." }, "Par ", h("b", { text: String(K) }), " lần bấm") : null);
     var built = buildGrid(w, hh, "Bàn Lights Out " + w + " nhân " + hh + ", bấm một ô để đảo đèn của ô đó và bốn ô kề", ""), grid = built.grid, cells = built.cells;
-    host.replaceChildren(h("div", { class: "pz-lo" }, stats, grid));
+    // công tắc kiểu gợi ý — chỉ khi chơi được (replay/bàn chỉ-đọc không có gợi ý)
+    var style = loadHintStyle(), swHost = ro ? null : h("div", { class: "pz-lo-hintsw" });
+    function drawSwitch() {
+      if (!swHost) return;
+      var chips = U.pz.chips(HINT_STYLES, style, function (id) {
+        if (id === style) return;
+        style = id; saveHintStyle(id); game.setSettings({ loHint: id }); drawSwitch();
+        if (env.clearHint) env.clearHint();                                     // gợi ý đang mở thuộc kiểu cũ: đóng để lần sau hỏi theo kiểu mới
+        env.announce("Kiểu gợi ý: " + (id === "chase" ? "Đuổi đèn" : "Ít bấm nhất") + ".");
+      }, "Kiểu gợi ý");
+      swHost.replaceChildren(h("span", { class: "pz-lo-hintsw-lab", "aria-hidden": "true", text: "Kiểu gợi ý" }), chips);
+    }
+    if (!ro) { game.setSettings({ loHint: style }); drawSwitch(); }
+    host.replaceChildren(h("div", { class: "pz-lo" }, stats, grid, swHost));
 
     // ---- vẽ
     function canAct() { return !ro && !game.finished(); }
@@ -197,7 +220,7 @@
   /** Trình soạn (màn Tạo puzzle): chọn rộng/cao 2–10, bấm ô để bật/tắt đèn của bàn đầu; "Bàn ngẫu nhiên" = bấm ngẫu nhiên từ bàn tắt (luôn giải được);
       onChange({ w, h, v:[w*h số 0/1] }) — đúng dạng type.fromInput nhận. Engine từ chối bàn tắt hết và bàn không giải được; vỏ hiện lỗi đó. */
   function editor(host, env) {
-    var w = 5, hh = 5, v = null, square = true, sel = 0, cells = [], gridHost, info, gridEl = null;
+    var w = 5, hh = 5, v = null, square = true, sel = 0, cells = [], gridHost, info, obInfo, gridEl = null;
     var inp = env.input, pz = env.puzzle, src = null;
     if (inp && typeof inp === "object" && (inp.w != null || inp.n != null || inp.v != null)) {
       var iw = toInt(inp.w != null ? inp.w : inp.n), ih = toInt(inp.h != null ? inp.h : inp.n);
@@ -234,6 +257,7 @@
     var clearBtn = h("button", { type: "button", class: "btn pz-lo-tool", html: icon("eraser") + "<span>Tắt hết</span>", title: "Tắt mọi đèn (rồi bật lại các ô bạn muốn)" });
     clearBtn.addEventListener("click", function () { v = zeros(w * hh); paint(); emit(); });
     info = h("p", { class: "pz-lo-info", "aria-live": "polite" });
+    obInfo = h("p", { class: "pz-lo-obinfo", "aria-live": "polite", hidden: true });
     gridHost = h("div", { class: "pz-lo-grid-host" });
 
     /** Bấm ngẫu nhiên (Math.random — chỉ ở giao diện soạn) vài ô từ bàn tắt hết: bàn sinh ra luôn có lời giải (khác bật ngẫu nhiên từng ô, thường vô nghiệm ở 4×4). */
@@ -253,15 +277,21 @@
 
     // ---- vẽ / phát đầu vào
     function emit() { env.onChange({ w: w, h: hh, v: v.slice() }); }
+    /** Bất biến sống (B3): bàn đang soạn không giải được ⇒ engine trả nhóm ô có số đèn sáng lẻ (mỗi lần bấm đảo số chẵn đèn trong nhóm) — tô viền chấm đỏ.
+        Gọi thẳng engine trên luồng chính (bàn ≤ 10×10: khử Gauss vài ms); vỏ vẫn kiểm đầy đủ qua worker như cũ. */
+    function obstruction() { try { return env.type && env.type.lib && env.type.lib.obstruction ? env.type.lib.obstruction(w, hh, v) : null; } catch (e) { return null; } }
     function paint() {
-      var lit = 0, n = w * hh, k;
+      var lit = 0, n = w * hh, k, ob = obstruction(), inOb = {};
+      if (ob) ob.cells.forEach(function (i) { inOb[i] = 1; });
       for (k = 0; k < n; k++) {
         var el = cells[k], on = v[k] ? 1 : 0; if (on) lit++;
-        el.classList.toggle("on", !!on);
-        var lab = "Hàng " + (Math.floor(k / w) + 1) + ", cột " + (k % w + 1) + ", đèn " + (on ? "bật" : "tắt") + ". Bấm để đổi.";
+        el.classList.toggle("on", !!on); el.classList.toggle("obst", !!inOb[k]);
+        var lab = "Hàng " + (Math.floor(k / w) + 1) + ", cột " + (k % w + 1) + ", đèn " + (on ? "bật" : "tắt") + (inOb[k] ? ", thuộc nhóm bất biến" : "") + ". Bấm để đổi.";
         if (el.getAttribute("aria-label") !== lab) el.setAttribute("aria-label", lab);
       }
       info.textContent = (lit ? lit + " trên " + n + " đèn đang sáng." : "Chưa có đèn nào sáng — hãy bật ít nhất một đèn.") + " Bàn " + w + "×" + hh + ".";
+      obInfo.hidden = !ob;
+      obInfo.textContent = ob ? "Không giải được: nhóm " + ob.size + " ô viền chấm đỏ đang có " + ob.lit + " đèn sáng (lẻ). Bấm ô nào cũng đảo một số chẵn đèn trong nhóm này nên số đèn sáng ở đó luôn lẻ — không bao giờ về 0." : "";
       cw.sync(); ch.sync();
     }
     function rebuild() {
@@ -308,7 +338,7 @@
     host.replaceChildren(h("div", { class: "pz-lo pz-lo-ed" },
       h("div", { class: "pz-lo-ed-dims" }, cw.el, ch.el),
       h("div", { class: "pz-lo-tools" }, sqBtn, randBtn, clearBtn),
-      gridHost, info,
+      gridHost, info, obInfo,
       h("p", { class: "pz-lo-tip faint", text: "Bấm vào ô để bật/tắt đèn của bàn đầu (đèn sáng = ô cần tắt). Bàn phải có ít nhất một đèn sáng và phải giải được; kết quả kiểm tra hiện ở khung bên cạnh." })));
     rebuild(); paint(); emit();
     return {

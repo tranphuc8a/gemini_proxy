@@ -6,7 +6,7 @@ import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/pris
 import { copyToClipboard } from '../lib/exporters'
 import { withContrast } from '../lib/contrast'
 import { prismLanguage } from '../lib/codeLanguages'
-import { ensurePrismSheet, prismScope, prismThemeToCss } from '../lib/prismCss'
+import { PrismSheet, prismRenderer, prismScope } from '../lib/prismCss'
 import { IconCheck, IconCopy } from './Icons'
 
 interface CodeBlockProps {
@@ -20,32 +20,37 @@ interface CodeBlockProps {
   contrastBackground?: string
 }
 
-/** One scope class per theme and background, its stylesheet installed on first use. */
-const scopes = new Map<string, string>()
+/** One sheet per theme and background, shared by every block. */
+const sheets = new Map<string, PrismSheet>()
+/** Scope class → the theme|background it was made for, so two backgrounds never share one. */
+const scopeOwners = new Map<string, string>()
 
-function scopeFor(theme: 'light' | 'dark', background?: string): string {
+function sheetFor(theme: 'light' | 'dark', background?: string): PrismSheet {
   const key = `${theme}|${background ?? ''}`
-  let scope = scopes.get(key)
-  if (!scope) {
+  let sheet = sheets.get(key)
+  if (!sheet) {
     const base = theme === 'dark' ? oneDark : oneLight
-    const sheet = background ? withContrast(base, background) : base
-    scope = prismScope(theme, background)
-    ensurePrismSheet(scope, prismThemeToCss(sheet, scope))
-    scopes.set(key, scope)
+    let scope = prismScope(theme, background)
+    // Distinct colours that read alike once reduced to a class name get a suffix.
+    for (let n = 2; scopeOwners.has(scope) && scopeOwners.get(scope) !== key; n += 1) scope = `${prismScope(theme, background)}-${n}`
+    scopeOwners.set(scope, key)
+    sheet = new PrismSheet(background ? withContrast(base, background) : base, scope)
+    sheets.set(key, sheet)
   }
-  return scope
+  return sheet
 }
 
 const CUSTOM_STYLE = { margin: 0, background: 'transparent', padding: '14px 16px', fontSize: '0.85em' }
 
 /**
- * A highlighted code block. Tokens carry classes (`span.token.keyword`) and a
- * per-theme stylesheet colours them -- inline styles cost ~0.3 ms per token.
+ * A highlighted code block. Tokens carry classes (`span.token.keyword`) plus
+ * one rule class holding the style inline mode would have given them (see
+ * lib/prismCss) -- inline styles cost ~0.3 ms per token to compute.
  * Memoised: a preview render re-highlights only the blocks whose code changed.
  */
 function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockProps) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
-  const scope = scopeFor(theme, contrastBackground)
+  const sheet = sheetFor(theme, contrastBackground)
 
   const onCopy = async () => {
     const ok = await copyToClipboard(source)
@@ -70,7 +75,10 @@ function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockPro
       <SyntaxHighlighter
         language={prismLanguage(language)}
         useInlineStyles={false}
-        className={scope}
+        className={sheet.scope}
+        renderer={prismRenderer(sheet)}
+        // A renderer turns line wrapping on unless told otherwise; the stock one ran without it.
+        wrapLines={false}
         PreTag="div"
         customStyle={CUSTOM_STYLE}
         // Fresh each render: the highlighter writes into codeTagProps.style.

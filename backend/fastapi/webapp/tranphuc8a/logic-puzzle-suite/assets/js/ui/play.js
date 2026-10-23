@@ -50,12 +50,14 @@
       var c = game.counters, paused = game.status === "paused", fin = game.finished();
       updateTimer();
       ui.mist.lastChild.textContent = String(c.mistakes); ui.hints.lastChild.textContent = String(game.hintCount()); ui.moves.lastChild.textContent = String(c.moves);
+      var gr = (ui.score || (fin && def.grade)) ? game.grade() : null;                        // mục 11: loại optimize hiện giá trị hiện có (KHÔNG lộ giá trị tối ưu khi đang chơi)
+      if (ui.score) { ui.score.lastChild.textContent = gr ? gr.valueText : "—"; ui.score.title = def.objective.label + (def.objective.unit ? " (" + def.objective.unit + ")" : ""); }
       ui.undo.disabled = !game.canUndo() || !!replayState; ui.redo.disabled = !game.canRedo() || !!replayState; ui.hint.disabled = fin || paused || !!replayState || !def.hint;
       ui.pause.hidden = fin || !!replayState; ui.pause.innerHTML = icon(paused ? "play" : "pause") + "<span>" + (paused ? "Tiếp tục" : "Tạm dừng") + "</span>";
       ui.boardBox.classList.toggle("is-paused", paused && !replayState); ui.cover.hidden = !(paused && !replayState);
       if (paused && !replayState) { ui.board.setAttribute("inert", ""); ui.board.setAttribute("aria-hidden", "true"); } else { ui.board.removeAttribute("inert"); ui.board.removeAttribute("aria-hidden"); }
       ui.status.hidden = !fin || !!replayState;
-      if (fin) ui.statusText.textContent = game.status === "solved" ? "Đã giải — " + P.util.fmtTime(game.elapsed()) + ", " + c.mistakes + " lỗi, " + game.hintCount() + " gợi ý." : "Đã xem đáp án — không tính là tự giải.";
+      if (fin) ui.statusText.textContent = game.status === "solved" ? "Đã giải — " + P.util.fmtTime(game.elapsed()) + ", " + c.mistakes + " lỗi, " + game.hintCount() + " gợi ý." + (gr ? " Điểm tối ưu " + P.grade.starsText(gr.stars) + " (" + P.grade.display(gr, unit()) + ")." : "") : "Đã xem đáp án — không tính là tự giải.";
       ui.fav.setAttribute("aria-pressed", String(user.isFav(puzzle.id || P.util.puzzleId(puzzle))));
       if (fin) { ui.hintPanel.hidden = true; }
     }
@@ -84,15 +86,24 @@
       if (ctx.settings().confirmReveal) ctx.confirm("Hiện đáp án?", "Đáp án sẽ được điền thẳng vào bàn và ván này không tính là tự giải.", "Hiện đáp án", true).then(function (ok) { if (ok) go(); }); else go();
     }
 
+    function unit() { return def.objective && def.objective.unit || ""; }
+    /** Ô "Điểm tối ưu" (mục 11): sao + "giá trị / tối ưu đơn vị"; chỉ có khi bản ghi có grade (loại khai báo def.grade). */
+    function gradeStat(g) {
+      var el = Z.stat("Điểm tối ưu", P.grade.starsText(g.stars), P.grade.display(g, unit()));
+      el.classList.add("stat-grade"); el.title = g.text; el.firstChild.setAttribute("aria-label", g.stars + "/3 sao");
+      return el;
+    }
     function showSolved(rec) {
       var isBest = best === 0 || rec.time < best, avg = (function () { var t = [], r = user.history().filter(function (x) { return x.type === puzzle.type && x.result === "solved"; }); r.forEach(function (x) { t.push(x.time); }); return t.length > 1 ? Math.round(t.reduce(function (a, b) { return a + b; }, 0) / t.length) : 0; })();
-      var grid = h("div", { class: "stat-grid" }, Z.stat("Thời gian", P.util.fmtTime(rec.time), isBest && best ? "Kỷ lục mới! (trước đó " + P.util.fmtTime(best) + ")" : best ? "Tốt nhất " + P.util.fmtTime(best) : "Ván đầu ở bậc này"), Z.stat("Lỗi", String(rec.mistakes)), Z.stat("Gợi ý", String(rec.hints)), Z.stat("Độ khó", Z.scoreText(rec.score), Z.tierName(rec.tier)));
+      var grid = h("div", { class: "stat-grid" }, Z.stat("Thời gian", P.util.fmtTime(rec.time), isBest && best ? "Kỷ lục mới! (trước đó " + P.util.fmtTime(best) + ")" : best ? "Tốt nhất " + P.util.fmtTime(best) : "Ván đầu ở bậc này"), Z.stat("Lỗi", String(rec.mistakes)), Z.stat("Gợi ý", String(rec.hints)), Z.stat("Độ khó", Z.scoreText(rec.score), Z.tierName(rec.tier)),
+        rec.grade ? gradeStat(rec.grade) : null);
+      var gline = rec.grade ? h("p", { class: "grade-line", text: rec.grade.text }) : null;
       var more = h("p", { class: "faint", text: avg ? "Trung bình các ván " + def.name + " đã giải: " + P.util.fmtTime(avg) + "." : "" });
       var dlg, btn = function (label, cls, fn, ic) { return h("button", { type: "button", class: "btn " + cls, on: { click: function () { dlg.close(); fn(); } }, html: (ic ? icon(ic) : "") + "<span>" + label.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</span>" }); };
       var rr = P.progress.recommend(user.history(), puzzle.type), size = P.types.sizeOf(def, puzzle.sizeId);
-      dlg = U.dialog("Đã giải! 🎉", [h("p", { class: "solved-line", text: Z.puzzleTitle(puzzle) }), grid, more, rr.action !== "stay" ? h("p", { class: "hint", text: rr.reason }) : null].filter(Boolean), [
+      dlg = U.dialog("Đã giải! 🎉", [h("p", { class: "solved-line", text: Z.puzzleTitle(puzzle) }), grid, gline, more, rr.action !== "stay" ? h("p", { class: "hint", text: rr.reason }) : null].filter(Boolean), [
         btn("Xem lời giải từng bước", "", enterReplay, "play"), btn("Đổi độ khó", "", function () { ctx.go("#/new/" + puzzle.type); }, "grid"),
-        btn("Chơi tiếp", "btn-primary", function () { ctx.begin({ type: puzzle.type, seed: P.rng.randomSeed(), sizeId: size.id, tier: P.daily.tierFor(size, rr.recommended), source: "random" }); }, "new")], { onClose: function () { renderState(); } });
+        btn("Chơi tiếp", "btn-primary", function () { ctx.begin({ type: puzzle.type, seed: P.rng.randomSeed(), sizeId: size.id, tier: P.daily.tierFor(size, rr.recommended), options: puzzle.options, source: "random" }); }, "new")], { onClose: function () { renderState(); } });
       renderState();
     }
 
@@ -100,7 +111,7 @@
     function mountBoard(g, readOnly) {
       ui.board.replaceChildren();
       if (!boardDef) { ui.board.append(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Chưa có giao diện cho " + def.name }))); return null; }
-      var env = { game: g, puzzle: puzzle, type: def, U: U, readOnly: !!readOnly, settings: ctx.settings, announce: ctx.announce };
+      var env = { game: g, puzzle: puzzle, type: def, U: U, readOnly: !!readOnly, settings: ctx.settings, announce: ctx.announce, clearHint: clearHint };      // clearHint: bàn đổi kiểu gợi ý (Lights Out) thì đóng gợi ý đang mở
       try { return boardDef.mount(ui.board, env); } catch (e) { ui.board.append(h("p", { class: "form-err", text: "Lỗi khi vẽ bàn: " + (e && e.message || e) })); if (root.console) root.console.error(e); return null; }
     }
     function unmountBoard() { if (view && view.destroy) { try { view.destroy(); } catch (e) { /* bỏ qua */ } } view = null; ui.board.replaceChildren(); }
@@ -171,7 +182,9 @@
 
     // ------------------------------------------------------------------------------------------ dựng khung
     ui.timer = h("b", { class: "timer", "aria-label": "Thời gian chơi", text: "00:00" });
-    ui.mist = hudChip("x", "0", "Số lần điền sai"); ui.hints = hudChip("hint", "0", "Số gợi ý đã dùng"); ui.moves = hudChip("pencil", "0", "Số nước đi");
+    ui.mist = hudChip("x", "0", def.mistakeLabel || "Số lần điền sai"); ui.hints = hudChip("hint", "0", "Số gợi ý đã dùng"); ui.moves = hudChip("pencil", "0", def.moveLabel || "Số nước đi");     // nhãn tuỳ chọn của loại (mục 11)
+    ui.score = P.types.kindOf(def) === "optimize" && typeof def.grade === "function" && def.objective ? hudChip("star", "—", def.objective.label) : null;
+    if (ui.score) ui.score.classList.add("hud-score");
     ui.pause = h("button", { type: "button", class: "btn", on: { click: function () { if (game.status === "paused") game.resume(); else game.pause(); } } });
     ui.fav = h("button", { type: "button", class: "icon-btn fav-btn", "aria-label": "Yêu thích", title: "Yêu thích (★)", html: icon("star"), on: { click: function () { user.toggleFav(puzzle).then(function (r) { ctx.toast(r && r.fav ? "Đã thêm vào yêu thích." : "Đã bỏ khỏi yêu thích."); renderState(); }, function (e) { ctx.toast(e.message); }); } } });
     ui.more = h("button", { type: "button", class: "icon-btn", "aria-label": "Thêm tuỳ chọn", "aria-haspopup": "menu", html: icon("more"), on: { click: function () { menu(ui.more); } } });
@@ -192,7 +205,7 @@
     ui.rpLast = h("button", { type: "button", class: "icon-btn", "aria-label": "Tới cuối", html: icon("last"), on: { click: function () { stepTo(replayState.steps.length); } } });
     ui.rpPlay = h("button", { type: "button", class: "btn", on: { click: rpAuto } });
     ui.replay = h("section", { class: "replay-panel", hidden: true, "aria-label": "Replay lời giải" }, h("div", { class: "rp-head" }, h("h2", { text: "Replay lời giải" }), ui.rpCount, h("button", { type: "button", class: "btn btn-ghost", on: { click: exitReplay }, text: "Thoát replay" })), ui.rpText, ui.rpRange, h("div", { class: "btn-row" }, ui.rpFirst, ui.rpPrev, ui.rpNext, ui.rpLast, ui.rpPlay));
-    ui.side = h("div", { class: "play-side" }, h("div", { class: "hud" }, h("span", { class: "hud-chip hud-time", html: icon("clock") }, ui.timer), ui.mist, ui.hints, ui.moves, ui.pause), ui.toolbar, ui.hintPanel, ui.status, ui.replay);
+    ui.side = h("div", { class: "play-side" }, h("div", { class: "hud" }, h("span", { class: "hud-chip hud-time", html: icon("clock") }, ui.timer), ui.mist, ui.hints, ui.moves, ui.score, ui.pause), ui.toolbar, ui.hintPanel, ui.status, ui.replay);
     ui.play = h("div", { class: "play" },
       h("div", { class: "play-head" }, h("div", { class: "play-title" }, h("h1", {}, h("span", { class: "tc-ic", "aria-hidden": "true", text: def.icon }), h("span", { text: " " + Z.puzzleTitle(puzzle) })),
         h("p", { class: "play-sub" }, Z.tierBadge(puzzle.tier, puzzle.score), h("span", { text: " " + (puzzle.seed != null ? "Seed " + puzzle.seed : puzzle.tier === "custom" ? "Puzzle tự tạo" : "") }))), h("div", { class: "ph-act" }, ui.fav, ui.more)),

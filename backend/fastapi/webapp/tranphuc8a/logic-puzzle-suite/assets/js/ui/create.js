@@ -33,15 +33,17 @@
     function drawStatus() {
       var r = result, kids = [];
       if (!r) { setButtons(); return; }
-      var st = STATUS[r.status];
+      // Loại tương tác/tối ưu (mục 11) tự nói trạng thái bằng statusText + statusKind (ok|warn|bad) — "nghiệm duy nhất" vô nghĩa với chúng.
+      var custom = typeof r.statusText === "string" && r.statusText.trim() ? [/^(ok|warn|bad)$/.test(r.statusKind) ? r.statusKind : "ok", r.statusText] : null;
+      var st = custom || STATUS[r.status];
       // "nhiều nghiệm" chỉ là CẢNH BÁO khi engine tự nêu cảnh báo (Sudoku, Nonogram, Logic Grid…); với loại mà nhiều nghiệm là bình thường (Lights Out) engine không thêm cảnh báo → báo trung tính.
-      var benign = r.ok && r.status === "multiple" && !(r.warnings && r.warnings.length);
+      var benign = !custom && r.ok && r.status === "multiple" && !(r.warnings && r.warnings.length);
       if (benign) kids.push(h("p", { class: "cr-chip c-ok", text: "✓ Giải được — " + (r.count || "nhiều") + " cách giải (bình thường với loại này)" }));
-      else if (st) kids.push(h("p", { class: "cr-chip c-" + st[0], text: st[1] + (r.status === "multiple" && r.count ? " (từ " + r.count + " nghiệm)" : "") }));
+      else if (st) kids.push(h("p", { class: "cr-chip c-" + st[0], text: st[1] + (!custom && r.status === "multiple" && r.count ? " (từ " + r.count + " nghiệm)" : "") }));
       if (r.ok && r.puzzle) kids.push(h("p", { class: "cr-diff" }, Z.tierBadge("custom", r.puzzle.score), h("span", { text: " Độ khó " + Z.scoreText(r.puzzle.score) + " (" + Z.tierName(P.util.tierOfScore(r.puzzle.score).id) + ")" })));
       (r.errors || []).forEach(function (e) { kids.push(h("p", { class: "form-err", text: e })); });
       (r.warnings || []).forEach(function (w) { kids.push(h("p", { class: "cr-warn", text: "⚠ " + w })); });
-      if (r.ok && r.status === "multiple" && !benign) kids.push(h("p", { class: "hint", text: "Vẫn chơi và lưu được, nhưng lời giải và gợi ý chỉ dựa trên một trong các nghiệm. Thêm manh mối/ô cho sẵn để đề có nghiệm duy nhất." }));
+      if (r.ok && r.status === "multiple" && !benign && !custom) kids.push(h("p", { class: "hint", text: "Vẫn chơi và lưu được, nhưng lời giải và gợi ý chỉ dựa trên một trong các nghiệm. Thêm manh mối/ô cho sẵn để đề có nghiệm duy nhất." }));
       status.replaceChildren.apply(status, kids); setButtons();
     }
     function setButtons() { var ok = !!(result && result.ok && result.puzzle); [ui.play, ui.save, ui.share, ui.col].forEach(function (b) { if (b) b.disabled = !ok; }); }

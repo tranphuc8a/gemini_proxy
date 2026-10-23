@@ -64,4 +64,6 @@ export interface EditorState extends Settings {
   smartFormat: { start: number; end: number } | null
   /** Why the last local save failed, or null once one succeeds; 'quota' raises the red banner. */
   storageFailure: StorageFailure | null
+  /** What that failed save was: the documents, or only the settings (the documents were written). */
+  storageFailureScope: 'documents' | 'settings' | null
 }

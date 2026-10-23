@@ -11,6 +11,13 @@
  * Here the budget is spent in short slices. A slice that took far longer than
  * asked means the page itself was blocked, and only a bounded part of it is
  * counted; a slow server still times out after `totalMs` of responsive time.
+ *
+ * Known trade-off: a hidden tab gets its timers throttled hard (Chrome/Edge
+ * align them to once a minute after five minutes hidden), and each such slice
+ * still counts at most `maxSliceMs`, so a 10 s budget can stretch to minutes
+ * in a background tab. Acceptable for what it guards -- the admin session
+ * check simply answers later -- and far better than cancelling a reply that
+ * already arrived. Do not use it where a hidden tab must give up on time.
  */
 export interface TimerHost {
   now: () => number

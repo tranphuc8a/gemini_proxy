@@ -112,6 +112,9 @@ body {
 .nut:hover { background: var(--surf2); color: var(--tx); border-color: var(--tx3); }
 .nut:active { transform: translateY(1px); }
 .nut.nho { padding: 6px 9px; font-size: 12px; }
+/* Nut chi co ky hieu (↶ ↷ hoan tac chung): ky hieu to hon chut, ten doc
+   la aria-label, buoc se hoan tac nam o title. */
+.nut.nut-bieu { min-width: 34px; padding: 7px 9px; font-size: 15px; }
 .nut:disabled, .nut:disabled:hover {
   opacity: .45; cursor: default; transform: none;
   background: var(--surf); color: var(--tx2); border-color: var(--bd);
@@ -280,6 +283,10 @@ main { flex: 1; min-height: 0; display: flex; }
 }
 .n > .dong:hover { --nen-dong: var(--surf); background: var(--surf); }
 .n:focus > .dong { --nen-dong: var(--surf2); background: var(--surf2); }
+/* JE_APP.denDuong: nhay sang dong vua toi de mat thay ngay. */
+.n.nhay > .dong { animation: nhay-dong 1.2s ease-out; }
+@keyframes nhay-dong { from { background: var(--acbg); } }
+@media (prefers-reduced-motion: reduce) { .n.nhay > .dong { animation: none; outline: 2px solid var(--ac); } }
 .n:focus-visible > .dong { outline: 2px solid var(--ac); outline-offset: -1px; }
 .mo-dong {
   position: absolute; left: 0; top: 2px;

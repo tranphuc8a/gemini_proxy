@@ -143,6 +143,10 @@ a.type-card.pick:hover { border-color: var(--accent); background: var(--accent-s
 .stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); min-width: 0; }
 .stat b { font-size: 22px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .stat small { color: var(--text-2); }
+/* điểm tối ưu (HUONG-DAN-ENGINE.md mục 11): sao màu --star (tương phản với --elev đã đo ở check.py tầng 1); chữ "Tối ưu!/Đạt x %" dưới lưới */
+.stat-grade b { color: var(--star); letter-spacing: 2px; }
+.grade-line { font-weight: 600; overflow-wrap: anywhere; }
+.hud-score b { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ------------------------------------------------------------------ Học, Constraint View, cây tìm kiếm */
 .alg-steps { padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
@@ -158,6 +162,12 @@ a.type-card.pick:hover { border-color: var(--accent); background: var(--accent-s
 .cv-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .cv-table th, .cv-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
 .cv-cons { padding-left: 24px; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; max-height: 320px; overflow: auto; }
+/* mục thêm của loại (cv.sections — vd Lights Out: mẫu bấm im lặng, mọi lời giải, bất biến): chữ + lưới chữ đơn cách (# = ô thuộc mẫu) */
+.cv-sec { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cv-note { color: var(--text-2); font-size: 14px; overflow-wrap: anywhere; }
+.cv-items { padding-left: 24px; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; max-height: 360px; overflow: auto; }
+.cv-items li { overflow-wrap: anywhere; }
+.cv-grid { display: inline-block; margin: 4px 0 0; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--sunk); color: var(--text); font-size: 13px; line-height: 1.25; letter-spacing: 0.02em; max-width: 100%; overflow-x: auto; }
 .tv { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .tv-scroll { max-height: 420px; padding: 4px; }
 .tv-svg { display: block; }

@@ -39,9 +39,14 @@
   }
   var RESULT = { solved: "Đã giải", revealed: "Xem đáp án", abandoned: "Bỏ dở" };
 
-  /** Liên kết "cùng seed ra cùng puzzle": mở trang Puzzle mới đã điền sẵn và bắt đầu ngay. */
+  /** Liên kết "cùng seed ra cùng puzzle": mở trang Puzzle mới đã điền sẵn và bắt đầu ngay. Loại có options (mục 11) thêm o=id:lựa-chọn,… (chỉ lựa chọn
+      KHÁC mặc định, lấy từ puzzle.options) — loại cũ / toàn mặc định thì liên kết y hệt dạng cũ. */
   function seedHash(puzzle) {
-    return puzzle.seed == null ? "" : "#/new/" + puzzle.type + "?" + new root.URLSearchParams({ size: puzzle.sizeId || "", tier: puzzle.tier && puzzle.tier !== "custom" ? puzzle.tier : "", seed: String(puzzle.seed), go: "1" }).toString();
+    if (puzzle.seed == null) return "";
+    var q = { size: puzzle.sizeId || "", tier: puzzle.tier && puzzle.tier !== "custom" ? puzzle.tier : "", seed: String(puzzle.seed) }, d = typeDef(puzzle.type), o = d && d.options ? P.types.encodeOptions(d, puzzle.options) : "";
+    if (o) q.o = o;
+    q.go = "1";
+    return "#/new/" + puzzle.type + "?" + new root.URLSearchParams(q).toString();
   }
   function seedUrl(puzzle) { var hsh = seedHash(puzzle); return hsh ? root.location.origin + root.location.pathname + hsh : ""; }
 

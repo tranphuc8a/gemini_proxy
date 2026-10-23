@@ -5,15 +5,15 @@
    Mỗi tình huống "chưa đồng bộ được" có thông điệp riêng kèm việc làm được ngay (thuộc tính data-sync để check.py kiểm):
      file       mở tệp trực tiếp (file://)                  → chỉ đường: mở app qua máy chủ
      no_config  http(s) nhưng trang thiếu cấu hình máy chủ   → Tải lại trang / mở địa chỉ thư mục ./
-     offline    có máy chủ, đang mất mạng, chưa nối kho      → chờ có mạng (tự vẽ lại khi có mạng)
+     offline    có máy chủ, đang mất mạng, chưa nối kho      → chờ có mạng (tự vẽ lại khi mất / có mạng)
      ephemeral  máy chủ chỉ có kho tạm (vd JSON ở /tmp)       → cảnh báo + hộp xác nhận nói rõ khi tạo kho
      lost       kho mất thật (401 / 404 + wiki_not_found)    → nối lại bằng mã / ngắt kết nối rồi tạo kho mới
      no_api     địa chỉ này không có API /wiki (404 không mã) → thử lại / tải lại trang; KHÔNG bảo nối lại (khoá kho vẫn giữ) */
 (function (root) {
   "use strict";
   var W = root.Wiki, T = W.text, U = W.ui, h = U.h, icon = U.icon;
-  var onlineHook = null;                                           // listener "online" của bảng đồng bộ đang hiện (tối đa một)
-  function unhookOnline(f) { if (!f) return; root.removeEventListener("online", f); if (onlineHook === f) onlineHook = null; }
+  var onlineHook = null;                                           // listener "online"/"offline" của bảng đồng bộ đang hiện (tối đa một)
+  function unhookOnline(f) { if (!f) return; root.removeEventListener("online", f); root.removeEventListener("offline", f); if (onlineHook === f) onlineHook = null; }
 
   var EPHEMERAL_ALL = "Máy chủ này chỉ có kho tạm: dữ liệu có thể mất hoặc các thiết bị không thấy nhau. Hãy sao lưu.";
   var EPHEMERAL_ONE = "Nơi lưu này là kho tạm: dữ liệu trên máy chủ có thể mất khi máy chủ khởi động lại và các thiết bị có thể không thấy nhau. Nên chọn nơi lưu bền.";
@@ -22,9 +22,13 @@
     var S = W.sync && W.sync.instance, box = h("div", { class: "set-body" });
     var el = h("section", { class: "set set-sync", id: "set-sync", "aria-labelledby": "set-sync-h" }, h("h2", { id: "set-sync-h", tabindex: "-1", text: "Đồng bộ giữa các thiết bị" }), box);
     var backends = null, chosen = "", asking = false, askErr = null;
-    var pendingJoin = ctx.takeJoin ? ctx.takeJoin() : "";          // mã từ liên kết …/#/join/<mã> (app.js đã xoá khỏi địa chỉ)
 
-    if (!S) { box.append(h("p", { class: "faint", text: "Đồng bộ chưa sẵn sàng." })); return el; }
+    if (!S) {
+      box.append(h("p", { class: "faint", text: "Đồng bộ chưa sẵn sàng." }));
+      if (ctx.takeJoin && ctx.takeJoin()) ctx.toast("Đồng bộ chưa sẵn sàng nên chưa mở được liên kết nối — tải lại trang rồi mở lại liên kết.", { ms: 8000 });
+      return el;
+    }
+    var pendingJoin = ctx.takeJoin ? ctx.takeJoin() : "";          // mã từ liên kết …/#/join/<mã> (app.js đã xoá khỏi địa chỉ); lấy SAU khi chắc có S
 
     function fail(e) { ctx.toast(e && e.message ? e.message : "Không thực hiện được", { ms: 7000 }); }
     function when(ms) { return ms ? T.fmtDateTime(ms) + " (" + T.relTime(ms, Date.now()) + ")" : "chưa lần nào"; }
@@ -99,15 +103,17 @@
       if (!pendingJoin || !s.loaded) return;
       var c = pendingJoin; pendingJoin = "";
       if (!S.parseCode(c)) { ctx.toast("Liên kết nối không hợp lệ (mã sai dạng).", { ms: 7000 }); return; }
-      if (s.configured && c === S.code()) { ctx.toast("Máy này đã nối đúng kho này rồi."); return; }
+      // so theo kho (mã kho + khoá), không so cả chuỗi: máy nối bằng mã cũ "default.<kho>.<khoá>" mở liên kết "json.<kho>.<khoá>" vẫn là cùng kho
+      if (s.configured && W.sync.sameStore(c, S.code())) { ctx.toast("Máy này đã nối đúng kho này rồi."); return; }
       setTimeout(function () { if (el.isConnected) join(c); }, 0);
     }
 
     // ------------------------------------------------------------------------------------------- vẽ
     function setup(s, why, kids) {
       kids.push(h("p", { class: "faint", text: "Ghi chú luôn lưu trên máy này trước; đồng bộ chỉ sao chép chúng giữa các thiết bị của bạn qua máy chủ. Không cần tài khoản." }));
-      if (why === "offline" && !backends) {
-        // có máy chủ nhưng đang mất mạng (vd PWA mở offline): không hỏi máy chủ, nói đúng lý do
+      if (why === "offline") {
+        // có máy chủ nhưng đang mất mạng (vd PWA mở offline, hoặc rớt mạng khi bảng đang mở — kể cả đã hỏi được danh sách nơi lưu):
+        // không hỏi máy chủ, không mời "Tạo kho" / "Nối" (đều cần mạng) — nói đúng lý do
         kids.push(h("p", { class: "faint", "data-sync": "offline", text: "Đang ngoại tuyến — bật đồng bộ khi có mạng." }));
         return;
       }
@@ -174,10 +180,10 @@
     }
 
     var off = S.on(function () { if (!el.isConnected) { off(); return; } render(); });
-    // Có mạng lại thì vẽ lại (đang hiện "ngoại tuyến"). Chỉ giữ MỘT listener cho bảng đang hiện: mở lại Cài đặt thì gỡ listener của bảng cũ,
-    // không để chúng dồn lại theo số lần mở tới tận sự kiện "online" kế tiếp.
+    // Mất mạng / có mạng lại thì vẽ lại khi chưa nối kho ("ngoại tuyến" ⇄ nút Tạo/Nối; đã nối kho thì sync.js tự báo qua S.on). Chỉ giữ MỘT
+    // listener cho bảng đang hiện: mở lại Cài đặt thì gỡ listener của bảng cũ, không để chúng dồn lại theo số lần mở tới tận sự kiện kế tiếp.
     function back() { if (!el.isConnected) { unhookOnline(back); return; } if (!S.state().configured) render(); }
-    if (root.addEventListener) { unhookOnline(onlineHook); onlineHook = back; root.addEventListener("online", back); }
+    if (root.addEventListener) { unhookOnline(onlineHook); onlineHook = back; root.addEventListener("online", back); root.addEventListener("offline", back); }
     render();
     return el;
   }

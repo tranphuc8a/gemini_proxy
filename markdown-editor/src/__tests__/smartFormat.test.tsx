@@ -133,7 +133,9 @@ describe('SmartFormatModal', () => {
     expect(content()).toBe('# Notes\n\n' + RESULT.markdown + '\n\nTail paragraph.\n')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(useEditorStore.getState().toasts.some((toast) => /Ctrl\+Z/.test(toast.message))).toBe(true)
-  })
+    // userEvent types the hint key by key: ~3–4 s alone (same with the pre-M2 MarkdownView), past the 5 s default
+    // when the whole suite shares the CPU.
+  }, 15_000)
 
   it('makes the edit one undo step', async () => {
     gateway()

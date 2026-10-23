@@ -8,6 +8,7 @@ Nguồn sự thật ĐỘC LẬP: luật chữ thập được viết lại ở 
 
 from __future__ import annotations
 
+import re
 import threading
 
 SEED = 20261017
@@ -166,6 +167,245 @@ def webkit_touch(url):
     return out
 
 
+# ---------------------------------------------------------------------------------------------- đợt P2: nguồn độc lập (viết lại bằng Python, không dùng engine)
+def silent(w, h, S):
+    """S là mẫu bấm im lặng ⇔ bấm đủ mọi ô của S thì mỗi ô bị đảo số chẵn lần (luật chữ thập đối xứng: |chữ thập(i) ∩ S| chẵn với mọi i)."""
+    return all(len(cross(w, h, i) & S) % 2 == 0 for i in range(w * h))
+
+
+def apply_presses(w, h, v, presses):
+    st = list(v)
+    for i in presses:
+        for j in cross(w, h, i):
+            st[j] ^= 1
+    return st
+
+
+def min_obstruction(w, h, v):
+    """Bất biến nhỏ nhất bằng vét cạn 2^N (N ≤ 16): mẫu im lặng khác rỗng có số đèn sáng lẻ, ít ô nhất rồi nhỏ nhất theo từ điển."""
+    n, best = w * h, None
+    masks = [sum(1 << j for j in cross(w, h, i)) for i in range(n)]
+    for y in range(1, 1 << n):
+        if any(bin(m & y).count("1") % 2 for m in masks):
+            continue
+        cells = [i for i in range(n) if (y >> i) & 1]
+        if sum(v[i] for i in cells) % 2 and (best is None or (len(cells), cells) < (len(best), best)):
+            best = cells
+    return best
+
+
+def manual_chase(w, h, b):
+    """Đuổi đèn bằng tay: đuổi xuống → tra bảng hàng cuối (vét 2^w hàng 1, ít ô nhất rồi từ điển) → bấm hàng 1 theo thứ tự tăng → đuổi lại. → dãy ô."""
+    st, seq = list(b), []
+
+    def press(i):
+        for j in cross(w, h, i):
+            st[j] ^= 1
+
+    def chase():
+        for r in range(h - 1):
+            for c in range(w):
+                if st[r * w + c]:
+                    seq.append((r + 1) * w + c)
+                    press((r + 1) * w + c)
+    chase()
+    last = st[(h - 1) * w:]
+    if any(last):
+        best = None
+        for p in range(1 << w):
+            z = apply_presses(w, h, [0] * (w * h), [k for k in range(w) if (p >> k) & 1])
+            for r in range(h - 1):
+                for c in range(w):
+                    if z[r * w + c]:
+                        z = apply_presses(w, h, z, [(r + 1) * w + c])
+            cols = [k for k in range(w) if (p >> k) & 1]
+            if z[(h - 1) * w:] == last and (best is None or (len(cols), cols) < (len(best), best)):
+                best = cols
+        if best is None:
+            return None
+        for k in best:
+            seq.append(k)
+            press(k)
+        chase()
+    return seq if not any(st) else None
+
+
+def grid_cells(txt):
+    """'# . #\\n. # .' (lưới chữ của Constraint View) → tập chỉ số ô '#'."""
+    rows = [r.replace(" ", "") for r in txt.strip().split("\n")]
+    w = len(rows[0])
+    return set(r * w + c for r, row in enumerate(rows) for c, ch in enumerate(row) if ch == "#"), w, len(rows)
+
+
+JS_SETTING = """() => { const id = decodeURIComponent(location.hash.split('/play/')[1].split('?')[0]); const g = Puz.ui.app.ctx().getGame(id); return g.settings().loHint || null; }"""
+JS_SOLVE_HINTS = """() => {
+  const id = decodeURIComponent(location.hash.split('/play/')[1].split('?')[0]), g = Puz.ui.app.ctx().getGame(id), seq = []; let n = 0;
+  while (g.status === 'playing' && n < 400) { const h = g.hint(3); if (!h || h.none || !h.action) return { seq, err: 'hết gợi ý' }; seq.push(h.action.i); if (!g.applyHint(h).ok) return { seq, err: 'không áp dụng được' }; n++; }
+  return { seq, status: g.status, tech: g.lastHint && g.lastHint.technique };
+}"""
+
+
+def edge_p2(P, check, section, tid):
+    """Đợt P2 trên Edge thật (channel="msedge"; máy không có Edge thì lùi về Chromium và in rõ): công tắc kiểu gợi ý + đuổi đèn qua giao diện,
+    par / ô 'Điểm tối ưu', bất biến tô trong trình soạn, mẫu bấm im lặng + mọi lời giải ở Constraint View, bản đồ lời giải."""
+    PageCls = type(P)
+    bt = P.pg.context.browser.browser_type
+    try:
+        br, kenh = bt.launch(channel="msedge"), "Edge"
+    except Exception as e:  # noqa: BLE001
+        br, kenh = bt.launch(), "Chromium (không mở được Edge: %s)" % str(e).splitlines()[0][:80]
+    section("  — đợt P2 trên %s: kiểu gợi ý (Đuổi đèn), par + Điểm tối ưu, bất biến trong trình soạn, mẫu bấm im lặng" % kenh)
+    E = PageCls(br, P.url, "lo-p2", viewport={"width": 1280, "height": 900})
+    pg = E.pg
+    try:
+        # ---- công tắc kiểu gợi ý
+        E.start(tid, "5", "medium", SEED + 60)
+        g = gstate(pg)
+        w, h, n = g["w"], g["h"], g["w"] * g["h"]
+        chips = pg.locator(".board-host .pz-lo-hintsw .chip")
+        check(chips.count() == 2 and "Ít bấm nhất" in chips.nth(0).inner_text() and "Đuổi đèn" in chips.nth(1).inner_text() and chips.nth(0).get_attribute("aria-pressed") == "true" and chips.nth(1).get_attribute("aria-pressed") == "false",
+              "công tắc kiểu gợi ý dưới bàn: 'Ít bấm nhất' (mặc định, aria-pressed) | 'Đuổi đèn'")
+        check(pg.get_attribute(".pz-lo-hintsw .chips", "aria-label") == "Kiểu gợi ý" and all(chips.nth(k).bounding_box()["height"] >= 44 for k in range(2)) and pg.evaluate(JS_SETTING) == "min",
+              "nhóm nút có nhãn 'Kiểu gợi ý', mỗi nút cao ≥ 44 px; ván nhận settings loHint = 'min'")
+        pg.click(".toolbar button:has-text('Gợi ý')")
+        pg.wait_for_selector(".hint-panel:not([hidden]) .hint-text")
+        check("Khử Gauss" in pg.text_content(".hint-panel .hint-level"), "mặc định: gợi ý theo nghiệm ít bấm nhất (kỹ thuật 'Khử Gauss GF(2)')", pg.text_content(".hint-panel .hint-level"))
+        pg.click(".pz-lo-hintsw .chip:has-text('Đuổi đèn')")
+        check(pg.locator(".hint-panel:not([hidden])").count() == 0 and chips.nth(1).get_attribute("aria-pressed") == "true" and pg.evaluate(JS_SETTING) == "chase",
+              "bấm 'Đuổi đèn': nút bật, settings của ván đổi sang 'chase', gợi ý kiểu cũ đang mở được đóng lại")
+        # ---- gợi ý đuổi đèn ba mức qua giao diện
+        g = gstate(pg)
+        v = g["v"]
+        first = next(i for i in range((h - 1) * w) if v[i])
+        r0 = first // w
+        row_lit = [r0 * w + c for c in range(w) if v[r0 * w + c]]
+        pg.click(".toolbar button:has-text('Gợi ý')")
+        pg.wait_for_selector(".hint-panel:not([hidden]) .hint-text")
+        hl = pg.evaluate("[...document.querySelectorAll('.board-host .pz-lo-cell.hint')].map(c => +c.dataset.i).sort((a, b) => a - b)")
+        check("Đuổi đèn" in pg.text_content(".hint-panel .hint-level") and hl == row_lit and ("hàng %d còn %d đèn sáng" % (r0 + 1, len(row_lit))) in pg.inner_text(".hint-panel .hint-text"),
+              "Đuổi đèn mức 1: tô đúng các đèn sáng của hàng trên cùng còn đèn (hàng %d, %d đèn), bảo bấm ngay dưới" % (r0 + 1, len(row_lit)), (hl, row_lit, pg.inner_text(".hint-panel .hint-text")))
+        pg.click(".hint-panel button:has-text('Chi tiết hơn')")
+        pg.click(".hint-panel button:has-text('Chi tiết hơn')")
+        h3 = gstate(pg)["hint"]
+        check(h3["level"] == 3 and h3["action"]["i"] == first + w and pg.locator(".hint-panel .why li").count() >= 3, "Đuổi đèn mức 3: bấm ô NGAY DƯỚI đèn sáng đầu tiên (ô %d), có 3 dòng 'vì sao'" % (first + w), h3 and h3.get("action"))
+        before = gstate(pg)
+        pg.click(".hint-panel button:has-text('Áp dụng nước này')")
+        after = gstate(pg)
+        check(set(j for j in range(n) if before["v"][j] != after["v"][j]) == cross(w, h, first + w) and after["moves"] == 1, "áp dụng: đảo đúng chữ thập của ô đó, 1 lần bấm")
+        res = pg.evaluate(JS_SOLVE_HINTS)
+        seq = [first + w] + res["seq"]
+        want = manual_chase(w, h, g["initial"])
+        check(res.get("status") == "solved" and res.get("tech") == "Đuổi đèn", "lặp gợi ý mức 3 (kiểu Đuổi đèn, đọc từ settings của ván) giải xong ván (%d nước)" % len(seq), res.get("err"))
+        check(seq == want, "dãy nước trên giao diện TRÙNG thủ tục đuổi đèn bằng tay viết độc lập bằng Python (đuổi → tra bảng → bấm hàng 1 → đuổi lại)", (seq, want))
+        pg.wait_for_selector("dialog[open] h2:has-text('Đã giải')", timeout=10000)
+        K, moves = len(g["presses"]), len(seq)
+        stars = 3 if moves <= K else 2 if moves <= K + -(-K // 4) else 1
+        gstat = pg.inner_text("dialog[open] .stat-grade")
+        check("Điểm tối ưu" in gstat and ("★" * stars + "☆" * (3 - stars)) in gstat and re.search(r"%d\s/\s%d\s+lần bấm" % (moves, K), gstat), "giải bằng đuổi đèn (%d nước, par %d): ô 'Điểm tối ưu' %d★ theo par, 'số lần bấm / par lần bấm'" % (moves, K, stars), gstat.replace("\n", " | "))
+        check(pg.inner_text("dialog[open] .grade-line").startswith("Đúng par" if moves == K else "Hơn par %d lần bấm" % (moves - K)), "dòng điểm nói đúng/hơn par", pg.inner_text("dialog[open] .grade-line"))
+        pg.keyboard.press("Escape")
+        pg.wait_for_selector("dialog[open]", state="detached")
+        # ---- kiểu gợi ý được nhớ (localStorage của máy này)
+        E.reload()
+        E.start(tid, "5", "easy", SEED + 61)
+        check(pg.get_attribute(".pz-lo-hintsw .chip:has-text('Đuổi đèn')", "aria-pressed") == "true" and pg.evaluate(JS_SETTING) == "chase" and pg.evaluate("localStorage.getItem('puz:lo-hint')") == "chase",
+              "tải lại trang + ván mới: vẫn nhớ kiểu 'Đuổi đèn' (localStorage 'puz:lo-hint'), ván mới nhận settings")
+        pg.click(".pz-lo-hintsw .chip:has-text('Ít bấm nhất')")
+        pg.click(".toolbar button:has-text('Gợi ý')")
+        pg.wait_for_selector(".hint-panel:not([hidden]) .hint-text")
+        check(pg.evaluate(JS_SETTING) == "min" and "Khử Gauss" in pg.text_content(".hint-panel .hint-level"), "đổi lại 'Ít bấm nhất' → gợi ý theo nghiệm ít bấm nhất")
+        pg.click(".hint-panel button:has-text('Ẩn gợi ý')")
+        # ---- par: đúng par 3★, thừa một lần (kể cả đã hoàn tác) 2★
+        E.start(tid, "3", "easy", SEED + 62)
+        g = gstate(pg)
+        for i in g["presses"]:
+            pg.click(cell(i))
+            pg.wait_for_timeout(40)
+        pg.wait_for_selector("dialog[open] h2:has-text('Đã giải')", timeout=10000)
+        K = len(g["presses"])
+        gstat = pg.inner_text("dialog[open] .stat-grade")
+        check("★★★" in gstat and re.search(r"%d\s/\s%d\s+lần bấm" % (K, K), gstat) and pg.inner_text("dialog[open] .grade-line").startswith("Đúng par") and pg.get_attribute("dialog[open] .stat-grade b", "aria-label") == "3/3 sao",
+              "bấm đúng %d ô của par → 'Điểm tối ưu' ★★★ '%d / %d lần bấm', 'Đúng par', nhãn đọc màn hình 3/3 sao" % (K, K, K), gstat.replace("\n", " | "))
+        rec = pg.evaluate("Puz.ui.app.ctx().user.history().filter(r => r.type === 'lightsout' && r.seed === %d)[0]" % (SEED + 62))
+        check(rec and rec.get("grade") and rec["grade"]["stars"] == 3 and rec["grade"]["value"] == K and rec["grade"]["best"] == K, "lịch sử (IndexedDB) ghi record.grade 3★, value = best = par", rec and rec.get("grade"))
+        pg.keyboard.press("Escape")
+        pg.wait_for_selector("dialog[open]", state="detached")
+        check("Điểm tối ưu ★★★" in pg.inner_text(".play-status"), "dòng trạng thái sau khi xong nêu điểm theo par", pg.inner_text(".play-status"))
+        E.start(tid, "3", "easy", SEED + 63)
+        g = gstate(pg)
+        extra = next(i for i in range(9) if i not in g["presses"])
+        pg.click(cell(extra))
+        pg.click(".toolbar button:has-text('Hoàn tác')")
+        for i in g["presses"]:
+            pg.click(cell(i))
+            pg.wait_for_timeout(40)
+        pg.wait_for_selector("dialog[open] h2:has-text('Đã giải')", timeout=10000)
+        K = len(g["presses"])
+        gstat = pg.inner_text("dialog[open] .stat-grade")
+        check("★★☆" in gstat and re.search(r"%d\s/\s%d\s+lần bấm" % (K + 1, K), gstat) and pg.inner_text("dialog[open] .grade-line").startswith("Hơn par 1 lần bấm"),
+              "bấm thừa một ô rồi hoàn tác (vẫn tính lần bấm, %d / %d) → ★★ 'Hơn par 1 lần bấm'" % (K + 1, K), gstat.replace("\n", " | "))
+        pg.keyboard.press("Escape")
+        pg.wait_for_selector("dialog[open]", state="detached")
+        # ---- Constraint View: mẫu bấm im lặng + mọi lời giải (5×5: hạt nhân 2 chiều, 4 lời giải)
+        E.start(tid, "5", "easy", SEED + 64)
+        g = gstate(pg)
+        pg.click(".play-head button[aria-label='Thêm tuỳ chọn']")
+        pg.click(".popmenu button:has-text('Constraint View')")
+        pg.wait_for_selector("dialog[open] .cv-sec", timeout=20000)
+        titles = [t.strip() for t in pg.locator("dialog[open] .cv-sec h3").all_text_contents()]
+        check(titles[:2] == ["Mẫu bấm im lặng (cơ sở hạt nhân, 2 mẫu)", "Mọi lời giải (4)"], "Constraint View 5×5: mục 'Mẫu bấm im lặng' (2 mẫu) và 'Mọi lời giải (4)'", titles)
+        sec = pg.locator("dialog[open] .cv-sec")
+        pats = [grid_cells(t) for t in sec.nth(0).locator("pre.cv-grid").all_text_contents()]
+        sols = [grid_cells(t) for t in sec.nth(1).locator("pre.cv-grid").all_text_contents()]
+        check(len(pats) == 2 and all(p[1] == 5 and p[2] == 5 and p[0] and silent(5, 5, p[0]) for p in pats) and pats[0][0] != pats[1][0],
+              "mỗi lưới mẫu im lặng thật sự im lặng (kiểm bằng luật chữ thập viết lại bằng Python) và hai mẫu khác nhau", [sorted(p[0]) for p in pats])
+        check(len(sols) == 4 and all(not any(apply_presses(5, 5, g["initial"], sorted(s[0]))) for s in sols) and sorted(sols[0][0]) == g["presses"] and len(set(frozenset(s[0]) for s in sols)) == 4
+              and [len(s[0]) for s in sols] == sorted(len(s[0]) for s in sols),
+              "4 lời giải khác nhau đều tắt hết đèn của bàn, sắp theo số lần bấm, cách đầu = par (data.presses)", [len(s[0]) for s in sols])
+        check(not re.findall(r"\b(?:null|undefined|NaN)\b|\[object \w+\]", pg.inner_text("dialog[open]")), "Constraint View không có chữ rác")
+        pg.keyboard.press("Escape")
+        # ---- trình soạn: bất biến sống
+        E.go("#/create/lightsout", 400)
+        pg.wait_for_selector(".pz-lo-ed-grid", timeout=10000)
+        pg.click(".ph-act button:has-text('Làm mới')")
+        pg.click("dialog[open] button:has-text('Bắt đầu lại')")
+        pg.wait_for_timeout(400)
+        pg.select_option(".pz-lo-dim >> nth=0 >> select", "4")
+        pg.wait_for_timeout(150)
+        check(pg.locator(".pz-lo-ed-grid .pz-lo-cell.obst").count() == 0 and pg.locator(".pz-lo-obinfo:not([hidden])").count() == 0, "bàn trống (giải được): không tô bất biến, không có dòng 'Không giải được'")
+        pg.click(".pz-lo-ed-grid .pz-lo-cell[data-i='0']")
+        pg.wait_for_timeout(100)
+        ob = pg.evaluate("[...document.querySelectorAll('.pz-lo-ed-grid .pz-lo-cell.obst')].map(c => +c.dataset.i).sort((a, b) => a - b)")
+        v4 = [1] + [0] * 15
+        want = min_obstruction(4, 4, v4)
+        check(ob and silent(4, 4, set(ob)) and sum(v4[i] for i in ob) % 2 == 1 and ob == want,
+              "4×4 bật một đèn (vô nghiệm): tô viền chấm đúng nhóm bất biến nhỏ nhất (%d ô) — mẫu im lặng có số đèn sáng lẻ (vét cạn 2^16 bằng Python)" % len(ob), (ob, want))
+        check(pg.evaluate("getComputedStyle(document.querySelector('.pz-lo-ed-grid .pz-lo-cell.obst'), '::after').borderTopStyle") == "dotted" and "thuộc nhóm bất biến" in pg.get_attribute(".pz-lo-ed-grid .pz-lo-cell.obst", "aria-label"),
+              "ô bất biến: viền CHẤM (khác gợi ý nét đứt / replay nét liền), nhãn đọc màn hình nói 'thuộc nhóm bất biến'")
+        info = pg.inner_text(".pz-lo-obinfo")
+        check(pg.locator(".pz-lo-obinfo:not([hidden])").count() == 1 and "Không giải được" in info and ("nhóm %d ô" % len(ob)) in info and "1 đèn sáng (lẻ)" in info, "dòng giải thích dưới bàn soạn: nhóm k ô, số đèn sáng lẻ, vì sao không về 0", info)
+        pg.wait_for_function("(() => { const t = document.querySelector('.cr-status').textContent; return t.trim().length > 0 && t.indexOf('Đang kiểm tra') < 0; })()", timeout=15000)
+        check("Bất biến chẵn–lẻ" in pg.inner_text(".cr-status") and pg.locator(".create-side button:has-text('Chơi thử')").is_disabled(), "khung 'Kiểm tra đề' (engine trong worker) nêu bất biến và khoá 'Chơi thử'", pg.inner_text(".cr-status").replace("\n", " | "))
+        pg.click(".pz-lo-ed-grid .pz-lo-cell[data-i='0']")
+        for i in sorted(cross(4, 4, 5)):
+            pg.click(".pz-lo-ed-grid .pz-lo-cell[data-i='%d']" % i)
+        pg.wait_for_timeout(100)
+        check(pg.locator(".pz-lo-ed-grid .pz-lo-cell.obst").count() == 0 and pg.locator(".pz-lo-obinfo:not([hidden])").count() == 0, "sửa thành bàn giải được (chữ thập ô 5) → hết tô bất biến ngay (không chờ worker)")
+        pg.evaluate("async () => { await Puz.ui.app.ctx().user.dropDraft('edit:lightsout'); }")
+        # ---- 360 px: công tắc không làm tràn ngang
+        Q = PageCls(br, P.url, "lo-p2-360", viewport={"width": 360, "height": 780})
+        try:
+            Q.start(tid, "7", "easy", SEED + 65)
+            m = Q.pg.evaluate("""() => { const s = document.querySelector('.board-host .pz-lo-hintsw').getBoundingClientRect();
+              return { sw: document.documentElement.scrollWidth, iw: innerWidth, right: s.right, left: s.left, n: document.querySelectorAll('.pz-lo-hintsw .chip').length }; }""")
+            check(m["n"] == 2 and m["sw"] <= m["iw"] and m["right"] <= m["iw"] + 0.5 and m["left"] >= -0.5, "360 px: công tắc kiểu gợi ý nằm gọn, trang không tràn ngang", m)
+        finally:
+            Q.close()
+    finally:
+        E.close()
+        br.close()
+
+
 # ---------------------------------------------------------------------------------------------- kiểm
 def run(P, check, section, tid):
     pg = P.pg
@@ -184,7 +424,7 @@ def run(P, check, section, tid):
     check(dom_v(pg) == g["v"] and sum(g["v"]) > 0, "ô sáng trong DOM khớp state (%d đèn sáng)" % sum(g["v"]), (dom_v(pg), g["v"]))
     st = stats(pg)
     K = len(g["presses"])
-    check(st[0].startswith(str(sum(g["v"])) + " đèn sáng") and st[1].startswith("0 lần bấm") and st[2] == "Ít nhất %d lần bấm" % K, "số đèn sáng, số lần bấm và 'Ít nhất K lần bấm' (K = %d) hiển thị đúng" % K, st)
+    check(st[0].startswith(str(sum(g["v"])) + " đèn sáng") and st[1].startswith("0 lần bấm") and st[2] == "Par %d lần bấm" % K, "số đèn sáng, số lần bấm và 'Par K lần bấm' (K = %d = số lần bấm tối thiểu) hiển thị đúng" % K, st)
     labels = pg.evaluate("[...document.querySelectorAll('.board-host .pz-lo-cell')].map(c => c.getAttribute('aria-label'))")
     check(all(labels[i].startswith("Hàng %d, cột %d, đèn %s" % (i // w + 1, i % w + 1, "bật" if g["v"][i] else "tắt")) for i in range(n)), "aria-label mỗi ô: hàng, cột, đèn bật/tắt (từ type.describeCell)", labels[:3])
 
@@ -359,7 +599,14 @@ def run(P, check, section, tid):
         pg.click(".replay-panel button:has-text('Sau')")
         pg.wait_for_timeout(150)
         rp = pg.evaluate("[...document.querySelectorAll('.board-host .pz-lo-cell.replay')].map(c => +c.dataset.i).sort((a, b) => a - b)")
-        check(pg.locator(".board-host .pz-lo-grid[aria-readonly=true]").count() == 1 and set(rp) == cross(w3, g["h"], presses[0]), "replay bước 1: bàn chỉ-đọc, tô (xanh, nét liền) đúng các ô vừa đổi (%d ô)" % len(rp), rp)
+        check(pg.locator(".board-host .pz-lo-grid[aria-readonly=true]").count() == 1 and rp == sorted(presses) and "Bản đồ lời giải" in pg.inner_text(".rp-text"), "replay bước 1 = BẢN ĐỒ LỜI GIẢI: bàn chỉ-đọc, tô (xanh, nét liền) đúng mọi ô cần bấm (%d ô = data.presses)" % len(rp), (rp, presses))
+        check(pg.locator(".board-host .pz-lo-hintsw").count() == 0, "replay (chỉ-đọc): không có công tắc kiểu gợi ý")
+        pg.click(".replay-panel button:has-text('Sau')")
+        pg.wait_for_timeout(150)
+        rp2 = pg.evaluate("[...document.querySelectorAll('.board-host .pz-lo-cell.replay')].map(c => +c.dataset.i).sort((a, b) => a - b)")
+        check(set(rp2) == cross(w3, g["h"], presses[1]), "replay bước 2: tô đúng các ô vừa đổi bởi lần bấm thứ 2 (%d ô)" % len(rp2), rp2)
+        pg.click(".replay-panel button:has-text('Trước')")
+        pg.wait_for_timeout(150)
         check(pg.evaluate("getComputedStyle(document.querySelector('.board-host .pz-lo-cell.replay'), '::after').borderTopStyle") == "solid", "replay viền NÉT LIỀN (khác gợi ý nét đứt)")
         check(dom_v(pg) != [0] * (w3 * g["h"]), "replay: view.refresh() vẽ lại từ state của replay (sau bước 1 còn đèn sáng)")
         pg.click(".replay-panel button[aria-label='Tới cuối']")
@@ -390,12 +637,13 @@ def run(P, check, section, tid):
     for theme in ("light", "dark"):
         pg.evaluate("t => { document.documentElement.dataset.theme = t }", theme)
         pg.wait_for_timeout(250)
-        col = {k: rgb(pv(pg, "var(--%s)" % k)) for k in ("pz-lo-panel", "pz-lo-off", "pz-lo-off-edge", "pz-lo-off-ink", "pz-lo-on", "pz-lo-on-hi", "pz-lo-on-edge", "pz-lo-on-ink", "pz-lo-xp-ring", "pz-lo-xp-in", "star", "pz-good", "accent", "bg", "pz-line-strong")}
+        col = {k: rgb(pv(pg, "var(--%s)" % k)) for k in ("pz-lo-panel", "pz-lo-off", "pz-lo-off-edge", "pz-lo-off-ink", "pz-lo-on", "pz-lo-on-hi", "pz-lo-on-edge", "pz-lo-on-ink", "pz-lo-xp-ring", "pz-lo-xp-in", "star", "pz-good", "accent", "bg", "pz-line-strong", "pz-lo-obst", "danger", "elev")}
         pairs = [("ký hiệu ô tắt / nền ô tắt >= 4.5", col["pz-lo-off-ink"], col["pz-lo-off"], 4.5),
                  ("ký hiệu ô bật / nền vàng (đậm) >= 4.5", col["pz-lo-on-ink"], col["pz-lo-on"], 4.5), ("ký hiệu ô bật / nền vàng (nhạt) >= 4.5", col["pz-lo-on-ink"], col["pz-lo-on-hi"], 4.5),
                  ("viền ô tắt / nền bàn >= 3", col["pz-lo-off-edge"], col["pz-lo-panel"], 3.0),
                  ("khung bàn / nền trang >= 3", col["pz-line-strong"], col["bg"], 3.0), ("viền gợi ý (--star) / nền bàn >= 3", col["star"], col["pz-lo-panel"], 3.0),
-                 ("viền replay (--pz-good) / nền bàn >= 3", col["pz-good"], col["pz-lo-panel"], 3.0), ("vòng focus (--accent) / nền bàn >= 3", col["accent"], col["pz-lo-panel"], 3.0)]
+                 ("viền replay (--pz-good) / nền bàn >= 3", col["pz-good"], col["pz-lo-panel"], 3.0), ("vòng focus (--accent) / nền bàn >= 3", col["accent"], col["pz-lo-panel"], 3.0),
+                 ("viền bất biến (--pz-lo-obst) / nền bàn >= 3", col["pz-lo-obst"], col["pz-lo-panel"], 3.0), ("chữ 'Không giải được' (--danger) / nền trang >= 4.5", col["danger"], col["bg"], 4.5)]
         if max(ratio(col["pz-lo-on"], col["pz-lo-panel"]), ratio(col["pz-lo-on-edge"], col["pz-lo-panel"])) < 3:
             low.append("%s ranh giới ô bật (nền vàng hoặc viền) / nền bàn < 3" % theme)
         for name, a, b, need in pairs:
@@ -621,3 +869,6 @@ def run(P, check, section, tid):
         check(res["overflow"][0] <= res["overflow"][1] and res["overflow"][2] <= res["overflow"][1] + 0.5 and res["cell"][0] >= 40, "iPhone 13: không tràn ngang, ô 5×5 rộng %.0f px" % res["cell"][0], res["overflow"])
         check(res["ed"][0] == 0 and res["ed"][1] == 1 and res["ed"][2][0] <= res["ed"][2][1], "iPhone 13: chạm ô trong trình soạn bật đèn; trang không tràn ngang", res["ed"])
         check(not res["errs"], "WebKit: không lỗi console/pageerror", res["errs"][:3])
+
+    # ======================================================================= đợt P2 (Edge thật)
+    edge_p2(P, check, section, tid)

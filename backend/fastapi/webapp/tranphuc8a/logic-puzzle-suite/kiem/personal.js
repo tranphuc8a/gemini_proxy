@@ -25,6 +25,50 @@ module.exports = function (t) {
     t.ok("loại V2 (không có trong ORDER) đứng sau, không đảo lịch cũ", D.forDay("2026-10-17", ids.concat(["minesweeper"])).type === d1.type);
   } finally { Puz.types.get = realGet; Puz.types.all = realAll; }
 
+  t.group("Daily — lịch xoay vòng CÓ PHIÊN BẢN theo ngày bắt đầu (thêm loại không đổi hôm nay và quá khứ)");
+  (function () {
+    var OLD = ["sudoku", "nqueens", "lightsout", "nonogram", "logicgrid"];
+    // Bản cũ (trước 23/10/2026) viết lại độc lập: MỘT danh sách cố định, chỉ số = số ngày mod 5. (Phần bậc/seed không đổi nên dùng lại tierFor/weekday.)
+    function oldForDay(day, ids) {
+      var n = U.dayNumber(day); if (!isFinite(n)) return null;
+      var pool = OLD.filter(function (id) { return ids.indexOf(id) >= 0; }); ids.forEach(function (id) { if (pool.indexOf(id) < 0) pool.push(id); });
+      if (!pool.length) return null;
+      var start = ((n % 5) + 5) % 5, type = null; for (var i = 0; i < 5 && !type; i++) { var c = OLD[(start + i) % 5]; if (pool.indexOf(c) >= 0) type = c; }
+      if (!type) type = pool[0];
+      var def = Puz.types.get(type), size = def ? Puz.types.sizeOf(def, null) : { id: "", tiers: null };
+      return { day: day, type: type, sizeId: size.id, tier: D.tierFor(size, D.WEEKDAY_TIER[D.weekday(day)]), seed: 10000000 + (Puz.rng.hash32("daily:" + day + ":" + type) % 90000000) };
+    }
+    var S = D.SCHEDULE, real = Puz.types.all().map(function (d) { return d.id; }), stop = S.length > 1 ? S[1].tu : "2028-01-01", diff = [], n = 0;
+    for (var day = "2020-01-01"; day < stop && day < "2028-01-01"; day = U.addDays(day, 1)) { n++; if (JSON.stringify(D.forDay(day, real)) !== JSON.stringify(oldForDay(day, real))) diff.push(day); }
+    t.ok("lịch thật: " + n + " ngày từ 2020-01-01 tới trước phiên bản thứ hai (" + stop + ") trùng HỆT bản cũ (loại, cỡ, bậc, seed)", n > 2000 && diff.length === 0, diff.slice(0, 5));
+    t.eq("Daily ngày 23/10/2026 (ngày làm P1) không đổi", D.forDay("2026-10-23", real), oldForDay("2026-10-23", real));
+    var today = U.dayKey();
+    if (today < stop) t.eq("Daily HÔM NAY (" + today + ") không đổi so với bản cũ", D.forDay(today, real), oldForDay(today, real));
+    t.eq("loại đã đăng ký nhưng chưa vào lịch (V2) đứng sau, không đổi Daily", D.forDay("2026-10-23", real.concat(["camel", "coinbalance"])).type, oldForDay("2026-10-23", real).type);
+    // hình dạng SCHEDULE: phiên bản đầu từ 1970-01-01; ngày tăng dần, hợp lệ; mỗi phiên bản = phiên bản trước + id mới ở CUỐI; id không trùng; id có thật
+    var shape = [];
+    if (S[0].tu !== "1970-01-01") shape.push("phiên bản đầu phải bắt đầu 1970-01-01 (để trùng công thức cũ)");
+    S.forEach(function (v, i) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v.tu) || U.addDays(v.tu, 0) !== v.tu) shape.push(i + ": ngày sai " + v.tu);
+      if (i && !(v.tu > S[i - 1].tu)) shape.push(i + ": tu phải tăng dần");
+      if (!Array.isArray(v.ids) || !v.ids.length || v.ids.some(function (x, k) { return v.ids.indexOf(x) !== k; })) shape.push(i + ": ids rỗng hoặc trùng");
+      if (i && S[i - 1].ids.some(function (x, k) { return v.ids[k] !== x; })) shape.push(i + ": ids phải giữ nguyên danh sách cũ và chỉ thêm ở cuối");
+      v.ids.forEach(function (x) { if (real.indexOf(x) < 0) shape.push(i + ": id chưa đăng ký " + x); });
+    });
+    t.ok("SCHEDULE đúng quy tắc (bắt đầu 1970-01-01, tu tăng dần, chỉ thêm id ở cuối, id có thật)", shape.length === 0, shape);
+    t.eq("ORDER (thứ tự hiển thị) = danh sách của phiên bản mới nhất", D.ORDER, S[S.length - 1].ids);
+    // phiên bản giả định: từ 2026-11-01 thêm "camel" — trước ngày đó y nguyên, từ ngày đó xoay vòng 6 loại bắt đầu ở ids[0]
+    var sched = [{ tu: "1970-01-01", ids: OLD }, { tu: "2026-11-01", ids: OLD.concat(["camel"]) }], ids6 = OLD.concat(["camel"]), before = [], seen6 = {};
+    for (day = "2026-09-01"; day < "2026-11-01"; day = U.addDays(day, 1)) if (JSON.stringify(D.forDay(day, ids6, { schedule: sched })) !== JSON.stringify(oldForDay(day, ids6))) before.push(day);
+    t.ok("thêm phiên bản từ 2026-11-01: mọi ngày TRƯỚC đó (kể cả ngày triển khai) không đổi", before.length === 0, before.slice(0, 3));
+    t.eq("versionFor chọn đúng phiên bản theo ngày", [D.versionFor("2026-10-31", sched).tu, D.versionFor("2026-11-01", sched).tu, D.versionFor("2030-01-01", sched).tu, D.versionFor("1960-01-01", sched).tu], ["1970-01-01", "2026-11-01", "2026-11-01", "1970-01-01"]);
+    t.eq("ngày bắt đầu phiên bản mới → loại đầu danh sách", D.forDay("2026-11-01", ids6, { schedule: sched }).type, "sudoku");
+    for (var k = 0; k < 6; k++) seen6[D.forDay(U.addDays("2026-11-01", k), ids6, { schedule: sched }).type] = 1;
+    t.eq("6 ngày từ ngày bắt đầu đi hết 6 loại (loại mới vào ngày thứ 6)", [Object.keys(seen6).sort(), D.forDay("2026-11-06", ids6, { schedule: sched }).type], [ids6.slice().sort(), "camel"]);
+    t.eq("xoay vòng đều sau ngày bắt đầu: ngày n và n+6 cùng loại", D.forDay("2026-11-09", ids6, { schedule: sched }).type, D.forDay("2026-11-15", ids6, { schedule: sched }).type);
+    t.eq("loại mới chưa được đăng ký (trình duyệt cũ) → nhảy sang loại kế, không null", D.forDay("2026-11-06", OLD, { schedule: sched }).type, "sudoku");
+  })();
+
   t.group("Thống kê và streak");
   function rec(day, o) { return Object.assign({ id: "g" + Math.random(), type: "sudoku", tier: "easy", score: 3, source: "random", day: day, endedAt: U.dayNumber(day) * 86400000 + 43200000, time: 300000, mistakes: 0, hints: 0, result: "solved" }, o || {}); }
   var recs = [rec("2026-10-10"), rec("2026-10-11"), rec("2026-10-12", { result: "revealed" }), rec("2026-10-13"), rec("2026-10-13", { type: "nqueens", time: 100000 }), rec("2026-10-14"), rec("2026-10-15"), rec("2026-10-17")];

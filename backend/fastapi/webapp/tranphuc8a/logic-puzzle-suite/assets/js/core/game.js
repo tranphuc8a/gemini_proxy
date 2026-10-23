@@ -110,7 +110,7 @@
       if (g.finished()) return null;
       if (g.status === "ready") g.start();
       level = Math.max(1, Math.min(3, level | 0));
-      var h = type.hint(puzzle, g.state, level);
+      var h = type.hint(puzzle, g.state, level, settings);           // tham số thứ 4 (mục 11): loại cần cài đặt cho gợi ý (vd kiểu gợi ý Lights Out) đọc ở đây; loại cũ bỏ qua
       if (h && !h.none) g.counters.hints[level]++;
       g.lastHint = h || null;
       emit({ type: "hint", hint: h });
@@ -135,12 +135,21 @@
       return { v: 1, id: g.id, puzzle: puzzle, state: copyState(g.state), undo: g.undoStack, redo: g.redoStack, counters: g.counters, activeMs: g.elapsed(), status: g.status === "playing" ? "paused" : g.status,
         startedAt: g.startedAt, endedAt: g.endedAt, source: g.source, ctx: g.ctx, updated: clock() };
     };
-    /** Bản ghi cho Lịch sử / Thống kê. result: solved | revealed | abandoned. */
+    /** Điểm tối ưu hiện tại (mục 11) của loại có def.grade — đã chuẩn hoá bằng Puz.grade.normalize; null nếu loại không chấm điểm hoặc grade lỗi
+        (lỗi của một engine không được làm hỏng việc kết thúc ván). counters truyền BẢN SAO để engine không sửa được bộ đếm. */
+    g.grade = function () {
+      if (typeof type.grade !== "function") return null;
+      var c = g.counters, copy = { moves: c.moves, mistakes: c.mistakes, undos: c.undos, hints: { 1: c.hints[1], 2: c.hints[2], 3: c.hints[3] }, revealed: c.revealed };
+      try { var r = type.grade(puzzle, g.state, copy); return P.grade ? P.grade.normalize(r) : (r && typeof r === "object" ? r : null); } catch (e) { return null; }
+    };
+    /** Bản ghi cho Lịch sử / Thống kê. result: solved | revealed | abandoned. Loại có grade: ván 'solved' thêm `grade` (một đối tượng); loại cũ giữ nguyên các trường. */
     g.record = function (result) {
       var s = puzzle.size, h = g.counters.hints, tier = P.util.tierOfScore(puzzle.score || 0);
-      return { id: g.id, type: puzzle.type, puzzleId: puzzle.id || P.util.puzzleId(puzzle), seed: puzzle.seed == null ? null : puzzle.seed, tier: puzzle.tier || tier.id, score: puzzle.score || 0, size: s, sizeId: puzzle.sizeId || null,
+      var rec = { id: g.id, type: puzzle.type, puzzleId: puzzle.id || P.util.puzzleId(puzzle), seed: puzzle.seed == null ? null : puzzle.seed, tier: puzzle.tier || tier.id, score: puzzle.score || 0, size: s, sizeId: puzzle.sizeId || null,
         source: g.source, day: g.ctx && g.ctx.day || null, startedAt: g.startedAt || clock(), endedAt: g.endedAt || clock(), time: g.elapsed(), mistakes: g.counters.mistakes,
         hints: h[1] + h[2] + h[3], maxHint: h[3] ? 3 : h[2] ? 2 : h[1] ? 1 : 0, moves: g.counters.moves, result: result || (g.status === "solved" ? "solved" : g.status === "revealed" ? "revealed" : "abandoned") };
+      if (rec.result === "solved") { var gr = g.grade(); if (gr) rec.grade = gr; }
+      return rec;
     };
     return g;
   }

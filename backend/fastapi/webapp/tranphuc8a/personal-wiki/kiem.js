@@ -724,6 +724,14 @@ async function syncUxTests() {
     Y.joinLink("https://h.vn/webapp/tranphuc8a/personal-wiki/index.html?source=pwa#/settings/sync", "json.wk_A-b.k_9-x") === "https://h.vn/webapp/tranphuc8a/personal-wiki/#/join/json.wk_A-b.k_9-x" &&
     Y.joinLink("http://127.0.0.1:5000/webapp/tranphuc8a/personal-wiki/#/notes", "mysql.a.b") === "http://127.0.0.1:5000/webapp/tranphuc8a/personal-wiki/#/join/mysql.a.b" &&
     Y.joinLink("http://x/a/", "a b/c") === "http://x/a/#/join/a%20b%2Fc");
+  kiem("parseCode (mức mô-đun, dùng chung với bộ đồng bộ): đúng dạng → {backend, ws, key}; 'default.' → backend ''; sai dạng → null",
+    bang(Y.parseCode(" json.wk_A.k-1 "), { backend: "json", ws: "wk_A", key: "k-1" }) && bang(Y.parseCode("default.wk_A.k"), { backend: "", ws: "wk_A", key: "k" }) &&
+    Y.parseCode("sqlite.wk_A.k") === null && Y.parseCode("json.wk_A") === null && Y.parseCode("json.wk A.k") === null && Y.parseCode("") === null && Y.parseCode(null) === null);
+  kiem("sameStore: so theo KHO (mã kho + khoá) — mã cũ 'default.<kho>.<khoá>' và liên kết 'json.<kho>.<khoá>' là cùng kho (không mời 'THAY kho đó')",
+    Y.sameStore("default.wk_A.k1", "json.wk_A.k1") && Y.sameStore("json.wk_A.k1", "default.wk_A.k1") && Y.sameStore("mysql.wk_A.k1", " mysql.wk_A.k1") && Y.sameStore("default.wk_A.k1", "default.wk_A.k1"));
+  kiem("sameStore: khác mã kho / khác khoá / cả hai ghi rõ nơi lưu khác nhau / mã sai dạng → khác kho",
+    !Y.sameStore("json.wk_A.k1", "json.wk_B.k1") && !Y.sameStore("json.wk_A.k1", "json.wk_A.k2") && !Y.sameStore("json.wk_A.k1", "mysql.wk_A.k1") &&
+    !Y.sameStore("json.wk_A.k1", "") && !Y.sameStore("", "") && !Y.sameStore("rác", "rác"));
 
   var t0 = 1.95e12, V = function (s) { return Y.statusView(Object.assign({ available: true, loaded: true, configured: true, online: true, phase: "idle", last: 0, pending: 0, done: 0, total: 0, error: "", fatal: false, lost: false }, s), t0); };
   kiem("statusView: không có máy chủ → ẩn; chưa đọc cài đặt → loading; chưa nối kho → 'Bật đồng bộ'",
@@ -820,10 +828,14 @@ function wordTests() {
   kiem("khớp định nghĩa cũ trên 3.000 chuỗi ngẫu nhiên đủ loại ký tự", badR === 0, badR + " lệch, vd " + firstBad);
   var big = ""; while (big.length < 400000) big += "Tiếng Việt có dấu: thuật toán 42 bước, cấu trúc dữ liệu — cây nhị phân (BST) và đồ thị; mã `x = y + 1`. 中文 😀\n";
   kiem("note 400k ký tự: cùng số từ", wc(big) === old(big), wc(big) + " ≠ " + old(big));
-  function med(f) { var ts = []; for (var r = 0; r < 3; r++) { var t0 = process.hrtime.bigint(); f(big); ts.push(Number(process.hrtime.bigint() - t0) / 1e6); } ts.sort(function (a, b) { return a - b; }); return ts[1]; }
-  med(wc); med(old);
-  var tNew = med(wc), tOld = med(old);
-  kiem("note 400k ký tự: bản mới nhanh hơn bản cũ (trung vị 3 lần: " + tNew.toFixed(1) + " ms so với " + tOld.toFixed(1) + " ms)", tNew < tOld);
+  // Đo xen kẽ (mới, cũ, mới, cũ…) và lấy lần NHANH NHẤT của mỗi bản: một đợt máy bận rơi vào cả hai, và lần nhanh nhất ít nhiễu nhất.
+  // Máy rất chậm/đông vẫn đỏ chập chờn thì nới bằng PW_PERF_SLACK (mặc định 1, vd PW_PERF_SLACK=2 node kiem.js).
+  var slack = Math.max(1, Number(process.env.PW_PERF_SLACK) || 1);
+  function once(f) { var t0 = process.hrtime.bigint(); f(big); return Number(process.hrtime.bigint() - t0) / 1e6; }
+  once(wc); once(old);
+  var tNew = Infinity, tOld = Infinity;
+  for (var r = 0; r < 5; r++) { tNew = Math.min(tNew, once(wc)); tOld = Math.min(tOld, once(old)); }
+  kiem("note 400k ký tự: bản mới nhanh hơn bản cũ (nhanh nhất trong 5 lần xen kẽ: " + tNew.toFixed(1) + " ms so với " + tOld.toFixed(1) + " ms" + (slack > 1 ? ", PW_PERF_SLACK=" + slack : "") + ")", tNew < tOld * slack);
 }
 
 (async function main() {

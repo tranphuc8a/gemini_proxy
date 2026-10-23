@@ -1,6 +1,6 @@
 /* ui/app.js — khởi động, định tuyến theo địa chỉ (#/…), khung (thanh bên / thanh dưới), ván đang mở, sinh puzzle, nhắc sao lưu.
 
-   Địa chỉ:  #/ (Chơi: Daily + ván dở + các loại) · #/new[/<loại>]?size=&tier=&seed=&go=1 (Puzzle mới; go=1 bắt đầu ngay) · #/play/<id ván> (bàn chơi)
+   Địa chỉ:  #/ (Chơi: Daily + ván dở + các loại) · #/new[/<loại>]?size=&tier=&seed=[&o=id:lựa-chọn,…]&go=1 (Puzzle mới; go=1 bắt đầu ngay) · #/play/<id ván> (bàn chơi)
              #/daily (puzzle hôm nay) · #/learn[/<loại>] (luật, thuật toán, Constraint View, Show Solver) · #/create[/<loại>] (tự tạo, Logic Builder)
              #/library[/<id bộ sưu tập>] (yêu thích, bộ sưu tập, nhập tệp) · #/stats · #/settings
    Mỗi màn là một hàm U.<mô-đun>.open(ctx, host, arg, query) trả về { destroy() }. */
@@ -113,8 +113,12 @@
     var ov = U.pz.busy("Đang sinh " + d.name + (o && o.tier ? " (" + U.pz.tierName(o.tier) + ")" : "") + "…", function () { cancelled = true; P.gen.cancel(); });
     return P.gen.generate(type, seed, o).then(function (pz) { ov.close(); return cancelled ? null : pz; }, function (e) { ov.close(); if (!cancelled) U.toast("Không sinh được puzzle: " + (e && e.message || e), { ms: 7000 }); return null; });
   }
+  /** spec: { type, seed, sizeId, tier, options?, source, ctx }. `options` (mục 11) chỉ được truyền cho loại có def.options, ở dạng GỌN (chỉ lựa chọn khác mặc định) —
+      loại cũ nhận đúng {sizeId, tier} như trước; Daily không truyền options (dùng mặc định). */
   function begin(spec) {
-    return generate(spec.type, spec.seed, { sizeId: spec.sizeId, tier: spec.tier }).then(function (pz) { return pz ? startGame(pz, { source: spec.source || "random", ctx: spec.ctx || {} }) : null; });
+    var d = P.types.get(spec.type), o = { sizeId: spec.sizeId, tier: spec.tier };
+    if (d && d.options) o.options = P.types.compactOptions(d, spec.options);
+    return generate(spec.type, spec.seed, o).then(function (pz) { return pz ? startGame(pz, { source: spec.source || "random", ctx: spec.ctx || {} }) : null; });
   }
   /** Ván đang chơi dở của một puzzle/ngày (nếu có). */
   function findGame(pred) { var list = user.games(); for (var i = 0; i < list.length; i++) if (pred(list[i].ser)) return list[i]; return null; }

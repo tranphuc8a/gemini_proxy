@@ -80,13 +80,19 @@
     return { N: N, W: W, rows: rows, pivotCols: pivotCols, rank: r, consistent: consistent };
   }
 
+  function weightOf(a) { var s = 0; for (var q = 0; q < a.length; q++) s += pc(a[q]); return s; }
+  /** a đứng trước b theo thứ tự từ điển của dãy chỉ số tăng dần ⇔ bit thấp nhất khác nhau nằm ở a. */
+  function lexLess(a, b2) { for (var q = 0; q < a.length; q++) { var d = a[q] ^ b2[q]; if (d) { var low = d & -d; return !!(a[q] & low); } } return false; }
+  function bitsOf(a, N) { var o = []; for (var j = 0; j < N; j++) if (getBit(a, j)) o.push(j); return o; }
+
   /** Giải A·x = b, mô tả cả tập nghiệm. board: mảng 0/1 độ dài w*h.
-      → {status, count, rank, nullity, presses:[…]|null, weight, minimal, N}. status: none | unique | multiple. */
+      → {status, count, rank, nullity, presses:[…]|null, weight, minimal, N, basis, obstruction?}. status: none | unique | multiple.
+      basis = cơ sở hạt nhân ker(A) (các "mẫu bấm im lặng", mảng Uint32Array) — dựng được cả khi vô nghiệm vì chỉ phụ thuộc phần A của ma trận đã khử.
+      Vô nghiệm ⇒ obstruction = bất biến chứng minh điều đó (xem obstructionOf). */
   function analyse(w, h, board) {
     var el = eliminate(w, h, board), N = el.N, nullity = N - el.rank, res = { N: N, rank: el.rank, nullity: nullity, status: "none", count: 0, presses: null, weight: -1, minimal: true };
-    if (!el.consistent) return res;
     var W0 = (N + 31) >>> 5, x0 = new Uint32Array(W0), k, f, j, isPivot = new Uint8Array(N);
-    for (k = 0; k < el.pivotCols.length; k++) { isPivot[el.pivotCols[k]] = 1; if (getBit(el.rows[k], N)) setBit(x0, el.pivotCols[k]); }
+    for (k = 0; k < el.pivotCols.length; k++) isPivot[el.pivotCols[k]] = 1;
     var basis = [];
     for (f = 0; f < N; f++) {
       if (isPivot[f]) continue;
@@ -94,8 +100,10 @@
       for (k = 0; k < el.pivotCols.length; k++) if (getBit(el.rows[k], f)) setBit(v, el.pivotCols[k]);
       basis.push(v);
     }
-    function weight(a) { var s = 0; for (var q = 0; q < W0; q++) s += pc(a[q]); return s; }
-    function lexLess(a, b2) { for (var q = 0; q < W0; q++) { var d = a[q] ^ b2[q]; if (d) { var low = d & -d; return !!(a[q] & low); } } return false; }
+    res.basis = basis;
+    if (!el.consistent) { res.obstruction = obstructionOf(N, board, basis); return res; }
+    for (k = 0; k < el.pivotCols.length; k++) if (getBit(el.rows[k], N)) setBit(x0, el.pivotCols[k]);
+    var weight = weightOf;
     var best = x0, bestW = weight(x0);
     if (basis.length && basis.length <= MAX_NULL_ENUM) {
       var cur = Uint32Array.from(x0), total = Math.pow(2, basis.length);
@@ -107,11 +115,47 @@
       }
     } else if (basis.length) res.minimal = false;
     var presses = []; for (j = 0; j < N; j++) if (getBit(best, j)) presses.push(j);
-    res.presses = presses; res.weight = presses.length;
+    res.presses = presses; res.weight = presses.length; res.best = best;
     res.count = nullity < 52 ? Math.pow(2, nullity) : Infinity;
     res.status = nullity === 0 ? "unique" : "multiple";
     return res;
   }
+
+  // ---------------------------------------------------------------- bất biến khi vô nghiệm (B2)
+  /** A đối xứng (chữ thập) ⇒ ker(Aᵀ) = ker(A). Bàn b vô nghiệm ⇔ có y ∈ ker(A) với y·b lẻ: mỗi lần bấm ô j đảo |chữ thập(j) ∩ y| đèn trong y,
+      và số đó CHẴN (vì (A·y)_j = 0) ⇒ tính chẵn lẻ của số đèn sáng trong y không đổi; bàn tắt hết có 0 (chẵn) mà b có số lẻ ⇒ không tới được.
+      Chọn y ÍT Ô NHẤT (duyệt mọi tổ hợp cơ sở theo mã Gray, cùng số ô thì nhỏ nhất theo thứ tự từ điển — tất định).
+      → { cells, size, lit, minimal } hoặc null nếu b giải được. */
+  function obstructionOf(N, board, basis) {
+    var W0 = (N + 31) >>> 5, bv = new Uint32Array(W0), i, q;
+    for (i = 0; i < N; i++) if (board[i]) setBit(bv, i);
+    function odd(a) { var s = 0; for (q = 0; q < W0; q++) s += pc(a[q] & bv[q]); return s & 1; }
+    var best = null, bestW = Infinity, minimal = true;
+    if (basis.length && basis.length <= MAX_NULL_ENUM) {
+      var cur = new Uint32Array(W0), total = Math.pow(2, basis.length);
+      for (var g = 1; g < total; g++) {
+        var t = g & -g, bvk = basis[31 - Math.clz32(t)];
+        for (q = 0; q < W0; q++) cur[q] ^= bvk[q];
+        if (!odd(cur)) continue;
+        var wt = weightOf(cur);
+        if (wt < bestW || (wt === bestW && lexLess(cur, best))) { bestW = wt; best = Uint32Array.from(cur); }
+      }
+    } else { minimal = false; for (i = 0; i < basis.length && !best; i++) if (odd(basis[i])) best = basis[i]; }
+    if (!best) return null;
+    var cells = bitsOf(best, N), lit = 0;
+    for (i = 0; i < cells.length; i++) if (board[cells[i]]) lit++;
+    return { cells: cells, size: cells.length, lit: lit, minimal: minimal };
+  }
+  function cellList(w, cells, cap) {
+    cap = cap || 12;
+    var o = cells.slice(0, cap).map(function (i) { return "(" + (Math.floor(i / w) + 1) + "," + (i % w + 1) + ")"; }).join(" ");
+    return cells.length > cap ? o + " … (+" + (cells.length - cap) + " ô)" : o;
+  }
+  function obstructionText(w, ob) {
+    return "Bất biến chẵn–lẻ: xét nhóm " + ob.size + " ô " + cellList(w, ob.cells) + ". Bấm ô nào cũng đảo một số CHẴN đèn trong nhóm này (0, 2 hoặc 4), " +
+      "nên số đèn sáng trong nhóm luôn giữ nguyên tính chẵn/lẻ. Bàn tắt hết có 0 đèn sáng ở đó (chẵn), bàn này có " + ob.lit + " (lẻ) ⇒ không thể tắt hết.";
+  }
+  function obstructionInfo(w, ob) { return ob ? { cells: ob.cells.slice(), size: ob.size, lit: ob.lit, minimal: ob.minimal, text: obstructionText(w, ob) } : null; }
 
   // ---------------------------------------------------------------- đọc đề / điểm khó
   function analyze(puzzle) {
@@ -153,7 +197,12 @@
     if (m && typeof m === "object") ["name", "source", "note"].forEach(function (k) { if (typeof m[k] === "string" && m[k]) o[k] = m[k].slice(0, 200); });
     return o;
   }
-  function infoOf(an) { return { rank: an.rank, nullity: an.nullity, solutions: an.count, minPresses: an.weight, presses: an.presses ? an.presses.slice() : null, minimal: an.minimal }; }
+  /** info của solve/validate/fromInput. Vô nghiệm ⇒ thêm obstruction {cells, size, lit, minimal, text} (bất biến chứng minh — trình soạn tô các ô này). */
+  function infoOf(an, w) {
+    var o = { rank: an.rank, nullity: an.nullity, solutions: an.count, minPresses: an.weight, presses: an.presses ? an.presses.slice() : null, minimal: an.minimal };
+    if (an.obstruction) o.obstruction = obstructionInfo(w, an.obstruction);
+    return o;
+  }
 
   // ---------------------------------------------------------------- sinh
   function pickSize(sizeId) {
@@ -209,7 +258,7 @@
     var board = Array.isArray(opts.board) && opts.board.length === a.N && opts.board.every(function (x) { return x === 0 || x === 1; }) ? opts.board : a.v;
     var an = analyse(a.w, a.h, board);
     var out = { status: an.status, count: an.count, solution: an.status === "none" ? null : { v: zeros(a.N) }, steps: stepsOf(a.w, a.h, an), techniques: {}, nodes: an.status === "none" ? 0 : Math.pow(2, an.nullity),
-      presses: an.presses, minPresses: an.weight, info: infoOf(an) };
+      presses: an.presses, minPresses: an.weight, info: infoOf(an, a.w) };
     if (out.steps.length) out.techniques[TECH] = out.steps.length;
     if (!an.minimal) out.warning = "Nhân quá lớn (" + an.nullity + " chiều): chỉ trả một nghiệm, chưa chắc ít bấm nhất.";
     return out;
@@ -222,9 +271,9 @@
     var a = analyze(puzzle);
     if (!a.ok) return { ok: false, errors: a.errors, status: "none", count: 0 };
     var an = analyse(a.w, a.h, a.v), errors = [];
-    if (an.status === "none") errors.push(noneText(a.w, a.h, an));
+    if (an.status === "none") { errors.push(noneText(a.w, a.h, an)); if (an.obstruction) errors.push(obstructionText(a.w, an.obstruction)); }
     else if (an.weight === 0) errors.push("Bàn đã tắt hết đèn sẵn: không có gì để chơi.");
-    var out = { ok: errors.length === 0, errors: errors, status: an.status, count: an.count, info: infoOf(an) };
+    var out = { ok: errors.length === 0, errors: errors, status: an.status, count: an.count, info: infoOf(an, a.w) };
     if (an.status !== "none") out.solution = { v: zeros(a.N) };
     return out;
   }
@@ -243,11 +292,11 @@
         for (i = 0; i < N; i++) { if (src[i] !== 0 && src[i] !== 1) return badInput("Ô thứ " + (i + 1) + " có giá trị lạ (chỉ nhận 0 hoặc 1)."); v[i] = src[i]; }
       }
       var an = analyse(w, h, v), errors = [];
-      if (an.status === "none") errors.push(noneText(w, h, an));
+      if (an.status === "none") { errors.push(noneText(w, h, an)); if (an.obstruction) errors.push(obstructionText(w, an.obstruction)); }
       else if (an.weight === 0) errors.push("Bàn đang tắt hết đèn: hãy bật ít nhất một đèn.");
       var puzzle = buildPuzzle(w, h, v, an, { seed: null, tier: "custom", meta: cleanMeta(input.meta) });
       puzzle.score = difficulty(puzzle);
-      return { ok: errors.length === 0, puzzle: puzzle, errors: errors, warnings: [], status: an.status, count: an.count, info: infoOf(an) };
+      return { ok: errors.length === 0, puzzle: puzzle, errors: errors, warnings: [], status: an.status, count: an.count, info: infoOf(an, w) };
     } catch (e) { return badInput("Không đọc được dữ liệu nhập: " + (e && e.message ? e.message : e)); }
   }
 
@@ -276,15 +325,118 @@
     return "Hàng " + (Math.floor(i / a.w) + 1) + ", cột " + (i % a.w + 1) + ", đèn " + (v[i] ? "bật" : "tắt");
   }
 
+  // ---------------------------------------------------------------- đuổi đèn (B4) — kỹ thuật giải bằng tay
+  /* Pha 1: đi từ trên xuống, mỗi đèn sáng ở hàng r < h−1 tắt bằng ô NGAY DƯỚI nó (không làm sáng lại hàng trên). Hết pha 1 chỉ hàng cuối còn đèn (mẫu r).
+     Pha 2: tra "bảng hàng cuối": bấm tập t ở HÀNG 1 với T·t = r (cột j của T = mẫu hàng cuối khi bấm ô j của hàng 1 trên bàn tối rồi đuổi đèn) rồi đuổi lại ⇒ tắt hết.
+     t chọn CHÍNH TẮC: ít ô nhất, cùng số ô thì nhỏ nhất theo từ điển (5×5 ra đúng bảng kinh điển 10001 → ô 1, 2; 01010 → 1, 4; 11100 → 2; …).
+     Gợi ý là hàm THUẦN của trạng thái (không nhớ lịch sử). Để vẫn theo đúng trình tự tay ("bấm hết t ở hàng 1 rồi mới đuổi lại"), giữa pha 2 nhận ra
+     "đã bấm tập S ⊂ hàng 1": các hàng 2…h−2 tối, hàng 2 sáng đúng ở cột S và hàng 1 đúng bằng dấu vết của S ⇒ bàn trước đó q = s ⊕ A·S tối hết trừ hàng cuối.
+     Nếu S là ĐOẠN ĐẦU (theo chỉ số tăng dần) của t(q) thì bấm tiếp phần tử kế của t(q); ngược lại đuổi đèn bình thường.
+     Vì sao dừng và ≤ 2N − w nước: t chính tắc có tính chất "t(q ⊕ A·e_c) = t(q) \ {c} với c = phần tử nhỏ nhất" (mọi nghiệm ít ô nhất chứa c đều bắt đầu bằng c),
+     và một lần đuổi trọn từ bàn có t = ∅ không bao giờ khớp mẫu "giữa pha 2" với phần còn lại khác rỗng ⇒ tối đa: một phần pha 1 + ≤ w ô hàng 1 + một lần đuổi trọn. */
+  var CHASE_COLS = {};
+  function bit(x, c) { return (x >>> c) & 1; }
+  function lowBit(x) { return 31 - Math.clz32(x & -x); }
+  function highBit(x) { return 31 - Math.clz32(x); }
+  function rowMask(v, w, r) { var m = 0; for (var c = 0; c < w; c++) if (v[r * w + c]) m |= 1 << c; return m; }
+  function popc(x) { var s = 0; while (x) { x &= x - 1; s++; } return s; }
+  function maskLess(a, b2) { var d = a ^ b2; return d !== 0 && (a & (d & -d)) !== 0; }   // thứ tự từ điển của dãy chỉ số tăng dần
+  /** Đuổi đèn tại chỗ trên bản sao: bấm dưới mỗi đèn sáng của hàng 0…h−2. → {presses, last: mặt nạ hàng cuối}. */
+  function chaseDown(w, h, v0) {
+    var v = v0.slice(), pr = [], r, c, k, cs;
+    for (r = 0; r < h - 1; r++) for (c = 0; c < w; c++) if (v[r * w + c]) { var j = (r + 1) * w + c; pr.push(j); cs = crossCells(w, h, j); for (k = 0; k < cs.length; k++) v[cs[k]] ^= 1; }
+    return { presses: pr, last: rowMask(v, w, h - 1), v: v };
+  }
+  /** Cột của T (mặt nạ hàng cuối) cho từng ô hàng 1 — chỉ phụ thuộc (w, h), nhớ lại. */
+  function chaseCols(w, h) {
+    var key = w + "x" + h; if (CHASE_COLS[key]) return CHASE_COLS[key];
+    var cols = [];
+    for (var j = 0; j < w; j++) cols.push(chaseDown(w, h, applyPresses(w, h, zeros(w * h), [j])).last);
+    CHASE_COLS[key] = cols; return cols;
+  }
+  /** Tập ô hàng 1 (mặt nạ) chính tắc cho mẫu hàng cuối r: giải T·t = r trên GF(2) (w ≤ 10 nên khử trên mặt nạ bit), duyệt mọi nghiệm (2^dim ker T)
+      lấy ít ô nhất, hoà thì nhỏ nhất theo từ điển. null nếu vô nghiệm (bàn không giải được). */
+  function chaseTop(w, h, r) {
+    if (!r) return 0;
+    var cols = chaseCols(w, h), rows = [], i, j, c, piv = [], row = 0;
+    for (i = 0; i < w; i++) { var m = 0; for (j = 0; j < w; j++) if (bit(cols[j], i)) m |= 1 << j; rows.push(m | (bit(r, i) << w)); }
+    for (c = 0; c < w && row < w; c++) {
+      var p = -1; for (i = row; i < w; i++) if (bit(rows[i], c)) { p = i; break; }
+      if (p < 0) continue;
+      var tmp = rows[p]; rows[p] = rows[row]; rows[row] = tmp;
+      for (i = 0; i < w; i++) if (i !== row && bit(rows[i], c)) rows[i] ^= rows[row];
+      piv.push(c); row++;
+    }
+    for (i = row; i < w; i++) if (bit(rows[i], w)) return null;
+    var x0 = 0, isP = 0, ker = [];
+    for (i = 0; i < piv.length; i++) { isP |= 1 << piv[i]; if (bit(rows[i], w)) x0 |= 1 << piv[i]; }
+    for (c = 0; c < w; c++) if (!bit(isP, c)) { var kv = 1 << c; for (i = 0; i < piv.length; i++) if (bit(rows[i], c)) kv |= 1 << piv[i]; ker.push(kv); }
+    var best = x0, cur = x0;
+    for (var g = 1; g < (1 << ker.length); g++) { cur ^= ker[lowBit(g)]; if (popc(cur) < popc(best) || (popc(cur) === popc(best) && maskLess(cur, best))) best = cur; }
+    return best;
+  }
+  function topEffect(w, S) { var e = 0; for (var c = 0; c < w; c++) if (bit(S, c)) e ^= (1 << c) | (c > 0 ? 1 << (c - 1) : 0) | (c < w - 1 ? 1 << (c + 1) : 0); return e; }
+  function maskCols(w, m) { var o = []; for (var c = 0; c < w; c++) if (bit(m, c)) o.push(c + 1); return o; }
+  function maskStr(w, m) { var s = ""; for (var c = 0; c < w; c++) s += bit(m, c) ? "1" : "0"; return s; }
+  /** Một bước đuổi đèn từ trạng thái v. → {done} | {none} | {phase:1, cell, row, col} | {phase:2, cell, last, top, done:S}. */
+  function chaseStep(w, h, v) {
+    var N = w * h, i, r, c;
+    for (i = 0; i < N && !v[i]; i++);
+    if (i === N) return { done: true };
+    if (h >= 3) {
+      var dark = true;
+      for (i = 2 * w; i < (h - 1) * w && dark; i++) if (v[i]) dark = false;
+      var S = rowMask(v, w, 1);
+      if (dark && S && rowMask(v, w, 0) === topEffect(w, S)) {
+        var last = rowMask(v, w, h - 1), t = chaseTop(w, h, last);          // ô hàng 1 chỉ đảo hàng 1–2 nên hàng cuối của q = hàng cuối hiện tại
+        if (t !== null && (S & ~t) === 0 && S !== t && highBit(S) < lowBit(t & ~S)) return { phase: 2, cell: lowBit(t & ~S), last: last, top: t, pressed: S };
+      }
+    }
+    for (r = 0; r < h - 1; r++) for (c = 0; c < w; c++) if (v[r * w + c]) return { phase: 1, cell: (r + 1) * w + c, row: r, col: c };
+    var r0 = rowMask(v, w, h - 1), t0 = chaseTop(w, h, r0);
+    if (t0 === null) return { none: true, last: r0 };
+    return { phase: 2, cell: lowBit(t0), last: r0, top: t0, pressed: 0 };
+  }
+  var CHASE = "Đuổi đèn";
+  function chaseHint(a, v, level) {
+    var w = a.w, h = a.h, st = chaseStep(w, h, v), i = st.cell, r = Math.floor(i / w), c = i % w;
+    if (st.phase === 1) {
+      var lit = []; for (var k = 0; k < w; k++) if (v[st.row * w + k]) lit.push(st.row * w + k);
+      if (level === 1) return { level: 1, text: "Đuổi đèn: hàng " + (st.row + 1) + " còn " + lit.length + " đèn sáng — bấm ô ngay DƯỚI mỗi đèn sáng (ở hàng " + (st.row + 2) + ") để đẩy đèn xuống.", why: [], cells: lit, technique: CHASE };
+      if (level === 2) return { level: 2, text: "Bấm ô ngay dưới đèn sáng ở hàng " + (st.row + 1) + ", cột " + (st.col + 1) + ".", why: [], cells: [i], technique: CHASE };
+      var after = chaseDown(w, h, v);
+      return { level: 3, text: "Bấm ô " + rcLabel(w, i) + ".", technique: CHASE, cells: [i], action: { k: "press", i: i },
+        why: ["Đuổi đèn đi từ trên xuống: đèn ở hàng " + (st.row + 1) + ", cột " + (st.col + 1) + " chỉ còn tắt được bằng ô ngay dưới nó mà không làm sáng lại các hàng phía trên.",
+          "Làm lần lượt mọi đèn sáng, hàng này qua hàng khác, tới khi chỉ còn hàng cuối có đèn.",
+          after.last ? "Đuổi hết xuống từ bàn hiện tại, hàng cuối sẽ còn mẫu " + maskStr(w, after.last) + " — khi đó tra bảng hàng cuối (pha 2)." : "Đuổi hết xuống từ bàn hiện tại là tắt hết đèn — không cần pha 2."] };
+    }
+    var pat = maskStr(w, st.last), all = maskCols(w, st.top), left = maskCols(w, st.top & ~st.pressed), topCells = left.map(function (x) { return x - 1; });
+    var lastCells = []; for (var q = 0; q < w; q++) if (bit(st.last, q)) lastCells.push((h - 1) * w + q);
+    var table = "Hàng cuối còn mẫu " + pat + " → tra bảng: bấm ô " + all.join(", ") + " ở hàng 1 rồi đuổi lại.";
+    if (level === 1) return { level: 1, technique: CHASE, why: [], cells: st.pressed ? topCells : lastCells,
+      text: st.pressed ? "Đuổi đèn — pha 2 đang dở: theo bảng hàng cuối (mẫu " + pat + ") còn phải bấm " + left.length + " ô ở hàng 1 trước khi đuổi lại." : "Đuổi đèn — pha 2: chỉ còn hàng cuối có đèn (mẫu " + pat + "). Tra bảng hàng cuối để biết phải bấm những ô nào ở HÀNG 1, rồi đuổi lại." };
+    if (level === 2) return { level: 2, technique: CHASE, why: [], cells: topCells, text: table + " Ô tiếp theo: hàng 1, cột " + (c + 1) + "." };
+    var why = [table, "Bảng tính bằng cách giải T·t = r trên GF(2): cột j của T là mẫu hàng cuối khi bấm ô j của hàng 1 trên bàn tối rồi đuổi đèn; chọn cách ít ô nhất."];
+    if (st.pressed) why.push("Đã bấm ô " + maskCols(w, st.pressed).join(", ") + " ở hàng 1; còn ô " + left.join(", ") + ". Bấm hết rồi mới đuổi lại từ hàng 1.");
+    else why.push("Bấm đủ các ô này ở hàng 1 (thứ tự không quan trọng), xong mới đuổi lại từ trên xuống.");
+    return { level: 3, text: "Bấm ô " + rcLabel(w, i) + ".", why: why, cells: [i], technique: CHASE, action: { k: "press", i: i } };
+  }
+
   // ---------------------------------------------------------------- gợi ý
   function rowCells(w, r) { var o = []; for (var c = 0; c < w; c++) o.push(r * w + c); return o; }
-  function hint(puzzle, state, level) {
+  /** Kiểu gợi ý (settings.loHint, công tắc trên bàn): "min" (mặc định) = theo nghiệm ít bấm nhất; "chase" = đuổi đèn. */
+  function hintStyle(settings) { return settings && settings.loHint === "chase" ? "chase" : "min"; }
+  function hint(puzzle, state, level, settings) {
     level = Math.max(1, Math.min(3, level | 0 || 1));
     var a = analyze(puzzle), v = a.ok ? boardOf(a, state) : null;
     if (!v) return { level: level, text: "Đề không hợp lệ nên chưa gợi ý được.", why: a.errors.slice(), cells: [], none: true };
     var an = analyse(a.w, a.h, v);
-    if (an.status === "none") return { level: level, text: "Bàn hiện tại không thể tắt hết đèn bằng các nước bấm nên không gợi ý được.", why: [], cells: [], none: true };
+    if (an.status === "none") {
+      var ob = an.obstruction ? obstructionInfo(a.w, an.obstruction) : null;
+      return { level: level, text: "Bàn hiện tại không thể tắt hết đèn bằng các nước bấm nên không gợi ý được.", why: ob ? [ob.text] : [], cells: ob ? ob.cells : [], none: true, obstruction: ob };
+    }
     if (an.weight === 0) return { level: level, text: "Tất cả đèn đã tắt — không còn gì để gợi ý.", why: [], cells: [], none: true };
+    if (hintStyle(settings) === "chase") return chaseHint(a, v, level);
     var i = an.presses[0], r = Math.floor(i / a.w), c = i % a.w, K = an.weight, inRow = an.presses.filter(function (q) { return Math.floor(q / a.w) === r; }).length;
     if (level === 1) return { level: 1, text: "Bàn này cần ít nhất " + K + " lần bấm nữa. Hãy nhìn vào hàng " + (r + 1) + ".", why: [], cells: rowCells(a.w, r), technique: TECH };
     if (level === 2) return { level: 2, text: "Hàng " + (r + 1) + " còn cần bấm " + inRow + " ô. Một ô cần bấm nằm ở cột " + (c + 1) + ".", why: [], cells: [i], technique: TECH };
@@ -300,7 +452,11 @@
     an.presses.forEach(function (i, k) {
       var diff = moveFor(puzzle, st, { k: "press", i: i });
       var why = k === 0 ? ["Giải A·x = b trên GF(2): hạng " + an.rank + ", nhân " + an.nullity + " chiều, " + an.count + " nghiệm; chọn nghiệm ít bấm nhất (" + K + " lần).", "Ô này có hệ số 1 trong nghiệm đó."] : ["Ô này cũng có hệ số 1 trong nghiệm ít bấm nhất; thứ tự bấm không quan trọng."];
-      out.push({ text: "Bấm ô " + rcLabel(a.w, i) + " (lần " + (k + 1) + "/" + K + "): đảo " + diff.d.length + " đèn.", why: why, diff: diff, cells: diff.d.map(function (e) { return e[1]; }), technique: TECH });
+      // B3 — bản đồ lời giải: bước đầu tô MỌI ô cần bấm (các ô bị đảo vẫn thấy qua hoạt ảnh lật); các bước sau tô các ô vừa đổi như cũ
+      var text = (k === 0 ? "Bản đồ lời giải — cần bấm " + K + " ô (đang tô): " + cellList(a.w, an.presses, 40) + "; thứ tự không quan trọng. " : "") + "Bấm ô " + rcLabel(a.w, i) + " (lần " + (k + 1) + "/" + K + "): đảo " + diff.d.length + " đèn.";
+      var step = { text: text, why: why, diff: diff, cells: k === 0 ? an.presses.slice() : diff.d.map(function (e) { return e[1]; }), technique: TECH };
+      if (k === 0) step.map = an.presses.slice();
+      out.push(step);
       P.game.applyDiff(st, diff.d, false);
     });
     return out;
@@ -328,7 +484,29 @@
     if (cap < N) constraints.push("… và " + (N - cap) + " phương trình khác cùng dạng (mỗi ô một phương trình).");
     var summary = N + " biến nhị phân (ô có được bấm không) và " + N + " phương trình mod 2 — hệ A·x = b trên GF(2). Hạng " + an.rank + ", nhân " + an.nullity + " chiều; " +
       (an.status === "none" ? "bàn này KHÔNG giải được (b ngoài ảnh của A)." : an.count + " nghiệm" + (an.count > 1 ? " (cùng đúng, ít nhất " + an.weight + " lần bấm)" : ", cần " + an.weight + " lần bấm") + ".");
-    return { summary: summary, variables: variables, constraints: constraints, counts: { variables: N, constraints: N, rank: an.rank, nullity: an.nullity, solutions: an.count, minPresses: an.weight } };
+    return { summary: summary, variables: variables, constraints: constraints, counts: { variables: N, constraints: N, rank: an.rank, nullity: an.nullity, solutions: an.count, minPresses: an.weight },
+      sections: silentSections(w, h, an) };
+  }
+  /** B3 — "mẫu im lặng" (cơ sở hạt nhân: bấm cả mẫu thì không đèn nào đổi), mọi nghiệm khi ≤ 16, và bất biến nếu vô nghiệm.
+      Mỗi mục: { text, grid: ["#.#..", …] } (# = ô thuộc mẫu) — learn.js vẽ thành lưới chữ đơn cách. */
+  function gridOf(w, h, cells) { var g = [], set = {}, r, c; cells.forEach(function (i) { set[i] = 1; }); for (r = 0; r < h; r++) { var s = ""; for (c = 0; c < w; c++) s += set[r * w + c] ? "#" : "."; g.push(s); } return g; }
+  var MAX_LISTED = 16;
+  function silentSections(w, h, an) {
+    var N = w * h, out = [], basis = an.basis || [], k;
+    if (basis.length) {
+      out.push({ title: "Mẫu bấm im lặng (cơ sở hạt nhân, " + basis.length + " mẫu)", note: "Bấm đủ mọi ô của một mẫu thì mỗi đèn bị đảo một số chẵn lần — bàn không đổi. Cộng (XOR) một mẫu vào một lời giải được lời giải khác; " + basis.length + " mẫu độc lập cho 2^" + basis.length + " = " + Math.pow(2, basis.length) + " cách bấm cùng đúng.",
+        items: basis.map(function (b, i) { var cells = bitsOf(b, N); return { text: "Mẫu " + (i + 1) + " — " + cells.length + " ô: " + cellList(w, cells, 16), grid: gridOf(w, h, cells) }; }) });
+    } else out.push({ title: "Mẫu bấm im lặng", note: "Hạt nhân 0 chiều: không có tập bấm khác rỗng nào giữ nguyên bàn ⇒ mọi bàn " + w + "×" + h + " giải được và lời giải là duy nhất.", items: [] });
+    if (an.status !== "none" && an.best && basis.length <= 4) {
+      var sols = [], cur = Uint32Array.from(an.best), total = Math.pow(2, basis.length);
+      sols.push(Uint32Array.from(cur));
+      for (var g = 1; g < total; g++) { var bv = basis[31 - Math.clz32(g & -g)]; for (k = 0; k < cur.length; k++) cur[k] ^= bv[k]; sols.push(Uint32Array.from(cur)); }
+      sols.sort(function (x, y) { var d = weightOf(x) - weightOf(y); return d || (lexLess(x, y) ? -1 : lexLess(y, x) ? 1 : 0); });
+      if (sols.length <= MAX_LISTED) out.push({ title: "Mọi lời giải (" + sols.length + ")", note: "Lời giải đầu là cách ít bấm nhất (gợi ý và replay đi theo nó).",
+        items: sols.map(function (s, i) { var cells = bitsOf(s, N); return { text: "Cách " + (i + 1) + " — " + cells.length + " lần bấm" + (i === 0 ? " (ít nhất)" : "") + ": " + cellList(w, cells, 16), grid: gridOf(w, h, cells) }; }) });
+    }
+    if (an.obstruction) { var ob = obstructionInfo(w, an.obstruction); out.push({ title: "Bất biến: vì sao không giải được", note: ob.text, items: [{ text: "Nhóm " + ob.size + " ô, đang có " + ob.lit + " đèn sáng (lẻ).", grid: gridOf(w, h, ob.cells) }] }); }
+    return out;
   }
 
   function trace(puzzle) {
@@ -344,14 +522,19 @@
       var txt = "Cột " + (info.col + 1) + " (ẩn " + cellName(w, info.col) + "): " + (info.swapped >= 0 ? "đổi chỗ hàng " + (info.swapped + 1) + " lên hàng " + (info.row + 1) + " để có pivot 1; " : "pivot 1 đã ở hàng " + (info.row + 1) + "; ") + "cộng (XOR) hàng pivot vào " + info.elim + " hàng khác có 1 ở cột này.";
       steps.push({ text: txt, matrix: snap(rows), pivot: [info.row, info.col] }); pivots++;
     });
-    var truncated = pivots < el.pivotCols.length;
+    var truncated = pivots < el.pivotCols.length, nul = N - el.rank;
+    // B3 — bước cuối nêu hạt nhân: mỗi cột không pivot (ẩn tự do) cho một "mẫu bấm im lặng"; vô nghiệm thì nêu bất biến (một mẫu im lặng có số đèn sáng lẻ)
+    var kern = nul ? " Hạt nhân " + nul + " chiều: mỗi ẩn tự do cho một MẪU BẤM IM LẶNG (bấm cả mẫu thì không đèn nào đổi) — xem chúng ở Constraint View."
+      : " Hạt nhân 0 chiều: không có mẫu bấm im lặng nên bàn " + w + "×" + h + " nào cũng giải được và lời giải là duy nhất.";
+    if (!el.consistent) { var ob = obstructionOf(N, a.v, analyse(w, h, a.v).basis); if (ob) kern += " " + obstructionText(w, ob); }
     if (!truncated) {
-      var tail = el.consistent ? "Xong: hạng " + el.rank + ", nhân " + (N - el.rank) + " chiều. Mọi hàng còn lại đều dạng [0 … 0 | 0] nên hệ có nghiệm; mỗi cột pivot cho một ẩn, cột không pivot là ẩn tự do (" + (N - el.rank) + " ẩn)."
-        : "Xong: hạng " + el.rank + ", nhân " + (N - el.rank) + " chiều. Có hàng dạng [0 … 0 | 1] (0 = 1) nên hệ VÔ NGHIỆM — bàn này không thể tắt hết.";
+      var tail = el.consistent ? "Xong: hạng " + el.rank + ", nhân " + nul + " chiều. Mọi hàng còn lại đều dạng [0 … 0 | 0] nên hệ có nghiệm; mỗi cột pivot cho một ẩn, cột không pivot là ẩn tự do (" + nul + " ẩn)."
+        : "Xong: hạng " + el.rank + ", nhân " + nul + " chiều. Có hàng dạng [0 … 0 | 1] (0 = 1) nên hệ VÔ NGHIỆM — bàn này không thể tắt hết.";
+      tail += kern;
       if (steps.length < cap) steps.push({ text: tail, matrix: snap(el.rows) }); else steps[steps.length - 1].text += " " + tail;
     }
     var note = "Khử Gauss–Jordan trên GF(2): cộng hàng = XOR. " + N + " hàng × " + (N + 1) + " cột.";
-    if (truncated) note += " Chỉ ghi " + steps.length + " bước đầu (" + pivots + "/" + el.pivotCols.length + " pivot) để gọn.";
+    if (truncated) note += " Chỉ ghi " + steps.length + " bước đầu (" + pivots + "/" + el.pivotCols.length + " pivot) để gọn." + kern;
     return { kind: "matrix", title: "Khử Gauss trên GF(2) — [A | b] của bàn " + w + "×" + h, steps: steps, truncated: truncated, note: note, rank: el.rank, nullity: N - el.rank, solvable: el.consistent };
   }
 
@@ -406,6 +589,29 @@
     } catch (e) { return badInput("Không đọc được tệp: " + (e && e.message ? e.message : e)); }
   }
 
+  // ---------------------------------------------------------------- par + điểm tối ưu (B6, HUONG-DAN-ENGINE.md mục 11.4)
+  /** Par K = số lần bấm tối thiểu từ bàn đầu (data.presses — không ghi gì thêm vào puzzle nên seed cũ giữ nguyên id).
+      value = counters.moves (mọi lần bấm, kể cả lần sau đó hoàn tác — giống chip "lần bấm" trên bàn); 3★ = đúng K, 2★ ≤ K + ⌈K/4⌉, 1★ còn lại.
+      Chưa tắt hết đèn ⇒ 0★. quality = K / số lần bấm (Puz.grade.fromRatio, sense "min"). */
+  function parOf(puzzle) {
+    var d = puzzle && puzzle.data;
+    if (d && Array.isArray(d.presses)) return d.presses.length;
+    var a = analyze(puzzle); if (!a.ok) return 0;
+    var an = analyse(a.w, a.h, a.v); return an.status === "none" ? 0 : an.weight;
+  }
+  function parStars(moves, K) { return moves <= K ? 3 : moves <= K + Math.ceil(K / 4) ? 2 : 1; }
+  function grade(puzzle, state, counters) {
+    var K = parOf(puzzle), moves = counters && typeof counters.moves === "number" && isFinite(counters.moves) ? Math.max(0, Math.floor(counters.moves)) : 0;
+    var G = P.grade, solved = check(puzzle, state).solved;
+    if (!K) return { value: moves, best: null, quality: 0, stars: 0, valueText: String(moves), bestText: "—", text: "Bàn này không có par" };
+    var g = G.fromRatio(moves, K, "min");
+    if (!solved) { g.quality = 0; g.stars = 0; g.text = "Chưa tắt hết đèn (par " + K + " lần bấm)"; return g; }
+    g.stars = parStars(moves, K);
+    var over = moves - K;
+    g.text = over <= 0 ? "Đúng par: " + K + " lần bấm — ít nhất có thể!" : "Hơn par " + over + " lần bấm (par " + K + ")" + (g.stars === 2 ? " — rất gần tối ưu." : ". Thử lại để đạt par?");
+    return g;
+  }
+
   // ---------------------------------------------------------------- đăng ký
   var SIZES = [
     { id: "3", label: "3×3", params: { w: 3, h: 3 }, tiers: ["easy", "medium", "hard"] },
@@ -422,8 +628,10 @@
       "Mỗi ô là một chiếc đèn: bật (sáng) hoặc tắt (tối). Mục tiêu là tắt TẤT CẢ đèn.",
       "Bấm một ô sẽ đảo trạng thái của chính ô đó và của các ô kề phía trên, phía dưới, bên trái, bên phải (nếu có).",
       "Bấm hai lần cùng một ô thì trở lại như cũ, và thứ tự bấm không quan trọng — chỉ cần biết ô nào được bấm một số LẺ lần.",
-      "Đề do app sinh luôn giải được. Một bàn có thể có nhiều cách tắt hết đèn (đều đúng); gợi ý luôn theo cách ít lần bấm nhất.",
-      "Bàn chữ nhật tự nhập có thể không giải được — app sẽ báo cho bạn."
+      "Đề do app sinh luôn giải được. Một bàn có thể có nhiều cách tắt hết đèn (đều đúng).",
+      "Par = số lần bấm ít nhất có thể. Giải đúng par được ★★★, hơn par không quá một phần tư được ★★, còn lại ★ (mọi lần bấm đều tính, kể cả lần đã hoàn tác).",
+      "Gợi ý có hai kiểu (công tắc dưới bàn): \"Ít bấm nhất\" chỉ ô thuộc lời giải ngắn nhất; \"Đuổi đèn\" dạy cách giải bằng tay — tắt từng hàng từ trên xuống rồi tra bảng hàng cuối.",
+      "Bàn chữ nhật tự nhập có thể không giải được — app chỉ ra nhóm ô có số đèn sáng lẻ (bất biến) để chứng minh điều đó."
     ],
     sizes: SIZES,
     algorithm: {
@@ -438,10 +646,17 @@
       links: [{ id: "gaussian-elimination", label: "Khử Gauss (giải hệ tuyến tính, có bản GF(2) bằng bitset)" }, { id: "bit-manipulation", label: "Thao tác bit — XOR" }]
     },
     difficultyNote: "Điểm 0–10 = 10 × min(1, K/(0,5·N + 1)) × (0,65 + 0,35 · min(1, (N − 4)/45)), với N = số ô và K = số lần bấm TỐI THIỂU do khử Gauss tính ra (không phải số lần bấm ngẫu nhiên lúc sinh đề). Cần nhiều lần bấm tối thiểu và bàn lớn = khó; hệ số cỡ bàn làm bàn nhỏ (3×3, 4×4) không với tới bậc Chuyên gia.",
+    objective: { sense: "min", label: "Số lần bấm (par = ít nhất)", unit: "lần bấm" },
     generate: generate, fromInput: fromInput, validate: validate, solve: solve, difficulty: difficulty, newState: newState, isGiven: isGiven, moveFor: moveFor, check: check, mistakes: mistakes,
-    hint: hint, replay: replay, constraintView: constraintView, trace: trace, describeCell: describeCell, toFile: toFile, fromFile: fromFile, toText: toText, fromText: fromText
+    hint: hint, replay: replay, constraintView: constraintView, trace: trace, describeCell: describeCell, toFile: toFile, fromFile: fromFile, toText: toText, fromText: fromText, grade: grade
   };
   def.MIN_D = MIN_D; def.MAX_D = MAX_D;
+  /** Hàm thuần cho bàn/trình soạn/test (không thuộc hợp đồng chung). obstruction(w, h, v) → {cells, size, lit, minimal, text} | null (giải được);
+      chaseStep(w, h, v) → một bước đuổi đèn; chaseTop(w, h, mặt nạ hàng cuối) → mặt nạ ô hàng 1 của bảng; par(puzzle); cross(w, h, i). */
+  def.lib = {
+    obstruction: function (w, h, v) { var an = analyse(w, h, v); return an.obstruction ? obstructionInfo(w, an.obstruction) : null; },
+    chaseStep: chaseStep, chaseTop: chaseTop, par: parOf, parStars: parStars, cross: crossCells, hintStyle: hintStyle
+  };
   P.types.register(def);
   if (typeof module !== "undefined" && module.exports) module.exports = def;
 })(typeof globalThis !== "undefined" ? globalThis : this);

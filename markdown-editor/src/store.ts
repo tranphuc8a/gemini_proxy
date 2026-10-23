@@ -27,46 +27,13 @@ import { DEFAULT_SETTINGS, clearLegacyStorage, loadFiles, loadSettings, saveFile
 import type { InboxDocument } from './lib/inbox'
 import type { Layout, Pane } from './lib/responsive'
 import { readEditorSelection } from './lib/editorSelection'
+import { WELCOME } from './lib/welcome'
 
 /** Keystrokes inside this window collapse into a single undo step. */
 export const HISTORY_DEBOUNCE_MS = 600
 /** Undo depth. Previously unbounded, which grew localStorage without limit. */
 export const HISTORY_LIMIT = 200
 const AUTOSAVE_DEBOUNCE_MS = 800
-
-const WELCOME = `# Welcome to Markdown Editor
-
-A fast, offline-first editor with live GitHub-flavoured preview.
-
-## Try it out
-
-- **Bold**, *italic*, ~~strikethrough~~ and \`inline code\`
-- [ ] Click a checkbox in the preview to tick it off
-- [x] Press <kbd>Ctrl</kbd>+<kbd>K</kbd> for the command palette
-
-> Drag the divider to resize the panes, or press <kbd>Ctrl</kbd>+<kbd>/</kbd> for shortcuts.
-
-| Feature   | Shortcut       |
-| --------- | -------------- |
-| Bold      | Ctrl+B         |
-| Italic    | Ctrl+I         |
-| Link      | Ctrl+K then L  |
-| Find      | Ctrl+F         |
-
-\`\`\`ts
-export function greet(name: string): string {
-  return \`Hello, \${name}!\`
-}
-\`\`\`
-
-\`\`\`mermaid
-flowchart LR
-  Write[Write Markdown] --> Preview[Live preview]
-  Preview --> Export[Export PDF / HTML]
-\`\`\`
-
-Math works too: $e^{i\\pi} + 1 = 0$
-`
 
 interface StoreState extends EditorState {
   setContent: (content: string) => void
@@ -155,7 +122,8 @@ const initialState: EditorState = {
   drawerOpen: false,
   phonePane: null,
   smartFormat: null,
-  storageFailure: null
+  storageFailure: null,
+  storageFailureScope: null
 }
 
 /** Timers live outside the store so they never end up serialised. */
@@ -632,7 +600,12 @@ export const useEditorStore = create<StoreState>((set, get) => {
       const failure = filesFailure ?? settingsFailure
       // A full quota is worse than "not saved": the copy on disk is the one from before the limit was
       // hit, and a reload brings that one back. The banner (StorageBanner) says so until a save succeeds.
-      set({ saveState: failure ? 'error' : 'saved', lastSavedAt: Date.now(), storageFailure: failure })
+      set({
+        saveState: failure ? 'error' : 'saved',
+        lastSavedAt: Date.now(),
+        storageFailure: failure,
+        storageFailureScope: filesFailure ? 'documents' : settingsFailure ? 'settings' : null
+      })
     },
 
     pushToast: (message, tone = 'info') => {

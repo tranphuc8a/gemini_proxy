@@ -22,6 +22,24 @@ describe('useIdleValue', () => {
     expect(result.current).toBe('abcd')
   })
 
+  it('takes a new value at once when the reset key changes (another file was opened)', () => {
+    const { result, rerender } = renderHook(({ value, key }) => useIdleValue(value, 400, key), {
+      initialProps: { value: 'file a', key: 'a' }
+    })
+    rerender({ value: 'file a, edited', key: 'a' })
+    expect(result.current).toBe('file a')
+    rerender({ value: 'file b', key: 'b' })
+    expect(result.current).toBe('file b')
+    // Nothing from the first file arrives later either.
+    act(() => vi.advanceTimersByTime(1000))
+    expect(result.current).toBe('file b')
+    // And within the new file, edits are held back again.
+    rerender({ value: 'file b, edited', key: 'b' })
+    expect(result.current).toBe('file b')
+    act(() => vi.advanceTimersByTime(400))
+    expect(result.current).toBe('file b, edited')
+  })
+
   it('drops a pending update when the value returns to the settled one', () => {
     const { result, rerender } = renderHook(({ value }) => useIdleValue(value, 400), { initialProps: { value: 'x' } })
     rerender({ value: 'y' })

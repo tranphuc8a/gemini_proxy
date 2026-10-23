@@ -55,6 +55,16 @@ function textOf(node: HastNode): string {
   return (node.children ?? []).map(textOf).join('')
 }
 
+function hasClass(node: HastNode | undefined, name: string): boolean {
+  const value = node?.properties?.className
+  return Array.isArray(value) ? value.includes(name) : typeof value === 'string' && value.split(/\s+/).includes(name)
+}
+
+/** `<pre><code class="language-math">` -- a `$$` block, a ```` ```math ```` fence, or a promoted formula. */
+function isMathBlock(node: HastNode): boolean {
+  return node.type === 'element' && node.tagName === 'pre' && (node.children ?? []).some((child) => child.tagName === 'code' && hasClass(child, 'language-math'))
+}
+
 export interface EnhanceOptions {
   /**
    * Prepended to heading ids. Reading mode renders the document a second time
@@ -67,6 +77,10 @@ export interface EnhanceOptions {
  * Stamps every block element with the source line it came from, so the
  * preview and the editor can follow each other precisely, and gives headings
  * stable ids matching the outline panel's slugs.
+ *
+ * KaTeX later replaces a maths block's whole `<pre>` -- the element holding
+ * `data-line` -- so each one is wrapped in `<div class="math-block">` that
+ * carries the line and survives.
  */
 export function rehypeEnhance(options: EnhanceOptions = {}) {
   const prefix = options.idPrefix ?? ''
@@ -74,6 +88,23 @@ export function rehypeEnhance(options: EnhanceOptions = {}) {
     const seen = new Map<string, number>()
 
     const walk = (node: HastNode) => {
+      const children = node.children
+      if (children && !(node.tagName === 'div' && hasClass(node, 'math-block'))) {
+        for (let index = 0; index < children.length; index++) {
+          const child = children[index]
+          const line = child.position?.start?.line
+          if (line && isMathBlock(child)) {
+            children[index] = {
+              type: 'element',
+              tagName: 'div',
+              properties: { className: ['math-block'], 'data-line': String(line) },
+              children: [child],
+              position: child.position
+            }
+          }
+        }
+      }
+
       if (node.type === 'element' && node.tagName) {
         const line = node.position?.start?.line
         if (line && BLOCK_TAGS.has(node.tagName)) {
@@ -113,8 +144,13 @@ const ANY_CLASS = ['className'] as const
  * from the shared backend and be viewed by anonymous visitors.
  *
  * KaTeX and the syntax highlighter generate their markup *after* this step, so
- * the schema only has to keep the hooks they look for (`math-inline`,
- * `math-display`, `language-*`) plus the `data-line` anchors.
+ * the schema only has to keep the hooks they look for -- `language-*`,
+ * `math-inline` and `math-display` on `<code>`, which the default schema pins
+ * to `language-*` alone (a tag's own entry beats the `'*'` one, so listing them
+ * there was not enough: an inline formula could never be shown in display
+ * style) -- plus the `data-line` anchors, including the one on
+ * `div.math-block`. `style` is allowed, but rehypeStyleGuard has already
+ * removed the declarations that load resources or cover the page.
  */
 export const sanitizeSchema = {
   ...defaultSchema,
@@ -145,6 +181,8 @@ export const sanitizeSchema = {
     // The default schema pins `a`'s className to the footnote class alone,
     // which would strip the heading anchors added above.
     a: [...(defaultSchema.attributes?.a ?? []).filter((entry) => !Array.isArray(entry) || entry[0] !== 'className'), ...ANY_CLASS],
+    // remark-math marks formulas with these; rehype-katex picks display or inline style from them.
+    code: [['className', /^language-./, 'math-inline', 'math-display']],
     // KaTeX and the highlighter both key off classes on these.
     span: [...ANY_CLASS, 'style', 'ariaHidden'],
     div: [...ANY_CLASS, 'style', 'data-line'],

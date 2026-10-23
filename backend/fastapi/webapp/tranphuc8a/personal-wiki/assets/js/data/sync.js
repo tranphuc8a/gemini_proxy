@@ -23,6 +23,18 @@
     return { has: has, base: has ? b.replace(/\/+$/, "") : "" };
   }
 
+  /** Mã nối "<nơi lưu>.<mã kho>.<khoá>" → {backend ("" = mã cũ "default."), ws, key} | null (sai dạng). */
+  function parseCode(text) {
+    var p = String(text || "").trim().split("."); if (p.length !== 3 || !/^[A-Za-z0-9_-]{1,64}$/.test(p[1]) || !p[2] || p[2].length > 200 || !(p[0] === "default" || BACKENDS.test(p[0]))) return null;
+    return { backend: p[0] === "default" ? "" : p[0], ws: p[1], key: p[2] };
+  }
+  /** Hai mã nối có trỏ CÙNG một kho không: cùng mã kho + khoá; nơi lưu chỉ phân biệt khi cả hai mã đều ghi rõ (mã cũ "default.…" là nơi lưu
+      mặc định của máy chủ — có thể chính là "json."/"mysql." của mã kia). Mã sai dạng → false. */
+  function sameStore(a, b) {
+    var x = parseCode(a), y = parseCode(b);
+    return !!(x && y && x.ws === y.ws && x.key === y.key && (!x.backend || !y.backend || x.backend === y.backend));
+  }
+
   function create(repo, opt) {
     opt = opt || {};
     var doFetch = opt.fetch || function () { return root.fetch.apply(root, arguments); };
@@ -107,10 +119,6 @@
           return repo.setMeta("sync", creds).then(function () { notify(); return code(); });
         });
       }).catch(function () { return code(); });
-    }
-    function parseCode(text) {
-      var p = String(text || "").trim().split("."); if (p.length !== 3 || !/^[A-Za-z0-9_-]{1,64}$/.test(p[1]) || !p[2] || p[2].length > 200 || !(p[0] === "default" || BACKENDS.test(p[0]))) return null;
-      return { backend: p[0] === "default" ? "" : p[0], ws: p[1], key: p[2] };
     }
     /** Nối máy này vào kho có sẵn (mã nối từ thiết bị khác). Kiểm tra khoá trước khi lưu. */
     function join(text) {
@@ -350,6 +358,7 @@
   W.api.refresh();
 
   W.sync = { create: create, instance: null, readApi: readApi, blocker: blocker, chooseBackend: chooseBackend, isEphemeral: isEphemeral, joinLink: joinLink, statusView: statusView, NO_API: NO_API,
+    parseCode: parseCode, sameStore: sameStore,
     /** Gọi từ app.js sau khi kho mở: dựng bộ đồng bộ với địa chỉ API do máy chủ chèn vào trang (window.__WEBAPP_CONFIG__.apiBase). */
     start: function (ctx) {
       var api = W.api.refresh();

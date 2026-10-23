@@ -21,6 +21,7 @@ Kiểm đột biến (chứng minh bộ kiểm bắt được lỗi cũ — ph�
     PW_HOAN_NGUYEN=tieu-de   ... check.py --chuc-nang --dong-bo  # ô tiêu đề note mới điền sẵn "Chưa đặt tên" (gốc chỗ tầng 6 chập chờn, 23/10)
     PW_HOAN_NGUYEN=dem-moi-phim  ... check.py --chuc-nang        # mỗi phím lại đếm từ + thẻ ôn trên cả note (perf-md W1, W2 23/10)
     PW_HOAN_NGUYEN=bieu-ngu-chet ... check.py --chuc-nang --dong-bo  # lỗi đồng bộ dừng hẳn không lên biểu ngữ (mã chết cũ, W2 23/10)
+    PW_HOAN_NGUYEN=noi-cung-the  ... check.py --chuc-nang        # liên kết nối mở trong thẻ đang ở #/settings/sync bị bỏ qua, mã treo lại (sửa sau kiểm W2)
 """
 
 from __future__ import annotations
@@ -118,6 +119,18 @@ def _ban_sao(rel, cu, moi, ten):
     return s.replace(cu, moi)
 
 
+def app_js_noi_cung_the():
+    """Bản sao app.js với bản sửa sau kiểm W2 bị gỡ (nhánh #/join không buộc dựng lại màn; mã từ liên kết không bị bỏ khi rời / sau khi dựng)."""
+    s = io.open(os.path.join(HERE, "assets", "js", "ui", "app.js"), encoding="utf-8").read()
+    for pat in (r'\n[ \t]*if \(current && current\.key === "settings/sync"\) current\.key = "";[^\n]*',
+                r'\n[ \t]*if \(key !== "settings/sync"\) pendingJoin = "";[^\n]*',
+                r'\n[ \t]*if \(key === "settings/sync"\) pendingJoin = "";[^\n]*'):
+        s, n = re.subn(pat, "", s)
+        if n != 1:
+            raise SystemExit("PW_HOAN_NGUYEN=noi-cung-the: không tìm thấy đúng một chỗ " + pat)
+    return s
+
+
 def setup_hoan_nguyen(ctx):
     """Gắn route thay tệp của chế độ đột biến (gọi cho MỌI trang do lớp Page mở, trước lần tải đầu tiên)."""
     def thay(pat, body):
@@ -127,6 +140,8 @@ def setup_hoan_nguyen(ctx):
                                                                   "function changed() { queueDraft(); setStatus(); schedulePreview(); }", HOAN_NGUYEN))
     elif HOAN_NGUYEN == "bieu-ngu-chet":                     # W2 bị gỡ: biểu ngữ "sync" lại là mã chết (lỗi đồng bộ chỉ thấy trong Cài đặt)
         thay("**/personal-wiki/assets/js/ui/app.js*", _ban_sao("assets/js/ui/app.js", 'else if (syncStop) showBanner("sync", syncStop);', "", HOAN_NGUYEN))
+    elif HOAN_NGUYEN == "noi-cung-the":                      # sửa sau kiểm W2 bị gỡ: liên kết nối trong thẻ đang ở #/settings/sync bị bỏ qua, mã treo lại
+        thay("**/personal-wiki/assets/js/ui/app.js*", app_js_noi_cung_the())
     if HOAN_NGUYEN == "may-khach":
         src = sync_js_hoan_nguyen()
         ctx.route("**/personal-wiki/assets/js/data/sync.js*", lambda route: route.fulfill(status=200, content_type="text/javascript; charset=utf-8", body=src))
@@ -576,6 +591,43 @@ def _sync_box(pg):
     return re.sub(r"\s+", " ", pg.locator(SYNC_SECTION).inner_text())
 
 
+# Chân thanh bên ("← Cổng ứng dụng") phải nằm ở ĐÁY thanh bên dù chỉ báo đồng bộ hiện hay ẩn (lỗi cũ: luật ".syncchip + .side-foot" vẫn áp khi
+# chip [hidden] — file://, thiếu cấu hình, lúc mới mở — nên chân thanh bên trôi lên giữa).
+FOOT_JS = """() => { const s = document.querySelector('#side'), f = document.querySelector('#side .side-foot'), c = document.querySelector('#syncChip');
+  if (!s || !f || getComputedStyle(s).display === 'none') return null;
+  const a = s.getBoundingClientRect(), b = f.getBoundingClientRect(), pb = parseFloat(getComputedStyle(s).paddingBottom) || 0;
+  return { chipHidden: !c || c.hidden, sideBottom: Math.round(a.bottom - pb), footBottom: Math.round(b.bottom), gap: Math.round(a.bottom - pb - b.bottom) }; }"""
+# Toast mới (chưa đánh dấu) có chữ t — đánh dấu mọi toast đang có bằng MARK_TOASTS_JS trước thao tác cần kiểm.
+MARK_TOASTS_JS = "() => { document.querySelectorAll('.toast').forEach(e => { e.__cu = true; }); }"
+NEW_TOASTS_JS = "t => [...document.querySelectorAll('.toast')].filter(e => !e.__cu && e.textContent.includes(t)).length"
+OPEN_DLG_JS = """() => { const d = document.querySelector('dialog[open]'), i = d && d.querySelector('#ff-code');
+  return { hash: location.hash, href: location.href, val: i ? i.value : '', hint: d ? d.innerText.replace(/\\s+/g, ' ') : '' }; }"""
+
+
+def _mo_lien_ket_cung_the(Pg, code, cho_hop=True, timeout=4000):
+    """Dán liên kết nối vào thanh địa chỉ của CHÍNH thẻ này (chỉ đổi hash, không tải lại trang). → (có hộp 'Nối' mở, {hash, href, val, hint})."""
+    pg = Pg.pg
+    pg.evaluate(MARK_TOASTS_JS)
+    pg.evaluate("h => { location.hash = h }", "#/join/" + code)
+    hop = False
+    if cho_hop:
+        try:
+            pg.wait_for_selector("dialog[open] #ff-code", timeout=timeout)
+            hop = True
+        except Exception:
+            hop = False
+    else:
+        pg.wait_for_timeout(500)
+    return hop, pg.evaluate(OPEN_DLG_JS)
+
+
+def _huy_hop(pg):
+    """Đóng hộp thoại đang mở (nếu có) bằng nút Huỷ."""
+    if pg.locator("dialog[open] button:has-text('Huỷ')").count():
+        pg.click("dialog[open] button:has-text('Huỷ')")
+        pg.wait_for_timeout(200)
+
+
 def tang_2_dong_bo(br, P, url, may):
     section(" · đồng bộ: dễ tìm (đầu Cài đặt, neo #/settings/sync, chỉ báo ở thanh bên) + thông điệp đúng từng tình huống (W2)")
     pg = P.pg
@@ -589,6 +641,8 @@ def tang_2_dong_bo(br, P, url, may):
       focus: document.activeElement ? document.activeElement.id : '', top: Math.round(document.querySelector('#set-sync').getBoundingClientRect().top) })""")
     check(st["hash"] == "#/settings/sync" and st["first"] == "Đồng bộ giữa các thiết bị", "bấm chỉ báo → #/settings/sync; mục Đồng bộ là mục ĐẦU của Cài đặt", st)
     check(st["focus"] == "set-sync-h", "neo #/settings/sync đưa focus tới tiêu đề mục Đồng bộ (trình đọc màn hình đọc đúng chỗ)", st)
+    ft = pg.evaluate(FOOT_JS)
+    check(bool(ft) and not ft["chipHidden"] and abs(ft["gap"]) <= 2, "thanh bên: chỉ báo đồng bộ hiện → '← Cổng ứng dụng' vẫn ở đáy thanh bên (ngay dưới chỉ báo)", ft)
     sel = pg.input_value(SYNC_SECTION + " .sync-backend")
     check(sel == "json" and pg.locator(SYNC_SECTION + " [data-sync=ephemeral]").count() == 0,
           "máy chủ thật (JSON bền là mặc định): chọn sẵn 'json', không cảnh báo kho tạm", (sel, _sync_box(pg)[:160]))
@@ -618,6 +672,43 @@ def tang_2_dong_bo(br, P, url, may):
     q.select_option(SYNC_SECTION + " .sync-backend", "json")
     q.wait_for_selector(SYNC_SECTION + " [data-sync=ephemeral]", timeout=3000)
     check("Nơi lưu này là kho tạm" in _sync_box(q), "tự chọn JSON (kho tạm) → cảnh báo 'Nơi lưu này là kho tạm'", _sync_box(q)[:200])
+
+    # ---- liên kết nối mở trong CHÍNH thẻ đang ở #/settings/sync (lỗi cũ: nhánh "cùng màn" của app.js bỏ qua → không hộp, không toast, mã treo
+    # lại tới lần mở Cài đặt sau rồi bật hộp "Nối" bất ngờ). Ca thật: máy tính đang ở Cài đặt → Đồng bộ, dán liên kết nhận qua chat vào chính thẻ đó.
+    LINK = "json.wk_lienket.khoa-lien-ket"
+    hop, sj = _mo_lien_ket_cung_the(Q, LINK)
+    check(hop and sj["val"] == LINK and sj["hash"] == "#/settings/sync" and LINK not in sj["href"],
+          "thẻ ĐANG ở #/settings/sync mở liên kết nối (chỉ đổi hash): hộp 'Nối' bật ngay, điền sẵn mã, địa chỉ về #/settings/sync (mã không nằm lại)",
+          {k: v[:80] for k, v in sj.items()})
+    _huy_hop(q)
+    check(not any("wk_lienket" in c for c in fake.calls) and not q.evaluate("Wiki.sync.instance.state().configured"),
+          "…không tự nối (Huỷ → không gọi kho trong liên kết, máy vẫn chưa nối)", [c for c in fake.calls if "wk_lienket" in c])
+    Q.go("#/notes")
+    Q.go("#/settings")
+    q.wait_for_selector(SYNC_SECTION + " .sync-backend", timeout=8000)
+    q.wait_for_timeout(300)
+    n_dlg = q.locator("dialog[open]").count()
+    check(n_dlg == 0, "mở Cài đặt lần sau: KHÔNG có hộp 'Nối' nào bật ra (mã từ liên kết không treo lại)", q.evaluate(OPEN_DLG_JS)["hint"][:120] if n_dlg else "")
+    _huy_hop(q)
+    Q.go("#/settings/sync")
+    q.wait_for_selector(SYNC_SECTION + " .sync-backend", timeout=8000)
+
+    # ---- rớt mạng khi bảng đang mở và ĐÃ hỏi được danh sách nơi lưu → 'ngoại tuyến', không mời Tạo/Nối (đều cần mạng); có mạng lại → như cũ
+    Q.ctx.set_offline(True)
+    try:
+        q.wait_for_selector(SYNC_SECTION + " [data-sync=offline]", timeout=4000)
+    except Exception:
+        pass
+    check(q.locator(SYNC_SECTION + " [data-sync=offline]").count() == 1 and q.locator(SYNC_SECTION + " button:has-text('Tạo kho đồng bộ mới')").count() == 0
+          and q.locator(SYNC_SECTION + " button:has-text('Nối vào kho có sẵn')").count() == 0,
+          "rớt mạng khi bảng đang mở (đã có danh sách nơi lưu): 'Đang ngoại tuyến', không còn nút Tạo kho / Nối (bấm chỉ ra lỗi mạng)", _sync_box(q)[:160])
+    Q.ctx.set_offline(False)
+    try:
+        q.wait_for_selector(SYNC_SECTION + " .sync-backend", timeout=4000)
+    except Exception:
+        pass
+    check(q.locator(SYNC_SECTION + " button:has-text('Tạo kho đồng bộ mới')").count() == 1 and q.locator(SYNC_SECTION + " [data-sync=offline]").count() == 0,
+          "có mạng lại: bảng tự vẽ lại ô chọn nơi lưu + nút Tạo kho (không cần tải lại)", _sync_box(q)[:160])
 
     # ---- mất kho thật → biểu ngữ + thông điệp 'nối lại'; địa chỉ không có API → 'thử lại'; sửa xong → hết biểu ngữ
     q.evaluate(SEED_SYNC_JS, {"ws": "wk_fake", "key": "khoa-gia", "backend": "json"})
@@ -652,6 +743,18 @@ def tang_2_dong_bo(br, P, url, may):
     q.wait_for_timeout(100)
     bn, ch = q.evaluate(BANNER_JS), q.evaluate(CHIP_JS)
     check(bn["hidden"] and ch["kind"] == "ok" and "đồng bộ" in ch["text"].lower(), "máy chủ trả lời bình thường lại + 'Thử lại' → biểu ngữ tắt, chỉ báo '%s'" % ch["text"], (bn, ch))
+
+    # ---- máy ĐÃ nối kho (json.wk_fake.khoa-gia), thẻ ở #/settings/sync: liên kết của CÙNG kho viết kiểu mã cũ "default." → 'đã nối đúng kho',
+    # không mời "THAY kho đó" (so theo mã kho + khoá, không so cả chuỗi); liên kết kho KHÁC → hộp ghi rõ sẽ THAY, Huỷ thì giữ kho cũ
+    hop, sj = _mo_lien_ket_cung_the(Q, "default.wk_fake.khoa-gia", cho_hop=False)
+    n_ok = q.evaluate(NEW_TOASTS_JS, "đã nối đúng kho này")
+    check(n_ok == 1 and q.locator("dialog[open]").count() == 0 and sj["hash"] == "#/settings/sync",
+          "đã nối json.<kho>.<khoá>, mở liên kết default.<cùng kho>.<khoá>: toast 'đã nối đúng kho này', KHÔNG hộp 'THAY kho đó'", (n_ok, sj["hint"][:120]))
+    _huy_hop(q)
+    hop, sj = _mo_lien_ket_cung_the(Q, "json.wk_khac.khoa-khac")
+    check(hop and sj["val"] == "json.wk_khac.khoa-khac" and "THAY kho đó" in sj["hint"], "đã nối kho, mở liên kết của kho KHÁC: hộp 'Nối' điền sẵn và nói rõ sẽ THAY kho đó", sj["hint"][:200])
+    _huy_hop(q)
+    check(q.evaluate("Wiki.sync.instance.code()") == "json.wk_fake.khoa-gia", "…Huỷ → vẫn nối kho cũ", q.evaluate("Wiki.sync.instance.code()"))
     # 404 do chính máy chủ giả trả (mất kho / không có API) làm trình duyệt ghi "Failed to load resource" — cố ý, không phải lỗi của app
     Q.errors = [e for e in Q.errors if "status of 404" not in e]
     Q.close()
@@ -663,6 +766,20 @@ def tang_2_dong_bo(br, P, url, may):
     txt, ch = _sync_box(F.pg), F.pg.evaluate(CHIP_JS)
     check("mở tệp trực tiếp (file://)" in txt and "/webapp/tranphuc8a/personal-wiki/" in txt and ch["hidden"],
           "mở bằng file://: 'Bạn đang mở tệp trực tiếp (file://) … mở app qua máy chủ …/personal-wiki/'; không hiện chỉ báo đồng bộ", (txt[:200], ch))
+    ft = F.pg.evaluate(FOOT_JS)
+    check(bool(ft) and ft["chipHidden"] and abs(ft["gap"]) <= 2, "file:// (chỉ báo ẩn): '← Cổng ứng dụng' vẫn ở ĐÁY thanh bên, không trôi lên giữa", ft)
+    F.pg.wait_for_timeout(300)
+    hop, sj = _mo_lien_ket_cung_the(F, "json.wk_tep.khoa-tep", cho_hop=False)
+    n1 = F.pg.evaluate(NEW_TOASTS_JS, "chỉ dùng được khi mở app qua máy chủ")
+    check(n1 == 1 and sj["hash"] == "#/settings/sync" and "wk_tep" not in sj["href"] and F.pg.locator("dialog[open]").count() == 0,
+          "file://, thẻ đang ở #/settings/sync mở liên kết nối: báo NGAY 'Liên kết nối chỉ dùng được khi mở app qua máy chủ', địa chỉ đã xoá mã", (n1, sj["hash"]))
+    F.go("#/notes")
+    F.pg.evaluate(MARK_TOASTS_JS)
+    F.go("#/settings")
+    F.pg.wait_for_selector(SYNC_SECTION + " [data-sync=file]", timeout=8000)
+    F.pg.wait_for_timeout(300)
+    n2 = F.pg.evaluate(NEW_TOASTS_JS, "chỉ dùng được khi mở app qua máy chủ")
+    check(n2 == 0, "…mở Cài đặt lần sau: không còn toast liên kết nối (mã không treo lại)", n2)
     F.close()
 
     # ---- http(s) nhưng trang KHÔNG có cấu hình (vd máy chủ tĩnh khác) → 'thiếu cấu hình' + Tải lại + ./
@@ -1424,9 +1541,9 @@ def _http(method, url, key=None, body=None):
 
 
 # Đếm listener "online" gắn SAU lúc móc (app.js, pwa.js, sync.js đã gắn lúc khởi động nên không tính): gắn thêm → +1, gỡ → -1.
-ONLINE_HOOK_JS = """() => { const add = window.addEventListener, rm = window.removeEventListener; window.__online = new Set();
-  window.addEventListener = function (t, f, o) { if (t === 'online') window.__online.add(f); return add.call(this, t, f, o); };
-  window.removeEventListener = function (t, f, o) { if (t === 'online') window.__online.delete(f); return rm.call(this, t, f, o); }; }"""
+ONLINE_HOOK_JS = """() => { const add = window.addEventListener, rm = window.removeEventListener; window.__online = new Set(); window.__offline = new Set();
+  window.addEventListener = function (t, f, o) { if (t === 'online') window.__online.add(f); if (t === 'offline') window.__offline.add(f); return add.call(this, t, f, o); };
+  window.removeEventListener = function (t, f, o) { if (t === 'online') window.__online.delete(f); if (t === 'offline') window.__offline.delete(f); return rm.call(this, t, f, o); }; }"""
 
 
 def _tieu_de_may_chu(api, key):
@@ -1501,8 +1618,8 @@ def tang_6(api_prefix="/api/v1", start_a="", channel=None, nhan=""):
                 A.go("#/settings")
                 A.pg.wait_for_selector(SYNC_SECTION)
                 A.go("#/notes")
-            n_on = A.pg.evaluate("window.__online.size")
-            check(n_on == 1, "mở Cài đặt 3 lần: bảng đồng bộ giữ đúng 1 listener 'online' (không dồn theo số lần mở)", n_on)
+            n_on = A.pg.evaluate("[window.__online.size, window.__offline.size]")
+            check(n_on == [1, 1], "mở Cài đặt 3 lần: bảng đồng bộ giữ đúng 1 listener 'online' + 1 'offline' (không dồn theo số lần mở)", n_on)
             # new_note chỉ đạt khi CHÍNH ghi chú đó đã lưu đúng tiêu đề/nội dung (không còn dựa vào toast "Đã lưu" của ghi chú trước)
             if not (check(new_note(A, "Đồng bộ một", "nối tới [[Đồng bộ hai]]\n\nQ: Thủ đô của Pháp?\nA: Paris\n", ["sync"]), "A: tạo ghi chú 1")
                     and check(new_note(A, "Đồng bộ hai", "nội dung hai quokka", ["sync"]), "A: tạo ghi chú 2")):
@@ -1825,8 +1942,8 @@ def main():
         tang_1()
     if HOAN_NGUYEN:
         print("!! PW_HOAN_NGUYEN=%s — kiểm đột biến: một bản sửa bị gỡ tạm, phép kiểm mới PHẢI đỏ" % HOAN_NGUYEN)
-        if HOAN_NGUYEN not in ("may-chu", "may-khach", "tieu-de", "dem-moi-phim", "bieu-ngu-chet"):
-            raise SystemExit("PW_HOAN_NGUYEN chỉ nhận may-chu, may-khach, tieu-de, dem-moi-phim hoặc bieu-ngu-chet")
+        if HOAN_NGUYEN not in ("may-chu", "may-khach", "tieu-de", "dem-moi-phim", "bieu-ngu-chet", "noi-cung-the"):
+            raise SystemExit("PW_HOAN_NGUYEN chỉ nhận may-chu, may-khach, tieu-de, dem-moi-phim, bieu-ngu-chet hoặc noi-cung-the")
     needs_server = tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang"}
     if needs_server:
         may = K.MayChuThu([], env=env_may_chu()).__enter__()

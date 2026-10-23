@@ -2,91 +2,30 @@
    kiem.js — kiem cac ham THUAN cua json-editor bang node, khong can
    trinh duyet.
 
-       node kiem.js
+       node kiem.js              # tat ca: nhom "goc" (duoi day) + moi kiem/*.js
+       node kiem.js goc          # chi nhom goc
+       node kiem.js je-chung     # chi kiem/je-chung.js (loc theo ten tep, nhieu ten duoc)
 
-   Chi dung mot bo DOM toi thieu du de tep nap duoc, roi goi thang cac ham
-   qua `window.JE_THU`. Khong chep lai logic — neu chep lai thi phep thu
-   chi kiem ban chep, khong kiem san pham.
+   kiem/chung.js nap MOI script cua index.html (dung thu tu) vao vm voi bo
+   DOM toi thieu, roi ta goi thang cac ham qua `window.JE_THU` / `JE` /
+   `JE_APP`. Khong chep lai logic — neu chep lai thi phep thu chi kiem ban
+   chep, khong kiem san pham.
    ===================================================================== */
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const vm = require("vm");
+const C = require("./kiem/chung.js");
 
-/* --- DOM toi thieu --- */
-/* Du de doan khoi dong chay qua (ke ca cay, lop to mau, nut hoan tac).
-   window KHONG co requestAnimationFrame / matchMedia / ResizeObserver —
-   co y, de kiem luon duong du phong khi trinh duyet thieu chung. */
-function nutGia() {
-  const thuocTinh = {};
-  const n = {
-    _text: "", className: "", checked: true, value: "", style: {},
-    children: [], dataset: {}, hidden: false, disabled: false, tabIndex: -1,
-    scrollTop: 0, scrollLeft: 0, clientWidth: 0, clientHeight: 0,
-    appendChild(c) { n.children.push(c); return c; },
-    insertBefore(c) { n.children.push(c); return c; },
-    removeChild(c) { return c; },
-    replaceChild(c) { return c; },
-    insertAdjacentHTML() {},
-    lastElementChild: null,
-    querySelector: () => nutGia(),
-    querySelectorAll: () => [],
-    closest: () => null,
-    contains: () => false,
-    setAttribute(k, v) { thuocTinh[k] = String(v); },
-    getAttribute: (k) => (k in thuocTinh ? thuocTinh[k] : null),
-    removeAttribute(k) { delete thuocTinh[k]; },
-    hasAttribute: (k) => k in thuocTinh,
-    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
-    focus() {}, blur() {}, click() {},
-    addEventListener() {}, removeEventListener() {}, onclick: null, onchange: null,
-    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
-    select() {}
-  };
-  Object.defineProperty(n, "innerHTML", { get: () => n._text, set(v) { n._text = v; } });
-  Object.defineProperty(n, "textContent", { get: () => n._text, set(v) { n._text = v; } });
-  return n;
-}
-
-const ctx = {
-  window: {},
-  document: {
-    querySelector: () => nutGia(),
-    querySelectorAll: () => [],
-    createElement: () => nutGia(),
-    createDocumentFragment: () => nutGia(),
-    createRange: () => ({ setStartBefore() {}, setEndAfter() {}, deleteContents() {} }),
-    documentElement: { getAttribute: () => null, setAttribute() {} },
-    activeElement: null,
-    hasFocus: () => false,
-    execCommand: () => false,
-    addEventListener() {}
-  },
-  localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
-  navigator: {}, setTimeout, clearTimeout,
-  Blob: function () {}, URL: { createObjectURL: () => "", revokeObjectURL() {} },
-  FileReader: function () {},
-  console, JSON, Math, Object, Array, String, Number, Boolean, RegExp, Error, Date
-};
-ctx.globalThis = ctx;
-ctx.window.document = ctx.document;
-ctx.window.localStorage = ctx.localStorage;
-vm.createContext(ctx);
-vm.runInContext(
-  fs.readFileSync(path.join(__dirname, "assets", "json-editor.js"), "utf8"), ctx);
-
-const T = ctx.window.JE_THU;
-if (!T) { console.error("Khong phoi duoc JE_THU — tep khong nap duoc."); process.exit(1); }
-
-/* ---------------------------------------------------------------- */
-let hong = 0;
-function kiem(ten, dat, chiTiet) {
-  console.log("  " + (dat ? "[ok]  " : "[SAI] ") + ten + (chiTiet ? "   " + chiTiet : ""));
-  if (!dat) hong++;
-}
-const bang = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const LOC = process.argv.slice(2).filter((a) => !a.startsWith("-"));
+const chayNhom = (ten) => !LOC.length || LOC.some((l) => ten.indexOf(l) >= 0);
+const kiem = C.kiem, bang = C.bang;
 
 console.log("\nKiem json-editor\n" + "-".repeat(58));
+
+if (chayNhom("goc")) {
+const MT = C.taoMoiTruong();
+const T = MT.T;
+if (!T) { console.error("Khong phoi duoc JE_THU — tep khong nap duoc."); process.exit(1); }
 
 /* ====================== 1. dongCot ====================== */
 {
@@ -585,10 +524,138 @@ const dongBang = (v) => {
     ax(["a"], { loai: "thay", duong: [] }) === null && bang(ax([], { loai: "thay", duong: [] }), []));
 }
 
+/* ====================== 14. Dot J1 — sua loi da xac minh ====================== */
+{
+  C.nhom("dot J1: loi truy van / so sanh / sap khoa / dem / Tab");
+  const longSau = C.longSau, nemLoi = C.nemLoi;
+
+  /* #6 — truy van chi lay khoa RIENG */
+  const goc = JSON.parse('{"a":1,"mang":[10,20,30],"o":{"ten":"x","0":"khong"},"constructor":5,"__proto__":7}');
+  const gt = (q) => T.truyVan(goc, q).map((n) => n.v);
+  kiem("truyVan · $.toString / $.hasOwnProperty KHONG khop ham cua nguyen mau",
+    gt("$.toString").length === 0 && gt("$.hasOwnProperty").length === 0 && gt("$.valueOf").length === 0,
+    JSON.stringify(T.truyVan(goc, "$.toString").map((n) => n.d)));
+  kiem("truyVan · $.o.constructor / $.o['toString'] khong khop",
+    gt("$.o.constructor").length === 0 && gt("$.o['toString']").length === 0);
+  kiem("truyVan · $.mang.length khong khop (length khong phai phan tu)",
+    gt("$.mang.length").length === 0 && gt("$.mang['length']").length === 0);
+  kiem("truyVan · khoa RIENG ten 'constructor' / '__proto__' van khop dung gia tri",
+    bang(gt("$.constructor"), [5]) && bang(gt("$.__proto__"), [7]));
+  kiem("truyVan · chi so mang hop le van chay; '01', '-1', ngoai bien thi khong",
+    bang(gt("$.mang[2]"), [30]) && bang(gt("$.mang.0"), [10]) && gt("$.mang[01]").length === 0 &&
+    gt("$.mang[-1]").length === 0 && gt("$.mang[3]").length === 0);
+  kiem("truyVan · object co khoa \"0\" van vao duoc bang [0]", bang(gt("$.o[0]"), ["khong"]));
+  kiem("coKhoaTruyVan · mang chi nhan chi so, object chi nhan khoa rieng",
+    T.coKhoaTruyVan([1], "0") && !T.coKhoaTruyVan([1], "length") && !T.coKhoaTruyVan({}, "toString") &&
+    T.coKhoaTruyVan(JSON.parse('{"__proto__":1}'), "__proto__") && !T.coKhoaTruyVan(null, "a") && !T.coKhoaTruyVan("ab", "0"));
+
+  /* chayTruyVan khong no khi gia tri khong stringify duoc */
+  kiem("chuoiKetQua · undefined / ham khong nem, hien chu mo ta",
+    T.chuoiKetQua(undefined) === "undefined" && typeof T.chuoiKetQua(function () {}) === "string");
+  const sau = longSau(20000);
+  let kqSau = null, nemSau = false;
+  try { kqSau = T.chuoiKetQua(sau); } catch (e) { nemSau = true; }
+  kiem("chuoiKetQua · gia tri long 20 000 cap: khong nem, bao 'lồng quá sâu'",
+    !nemSau && /lồng quá sâu/.test(kqSau), kqSau && kqSau.slice(0, 70));
+  kiem("chuoiKetQua · gia tri thuong: JSON thut 2", T.chuoiKetQua({ a: [1] }) === '{\n  "a": [\n    1\n  ]\n}');
+  kiem("chuoiGon · mot dong, khong nem", T.chuoiGon({ a: [1] }) === '{"a":[1]}' && !nemLoi(() => T.chuoiGon(sau)));
+  kiem("moTaLoiNem · RangeError (tran ngan xep) -> 'lồng quá sâu'; loi khac giu thong bao",
+    /lồng quá sâu/.test(T.moTaLoiNem(new RangeError("Maximum call stack size exceeded"))) &&
+    T.moTaLoiNem(new Error("abc")) === "abc");
+
+  /* #7 — so sanh chi tinh khoa rieng */
+  let r = T.khacNhau({ constructor: 1 }, {});
+  kiem("khacNhau · {constructor:1} vs {} = 'bot' (truoc: 'doi')",
+    r.length === 1 && r[0].loai === "bot" && r[0].d === "$.constructor", JSON.stringify(r));
+  r = T.khacNhau({}, { toString: 1 });
+  kiem("khacNhau · {} vs {toString:1} = 'them'",
+    r.length === 1 && r[0].loai === "them" && r[0].d === "$.toString", JSON.stringify(r));
+  r = T.khacNhau(JSON.parse('{"__proto__":1}'), JSON.parse('{"__proto__":2}'));
+  kiem("khacNhau · khoa \"__proto__\" la khoa thuong: 1 vs 2 = 'doi'",
+    r.length === 1 && r[0].loai === "doi" && r[0].d === "$.__proto__", JSON.stringify(r));
+  r = T.khacNhau(JSON.parse('{"__proto__":{"x":1},"a":1}'), { a: 1 });
+  kiem("khacNhau · co khoa \"__proto__\" o mot ben = 'bot', khong lam ban tap khoa",
+    r.length === 1 && r[0].loai === "bot" && r[0].d === "$.__proto__", JSON.stringify(r));
+  kiem("khacNhau · {hasOwnProperty:1} vs {hasOwnProperty:1} khong khac (khong goi nham ham)",
+    T.khacNhau({ hasOwnProperty: 1 }, { hasOwnProperty: 1 }).length === 0);
+
+  /* #8 — sap khoa giu __proto__ va kieu thut le */
+  const pv = T.sapKhoa(JSON.parse('{"b":1,"__proto__":{"x":1},"a":{"z":0,"__proto__":[2]}}'));
+  kiem("sapKhoa · khoa \"__proto__\" con nguyen va duoc sap (truoc: mat khoa)",
+    JSON.stringify(pv) === '{"__proto__":{"x":1},"a":{"__proto__":[2],"z":0},"b":1}', JSON.stringify(pv));
+  kiem("sapKhoa · khong doi NGUYEN MAU cua object (pv.x khong lot ra)",
+    pv.x === undefined && pv.a[0] === undefined && typeof pv.hasOwnProperty === "function");
+  const s4 = JSON.stringify({ z: 1, a: [3, { y: 1, b: 2 }] }, null, 4) + "\n";
+  const kq4 = T.sapKhoaVanBan(JSON.parse(s4), s4);
+  kiem("sapKhoaVanBan · giu thut 4 + dau xuong dong cuoi (truoc: ep thut 2)",
+    kq4 === JSON.stringify({ a: [3, { b: 2, y: 1 }], z: 1 }, null, 4) + "\n", JSON.stringify(kq4.slice(0, 30)));
+  const sTab = JSON.stringify({ b: 1, a: 2 }, null, "\t");
+  kiem("sapKhoaVanBan · giu tab va giu dang nen tren mot dong",
+    T.sapKhoaVanBan(JSON.parse(sTab), sTab) === '{\n\t"a": 2,\n\t"b": 1\n}' &&
+    T.sapKhoaVanBan({ b: 1, a: [2] }, '{"b":1,"a":[2]}') === '{"a":[2],"b":1}');
+  const ps = T.sapKhoa(longSau(20000, "object"));
+  let doSau = 0;
+  for (let x = ps; x && typeof x === "object"; x = x.a) doSau++;
+  kiem("sapKhoa · lap, khong de quy: du lieu long 20 000 cap khong tran ngan xep", doSau === 20000, "sau " + doSau);
+  kiem("sapKhoa · gia tri nguyen thuy tra nguyen", T.sapKhoa(5) === 5 && T.sapKhoa(null) === null && T.sapKhoa("x") === "x");
+
+  /* #13 — dem lap */
+  let d = null, nemDem = "";
+  try { d = T.dem(longSau(20000)); } catch (e) { nemDem = e.message; }
+  kiem("dem · mang long 20 000 cap: khong tran ngan xep (truoc: Maximum call stack)",
+    d && d.sau === 20000 && d.nut === 20001 && d.mang === 20000 && d.la === 1, nemDem || JSON.stringify(d && { sau: d.sau, nut: d.nut }));
+  d = T.dem(longSau(20000, "object"));
+  kiem("dem · object long 20 000 cap", d.sau === 20000 && d.obj === 20000);
+  kiem("dem · tham so sau = do sau cua chinh goc (giu nghia cu)",
+    T.dem({ a: 1 }, 2).sau === 3 && T.dem(5, 4).sau === 4);
+  d = T.dem({ a: [1, "x", null, true, { b: 2.5 }] });
+  kiem("dem · dem theo kieu (cho tab Thong ke)",
+    bang(d.kieu, { object: 2, array: 1, number: 2, string: 1, null: 1, boolean: 1 }) ||
+    (d.kieu.object === 2 && d.kieu.array === 1 && d.kieu.number === 2 && d.kieu.string === 1 && d.kieu.null === 1 && d.kieu.boolean === 1),
+    JSON.stringify(d.kieu));
+
+  /* xemTruoc tren mang long rat sau (veCay goi no cho moi nhanh gap) */
+  let xt = null, nemXt = "";
+  try { xt = T.xemTruoc([longSau(20000)]); } catch (e) { nemXt = e.message; }
+  kiem("xemTruoc · mang-trong-mang 20 000 cap: khong tran ngan xep, <= 60 ky tu",
+    xt !== null && xt.length <= 60 && xt.indexOf("[0] [0] [0]") === 0, nemXt || xt);
+  kiem("xemTruoc · dung som cho ket qua Y HET khi long 40 cap (da qua 60 ky tu)",
+    T.xemTruoc(longSau(40)) === T.xemTruoc(longSau(20000)) && T.xemTruoc([[1, 2]]) === "[0] 1, 2");
+
+  /* Tab trong textarea: thut theo kieu van ban */
+  kiem("donViThut · tab / 4 / 2 dau cach theo van ban; rong hoac nen -> 2",
+    T.donViThut('{\n\t"a": 1\n}') === "\t" && T.donViThut(JSON.stringify({ a: [1] }, null, 4)) === "    " &&
+    T.donViThut(JSON.stringify({ a: [1] }, null, 2)) === "  " && T.donViThut("") === "  " &&
+    T.donViThut('{"a":1}') === "  ");
+  kiem("donViThut · van ban rat lon chi doan tren phan dau (khong cat ca 10 MB)",
+    T.donViThut(JSON.stringify({ a: 1 }, null, 4) + "\n" + "x".repeat(300000)) === "    ");
+}
+}
+
+/* ====================== kiem/*.js — cac nhom moi ====================== */
+const thuMuc = path.join(__dirname, "kiem");
+const tep = fs.existsSync(thuMuc)
+  ? fs.readdirSync(thuMuc).filter((f) => f.endsWith(".js") && f !== "chung.js").sort()
+  : [];
+for (const f of tep) {
+  const ten = f.slice(0, -3);
+  if (!chayNhom(ten)) continue;
+  console.log("\n[" + ten + "]");
+  try {
+    require(path.join(thuMuc, f))(C);
+  } catch (e) {
+    C.kiem("kiem/" + f + " chay het khong nem loi", false, e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : String(e));
+  }
+}
+
 /* ---------------------------------------------------------------- */
 console.log("-".repeat(58));
-if (hong) {
-  console.log(hong + " muc SAI.\n");
+if (!C.soDat() && !C.soSai()) {
+  console.log("Khong co nhom nao khop bo loc: " + LOC.join(", ") + "\n");
   process.exit(1);
 }
-console.log("Dat — moi ham thuan cua json-editor hoat dong dung.\n");
+if (C.soSai()) {
+  console.log(C.soSai() + " muc SAI (" + C.soDat() + " dat).\n");
+  process.exit(1);
+}
+console.log("Dat — " + C.soDat() + " phep, moi ham thuan cua json-editor hoat dong dung.\n");

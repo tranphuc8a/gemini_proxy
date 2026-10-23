@@ -73,7 +73,7 @@ body[data-pane="list"] .fab { display: grid; }
 /* chỉ báo đồng bộ (chân thanh bên) — data-kind: loading | off | ok | busy | offline | error | fatal */
 .syncchip { position: relative; display: flex; align-items: center; gap: 10px; min-height: 40px; margin-top: auto; padding: 0 12px; border-radius: 12px; color: var(--text-2); text-decoration: none; font-size: 13.5px; font-weight: 600; min-width: 0; }
 .syncchip[hidden] { display: none; }
-.syncchip + .side-foot { margin-top: 0; }
+.syncchip:not([hidden]) + .side-foot { margin-top: 0; }   /* chip ẩn (file://, thiếu cấu hình, lúc mới mở) thì chân thanh bên vẫn dồn xuống đáy */
 .syncchip:hover { background: var(--accent-soft); color: var(--text); }
 .syncchip .ic { flex: none; }
 .sc-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

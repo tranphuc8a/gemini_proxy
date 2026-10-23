@@ -57,7 +57,7 @@
         h("span", { class: "rs-ic", "aria-hidden": "true", text: d ? d.icon : "?" }),
         h("div", { class: "hrow-main" }, h("b", { text: (d ? d.name : r.type) + (r.source === "daily" ? " · Daily" : "") }), h("small", { text: Z.dateTime(r.endedAt) + " · " + (Z.RESULT[r.result] || r.result) })),
         Z.tierBadge(r.tier, r.score),
-        h("div", { class: "hrow-nums" }, h("span", { title: "Thời gian", text: P.util.fmtTime(r.time) }), h("span", { title: "Lỗi", text: "✗ " + r.mistakes }), h("span", { title: "Gợi ý", text: "💡 " + r.hints })),
+        h("div", { class: "hrow-nums" }, h("span", { title: "Thời gian", text: P.util.fmtTime(r.time) }), h("span", { title: "Lỗi", text: "✗ " + r.mistakes }), h("span", { title: "Gợi ý", text: "💡 " + r.hints }), r.grade && typeof r.grade.stars === "number" ? h("span", { class: "hrow-grade", title: "Điểm tối ưu" + (typeof r.grade.text === "string" ? ": " + r.grade.text : ""), text: P.grade.starsText(r.grade.stars) }) : null),
         h("div", { class: "prow-act" },
           h("button", { type: "button", class: "icon-btn", "aria-label": "Chơi lại puzzle này", title: canReplay ? "Chơi lại puzzle này" : "Không còn dữ liệu puzzle", disabled: canReplay ? null : true, html: icon("restart"), on: { click: function () {
             var saved = user.getPuzzle(r.puzzleId);

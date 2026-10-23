@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JSON Editor — soạn, soi và sửa JSON</title>
+<!-- Bieu tuong nhung san (khong tai tep, khong 404 /favicon.ico). -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315304d'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='700' text-anchor='middle' fill='%234fa3ff'%3E%7B%7D%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/kieu.css">
 </head>
 <body>
@@ -22,6 +24,10 @@
     <button class="nut" id="nut-sap-khoa">↕ Sắp khoá</button>
     <button class="nut" id="nut-thoat">⌫ Thoát chuỗi</button>
     <span class="vach"></span>
+    <!-- Hoan tac chung cho moi tab (Ctrl+Z / Ctrl+Y). title doi theo buoc: "Hoàn tác: Định dạng (Ctrl+Z)". -->
+    <button class="nut nut-bieu" id="nut-hoan-tac" aria-label="Hoàn tác" title="Hoàn tác (Ctrl+Z)" disabled>↶</button>
+    <button class="nut nut-bieu" id="nut-lam-lai" aria-label="Làm lại" title="Làm lại (Ctrl+Y hoặc Ctrl+Shift+Z)" disabled>↷</button>
+    <span class="vach"></span>
     <button class="nut" id="nut-mo">📂 Mở tệp</button>
     <button class="nut" id="nut-luu">💾 Tải về</button>
     <button class="nut" id="nut-chep">📋 Chép</button>
@@ -31,11 +37,11 @@
 </header>
 
 <nav class="tab" role="tablist">
-  <button class="tab-n dang" data-o="soan" role="tab">✎ Soạn</button>
-  <button class="tab-n" data-o="cay" role="tab">🌳 Cây</button>
-  <button class="tab-n" data-o="loc" role="tab">🔎 Truy vấn</button>
-  <button class="tab-n" data-o="sosanh" role="tab">⇄ So sánh</button>
-  <button class="tab-n" data-o="thongke" role="tab">📊 Thống kê</button>
+  <button class="tab-n dang" data-o="soan" role="tab" aria-selected="true">✎ Soạn</button>
+  <button class="tab-n" data-o="cay" role="tab" aria-selected="false">🌳 Cây</button>
+  <button class="tab-n" data-o="loc" role="tab" aria-selected="false">🔎 Truy vấn</button>
+  <button class="tab-n" data-o="sosanh" role="tab" aria-selected="false">⇄ So sánh</button>
+  <button class="tab-n" data-o="thongke" role="tab" aria-selected="false">📊 Thống kê</button>
 </nav>
 
 <main>
@@ -77,7 +83,7 @@ Ví dụ:
       Bấm giá trị để sửa, bấm tên khoá để đổi tên<span class="mach-phim"> ·
       <kbd>↑</kbd><kbd>↓</kbd> chọn · <kbd>Enter</kbd> sửa / gấp mở · <kbd>F2</kbd> đổi tên ·
       <kbd>Insert</kbd> thêm · <kbd>Delete</kbd> xoá · <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> đổi chỗ ·
-      <kbd>Ctrl</kbd>+<kbd>Z</kbd> hoàn tác</span>
+      <kbd>Ctrl</kbd>+<kbd>Z</kbd> hoàn tác (mọi tab)</span>
     </p>
     <div class="cay" id="cay" role="tree" aria-label="Cây JSON"></div>
   </section>
@@ -124,6 +130,9 @@ Ví dụ:
 
 <input type="file" id="tep" accept=".json,.txt,application/json" hidden>
 
+<!-- Thu tu nap: je-chung (khong gian JE) → module thuan → json-editor (loi + JE_APP) → ui-*.
+     check.py --tinh kiem thu tu nay. -->
+<script src="assets/je-chung.js"></script>
 <script src="assets/json-editor.js"></script>
 </body>
 </html>

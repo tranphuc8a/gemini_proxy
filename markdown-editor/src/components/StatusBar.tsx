@@ -24,7 +24,9 @@ function StatusBar({ onOpenHelp }: StatusBarProps) {
   const toggleFullscreen = useEditorStore((state) => state.toggleFullscreen)
 
   // Counting scans the whole document, so it follows the text once typing pauses.
-  const settled = useIdleValue(content, 400)
+  const fileId = useEditorStore((state) => state.currentFileId)
+  // Another file: its own counts at once, never the previous file's.
+  const settled = useIdleValue(content, 400, fileId)
   const stats = useMemo(() => getDocumentStats(settled), [settled])
 
   return (

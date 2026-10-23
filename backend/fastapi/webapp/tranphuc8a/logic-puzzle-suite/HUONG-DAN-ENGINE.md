@@ -12,9 +12,9 @@ Thêm puzzle mới = thêm đúng các tệp dưới đây, **không sửa lõi*
 Phong cách mã: ES5 thuần (`var`, `function`; không `class`/mũi tên/template literal) cho khớp phần còn lại và Safari cũ; bọc `(function (root) { "use strict"; … })(typeof globalThis !== "undefined" ? globalThis : this);`;
 chuỗi hiển thị cho người dùng bằng **tiếng Việt**, định danh trong mã bằng tiếng Anh; chú thích đầu tệp nói rõ cách chọn thiết kế (xem `core/*.js`, `Algorithm Notebook` để bắt chước giọng). Không thư viện ngoài. Không `Math.random()`, `Date.now()` trong sinh/giải (xem mục 6).
 
-Có sẵn để dùng: `Puz.rng` (seed, `create(seed).int/range/pick/shuffle/chance/fork`), `Puz.util` (bậc độ khó, `puzzleId`, `popcount`, `bitsOf`…), `Puz.csp` (bộ giải CSP tổng quát, xem đầu `core/csp.js`), `Puz.game` (một ván; `applyDiff`, `reverseDiff`, `diffTo`), `Puz.types`.
+Có sẵn để dùng: `Puz.rng` (seed, `create(seed).int/range/pick/shuffle/chance/fork`), `Puz.util` (bậc độ khó, `puzzleId`, `popcount`, `bitsOf`…), `Puz.csp` (bộ giải CSP tổng quát, xem đầu `core/csp.js`), `Puz.game` (một ván; `applyDiff`, `reverseDiff`, `diffTo`), `Puz.types` (sổ đăng ký + `optionsOf`/`compactOptions`), `Puz.plan` (trạng thái = kế hoạch, mục 11), `Puz.grade` (chấm sao, mục 11).
 
-**Chạy trong Web Worker:** việc nặng (`generate`, `fromInput`, `replay`, `constraintView`, `trace`) được vỏ đẩy sang worker (`core/gen.js` → `worker/gen.js`). Worker CHỈ nạp các tệp có thuộc tính `data-pz` trong `index.html` (hiện: `rng`, `util`, `csp`, `types`, `game` và mọi `puzzles/*.js`); thêm loại mới nghĩa là thêm thẻ `<script src="./assets/js/puzzles/<id>.js" data-pz>`. Engine KHÔNG được dùng thứ gì ngoài danh sách đó (không `Puz.text`, `Puz.stats`, `Puz.ui`…). `kiem/app-worker.js` mô phỏng đúng ngữ cảnh này (vm trống chỉ nạp các tệp `data-pz`) và gọi mọi hàm trên từng loại — **chạy `node kiem.js app` sau khi thêm loại mới**; test engine thường chạy trong node với đủ lõi nên KHÔNG bắt được lỗi thiếu phụ thuộc trong worker (đã từng xảy ra với `Puz.game.applyDiff`).
+**Chạy trong Web Worker:** việc nặng (`generate`, `fromInput`, `replay`, `constraintView`, `trace`) được vỏ đẩy sang worker (`core/gen.js` → `worker/gen.js`). Worker CHỈ nạp các tệp có thuộc tính `data-pz` trong `index.html` (hiện: `rng`, `util`, `csp`, `types`, `grade`, `plan`, `game` và mọi `puzzles/*.js`); thêm loại mới nghĩa là thêm thẻ `<script src="./assets/js/puzzles/<id>.js" data-pz>`. Engine KHÔNG được dùng thứ gì ngoài danh sách đó (không `Puz.text`, `Puz.stats`, `Puz.ui`…). `kiem/app-worker.js` mô phỏng đúng ngữ cảnh này (vm trống chỉ nạp các tệp `data-pz`) và gọi mọi hàm trên từng loại — **chạy `node kiem.js app` sau khi thêm loại mới**; test engine thường chạy trong node với đủ lõi nên KHÔNG bắt được lỗi thiếu phụ thuộc trong worker (đã từng xảy ra với `Puz.game.applyDiff`).
 Đọc `core/game.js` trước: nó quyết định hình dạng state/diff/action.
 
 ## 1. Dữ liệu
@@ -69,7 +69,7 @@ Mọi hàm **thuần** (không sửa đối số, không dùng toàn cục), t�
 | `moveFor(puzzle, state, action, settings)` | `diff` hoặc `null` (không hợp lệ / không đổi gì). `settings` có thể có `autoRemove` (tự gạt ứng viên). Không đụng ô cho sẵn. |
 | `check(puzzle, state)` | `{ solved, conflicts:[chỉ số ô vi phạm luật HIỆN TẠI], filled, total }`. `solved` = state thoả MỌI luật (không nhất thiết trùng `puzzle.solution` — đề tự nhập có thể nhiều nghiệm). |
 | `mistakes(puzzle, state, diff)` | số **nước sai MỚI** trong diff (gọi **trước** khi áp diff), so với `puzzle.solution`. Loại không có khái niệm sai trả 0. |
-| `hint(puzzle, state, level)` | xem mục 4. |
+| `hint(puzzle, state, level, settings)` | xem mục 4. `settings` (tham số thứ 4, mục 11) = cài đặt của ván (`game.settings()`); loại không cần thì bỏ qua. |
 | `replay(puzzle)` | `[{ text, why?, diff:{d}, cells:[…], technique? }]`: chuỗi bước giải từ `newState(puzzle)` tới lúc `check(...).solved`; áp tuần tự các `diff` phải ra một state thoả `check`. Mỗi bước có `text` tiếng Việt giải thích (spec #14). |
 | `constraintView(puzzle)` | `{ summary, variables:[{name, domain, count?}], constraints:[chuỗi], counts:{variables, constraints, …} }` — màn Constraint View (spec #24). Biến nhiều (≥ 40) thì gộp nhóm (`count`). |
 | `trace(puzzle, opts)` | trực quan hoá bộ giải (spec #27): `{kind:"tree", nodes:[{id,parent,label,status}], truncated, note}` hoặc `{kind:"matrix", title, steps:[{text, matrix:[[…]], pivot?:[r,c]}], note}`. `status` ∈ `fail|dead|ok|solution`. Giới hạn ≤ 600 nút / ≤ 60 bước. |
@@ -79,7 +79,7 @@ Mọi hàm **thuần** (không sửa đối số, không dùng toàn cục), t�
 
 ## 4. Gợi ý (Hint) — phần làm nên khác biệt "học" so với "chơi" (spec #10–11)
 
-`hint(puzzle, state, level)` trả:
+`hint(puzzle, state, level, settings)` trả:
 
 ```
 { level, text, why:[chuỗi…], cells:[chỉ số ô để tô sáng], regions?:{…tuỳ loại}, technique?:"tên kỹ thuật", action?:{k:…}, none?:true }
@@ -107,6 +107,14 @@ Mọi hàm **thuần** (không sửa đối số, không dùng toàn cục), t�
 - **Sudoku** 9×9. Bộ giải kỹ thuật người (single, cặp/bộ ba, pointing/claiming, X-Wing…, rồi đoán) để chấm độ khó và sinh hint giải thích; bộ giải bitmask nhanh để đếm nghiệm; ứng viên (pencil) `c[i]` là bitmask bit `d` = chữ số `d` (1..9); `autoRemove` gạt ứng viên ở hàng/cột/block khi điền.
 - **N-Queens** cỡ 6/8/10/12/16 (+ tự nhập N 4–24): đề = bàn có sẵn vài hậu cố định, người chơi đặt nốt; sinh bằng cách bỏ dần hậu khỏi một lời giải mà vẫn **duy nhất** lời giải; có `trace` cây quay lui.
 - **Lights Out** 3×3 … 7×7 (+ chữ nhật): luật chữ thập; sinh bằng cách bấm ngẫu nhiên từ bàn tắt (luôn giải được); `solution.v` = bàn tắt hết, `data.presses` = tập bấm ít nhất; số nghiệm = 2^(chiều của nhân) — **nhiều nghiệm là bình thường, không cảnh báo**; dùng khử Gauss GF(2) (có thể chép/tham khảo `../light-grid-shared/gf2.js`), `trace` kiểu `matrix` ghi từng bước khử.
+  Đợt P2 (23/10/2026, `kiem/lightsout-hoc.js`, mẫu vàng `kiem/lightsout-vang.js` 340 puzzle sinh + 40 bàn tự nhập — seed cũ ra đúng puzzle cũ, KHÔNG ghi thêm trường vào puzzle cổ điển):
+  **bất biến** khi vô nghiệm — `info.obstruction = {cells, size, lit, minimal, text}` trong `validate/solve/fromInput` (+ `errors[1]`), hint `none` tô các ô đó
+  (y ∈ ker A ít ô nhất có y·b lẻ; A đối xứng nên ker Aᵀ = ker A); `constraintView().sections` = mẫu bấm im lặng (cơ sở hạt nhân), mọi lời giải khi ≤ 16, bất biến
+  (`learn.js` vẽ `sections` tuỳ chọn cho mọi loại: `[{title, note?, items:[chuỗi | {text, grid:["#.#",…]}]}]`); bước cuối `trace` nêu hạt nhân; bước đầu `replay`
+  là **bản đồ lời giải** (`cells` = mọi ô cần bấm, `map`); **kiểu gợi ý** `settings.loHint` = `"min"` (mặc định, như cũ) | `"chase"` (đuổi đèn: pha 1 bấm dưới đèn sáng
+  đầu tiên, pha 2 tra bảng hàng cuối T·t = r chọn chính tắc ít ô nhất rồi từ điển — 5×5 khớp bảng kinh điển; nhận ra "pha 2 đang dở" nên trùng thủ tục tay, ≤ 2N − w nước);
+  bàn có công tắc (nhớ ở `localStorage["puz:lo-hint"]`); **par + grade** (mục 11.4): `objective {min, "lần bấm"}`, 3★ = K lần bấm, 2★ ≤ K + ⌈K/4⌉, 1★ còn lại, chưa xong 0★;
+  `def.lib` = hàm thuần cho bàn/test (`obstruction`, `chaseStep`, `chaseTop`, `par`, `parStars`, `cross`, `hintStyle`).
 - **Nonogram** 5×5 / 10×10 / 15×15: `state.v` 0 = chưa biết, 1 = tô, 2 = gạch; đề sinh từ ảnh ngẫu nhiên tất định và phải có nghiệm duy nhất; bộ giải theo dòng (overlap, chốt, gạch…) rồi quay lui; hint nói theo dòng/cột.
 - **Logic Grid** `cats × items`: manh mối `=`, `≠`, "A hoặc B" và so sánh/liền kề cho nhóm **có thứ tự** (vị trí, tuổi); sinh manh mối rồi **tỉa** tới mức vừa đủ duy nhất; có Builder (nhập `Alice != Red`, `Bob = Blue`, `Alice left-of Bob`…) → bài toán ràng buộc (dùng `Puz.csp`); `constraintView` liệt kê biến/miền/ràng buộc; hint dựa trên lan truyền ràng buộc nên giải thích được.
 
@@ -155,6 +163,110 @@ Báo cáo kết quả bằng **số đo thật** (ms, số seed đã thử, tỉ
 1. `assets/js/puzzles/<id>.js` (engine thuần, mục 1–7) + `kiem/<id>.js` (mục 8, có nguồn sự thật độc lập) — `node kiem.js <id>` xanh.
 2. Thêm hai thẻ vào `index.html`: `<script src="./assets/js/puzzles/<id>.js" data-pz></script>` (cạnh các engine khác) và `<script src="./assets/js/ui/boards/<id>.js"></script>`, cộng `<link rel="stylesheet" href="./assets/css/board-<id>.css">`.
 3. `assets/js/ui/boards/<id>.js` + `assets/css/board-<id>.css` (mục 9), kèm `check_board_<id>.py` có hàm `run(P, check, section, tid)` — `check.py` tự nạp mọi tệp tên đó.
-4. Nếu muốn Daily Puzzle xoay vòng cả loại mới: thêm id vào `ORDER` trong `core/daily.js` (cuối danh sách, KHÔNG xen giữa — đổi thứ tự là đổi lịch Daily đã phát).
+4. Nếu muốn Daily Puzzle xoay vòng cả loại mới: thêm MỘT phiên bản mới ở cuối `SCHEDULE` trong `core/daily.js` — `{ tu: "<ngày trong tương lai>", ids: <ids phiên bản trước> + id mới ở cuối }` (mục 11.8). KHÔNG sửa phiên bản cũ: đổi danh sách đang dùng là đổi lịch Daily của hôm nay và mọi ngày đã phát.
 5. `node kiem.js app` (mô phỏng worker), `python tao-pwa.py`, rồi `python check.py --tat-ca`.
-Vỏ (home, new, play, learn, create, library, stats) tự nhận loại mới qua `Puz.types.all()` — không cần sửa.
+Vỏ (home, new, play, learn, create, library, stats) tự nhận loại mới qua `Puz.types.all()` — không cần sửa. Loại tương tác / tối ưu / có tuỳ chọn: đọc mục 11 trước.
+
+## 11. Puzzle tương tác, tối ưu, options, grade (đợt P1, 23/10/2026)
+
+Mở rộng **tuỳ chọn, tương thích ngược**: loại không khai báo gì ở mục này chạy y như cũ (mẫu vàng `kiem/app-vang.js`: 126 tổ hợp của 5 loại cũ, cùng seed → cùng puzzle).
+Một hợp đồng chung cho cả họ "cân xu" (CW1–CW3, Lights Out par) và họ "tối ưu" (lạc đà, xe máy) — không có `goal`, `quality` hay `step()` riêng.
+Ví dụ chạy được: hai loại giả trong `kiem/mau/loai-gia.js` (`giatoiuu` optimize có options; `giadoan` interactive có oracle + đối thủ thích nghi).
+
+### 11.1 Thuộc tính tuỳ chọn (conformance kiểm kiểu)
+
+| Thuộc tính | Nội dung |
+| --- | --- |
+| `kind` | `"static"` (mặc định khi vắng) · `"interactive"` (mỗi nước nhận phản hồi từ oracle: cân xu, đoán) · `"optimize"` (không đúng/sai, nộp kế hoạch, chấm theo mức gần tối ưu). `Puz.types.kindOf(def)`. |
+| `objective` | `{ sense: "max"\|"min", label: "Quãng đường xa nhất", unit: "km" }` — **bắt buộc khi `kind:"optimize"`**; loại khác khai báo được (vd cân xu: `{sense:"min", label:"Số lần cân", unit:"lần"}`) để vỏ có đơn vị khi hiện điểm. `unit` là chuỗi, có thể rỗng. |
+| `grade(puzzle, state, counters)` | xem 11.4 — **bắt buộc khi `kind:"optimize"`**, tuỳ chọn với loại khác (Lights Out par, CW1). |
+| `options` | xem 11.3. |
+| `sizeLabel` | nhãn thay cho "Cỡ bàn" ở Puzzle mới / Học ("Phiên bản"). |
+| `moveLabel` | `title` của chip "Số nước đi" trên HUD ("Lần cân", "Số món đã chọn"). |
+| `mistakeLabel` | `title` của chip "Số lần điền sai" ("Nước làm mất tối ưu"). |
+
+Dùng `goal` là lỗi conformance (tên cũ của thiết kế camel — đã gộp vào `kind`).
+
+### 11.2 Trạng thái = kế hoạch: `Puz.plan` (`core/plan.js`, data-pz)
+
+Puzzle "dãy hành động rồi nộp/kết luận" không có lưới ô cố định, nhưng `game.js` chỉ biết `state.v` độ dài cố định + diff. Mã hoá:
+
+```
+state.v = [ nộp, len, p_0 … p_{extra−1}, rec_0 (W số), …, rec_{cap−1} ]       L = Puz.plan.layout(cap, W, extra)
+```
+
+- `nộp` 0/1 — **cờ "đã nộp / đã kết luận" nằm TRONG state**, nên `solution.v` chứa cờ ⇒ Reveal (`diffTo(solution.v)`) và `check(solution).solved` chạy đúng; `kiem/app-worker.js` đòi `check(replay).solved`.
+- `len` bản ghi đang dùng; ô sau bản ghi cuối luôn 0 (dạng chuẩn ⇒ cùng kế hoạch, cùng mảng). `p_*` = tham số của lần nộp: **kết luận = nộp kèm tham số** (`submitDiff(state, L, [xu + 1, nặng])`).
+- API: `empty(L)`, `build(L, recs, submitted, ps)` (cho `initial`/`solution`), `read`, `record`, `count`, `isSubmitted`, `params`, `valid(state, L)`;
+  `appendDiff(state, L, rec|recs, label)`, `truncateDiff(state, L, n, label)` (quay về n bước; khi đã nộp thì đồng thời **mở lại** — `n = len` chỉ mở lại),
+  `submitDiff(state, L, ps, label)`. Mọi hàm *Diff trả `null` khi không hợp lệ (tràn `cap`, đã nộp, sai hình dạng) — `moveFor` trả thẳng null, `game.act` coi là noop.
+- Action chung nên dùng: `{k:"submit"}`, `{k:"truncate", n}`; action riêng (`weigh`, `trip`, `cmd`…) thêm bản ghi. Mỗi action = MỘT diff ⇒ hoàn tác/làm lại/tự lưu/khôi phục/replay dùng y nguyên.
+- **Oracle phải tất định và kết quả ghi vào diff** (không có kênh quan sát ngoài state): cố định = bí mật trong `puzzle.data` (sinh từ seed; lộ qua JSON — chấp nhận với app cá nhân);
+  đối thủ = hàm thuần của lịch sử trong `state.v` (phá hoà bằng `Puz.rng.create(hash(...))`). Làm lại / khôi phục áp lại đúng kết quả cũ.
+- Trạng thái giao diện tạm (xu đang đặt trên đĩa trước khi bấm "Cân", km đang chọn) là trạng thái **board**, không vào `state`.
+
+### 11.3 `options` — tham số sinh đề ngoài (cỡ, bậc)
+
+```
+options: [{ id: "mode", label: "Chế độ", choices: [{ id: "fixed", label: "Xu giả cố định" }, { id: "adv", label: "Đối thủ thích nghi", note: "…" }], default: "fixed" }]
+```
+
+- `id` khớp `/^[a-z][a-z0-9-]{0,23}$/`, id lựa chọn `/^[A-Za-z0-9][A-Za-z0-9-]{0,23}$/` (không `:` `,` — dùng trong liên kết; không `_` đầu — chặn `__proto__`); ≥ 2 lựa chọn; `default` là một id lựa chọn.
+- `generate(seed, {sizeId, tier, options})`: vỏ truyền `options` **dạng gọn** (chỉ lựa chọn khác mặc định) và chỉ cho loại có `def.options`; Daily không truyền (dùng mặc định).
+  Engine chuẩn hoá bằng `Puz.types.optionsOf(def, o.options)` (thiếu/lạ → mặc định), **ghi lựa chọn KHÁC mặc định vào `puzzle.data`** (⇒ `puzzleId` khác, yêu thích/thư viện phân biệt được)
+  và trả `puzzle.options = Puz.types.compactOptions(def, full)` (`{}` khi toàn mặc định). Lựa chọn = mặc định tường minh ⇒ cùng puzzle với không truyền.
+- Liên kết seed: `#/new/<id>?size=&tier=&seed=&o=mode:adv,rule:x&go=1` (`Puz.types.encodeOptions` theo thứ tự khai báo; `decodeOptions` bỏ rác, không ném).
+  Không có `o=` = mặc định ⇒ liên kết cũ giữ nghĩa; loại không có options thì liên kết y hệt dạng cũ.
+- Vỏ: Puzzle mới thêm một hàng chip mỗi option (`.ng-opt`), "Chơi tiếp" giữ lựa chọn của ván vừa xong.
+
+### 11.4 `grade` — điểm tối ưu (sao), một hàm duy nhất
+
+```
+grade(puzzle, state, counters) → { value, best, quality, stars, valueText, bestText, text }
+```
+
+- `value`/`best`: số hữu hạn hoặc `null` (chưa có giá trị), đơn vị = `objective.unit`. `quality` ∈ [0, 1] (3 chữ số; 1 = tối ưu). `stars` nguyên 0..3.
+  `valueText`/`bestText`: số đã định dạng **không kèm đơn vị** (vỏ ghép "1 480 / 1 533 km"); `text`: một câu ("Tối ưu!", "Đạt 96 % mức tối ưu").
+- Thuần, tất định; `counters` = bản sao `{moves, mistakes, undos, hints:{1,2,3}, revealed}` (để phạt hoàn tác / gợi ý mức 3).
+- Theo tỉ lệ: `Puz.grade.fromRatio(value, best, sense, {digits?, fmt?})` — max: value/best, min: best/value, bằng/vượt tối ưu → 1, null → 0.
+  Ngưỡng mặc định `starsFor`: 3★ quality = 1 (sau làm tròn 3 chữ số, nên lệch số thực vẫn là tối ưu), 2★ ≥ 0,9, 1★ > 0, 0★ = 0. Dùng cho lạc đà, xe máy, Bachet.
+- Tự đặt sao: Lights Out (par: 3★ = K nước, 2★ ≤ K + ⌈K/4⌉…), CW1 (3★ thắng không hoàn tác/đúng k*, 2★ có hoàn tác hoặc gợi ý mức 3) — vẫn trả ĐỦ trường (lấy `fromRatio` rồi đặt lại `stars`, `text`).
+- Vỏ không tin engine: `game.grade()` = `Puz.grade.normalize(def.grade(...))` (kẹp, điền chữ thiếu; ném lỗi → null, ván vẫn kết thúc được).
+  `game.record("solved")` thêm `record.grade` (một đối tượng); ván revealed/abandoned không có grade; loại không có `grade` giữ đúng các trường cũ.
+- Hiển thị: HUD loại `optimize` có chip giá trị hiện có (`.hud-score`, chỉ `valueText` — KHÔNG lộ tối ưu khi đang chơi); hộp thoại "Đã giải" giữ 4 ô cũ + ô **"Điểm tối ưu"**
+  (sao + "giá trị / tối ưu đơn vị", `.stat-grade`) + dòng `text`; dòng trạng thái sau khi xong; sao trong dòng lịch sử ở Thống kê.
+- Test của loại: `Puz.grade.errors(def.grade(...))` rỗng (đủ trường, không chữ rác); `grade(solution)` có `quality === 1` với loại optimize.
+
+### 11.5 Ngữ nghĩa các hàm hợp đồng với loại interactive / optimize
+
+| Hàm | Ngữ nghĩa |
+| --- | --- |
+| `check` | vẫn thuần `{ solved, conflicts, filled, total, complete? }`. `solved = đã nộp && complete` (optimize) hoặc `đã kết luận && kết luận bị lịch sử ÉP BUỘC` (interactive — đoán may không tính). `total` = số bước của kế hoạch tối ưu. Giá trị/điểm KHÔNG nằm ở đây mà ở `grade`. |
+| `solution` | MỘT kế hoạch tối ưu (với interactive: ván chơi tối ưu chống chính oracle đó) + cờ đã nộp. |
+| `mistakes(p, s, diff)` | số nước làm **mất khả năng thắng chắc / mất tối ưu**, nếu engine xác định chắc chắn (CW1, lạc đà); kết luận/nộp sai bằng chứng = 1; không xác định được thì 0 (xe máy). |
+| `hint(p, s, level, settings)` | trạng thái đã mất tối ưu / kết luận chưa chứng minh ⇒ nói trước, mức 3 `action:{k:"truncate", n:j}` (j = tiền tố dài nhất còn tối ưu; n = len khi chỉ cần mở lại); còn tối ưu ⇒ nước kế tiếp của một kế hoạch tối ưu; đã đạt tối ưu ⇒ mức 3 là `{k:"submit"}` (hoặc kết luận) — để vòng "gợi ý → áp dụng" của check.py kết thúc. `settings` cho kiểu gợi ý (Lights Out: ít bấm nhất / đuổi đèn). |
+| `replay` | các bước của `solution`, bước cuối là "Nộp" / "Kết luận". |
+| `fromInput`/`validate` | `status:"unique"` = biết chính xác giá trị tối ưu / có chiến lược chắc chắn; `"multiple"` + `warnings` = chỉ biết cận. Thêm `statusText` + `statusKind` (`ok\|warn\|bad`): màn Tạo puzzle in câu này thay cho "Có đúng một nghiệm". |
+| `describeCell(p, s, i)` | `i` là chỉ số bước/bản ghi (hoặc xu) theo cách board dùng `highlight`. |
+
+### 11.6 Test bắt buộc thêm (`kiem/<id>.js`, ngoài mục 8)
+
+(a) `check(solution).solved` và `grade(solution).quality === 1` (optimize); (b) giá trị tối ưu đối chiếu **nguồn độc lập** viết riêng trong test (vét cạn cỡ nhỏ / LP / mô phỏng hữu tỉ);
+(c) vòng "gợi ý mức 3 → áp dụng" từ trạng thái đầu VÀ từ trạng thái có chèn nước làm mất tối ưu ⇒ `solved` với quality 1, ≤ `total·3` bước;
+(d) mọi diff (thêm/quay về/nộp/mở lại) hoàn lại bằng `reverseDiff`, trạng thái luôn `Puz.plan.valid`; (e) kế hoạch đầy dung lượng → `moveFor` trả null, không ném;
+(f) interactive: oracle tất định (làm lại/khôi phục cho đúng kết quả cũ), đối thủ luôn nhất quán và giữ được ≥ 2 khả năng khi người chơi đi sai, đoán may không được tính giải;
+(g) mỗi lựa chọn của `options`: puzzle.options gọn đúng, id khác đề mặc định, tất định — `kiem/app-worker.js` tự lặp qua mọi lựa chọn trong ngữ cảnh worker;
+(h) `Puz.grade.errors(grade(...))` rỗng. Mẫu đầy đủ: `kiem/core-hop-dong.js` với hai loại giả.
+
+### 11.7 check.py
+
+- Vòng đời chung (`tuong_loai`) kiểm HUD dùng nhãn của loại, ô "Điểm tối ưu" chỉ có ở loại có `grade` (loại cũ giữ đúng 4 ô).
+- Tầng 3 (sập máy) áp `min(4, số bước replay − 1)` gợi ý trước khi "sập", nên loại có lời giải ngắn không bị giải xong trước.
+- `hop_dong()` (tầng 2, Edge `channel="msedge"`): chèn hai loại giả vào trang thật (Blob `<script data-pz>` — trang và worker cùng nạp) và kiểm options/`o=`, nhãn, HUD, hint nhận settings, "Điểm tối ưu", `record.grade`, sao ở Thống kê, `statusText` ở Tạo puzzle, Daily không đổi.
+
+### 11.8 Daily có phiên bản
+
+`core/daily.js` dùng `SCHEDULE = [{ tu: "1970-01-01", ids: [5 loại cũ] }, …]`: ngày d dùng phiên bản cuối có `tu ≤ d`, xoay vòng tính từ `tu`
+(phiên bản đầu bắt đầu ngày số 0 nên trùng hệt công thức cũ). Thêm loại vào Daily = thêm phiên bản mới ở cuối với `tu` **trong tương lai** và `ids` = danh sách cũ + id mới ở cuối.
+`kiem/personal.js` kiểm: lịch từ 2020-01-01 tới trước phiên bản thứ hai trùng hệt bản cũ, hôm nay không đổi, hình dạng SCHEDULE đúng quy tắc, phiên bản giả định không đổi các ngày trước `tu`.
+`Puz.daily.ORDER` = ids của phiên bản mới nhất (thứ tự hiển thị các loại). Đợt P1 CHƯA thêm loại nào vào Daily.

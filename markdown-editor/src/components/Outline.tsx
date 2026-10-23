@@ -9,7 +9,9 @@ import './Outline.css'
 function Outline() {
   const content = useEditorStore((state) => state.currentContent)
   // Rebuilt once typing pauses: on a long document every keystroke re-drew hundreds of entries.
-  const settled = useIdleValue(content, 300)
+  const fileId = useEditorStore((state) => state.currentFileId)
+  // Another file: its own headings at once -- a stale entry would jump to a heading that is not there.
+  const settled = useIdleValue(content, 300, fileId)
   const headings = useMemo(() => extractHeadings(settled), [settled])
   const [active, setActive] = useState<number | null>(null)
 

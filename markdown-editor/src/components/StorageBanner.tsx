@@ -14,6 +14,7 @@ import './StorageBanner.css'
  */
 function StorageBanner() {
   const failure = useEditorStore((state) => state.storageFailure)
+  const scope = useEditorStore((state) => state.storageFailureScope)
   const flushPersist = useEditorStore((state) => state.flushPersist)
 
   if (failure !== 'quota') return null
@@ -23,15 +24,33 @@ function StorageBanner() {
     exportMarkdown(findNode(files, currentFileId)?.name ?? 'document.md', currentContent)
   }
 
+  // The documents went in and only the settings (theme, layout) did not: nothing written is at risk.
+  if (scope === 'settings') {
+    return (
+      <div className="storage-banner" role="alert">
+        <p className="storage-banner-text">
+          <strong>Browser storage is full — your settings are not saved.</strong> Your documents are. Delete large files you
+          no longer need, then save again.
+        </p>
+        <div className="storage-banner-actions">
+          <button type="button" className="btn storage-banner-btn" onClick={flushPersist}>
+            Try saving again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="storage-banner" role="alert">
       <p className="storage-banner-text">
         <strong>Browser storage is full — your latest changes are not saved.</strong> Reloading or closing this tab now
-        brings back an older copy. Export this document, or delete large files you no longer need, then save again.
+        brings back an older copy of every document changed since. Export the open document (and any other you changed),
+        or delete large files you no longer need, then save again.
       </p>
       <div className="storage-banner-actions">
         <button type="button" className="btn storage-banner-btn" onClick={exportCurrent}>
-          Export this document
+          Export open document
         </button>
         <button type="button" className="btn storage-banner-btn" onClick={flushPersist}>
           Try saving again

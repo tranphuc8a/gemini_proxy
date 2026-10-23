@@ -87,7 +87,10 @@ function ReadingView() {
   const lastTop = useRef(0)
   const jumpingUntil = useRef(0)
   const jumpTarget = useRef(0)
+  /** The one pending animation frame, shared by scrolling and layout changes. */
   const frame = useRef(0)
+  /** Set when the layout changed: the pending frame re-measures before it places the reader. */
+  const needsMeasure = useRef(false)
   const pointerType = useRef('mouse')
   /** Each outline entry's rendered heading, collected once per render of the article. */
   const headingEls = useRef<(HTMLElement | null)[]>([])
@@ -101,8 +104,9 @@ function ReadingView() {
   const [panel, setPanel] = useState<'toc' | 'settings' | null>(null)
   const [activeIndex, setActiveIndex] = useState(-1)
 
-  // Outline and counts scan the whole text; they follow it once it settles.
-  const settled = useIdleValue(content, 300)
+  // Outline and counts scan the whole text; they follow it once it settles (another file: at once).
+  const fileId = useEditorStore((state) => state.currentFileId)
+  const settled = useIdleValue(content, 300, fileId)
   const headings = useMemo(() => extractHeadings(settled), [settled])
   // Indent relative to the shallowest heading, like the editor's outline.
   const baseLevel = headings.length ? Math.min(...headings.map((heading) => heading.level)) : 1
@@ -149,6 +153,7 @@ function ReadingView() {
   const measure = useCallback(() => {
     const scroller = scrollRef.current
     if (!scroller) return
+    needsMeasure.current = false
     const base = scroller.getBoundingClientRect().top - scroller.scrollTop
     headingTops.current = headingEls.current.map((element) =>
       element ? element.getBoundingClientRect().top - base : Number.POSITIVE_INFINITY
@@ -156,6 +161,22 @@ function ReadingView() {
     topsAscending.current = isAscending(headingTops.current)
     updatePosition()
   }, [updatePosition])
+
+  /**
+   * At most one frame is pending, for scrolling and layout changes alike. A
+   * scroll must not cancel a re-measure the layout asked for: images, diagrams
+   * and maths grow the article while the reader scrolls, and the old offsets
+   * then marked the wrong section as being read until the next resize that
+   * came without a scroll.
+   */
+  const scheduleFrame = useCallback(() => {
+    if (frame.current) return
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0
+      if (needsMeasure.current) measure()
+      else updatePosition()
+    })
+  }, [measure, updatePosition])
 
   // After every render of the article; images, diagrams and maths then change
   // the height as they finish rendering.
@@ -165,15 +186,16 @@ function ReadingView() {
     const article = articleRef.current
     if (!article) return
     const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(frame.current)
-      frame.current = requestAnimationFrame(measure)
+      needsMeasure.current = true
+      scheduleFrame()
     })
     observer.observe(article)
     return () => {
       observer.disconnect()
       cancelAnimationFrame(frame.current)
+      frame.current = 0
     }
-  }, [collectHeadings, measure, content, theme, fontSize, lineHeight, width])
+  }, [collectHeadings, measure, scheduleFrame, content, theme, fontSize, lineHeight, width])
 
   // Focus goes to the article so arrows, Page Down and Space scroll it at
   // once; on the way out it goes back to whatever opened reading mode.
@@ -238,8 +260,7 @@ function ReadingView() {
       setBarHidden(delta > 0)
       lastTop.current = top
     }
-    cancelAnimationFrame(frame.current)
-    frame.current = requestAnimationFrame(updatePosition)
+    scheduleFrame()
   }
 
   const scrollToElement = (element: HTMLElement) => {
