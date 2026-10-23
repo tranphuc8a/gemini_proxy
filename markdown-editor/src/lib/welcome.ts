@@ -58,8 +58,9 @@ export const WELCOME_SHA256 = '9f46a70e4a46cc978c19b18af869737c8fa35e9cf29a007fc
 
 /**
  * SHA-256 (UTF-8, hex) of every earlier welcome text, oldest first:
- *  - `# Welcome to Markdown Editor\n\nStart typing markdown here...` (first build, 2026-09-04, commit 6aaa126);
- *  - the "Try it out" tour without the Math section (2026-09-12 … 2026-10-23, commits 4eb63f1 … 8d9724e).
+ *  - `# Welcome to Markdown Editor\n\nStart typing markdown here...` (first builds, 2026-09-02 … 09-12, commits 1385c57 … 6aaa126);
+ *  - the "Try it out" tour without the Math section (2026-09-12 … 2026-10-23, commits cb4bb93 … 8d9724e).
+ * Checked against every branch: no other welcome text was ever committed.
  */
 export const LEGACY_WELCOME_SHA256: readonly string[] = Object.freeze([
   '35b2144737d907df559727016b05a16fc54ee87472fb00ed333a8752f8efdbee',

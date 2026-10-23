@@ -19,7 +19,12 @@ interface HastNode {
 }
 
 const BLOCKED_PROPERTY = /^(?:behavior|-moz-binding|-ms-behavior)$/
-const LOADING_FUNCTION = /(?:^|[^a-z0-9_-])(?:-[a-z]+-)?(?:url|image|image-set|cross-fade|element|src|attr|paint|expression)\(/
+/**
+ * Looked for anywhere in the canonical value, with no boundary on the left: white space is gone there, so the
+ * shorthand `background: #fff url(…) no-repeat` reads `#fffurl(…)no-repeat`, and `red/**\/url(…)` reads `redurl(…)`.
+ * No CSS function a style needs ends in one of these names (vendor prefixes like `-webkit-image-set(` included).
+ */
+const LOADING_FUNCTION = /(?:url|image|image-set|cross-fade|element|src|attr|paint|expression)\(/
 const SAFE_POSITION = /^(?:static|relative|absolute|initial|inherit|unset|revert|revert-layer)(?:!important)?$/
 
 /** Splits a declaration list on `;` outside strings and parentheses. */

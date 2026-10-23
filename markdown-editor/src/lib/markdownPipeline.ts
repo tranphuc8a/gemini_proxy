@@ -9,6 +9,7 @@ import rehypeKatex from 'rehype-katex'
 import 'katex/contrib/mhchem'
 // Without this stylesheet KaTeX output renders as unstyled spans.
 import 'katex/dist/katex.min.css'
+import { KATEX_MACROS, katexOptions } from './katexOptions'
 import { rehypeEnhance, sanitizeSchema } from './rehypeEnhance'
 import rehypeStyleGuard from './rehypeStyleGuard'
 import remarkMathPromote from './remarkMathPromote'
@@ -41,20 +42,8 @@ export interface NamedPlugin<Name extends string> {
   plugin: Pluggable
 }
 
-/**
- * Macros for what LLM answers borrow from LaTeX/MathJax that KaTeX lacks: equation labels and references render as
- * their text instead of a red error. A fresh copy per render: KaTeX writes `\gdef`s into the object it is given.
- */
-export const KATEX_MACROS: Readonly<Record<string, string>> = Object.freeze({
-  '\\label': '\\mathrlap{\\phantom{\\text{#1}}}',
-  '\\eqref': '\\text{(#1)}',
-  '\\ref': '\\text{#1}'
-})
-
-/** KaTeX settings: no warnings for LaTeX-incompatible input (chat answers are full of it), the macros above. */
-export function katexOptions() {
-  return { strict: 'ignore' as const, macros: { ...KATEX_MACROS } }
-}
+// KaTeX settings live in a pure module that gemini-chat shares (scripts/sync-math.mjs); re-exported for callers here.
+export { KATEX_MACROS, katexOptions }
 
 /** rehype-katex with fresh options each time a processor is built (once per render). */
 function rehypeKatexFresh() {

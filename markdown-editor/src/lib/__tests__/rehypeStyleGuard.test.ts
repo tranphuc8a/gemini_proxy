@@ -32,6 +32,28 @@ describe('cleanStyle', () => {
     ['pos\\ition: fixed', ''],
     ['background: url/**/(https://tracker.test/p.png)', ''],
     ['background: red; @import "x.css"', 'background: red'],
+    // Shorthands: url( after another value of the same declaration (white space is gone in the canonical text, so
+    // there is no boundary on the left to wait for).
+    ['background: red url(https://tracker.test/p.png)', ''],
+    ['background: #fff url("https://tracker.test/p.png") no-repeat; color: red', 'color: red'],
+    ['background: no-repeat url(https://tracker.test/p.png)', ''],
+    ['background: 0 0 url(https://tracker.test/p.png)', ''],
+    ['background:center/cover url(https://tracker.test/p.png)', ''],
+    ['border-image: 30 url(https://tracker.test/p.png)', ''],
+    ['list-style: square url(https://tracker.test/p.png)', ''],
+    ['background: red/**/url(https://tracker.test/p.png)', ''],
+    ['background: red\\ url(https://tracker.test/p.png)', ''],
+    ['background: red -webkit-image-set("https://tracker.test/p.png" 1x)', ''],
+    ['mask: linear-gradient(#000, #000) 0 0 / 10px no-repeat, red url(m.svg)', ''],
+    ['filter: blur(2px) url(#f)', ''],
+    ['content: "a" attr(data-x)', ''],
+    // …and still nothing safe goes: no ordinary function name ends in one of the blocked ones.
+    ['background: linear-gradient(90deg, red, blue) no-repeat', 'background: linear-gradient(90deg, red, blue) no-repeat'],
+    ['transform: translate(2px) rotate(3deg) scale(1.1)', 'transform: translate(2px) rotate(3deg) scale(1.1)'],
+    ['color: color-mix(in srgb, red 40%, blue)', 'color: color-mix(in srgb, red 40%, blue)'],
+    ['box-shadow: 0 0 2px rgba(0, 0, 0, .3); width: calc(100% - 2em)', 'box-shadow: 0 0 2px rgba(0, 0, 0, .3); width: calc(100% - 2em)'],
+    ['grid-template-columns: repeat(2, minmax(0, 1fr))', 'grid-template-columns: repeat(2, minmax(0, 1fr))'],
+    ['font-family: "Source Sans", sans-serif; background: var(--bg, #fff) border-box', 'font-family: "Source Sans", sans-serif; background: var(--bg, #fff) border-box'],
     // A semicolon inside a data URL or a string does not split the declaration.
     ['background: url("data:image/png;base64,AAAA"); color: red', 'color: red'],
     ['font-family: "a;b", serif', 'font-family: "a;b", serif'],
@@ -51,6 +73,20 @@ describe('rehypeStyleGuard in the pipeline', () => {
     expect(out).not.toContain('tracker.test')
     expect(out).not.toMatch(/position:\s*fixed/)
     expect(out).toContain('top:0')
+  })
+
+  it('strips url( inside shorthands too (background, border-image, list-style), from every element', () => {
+    const out = html(
+      [
+        '<span style="color:red;background:#fff url(https://tracker.test/a.png) no-repeat">a</span>',
+        '<div style="border-image: 30 url(https://tracker.test/b.png)">b</div>',
+        '<ul><li style="list-style: square url(https://tracker.test/c.png)">c</li></ul>',
+        '<p style="background: red/**/url(https://tracker.test/d.png)">d</p>'
+      ].join('\n\n')
+    )
+    expect(out).toContain('<span style="color:red">a</span>')
+    expect(out).not.toContain('tracker.test')
+    expect(out).not.toContain('url(')
   })
 
   it('removes the attribute when nothing safe is left', () => {

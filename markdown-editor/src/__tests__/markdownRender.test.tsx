@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import { describe, expect, it } from 'vitest'
 import MarkdownView from '../components/MarkdownView'
 import { sanitizeSchema } from '../lib/rehypeEnhance'
@@ -9,6 +11,7 @@ import { fenceLanguage } from '../lib/markdownPipeline'
 import { prismLanguage } from '../lib/codeLanguages'
 import { prepareMarkdown } from '../lib/prepareMarkdown'
 import { WELCOME } from '../lib/welcome'
+import { RENDER_VECTORS, STREAM_ANSWERS, countMaths, openDelimiterAt, streamCuts, textOf } from '../lib/__tests__/mathVectors'
 
 /**
  * The whole pipeline, rendered the way the preview renders it (MarkdownView → static HTML), on maths as Gemini,
@@ -21,204 +24,16 @@ function render(md: string): HTMLDivElement {
   return div
 }
 
-function count(root: HTMLElement) {
-  const display = root.querySelectorAll('.katex-display').length
-  return {
-    display,
-    inline: root.querySelectorAll('.katex').length - display,
-    errors: root.querySelectorAll('.katex-error').length + (root.innerHTML.includes('#cc0000') ? 1 : 0)
-  }
-}
-
-/** Visible text with every formula replaced by «TeX». */
-function textOf(root: HTMLElement): string {
-  const copy = root.cloneNode(true) as HTMLElement
-  copy.querySelectorAll('.katex').forEach((node) => {
-    const tex = node.querySelector('annotation')?.textContent ?? '?'
-    node.replaceWith(document.createTextNode(`«${tex}»`))
-  })
-  return copy.textContent ?? ''
-}
-
-interface Vector {
-  name: string
-  md: string
-  display: number
-  inline: number
-  /** Substrings the visible text must contain. */
-  has?: string[]
-  /** Substrings the visible text must not contain. */
-  hasNot?: string[]
-  /** Extra checks on the rendered DOM. */
-  check?: (root: HTMLElement) => void
-}
-
+const count = countMaths
 const R = String.raw
 
-const VECTORS: Vector[] = [
-  { name: '$…$ inline', md: 'Euler $e^{i\\pi}+1=0$ ok', display: 0, inline: 1 },
-  { name: '$$ block', md: '$$\nx^2 + y^2 = z^2\n$$', display: 1, inline: 0 },
-  { name: '$$x$$ alone on its line (Gemini) → block', md: R`$$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$$`, display: 1, inline: 0 },
-  { name: '$$ x $$ alone with spaces → block', md: '$$ x^2 + y^2 = z^2 $$', display: 1, inline: 0 },
-  {
-    name: '"$$ x^2 +" then "y^2 = z^2 $$" → one block, nothing lost',
-    md: '$$ x^2 +\ny^2 = z^2 $$\n\nafter',
-    display: 1,
-    inline: 0,
-    check: (root) => {
-      expect(root.querySelector('annotation')?.textContent).toContain('y^2 = z^2')
-      expect(root.querySelector('p[data-line="4"]')?.textContent).toBe('after')
-    }
-  },
-  { name: '$$ block inside a paragraph', md: 'Text before\n$$\nE = mc^2\n$$\ntext after', display: 1, inline: 0, has: ['Text before', 'text after'] },
-  { name: '\\[ \\] on lines of their own (ChatGPT)', md: '\\[\nE = mc^2\n\\]', display: 1, inline: 0, hasNot: ['[', ']'] },
-  { name: '\\[ \\] on one line', md: R`\[ E = mc^2 \]`, display: 1, inline: 0, hasNot: ['['] },
-  { name: '\\( \\) inline (ChatGPT)', md: R`Energy \( E = mc^2 \) here`, display: 0, inline: 1, has: ['Energy «E = mc^2» here'] },
-  {
-    name: '\\( \\) keeps _ and * as maths',
-    md: R`Let \( x_1 * x_2 = a_i * b_j * c \) hold`,
-    display: 0,
-    inline: 1,
-    check: (root) => expect(root.querySelector('em')).toBeNull()
-  },
-  {
-    name: '\\[ aligned \\] keeps its \\\\ line breaks',
-    md: '\\[\n\\begin{aligned}\na &= b \\\\\nc &= d\n\\end{aligned}\n\\]',
-    display: 1,
-    inline: 0,
-    check: (root) => expect(root.querySelector('annotation')?.textContent).toContain('a &= b \\\\')
-  },
-  {
-    name: 'bare \\begin{align} keeps its \\\\',
-    md: '\\begin{align}\na &= b \\\\\nc &= d\n\\end{align}',
-    display: 1,
-    inline: 0,
-    check: (root) => expect(root.querySelector('annotation')?.textContent).toContain('a &= b \\\\')
-  },
-  { name: 'bare equation with \\tag', md: '\\begin{equation}\nE = mc^2 \\tag{1}\n\\end{equation}', display: 1, inline: 0 },
-  { name: 'bare pmatrix on one line', md: R`\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}`, display: 1, inline: 0 },
-  { name: 'bare cases', md: R`\begin{cases} 1 & x > 0 \\ 0 & \text{otherwise} \end{cases}`, display: 1, inline: 0 },
-  {
-    name: 'bare align with lines starting + and - stays one formula',
-    md: '\\begin{align}\nf(x) &= x^2\n+ 2x \\\\\n- 3 &= 0\n\\end{align}',
-    display: 1,
-    inline: 0,
-    check: (root) => expect(root.querySelector('ul, li')).toBeNull()
-  },
-  { name: '```math fence', md: '```math\n\\frac{a}{b}\n```', display: 1, inline: 0 },
-  { name: '$$ \\begin{align} $$ (Gemini)', md: '$$\n\\begin{align}\na &= b \\\\\nc &= d\n\\end{align}\n$$', display: 1, inline: 0 },
-  { name: '\\boxed and \\tag', md: '$$\n\\boxed{x = 2} \\tag{2}\n$$', display: 1, inline: 0 },
-  { name: 'mhchem \\ce and \\pu', md: R`$\ce{H2O}$ and $\pu{123 kJ}$`, display: 0, inline: 2 },
-  { name: 'mhchem inside \\( \\)', md: R`\(\ce{H2O + CO2 -> H2CO3}\)`, display: 0, inline: 1 },
-  { name: 'prices $5 and $10 are not maths', md: 'It costs $5 and $10 total', display: 0, inline: 0, has: ['It costs $5 and $10 total'] },
-  { name: 'a price before real maths', md: 'Pay $5 for $x$ items', display: 0, inline: 1, has: ['Pay $5 for «x» items'] },
-  { name: 'plan prices', md: 'Plus costs $20/month and Pro $200/month.', display: 0, inline: 0, has: ['$20/month and Pro $200/month.'] },
-  { name: 'price range', md: 'between $5-$10 each', display: 0, inline: 0, has: ['between $5-$10 each'] },
-  { name: 'escaped dollar stays a dollar', md: 'Literal \\$5 and $y$', display: 0, inline: 1, has: ['Literal $5 and «y»'] },
-  { name: '$ x $ with inner spaces is text (pandoc)', md: '$ x $', display: 0, inline: 0, has: ['$ x $'] },
-  { name: '$$…$$ mid-sentence stays inline', md: 'The area is $$A = \\pi r^2$$ for a circle.', display: 0, inline: 1 },
-  {
-    name: '\\[ \\] inside a blockquote',
-    md: '> \\[\n> a^2\n> \\]',
-    display: 1,
-    inline: 0,
-    check: (root) => expect(root.querySelector('blockquote .katex-display')).not.toBeNull()
-  },
-  {
-    name: '\\[ \\] inside a list item',
-    md: '- item\n  \\[\n  a^2\n  \\]\n- next',
-    display: 1,
-    inline: 0,
-    check: (root) => expect(root.querySelectorAll('li')).toHaveLength(2)
-  },
-  { name: '\\( \\) in a table cell', md: '| a | b |\n|---|---|\n| \\(x^2\\) | $y$ |', display: 0, inline: 2 },
-  { name: '\\\\[ (copied from JSON) is text', md: R`\\[ x^2 \\]`, display: 0, inline: 0, has: ['\\[ x^2 \\]'] },
-  { name: 'escaped brackets of a link-like text', md: R`See [docs](http://a.b) and \[not math]`, display: 0, inline: 0, has: ['[not math]'] },
-  { name: '\\[Enter\\] mid-sentence is text', md: R`Press \[Enter\] to continue`, display: 0, inline: 0, has: ['Press [Enter] to continue'] },
-  {
-    name: 'code span untouched',
-    md: 'Use `\\(x\\)` literally',
-    display: 0,
-    inline: 0,
-    check: (root) => expect(root.querySelector('code')?.textContent).toBe('\\(x\\)')
-  },
-  { name: 'fenced code untouched', md: '```\n\\[ x \\] costs $5 and $10\n```', display: 0, inline: 0, has: ['\\[ x \\] costs $5 and $10'] },
-  {
-    name: '\\label, \\tag and \\eqref',
-    md: '\\[\nx = 1 \\label{eq:a} \\tag{1}\n\\]\nSee \\(\\eqref{eq:a}\\).',
-    display: 1,
-    inline: 1,
-    check: (root) => expect(Array.from(root.querySelectorAll('.katex-html')).pop()?.textContent).toContain('(eq:a)')
-  },
-  { name: '\\ref', md: R`Equation \(\ref{eq:a}\) holds`, display: 0, inline: 1 },
-  { name: '\\require (MathJax) is dropped', md: R`$$\require{cancel}\cancel{x}$$`, display: 1, inline: 0 },
-  { name: 'multline → gather', md: '\\begin{multline}\na + b \\\\\nc\n\\end{multline}', display: 1, inline: 0 },
-  { name: 'eqnarray → align', md: '\\begin{eqnarray}\na &=& b\n\\end{eqnarray}', display: 1, inline: 0 },
-  { name: 'flalign → align', md: '$$\n\\begin{flalign}\na &= b\n\\end{flalign}\n$$', display: 1, inline: 0 },
-  {
-    name: '\\[ \\] mid-sentence renders in display style',
-    md: R`So \[ a^2 \] is display`,
-    display: 1,
-    inline: 0,
-    check: (root) => expect(root.querySelector('p .katex-display')).not.toBeNull()
-  },
-  { name: 'escaped dollar inside \\( \\)', md: R`Price \(\$5\) ok`, display: 0, inline: 1 },
-  { name: 'escaped dollar inside $…$', md: R`$\$5$ ok`, display: 0, inline: 1 },
-  { name: '\\( \\) at the start of a line', md: R`\(f\) is continuous`, display: 0, inline: 1 },
-  { name: 'inline HTML inside maths stays maths', md: '$a <b c>d$ and $y$', display: 0, inline: 2 },
-  {
-    name: 'dollar in a link address',
-    md: '[buy](http://x.test/?p=$5) and $z$',
-    display: 0,
-    inline: 1,
-    check: (root) => expect(root.querySelector('a')?.getAttribute('href')).toBe('http://x.test/?p=$5')
-  },
-  { name: 'maths in a heading', md: '## Energy $E=mc^2$', display: 0, inline: 1 },
-  {
-    name: 'inline, block and dollar maths in one paragraph',
-    md: 'Inline \\(a\\), display\n\\[\nb\n\\]\nand $c$',
-    display: 1,
-    inline: 2
-  },
-  {
-    name: '\\[ \\] in <details> after a blank line',
-    md: '<details>\n<summary>Proof</summary>\n\n\\[\nx^2\n\\]\n\n</details>',
-    display: 1,
-    inline: 0
-  },
-  { name: '"Text $$" … "$$" across lines', md: 'Text $$\nx\n$$', display: 0, inline: 1 },
-  {
-    name: 'a ChatGPT answer',
-    md: [
-      'The quadratic formula gives the roots of \\(ax^2 + bx + c = 0\\):',
-      '',
-      '\\[',
-      'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}',
-      '\\]',
-      '',
-      'For example, if the course costs $49 and the book $15, the total is $64.',
-      '',
-      '1. Compute the discriminant \\( \\Delta = b^2 - 4ac \\).',
-      '2. If \\( \\Delta < 0 \\), there are no real roots.'
-    ].join('\n'),
-    display: 1,
-    inline: 3,
-    has: ['costs $49 and the book $15, the total is $64.']
-  },
-  {
-    name: 'a Gemini answer',
-    md: ['Phương trình Schrödinger:', '', '$$i\\hbar \\frac{\\partial}{\\partial t}\\Psi = \\hat H \\Psi$$', '', 'với $\\hbar = h / 2\\pi$.'].join('\n'),
-    display: 1,
-    inline: 1
-  }
-]
-
+// The vectors (and `countMaths`/`textOf`) are shared with gemini-chat: ../lib/__tests__/mathVectors.ts.
 describe('MarkdownView: maths as LLMs write it', () => {
   it('has at least 40 vectors', () => {
-    expect(VECTORS.length).toBeGreaterThanOrEqual(40)
+    expect(RENDER_VECTORS.length).toBeGreaterThanOrEqual(40)
   })
 
-  it.each(VECTORS)('$name', ({ md, display, inline, has, hasNot, check }) => {
+  it.each(RENDER_VECTORS)('$name', ({ md, display, inline, has, hasNot, check }) => {
     const root = render(md)
     expect(count(root)).toEqual({ display, inline, errors: 0 })
     const text = textOf(root)
@@ -242,6 +57,62 @@ describe('MarkdownView: maths as LLMs write it', () => {
   })
 })
 
+describe('MarkdownView: an answer as it streams in (the same answers gemini-chat checks)', () => {
+  it.each(STREAM_ANSWERS)('$name', ({ md, display, inline }) => {
+    expect(count(render(md))).toEqual({ display, inline, errors: 0 })
+    const before = new Map<number, ReturnType<typeof count>>()
+    for (const cut of streamCuts(md)) {
+      const prefix = md.slice(0, cut)
+      const counts = count(render(prefix))
+      expect(counts.errors, JSON.stringify(prefix)).toBe(0)
+      const at = openDelimiterAt(prefix)
+      if (at === -1) continue
+      if (!before.has(at)) before.set(at, count(render(prefix.slice(0, at))))
+      // An open \[ or \( is still text: it adds no formula and swallows none of what came before.
+      expect(counts, JSON.stringify(prefix)).toEqual(before.get(at))
+    }
+  }, 60_000)
+})
+
+describe('prepareMarkdown keeps the blocks of the author text', () => {
+  /** The block elements Markdown alone makes of a text (raw HTML stays escaped text here, so it never counts). */
+  const blocks = (md: string) =>
+    (renderToStaticMarkup(<ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]}>{md}</ReactMarkdown>).match(/<(?:li|tr|h[1-6]|blockquote|pre|table|hr|ul|ol)[ >]/g) ?? []).join('')
+
+  it('never loses or adds a list item, table row, heading, quote or code block (randomised, author maths only)', () => {
+    // Lines of prices and formulas behind block syntax. No \( \[ \begin: formulas written there on purpose may run over
+    // a line that would start a block (that is what `\relax` is for).
+    const prefixes = ['', '', '- ', '* ', '+ ', '1. ', '2) ', '  ', '# ', '## ', '> ', '> - ', '>> ', '| ', '    ', '\t', '    >>> ', '<details>', '<pre>', '```', '===', '---', '|---|---|', '- <p>']
+    // `$$` words exercise the author's `$$…$$` across lines, and its closer at the start of a line (`\relax $$`).
+    const words = ['5$/tháng', '10$.', '2$/lần', '$x$', '$5', '$a +', 'b$', '$', 'a', 'b c', '|', 'x_1', '\\$', '`', 'é', '<b>', '$$', '$$ a', 'x $$', '$$$']
+    let seed = 2026
+    const random = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0
+      return seed / 4294967296
+    }
+    const pick = <T,>(list: T[]) => list[Math.floor(random() * list.length)]
+    let compared = 0
+    for (let round = 0; round < 400; round++) {
+      const lines: string[] = []
+      const count = 2 + Math.floor(random() * 5)
+      for (let n = 0; n < count; n++) {
+        let line = pick(prefixes)
+        const length = Math.floor(random() * 4)
+        for (let k = 0; k < length; k++) line += (k ? ' ' : '') + pick(words)
+        lines.push(line)
+        if (random() < 0.1) lines.push('')
+      }
+      const md = lines.join(random() < 0.2 ? '\r\n' : '\n')
+      const prepared = prepareMarkdown(md)
+      // A `$$ text` line closing later is rewritten on purpose (generated), so is a closing `$$` that would open a fence.
+      if (prepared.generated.size || prepared.text.includes('\\relax $$')) continue
+      compared++
+      expect(blocks(prepared.text), JSON.stringify(md)).toBe(blocks(md))
+    }
+    expect(compared).toBeGreaterThan(350)
+  })
+})
+
 describe('MarkdownView: source line anchors around maths', () => {
   it('keeps every block after a converted formula on its own source line', () => {
     const root = render('# T\n\n\\[\na\n\\]\n\n## After\n\nText \\(x\\) here\n\n\\begin{align}\nb\n\\end{align}\n\nLast')
@@ -249,6 +120,10 @@ describe('MarkdownView: source line anchors around maths', () => {
     expect(root.querySelector('p')?.getAttribute('data-line')).toBe('9')
     expect(Array.from(root.querySelectorAll('.math-block')).map((node) => node.getAttribute('data-line'))).toEqual(['3', '11'])
     expect(Array.from(root.querySelectorAll('p')).pop()?.getAttribute('data-line')).toBe('15')
+  })
+
+  it('the paragraph after a "$$ x^2 +" … "$$" formula keeps its source line', () => {
+    expect(render('$$ x^2 +\ny^2 = z^2 $$\n\nafter').querySelector('p[data-line="4"]')?.textContent).toBe('after')
   })
 
   it('wraps every maths block in div.math-block[data-line] (KaTeX replaces the <pre> that had it)', () => {

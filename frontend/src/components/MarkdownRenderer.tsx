@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -10,6 +10,12 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import mermaid from 'mermaid';
 import 'katex/dist/katex.min.css';
+// Registers \ce and \pu (mhchem) on the KaTeX instance rehype-katex renders with: chemistry answers use them.
+import 'katex/contrib/mhchem';
+// Copies of Markdown Editor Pro's pure maths modules (scripts/sync-math.mjs); edit them in markdown-editor/src/lib/.
+import { normalizeMath } from '../lib/mathDelimiters';
+import remarkMathPromote from '../lib/remarkMathPromote';
+import { katexOptions } from '../lib/katexOptions';
 import { useAppStore } from '../store/appStore';
 import { showToast } from '../utils/toast';
 
@@ -219,15 +225,29 @@ const MermaidDiagram: React.FC<{ code: string; theme: 'dark' | 'light' }> = ({ c
  * Memoised on content: streaming re-renders the message list on every chunk, and
  * re-parsing every sibling message's Markdown each time is what made long
  * answers stutter.
+ *
+ * Maths as models write it: `normalizeMath` first rewrites `\( \)`, `\[ \]` and
+ * a bare `\begin{align}` into the `$` syntax remark-math reads, and escapes
+ * prices (`$5 and $10`) so they stay text; `remarkMathPromote` then shows a
+ * formula standing alone (`$$x$$` on its line, as Gemini writes it) as a block.
+ * It runs on every streamed chunk, so a `\[` whose `\]` has not arrived yet is
+ * left as text rather than swallowing the rest of the answer. No raw HTML
+ * reaches the page here, so the editor's style guard has nothing to guard.
  */
 const MarkdownRendererInner: React.FC<MarkdownRendererProps> = ({ content }) => {
   const theme = useAppStore((state) => state.theme);
+  const prepared = useMemo(() => normalizeMath(content), [content]);
 
   return (
     <div className="markdown-body">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        remarkPlugins={[
+          remarkGfm,
+          remarkMath,
+          [remarkMathPromote, { display: prepared.display, generated: prepared.generated, text: prepared.text }],
+        ]}
+        // Fresh options per render: KaTeX writes `\gdef`s into the macros object it is given.
+        rehypePlugins={[[rehypeKatex, katexOptions()]]}
         components={{
           code(props) {
             const { children, className } = props;
@@ -257,7 +277,7 @@ const MarkdownRendererInner: React.FC<MarkdownRendererProps> = ({ content }) => 
           },
         }}
       >
-        {content}
+        {prepared.text}
       </ReactMarkdown>
     </div>
   );

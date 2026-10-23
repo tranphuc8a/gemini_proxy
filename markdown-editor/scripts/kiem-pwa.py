@@ -26,8 +26,10 @@ Kịch bản (một trình duyệt, một origin, để service worker và local
  10. (đợt M2, toán kiểu LLM + chặn style) tài liệu có \\( \\), \\[ \\], \\begin{align} trần, $$x$$ một dòng, "$$ chữ"
      hai dòng, mhchem, \\eqref, giá $5/$10: preview đủ số công thức hiển thị/nội dòng, 0 katex-error, giá tiền là chữ;
      khối toán là div.math-block[data-line] đúng dòng nguồn, nhấp đúp khối toán → con trỏ editor về đúng dòng, tiêu đề
-     sau toán giữ data-line; style="background-image:url(…)" bị bỏ (0 yêu cầu tới máy theo dõi) còn màu giữ,
-     position:fixed bị bỏ; chế độ đọc và tệp Export HTML có cùng công thức; welcome.md (ngữ cảnh mới) có ví dụ toán
+     sau toán giữ data-line; style có url(…) trong dạng rút gọn ("background: #fff url(…) no-repeat", "border-image: 30
+     url(…)") bị bỏ (0 yêu cầu tới máy theo dõi) còn màu giữ,
+     position:fixed bị bỏ; chế độ đọc và tệp Export HTML có cùng công thức; welcome.md (ngữ cảnh mới) có ví dụ toán;
+     (sửa sau kiểm) giá "5$/tháng" ở mục danh sách, hàng bảng, quanh tiêu đề giữ nguyên cấu trúc, mã thụt lề ">>>" giữ $
 
 AN TOÀN: máy chủ chạy với DB_URL trỏ SQLite trong thư mục tạm và MONGO_URI rỗng (ghi đè .env); khoá quản trị trong
 phép kiểm là chuỗi giả của chính script này, không phải khoá thật.
@@ -670,11 +672,27 @@ y^2 = z^2 $$
 
 Hoá học $\ce{2H2 + O2 -> 2H2O}$, nhãn \(\eqref{eq:a}\), giữa câu \[ a^2 \] vẫn hiển thị.
 
-<span id="sg" style="color: rgb(200, 0, 0); background-image: url(https://tracker.invalid/p.png)">kiểu chữ đỏ</span>
+<span id="sg" style="color: rgb(200, 0, 0); background: #fff url(https://tracker.invalid/p.png) no-repeat; border-image: 30 url(https://tracker.invalid/b.png)">kiểu chữ đỏ</span>
 
 <div id="fx" style="position: fixed; top: 0; left: 0; width: 100%">lớp phủ giả</div>
 
 ## Sau toán
+
+- Gói cơ bản: 5$/tháng
+- Gói pro: 10$/tháng
+
+| Gói | Giá |
+| --- | --- |
+| Basic | 5$/mo |
+| Pro | 10$/mo |
+
+Ghi chú: phí 2$/lần
+### Phí khác
+thêm 3$/lần
+
+Ví dụ:
+
+    >>> price = "$5 and $10"
 """
 M2_BLOCK_LINES = ["5", "9", "14", "16"]
 M2_DISPLAY = 5   # 4 khối + \[ a^2 \] giữa câu
@@ -723,6 +741,25 @@ def run_m2(browser, srv: Server, shots: str | None) -> None:
           bool(got) and "giá $5 và $10 vẫn là chữ" in got["text"] and got["ce"], summary)
     check(f"preview: mỗi khối toán là div.math-block[data-line] đúng dòng nguồn {M2_BLOCK_LINES}; tiêu đề sau toán giữ data-line 25",
           bool(got) and got["blocks"] == M2_BLOCK_LINES and got["blocksWithKatex"] == len(M2_BLOCK_LINES) and got["h2"] == "25", summary)
+    # Sửa sau kiểm: `$` của tác giả không ghép qua ranh giới khối (giá "5$/tháng" ở mục danh sách, hàng bảng, quanh tiêu đề),
+    # và mã thụt lề bắt đầu bằng ">>>" không bị chèn "\$".
+    blocks = page.evaluate("""() => {
+      const el = document.querySelector('.preview-scroll .markdown-body');
+      return {
+        li: Array.from(el.querySelectorAll('li')).map((li) => li.textContent.trim()),
+        td: Array.from(el.querySelectorAll('td')).map((td) => td.textContent.trim()),
+        h3: Array.from(el.querySelectorAll('h3')).map((h) => h.textContent),
+        // Mã không có tên ngôn ngữ (mã thụt lề) ra <code> trần, không có <pre> (markdownPipeline bỏ <pre>).
+        code: Array.from(el.querySelectorAll('code, .code-block')).map((p) => p.textContent).find((t) => t.includes('>>>')) || '',
+        relax: el.textContent.includes('relax'),
+      };
+    }""")
+    check("preview: giá \"5$/tháng\" ở 2 mục danh sách, 2 hàng bảng và quanh tiêu đề giữ nguyên cấu trúc (không ghép $ qua khối, không \\relax)",
+          blocks["li"] == ["Gói cơ bản: 5$/tháng", "Gói pro: 10$/tháng"] and blocks["td"] == ["Basic", "5$/mo", "Pro", "10$/mo"]
+          and any("Phí khác" in h for h in blocks["h3"]) and not blocks["relax"],
+          json.dumps({k: v for k, v in blocks.items() if k != "code"}, ensure_ascii=False))
+    check("preview: mã thụt lề \"    >>> price = \\\"$5 and $10\\\"\" giữ nguyên từng ký tự (không thêm \\)",
+          '>>> price = "$5 and $10"' in blocks["code"] and "\\$" not in blocks["code"], blocks["code"][:120])
     snap("06-toan-llm")
 
     # Nhấp đúp một khối toán → con trỏ editor về đúng dòng nguồn (cần data-line trên khối; trước M2 KaTeX xoá mất).
@@ -736,11 +773,14 @@ def run_m2(browser, srv: Server, shots: str | None) -> None:
       const div = Array.from(document.querySelectorAll('.preview-scroll div')).find((d) => d.textContent === 'lớp phủ giả');
       return {
         color: span && getComputedStyle(span).color, bg: span && getComputedStyle(span).backgroundImage,
+        border: span && getComputedStyle(span).borderImageSource,
         attr: span && span.getAttribute('style'), pos: div && getComputedStyle(div).position, divAttr: div && div.getAttribute('style'),
       };
     }""")
-    check("style=\"…url(…)\" trong HTML thô: bỏ khai báo url (không tải ảnh theo dõi), giữ màu chữ",
-          style["color"] == "rgb(200, 0, 0)" and style["bg"] == "none" and "url" not in (style["attr"] or "") and not tracker,
+    check("style có url(…) ở dạng rút gọn (\"background: #fff url(…) no-repeat\", \"border-image: 30 url(…)\") trong HTML thô: "
+          "bỏ cả hai khai báo (không tải ảnh theo dõi), giữ màu chữ",
+          style["color"] == "rgb(200, 0, 0)" and style["bg"] == "none" and style["border"] == "none"
+          and "url" not in (style["attr"] or "") and not tracker,
           json.dumps({**style, "tracker": tracker[:2]}, ensure_ascii=False))
     check("style=\"position: fixed…\" bị bỏ (không phủ được giao diện app)", style["pos"] == "static", json.dumps(style, ensure_ascii=False))
 
