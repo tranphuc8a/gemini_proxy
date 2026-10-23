@@ -61,6 +61,29 @@ function adminHeaders(): Record<string, string> {
   return adminSession ? { 'X-Admin-Session': adminSession } : {}
 }
 
+/** The admin header for another client of the markdown API (the share links: services/shareClient.ts). */
+export function adminSessionHeaders(): Record<string, string> {
+  return adminHeaders()
+}
+
+/**
+ * A refusal from the markdown API, with the machine-readable `data.code` of its error envelope
+ * (`{message, data: {code, retryAfter}}`) so the UI can react to the case rather than to a sentence.
+ */
+export class StorageError extends Error {
+  readonly status: number
+  readonly code: string | null
+  readonly retryAfter: number | null
+
+  constructor(message: string, status: number, code: string | null = null, retryAfter: number | null = null) {
+    super(message)
+    this.name = 'StorageError'
+    this.status = status
+    this.code = code
+    this.retryAfter = retryAfter
+  }
+}
+
 export function hasAdminCredential(): boolean {
   return Boolean(adminSession)
 }
@@ -93,8 +116,10 @@ export async function verifyAdminKey(key: string): Promise<boolean> {
     setAdminSession(await readSession(response))
     return true
   }
-  if (response.status === 401 || response.status === 403) return false
-  throw new Error(await describeFailure(response))
+  const failure = await storageError(response)
+  // A refused DEFAULT key or a locked-out address is not "wrong key": say what is going on.
+  if ((response.status === 401 || response.status === 403) && failure.code !== 'markdown_default_key_refused') return false
+  throw failure
 }
 
 /** What the backend said about a session token: it holds, it is spent, or nobody answered. */
@@ -106,6 +131,8 @@ async function checkSession(token: string): Promise<SessionCheck> {
       method: 'POST',
       headers: { 'X-Admin-Session': token }
     })
+    // Locked out for a while (too many wrong keys from this network, maybe not ours): says nothing about the token.
+    if (response.status === 429) return 'unreachable'
     // Expired, or the admin key was rotated. Either way this token is spent.
     if (!response.ok) return 'rejected'
     // The server hands back a fresh token, so an active user is not signed out
@@ -187,13 +214,56 @@ export async function listBackends(): Promise<BackendInfo[]> {
   return data.filter((item): item is BackendInfo => typeof item === 'object' && item !== null && 'id' in item)
 }
 
-/** Turns a fetch failure into a message worth showing in a toast. */
+interface ErrorEnvelope {
+  message?: unknown
+  detail?: unknown
+  data?: { code?: unknown; retryAfter?: unknown } | null
+}
+
+/** What the UI says for the API's error codes (the server's own sentences are Vietnamese; the app is English). */
+function messageForCode(code: string | null, retryAfter: number | null): string | null {
+  switch (code) {
+    case 'markdown_private':
+      return "This server's documents are private. Unlock admin mode to load them."
+    case 'markdown_admin_locked':
+      return `Too many wrong admin keys from this network. Try again in ${retryAfter ?? 600} s.`
+    case 'markdown_default_key_refused':
+      return 'The server still uses the default admin key, which is public, so it refuses admin access from other devices. Set MARKDOWN_ADMIN_KEY on the server.'
+    case 'markdown_session_expired':
+      return 'Your admin session expired. Unlock admin mode again.'
+    case 'markdown_admin_disabled':
+      return 'Admin access is switched off on this server.'
+    default:
+      return null
+  }
+}
+
+/** Turns a refused response into a `StorageError` whose message is worth showing in a toast. */
+async function storageError(response: Response): Promise<StorageError> {
+  const raw = await response.text().catch(() => '')
+  let envelope: ErrorEnvelope | null = null
+  try {
+    envelope = raw ? (JSON.parse(raw) as ErrorEnvelope) : null
+  } catch {
+    envelope = null
+  }
+  const code = typeof envelope?.data?.code === 'string' ? envelope.data.code : null
+  const header = Number(response.headers.get('Retry-After'))
+  const retryAfter =
+    typeof envelope?.data?.retryAfter === 'number' ? envelope.data.retryAfter : Number.isFinite(header) && header > 0 ? header : null
+  const known = messageForCode(code, retryAfter)
+  if (known) return new StorageError(known, response.status, code, retryAfter)
+  const trimmed = raw.slice(0, 200).trim()
+  let message: string
+  if (response.status === 401 || response.status === 403) message = 'Backend rejected the admin key'
+  else if (response.status === 404) message = 'Backend endpoint not found - is the API running?'
+  else if (response.status === 429) message = `Too many requests. Try again in ${retryAfter ?? 60} s.`
+  else message = trimmed ? `Backend error ${response.status}: ${trimmed}` : `Backend error ${response.status}`
+  return new StorageError(message, response.status, code, retryAfter)
+}
+
 async function describeFailure(response: Response): Promise<string> {
-  const detail = await response.text().catch(() => '')
-  const trimmed = detail.slice(0, 200).trim()
-  if (response.status === 401 || response.status === 403) return 'Backend rejected the admin key'
-  if (response.status === 404) return 'Backend endpoint not found - is the API running?'
-  return trimmed ? `Backend error ${response.status}: ${trimmed}` : `Backend error ${response.status}`
+  return (await storageError(response)).message
 }
 
 async function request(url: string, init?: RequestInit): Promise<Response> {
@@ -213,9 +283,13 @@ async function request(url: string, init?: RequestInit): Promise<Response> {
   }
 }
 
+/**
+ * The server's whole tree. The store is private by default (MARKDOWN_PUBLIC_READ=false), so the admin session goes
+ * along when there is one; a guest is refused with `StorageError.code === 'markdown_private'`.
+ */
 export async function loadMarkdownFiles(storageType: StorageBackend): Promise<FileNode[]> {
-  const response = await request(`${filesUrl()}?backend=${storageType}`)
-  if (!response.ok) throw new Error(await describeFailure(response))
+  const response = await request(`${filesUrl()}?backend=${storageType}`, { headers: { ...adminHeaders() } })
+  if (!response.ok) throw await storageError(response)
 
   const data = (await response.json()) as { files?: unknown }
   if (!Array.isArray(data.files)) throw new Error('Backend returned an unexpected payload')
@@ -233,5 +307,5 @@ export async function saveMarkdownFiles(files: FileNode[], storageType: StorageB
     },
     body: JSON.stringify({ files })
   })
-  if (!response.ok) throw new Error(await describeFailure(response))
+  if (!response.ok) throw await storageError(response)
 }

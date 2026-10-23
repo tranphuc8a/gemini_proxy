@@ -9,8 +9,8 @@
 (function (root) {
   "use strict";
   var W = root.Wiki || (root.Wiki = {});
-  ["text", "notes", "search", "flash"].forEach(function (m) { if (!W[m] && typeof require === "function") require("../core/" + m + ".js"); });
-  var T = W.text, N = W.notes, S = W.search, F = W.flash;
+  ["text", "notes", "search", "flash", "compose"].forEach(function (m) { if (!W[m] && typeof require === "function") require("../core/" + m + ".js"); });
+  var T = W.text, N = W.notes, S = W.search, F = W.flash, C = W.compose;
 
   var CHUNK_SHIFT = 7, BLOCK_SHIFT = 13, BATCH = 1500;
   var ALL = ["notes", "heads", "tokens", "links", "cards", "changes", "drafts", "meta"];
@@ -358,6 +358,22 @@
       });
     }
 
+    /** Ghi chú liên quan tới một văn bản thô (Soạn bằng AI chọn trước top-K để gửi kèm): đọc danh sách KHỚP ĐÚNG của ≤ 48 token trong
+        MỘT giao dịch chỉ đọc (không quét nội dung note, không mở rộng tiền tố), bỏ token có trong quá max(50, 5 %) note, rồi compose.rank.
+        → Promise<[{h, score}]> (chỉ note đang dùng). o {k (mặc định 25, tối đa 40)} */
+    function related(text, o) {
+      o = o || {};
+      var info = C.textInfo(text), total = heads.size;
+      if (!total) return Promise.resolve([]);
+      return store.tx(["tokens"], "r", function (t) {
+        return Promise.all(info.tokens.map(function (tok) { return termLists(t, tok, false); }));
+      }).then(function (arrs) {
+        var cap = Math.max(50, 0.05 * total), lists = [];
+        arrs.forEach(function (a, i) { if (a.length && a.length <= cap) lists.push({ tok: info.tokens[i], a: a, idf: Math.log(1 + total / a.length) }); });
+        return C.rank(heads, lists, info, { k: o.k });
+      });
+    }
+
     // ============================================================================================ liên kết & đồ thị
     function allEdges(ns) {
       return store.tx(["links"], "r", function (t) {
@@ -618,7 +634,7 @@
     var api = {
       open: open, reload: reload, on: function (fn) { listeners.push(fn); return function () { var i = listeners.indexOf(fn); if (i !== -1) listeners.splice(i, 1); }; }, store: store, now: clock,
       save: save, removeForever: removeForever, bulkAdd: bulkAdd, get: getNote, getMany: getMany, head: headById, headByN: headByN, findByTitle: findByTitle, resolve: function (title) { var n = resolveKey(T.titleKey(title)); return n ? heads.get(n) : null; },
-      list: list, tags: tags, stats: stats, suggest: suggest, search: search, relations: relations, backlinks: backlinks, graph: graph,
+      list: list, tags: tags, stats: stats, suggest: suggest, search: search, related: related, relations: relations, backlinks: backlinks, graph: graph,
       saveDraft: saveDraft, getDraft: getDraft, listDrafts: listDrafts, dropDraft: dropDraft, daily: daily, renameTag: renameTag, deleteTag: deleteTag,
       wipe: wipe, dueCards: dueCards, cardStats: cardStats, review: review, notesCards: notesCards, allCards: allCards, forEachNote: forEachNote, purgeTrash: purgeTrash,
       getMeta: getMeta, setMeta: setMeta, pendingChanges: pendingChanges, pendingCount: pendingCount, getCard: getCard, queueChange: queueChange, ackChanges: ackChanges, markAllChanged: markAllChanged, applyCard: applyCard,

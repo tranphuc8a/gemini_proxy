@@ -42,7 +42,15 @@
   <button class="tab-n" data-o="loc" role="tab" aria-selected="false">🔎 Truy vấn</button>
   <button class="tab-n" data-o="sosanh" role="tab" aria-selected="false">⇄ So sánh</button>
   <button class="tab-n" data-o="thongke" role="tab" aria-selected="false">📊 Thống kê</button>
+  <button class="tab-n" data-o="schema" role="tab" aria-selected="false">✓ Schema</button>
 </nav>
+
+<!-- Goi y khi mo tep trong nhu mot JSON Schema (ui-schema.js). -->
+<div class="bang-goi-y" id="sc-goi-y" role="status" hidden>
+  <span id="sc-goi-y-chu"></span>
+  <button class="nut nho" id="sc-goi-y-dung" type="button">Dùng làm schema</button>
+  <button class="nut nho" id="sc-goi-y-bo" type="button">Giữ làm dữ liệu</button>
+</div>
 
 <main>
   <!-- ======================= SOẠN ======================= -->
@@ -76,6 +84,7 @@ Ví dụ:
       <button class="nut nho" id="cay-lam-lai" title="Làm lại (Ctrl+Y hoặc Ctrl+Shift+Z)" disabled>↷ Làm lại</button>
       <span class="vach"></span>
       <label class="o-chon"><input type="checkbox" id="cay-kieu" checked> Hiện kiểu</label>
+      <label class="o-chon" title="Hiện kích thước (byte khi nén) của nhánh đang gấp"><input type="checkbox" id="cay-kich-thuoc" checked> Kích thước</label>
       <span class="phu" id="cay-tom"></span>
       <span class="bao-cay" id="cay-bao" role="status" aria-live="polite"></span>
     </div>
@@ -117,6 +126,59 @@ Ví dụ:
   <section class="o" data-o="thongke">
     <div class="ket" id="tk-ket"></div>
   </section>
+
+  <!-- ======================= SCHEMA ======================= -->
+  <section class="o" data-o="schema">
+    <div class="thanh-phu sc-thanh">
+      <button class="nut nho" id="sc-mo" type="button">📂 Mở schema</button>
+      <label class="o-chon">Ví dụ
+        <select id="sc-vi-du" class="chon-nho" aria-label="Chèn schema ví dụ"></select>
+      </label>
+      <button class="nut nho" id="sc-dinh-dang" type="button" title="Định dạng JSON của schema (thụt 2)">⇥ Định dạng schema</button>
+      <span class="vach"></span>
+      <label class="o-chon">Draft
+        <select id="sc-draft" class="chon-nho" aria-label="Phiên bản JSON Schema">
+          <option value="tu-dong">Tự động (theo $schema)</option>
+          <option value="2020-12">2020-12</option>
+          <option value="2019-09">2019-09</option>
+          <option value="07">draft-07 / 06 / 04</option>
+        </select>
+      </label>
+      <label class="o-chon">Format
+        <select id="sc-format" class="chon-nho" aria-label="Mức của format">
+          <option value="canh-bao">Cảnh báo</option>
+          <option value="loi">Lỗi</option>
+          <option value="bo-qua">Bỏ qua</option>
+        </select>
+      </label>
+      <label class="o-chon"><input type="checkbox" id="sc-tu-kiem" checked> Tự kiểm</label>
+      <button class="nut nho" id="sc-kiem-ngay" type="button">✓ Kiểm ngay</button>
+      <input type="file" id="sc-tep" accept=".json,.txt,application/json,application/schema+json" hidden>
+    </div>
+    <div class="sc-khung">
+      <div class="sc-trai">
+        <textarea id="sc-nhap" class="sc-nhap" spellcheck="false" autocomplete="off" aria-label="JSON Schema"
+                  placeholder='Dán JSON Schema vào đây, hoặc chọn “Ví dụ”.
+
+{
+  "type": "object",
+  "required": ["ten"],
+  "properties": { "ten": { "type": "string" } }
+}'></textarea>
+        <div class="sc-trang-thai" id="sc-trang-thai" role="status" aria-live="polite"></div>
+        <details class="sc-ho-tro">
+          <summary>Từ khoá hỗ trợ · giới hạn</summary>
+          <p class="phu">Chạy hoàn toàn trong trình duyệt: <b>không tải $ref tới địa chỉ ngoài</b> (http…) — dán schema đó vào <code>$defs</code>.
+            Kiểm chạy trong Worker có hạn giờ; mẫu <code>pattern</code> quay lui thảm hoạ sẽ báo “hết giờ”.</p>
+          <div id="sc-ho-tro"></div>
+        </details>
+      </div>
+      <div class="sc-phai">
+        <div class="sc-tom" id="sc-tom" role="status" aria-live="polite">Chưa có schema</div>
+        <ul class="sc-loi" id="sc-loi" aria-label="Danh sách lỗi theo schema"></ul>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="chan">
@@ -125,14 +187,22 @@ Ví dụ:
   <span class="day"></span>
   <span class="phu" id="vi-tri">dòng 1, cột 1</span>
   <span class="phu" id="co-tep"></span>
+  <button class="huy-hieu-chan" id="sc-chan" type="button" hidden title="Mở tab Schema">Schema</button>
   <span class="phu" id="bao-mau" hidden>Tô màu đã tắt — nội dung trên 300 KB</span>
 </footer>
 
 <input type="file" id="tep" accept=".json,.txt,application/json" hidden>
 
-<!-- Thu tu nap: je-chung (khong gian JE) → module thuan → json-editor (loi + JE_APP) → ui-*.
+<!-- Thu tu nap: je-chung (khong gian JE) → module thuan (tom-tat, vi-tri, schema-format, schema-kiem; deu day vao JE_NGUON
+     de Worker ghep lai) → chay-nen (Worker tu Blob) → json-editor (loi + JE_APP) → ui-*.
      check.py --tinh kiem thu tu nay. -->
 <script src="assets/je-chung.js"></script>
+<script src="assets/tom-tat.js"></script>
+<script src="assets/vi-tri.js"></script>
+<script src="assets/schema-format.js"></script>
+<script src="assets/schema-kiem.js"></script>
+<script src="assets/chay-nen.js"></script>
 <script src="assets/json-editor.js"></script>
+<script src="assets/ui-schema.js"></script>
 </body>
 </html>

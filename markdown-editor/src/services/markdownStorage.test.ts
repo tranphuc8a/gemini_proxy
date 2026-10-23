@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   SESSION_KEY,
+  StorageError,
+  adminSessionHeaders,
   clearAdminCredentials,
   hasAdminCredential,
+  loadMarkdownFiles,
   recheckAdminSession,
-  restoreAdminSession
+  restoreAdminSession,
+  setAdminSession,
+  verifyAdminKey
 } from './markdownStorage'
 
 /**
@@ -121,5 +126,39 @@ describe('recheckAdminSession', () => {
     vi.stubGlobal('fetch', answer(200))
     expect(await recheckAdminSession()).toBe('rejected')
     expect(fetch).not.toHaveBeenCalled()
+  })
+})
+
+describe('the private store and the hardened admin key (M3: Q1, B0)', () => {
+  it('a locked-out address (429) keeps the stored session instead of signing the owner out', async () => {
+    vi.stubGlobal('fetch', answer(429, { message: 'x', data: { code: 'markdown_admin_locked', retryAfter: 60 } }))
+    expect(await restoreAdminSession()).toBe(false)
+    expect(localStorage.getItem(SESSION_KEY)).toBe(TOKEN)
+  })
+
+  it('loading the tree sends the admin session (the store is private by default)', async () => {
+    setAdminSession('admin.token')
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ files: [] }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await loadMarkdownFiles('json')
+    expect((fetchMock.mock.calls[0][1]?.headers as Record<string, string>)['X-Admin-Session']).toBe('admin.token')
+    expect(adminSessionHeaders()).toEqual({ 'X-Admin-Session': 'admin.token' })
+  })
+
+  it('a guest refused by a private store gets a StorageError with the code and a clear message', async () => {
+    vi.stubGlobal('fetch', answer(403, { message: 'riêng tư', data: { code: 'markdown_private' } }))
+    const error = await loadMarkdownFiles('json').catch((e) => e)
+    expect(error).toBeInstanceOf(StorageError)
+    expect(error.code).toBe('markdown_private')
+    expect(error.message).toMatch(/private\. Unlock admin mode/)
+  })
+
+  it('verifyAdminKey: a wrong key is false; the refused default key and a lock-out explain themselves', async () => {
+    vi.stubGlobal('fetch', answer(403, { message: 'sai', data: { code: 'markdown_admin_invalid' } }))
+    expect(await verifyAdminKey('nope')).toBe(false)
+    vi.stubGlobal('fetch', answer(403, { message: 'mặc định', data: { code: 'markdown_default_key_refused' } }))
+    await expect(verifyAdminKey('markdown-editor-admin-2024')).rejects.toThrow(/default admin key/)
+    vi.stubGlobal('fetch', answer(429, { message: 'khoá', data: { code: 'markdown_admin_locked', retryAfter: 120 } }))
+    await expect(verifyAdminKey('x')).rejects.toThrow(/Try again in 120 s/)
   })
 })

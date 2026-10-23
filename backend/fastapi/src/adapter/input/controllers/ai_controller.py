@@ -21,6 +21,7 @@
     POST /ai/draft/assist rewrite / expand / translate / quiz / exercise from a selected passage  [admin]
     POST /ai/markdown   "smart format": raw text → readable markdown (Markdown Editor Pro)
     POST /ai/code/explain  a compile / runtime error of a source file → cause, fixes, an optional one-edit patch (Code Studio)
+    POST /ai/wiki       raw notes → 1–5 wiki notes linked to the related notes the page sent (Personal Wiki; nothing is saved)
 
 A caller is identified by the headers the course pages already send:
 `X-Admin-Session` / `X-Admin-Key` (course administrator) and `X-AI-Session`
@@ -37,13 +38,13 @@ from typing import Annotated, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from src.adapter.factory.ai_factory import (get_ai_chat_usecase, get_ai_code_usecase, get_ai_course_usecase,
                                             get_ai_draft_usecase,
                                             get_ai_http_usecase, get_ai_query_usecase, get_ai_speaking_usecase,
                                             get_ai_markdown_usecase, get_ai_spending_usecase, get_ai_study_usecase,
-                                            get_ai_usecase)
+                                            get_ai_usecase, get_ai_wiki_usecase)
 from src.adapter.input.controllers.admin_auth import client_address, is_admin, require_admin
 from src.application.usecases import ai_usecase
 from src.application.usecases.ai_chat_usecase import PROMPT_CHARS, AiChatUseCase
@@ -59,6 +60,8 @@ from src.application.usecases.ai_speaking_usecase import AiSpeakingUseCase
 from src.application.usecases.ai_spending_usecase import TEXT_CHARS as SPENDING_TEXT_CHARS, AiSpendingUseCase
 from src.application.usecases.ai_study_usecase import AiStudyUseCase
 from src.application.usecases.ai_usecase import AiUseCase
+from src.application.usecases import ai_wiki_usecase as wiki_ai
+from src.application.usecases.ai_wiki_usecase import AiWikiUseCase
 from src.domain.models.ai_domain import AiCaller
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -290,6 +293,32 @@ class SpendingAsk(BaseModel):
     groups: List[SpendingGroup] = Field(default_factory=list, max_length=50)
 
 
+WikiTag = Annotated[str, Field(max_length=wiki_ai.TAG_CHARS)]
+
+
+class WikiCandidate(BaseModel):
+    """A related note the page picked on the device: a ref of its own choosing, never the note's id."""
+    ref: str = Field(..., pattern=r"^c[0-9]{1,3}$")
+    title: str = Field(..., min_length=1, max_length=wiki_ai.CAND_TITLE_CHARS)
+    tags: List[WikiTag] = Field(default_factory=list, max_length=wiki_ai.CAND_TAGS)
+    snippet: str = Field(default="", max_length=wiki_ai.CAND_SNIPPET_CHARS)
+
+
+class WikiCompose(BaseModel):
+    text: str = Field(..., min_length=1, max_length=wiki_ai.TEXT_CHARS)
+    hint: str = Field(default="", max_length=wiki_ai.HINT_CHARS)
+    maxNotes: int = Field(default=1, ge=1, le=wiki_ai.MAX_NOTES)
+    candidates: List[WikiCandidate] = Field(default_factory=list, max_length=wiki_ai.MAX_CANDIDATES)
+    tags: List[WikiTag] = Field(default_factory=list, max_length=wiki_ai.MAX_TAGS_CTX)
+
+    @model_validator(mode="after")
+    def _refs_unique(self):
+        refs = [c.ref for c in self.candidates]
+        if len(refs) != len(set(refs)):
+            raise ValueError("candidate refs must be unique")
+        return self
+
+
 @router.get("/status")
 async def ai_status(caller: AiCaller = Depends(ai_caller)):
     return JSONResponse(AiUseCase.status(caller), headers={"Cache-Control": "no-store"})
@@ -426,6 +455,14 @@ async def ai_spending(body: SpendingAsk, caller: AiCaller = Depends(ai_caller),
                          accounts=[a.model_dump() for a in body.accounts],
                          people=[p.model_dump() for p in body.people],
                          groups=[g.model_dump() for g in body.groups])
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/wiki")
+async def ai_wiki(body: WikiCompose, caller: AiCaller = Depends(ai_caller),
+                  uc: AiWikiUseCase = Depends(get_ai_wiki_usecase)):
+    out = await uc.compose(caller, text=body.text, hint=body.hint, max_notes=body.maxNotes,
+                           candidates=[c.model_dump() for c in body.candidates], tags=body.tags)
     return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
 

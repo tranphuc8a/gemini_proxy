@@ -29,9 +29,11 @@ interface CommandPaletteProps {
   open: boolean
   onClose: () => void
   onOpenHelp: () => void
+  /** "Share read-only link…" (offered while a document is open). */
+  onOpenShare?: () => void
 }
 
-function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
+function CommandPalette({ open, onClose, onOpenHelp, onOpenShare }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
@@ -76,6 +78,9 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
         : []),
       { id: 'save', label: 'Save now', group: 'Commands', shortcut: 'Ctrl+S', run: state.flushPersist },
       { id: 'export-md', label: 'Export as Markdown', group: 'Commands', run: () => exportMarkdown(fileName, useEditorStore.getState().currentContent) },
+      ...(onOpenShare && currentFileId && flatten(files).some((node) => node.id === currentFileId && node.type === 'file')
+        ? [{ id: 'share', label: 'Share read-only link…', group: 'Commands' as const, hint: 'anyone with the link can read a snapshot', run: onOpenShare }]
+        : []),
       { id: 'print', label: 'Print or save as PDF', group: 'Commands', shortcut: 'Ctrl+P', run: () => window.print() },
       { id: 'help', label: 'Open help and shortcuts', group: 'Commands', shortcut: 'Ctrl+/', run: onOpenHelp }
     ]
@@ -113,7 +118,7 @@ function CommandPalette({ open, onClose, onOpenHelp }: CommandPaletteProps) {
     }))
 
     return [...actions, ...fileCommands, ...headingCommands]
-  }, [open, content, currentFileId, files, onOpenHelp])
+  }, [open, content, currentFileId, files, onOpenHelp, onOpenShare])
 
   const results = useMemo(() => rankBySearch(commands, query), [commands, query])
 

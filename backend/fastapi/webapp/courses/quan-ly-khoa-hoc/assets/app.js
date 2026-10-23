@@ -919,7 +919,7 @@ var TEN_AI = {
   compare: "Gemini Chat — so sánh model", review_grade: "Ôn tập — AI chấm câu trả lời", exercise_hint: "Bài tập code — gợi ý",
   notes_summary: "Sổ tay — tóm tắt để ôn", notes_cards: "Sổ tay — sinh thẻ ôn tập", opic_script: "OPIc — nhận xét script viết",
   draft_assist: "Soạn bài — trợ lý đoạn chọn", markdown_format: "Markdown — định dạng thông minh", spending_parse: "Chi tiêu — tách giao dịch",
-  code_explain: "Code Studio — giải thích lỗi"
+  code_explain: "Code Studio — giải thích lỗi", wiki_compose: "Wiki — soạn ghi chú từ ghi chép"
 };
 var QUYEN_AI = {
   admin: "chỉ quản trị viên", code: "ai có mã truy cập (AI_ACCESS_CODE) và quản trị viên",

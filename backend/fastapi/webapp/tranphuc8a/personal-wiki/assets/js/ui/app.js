@@ -1,6 +1,7 @@
 /* ui/app.js — khởi động, định tuyến theo địa chỉ (#/…), khung giao diện (thanh bên / thanh dưới), phím tắt toàn cục, đồng bộ giữa các thẻ trình duyệt.
 
    Địa chỉ:  #/ (trang chủ) · #/notes?status=&tag=&sort=&fav= · #/search?q= · #/n/<id> · #/new?title= · #/daily[/<ngày>] · #/graph?c=&d= · #/review · #/books · #/book/<id> · #/tags · #/settings
+             · #/ai (Soạn bằng AI: dán ghi chép thô → AI soạn ghi chú, xem trước rồi mới tạo — ui/aicompose.js)
              · #/settings/sync (Cài đặt, cuộn tới mục Đồng bộ) · #/join/<mã nối> (liên kết nối thiết bị: giữ mã trong bộ nhớ, thay địa chỉ bằng #/settings/sync
                để mã không nằm lại trong lịch sử, rồi mở hộp "Nối" điền sẵn — người dùng tự bấm Nối)
    Điện thoại: mỗi lúc một màn (danh sách HOẶC ghi chú). Máy tính ≥ 900px: danh sách cạnh ghi chú.
@@ -12,7 +13,7 @@
     { id: "home", label: "Trang chủ", icon: "home", hash: "#/" }, { id: "notes", label: "Ghi chú", icon: "notes", hash: "#/notes" }, { id: "graph", label: "Đồ thị", icon: "graph", hash: "#/graph" },
     { id: "review", label: "Ôn tập", icon: "card", hash: "#/review" }, { id: "books", label: "Sách", icon: "book", hash: "#/books" }, { id: "tags", label: "Tag", icon: "tag", hash: "#/tags" }, { id: "settings", label: "Cài đặt", icon: "settings", hash: "#/settings" }
   ];
-  var TITLES = { home: "Trang chủ", notes: "Ghi chú", search: "Tìm kiếm", graph: "Đồ thị", review: "Ôn tập", books: "Sách", book: "Sách", tags: "Tag", settings: "Cài đặt", n: "Ghi chú", daily: "Hôm nay" };
+  var TITLES = { home: "Trang chủ", notes: "Ghi chú", search: "Tìm kiếm", graph: "Đồ thị", review: "Ôn tập", books: "Sách", book: "Sách", tags: "Tag", settings: "Cài đặt", n: "Ghi chú", daily: "Hôm nay", ai: "Soạn bằng AI" };
   var repo, ctx, listPane, current = null, listState = {}, dueCount = 0, chan = null, mainEl, bannerEl;
   var pendingJoin = "", syncView = { kind: "none", text: "", title: "" }, syncStop = "";
 
@@ -80,6 +81,7 @@
         else if (r.name === "book") view = U.views.book(ctx, mainEl, r.arg);
         else if (r.name === "tags") view = U.views.tags(ctx, mainEl);
         else if (r.name === "settings") view = U.settings.open(ctx, mainEl, r.arg);
+        else if (r.name === "ai") view = U.aicompose.open(ctx, mainEl);
         else { mainEl.append(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Không có trang này" }), h("a", { class: "btn btn-primary", href: "#/", text: "Về trang chủ" }))); }
       } catch (e) { mainEl.replaceChildren(h("div", { class: "main-empty" }, h("p", { class: "big", text: "Có lỗi khi mở màn này" }), h("p", { class: "faint", text: String(e && e.message || e) }))); if (root.console) root.console.error(e); }
       if (key === "settings/sync") pendingJoin = "";      // bảng Đồng bộ vừa dựng đã lấy mã (nếu có thể) — không để mã treo lại cho lần mở sau
@@ -115,7 +117,9 @@
     }).concat([(function () {
       var b = h("button", { type: "button", class: "bn", id: "moreBtn", "aria-haspopup": "menu", "aria-label": "Thêm" }); b.innerHTML = icon("menu") + "<span>Thêm</span>";
       b.addEventListener("click", function () {
-        var items = [{ label: "Sách", icon: "book", run: function () { go("#/books"); } }, { label: "Tag", icon: "tag", run: function () { go("#/tags"); } }, { label: "Tìm kiếm", icon: "search", run: function () { go("#/search"); setTimeout(function () { listPane.focusSearch(); }, 80); } }, { sep: true }];
+        var items = [{ label: "Sách", icon: "book", run: function () { go("#/books"); } }, { label: "Tag", icon: "tag", run: function () { go("#/tags"); } }, { label: "Tìm kiếm", icon: "search", run: function () { go("#/search"); setTimeout(function () { listPane.focusSearch(); }, 80); } }];
+        if (W.api && W.api.has) items.push({ label: "Soạn bằng AI", icon: "spark", run: function () { go("#/ai"); } });   // chỉ khi mở qua máy chủ
+        items.push({ sep: true });
         // điện thoại không có thanh bên: trạng thái đồng bộ nằm ở đây (chữ đọc lúc mở menu), bấm là tới mục Đồng bộ
         if (syncView.kind !== "none") items.push({ label: "Đồng bộ: " + syncView.text, icon: "cloud", run: function () { go("#/settings/sync"); } });
         items.push({ label: "Cài đặt", icon: "settings", run: function () { go("#/settings"); } });
@@ -190,6 +194,7 @@
     if (e.key === "g") gAt = Date.now();
     else if (e.key === "/") { e.preventDefault(); focusSearch(); }
     else if (e.key === "n") { e.preventDefault(); newNote({}); }
+    else if (e.key === "a") { e.preventDefault(); go("#/ai"); }
     else if (e.key === "?") { e.preventDefault(); help(); }
   }
   function focusSearch() {
@@ -198,7 +203,7 @@
     setTimeout(function () { listPane.focusSearch(); }, 40);
   }
   function help() {
-    var rows = [["/ hoặc Ctrl K", "Tìm ghi chú"], ["n", "Ghi chú mới"], ["g rồi h / n / g / r / b / t / s / d", "Trang chủ / Ghi chú / Đồ thị / Ôn tập / Sách / Tag / Cài đặt / Hôm nay"], ["Ctrl S", "Lưu ghi chú đang soạn"], ["Ctrl B / I / K", "Đậm / nghiêng / chèn [[liên kết]]"], ["[[", "Gợi ý tên ghi chú để nối"], ["Space, 1–4", "Ôn tập: hiện đáp án, chấm Lại/Khó/Được/Dễ"], ["?", "Bảng này"]];
+    var rows = [["/ hoặc Ctrl K", "Tìm ghi chú"], ["n", "Ghi chú mới"], ["a", "Soạn ghi chú bằng AI từ ghi chép thô (cần mở qua máy chủ)"], ["g rồi h / n / g / r / b / t / s / d", "Trang chủ / Ghi chú / Đồ thị / Ôn tập / Sách / Tag / Cài đặt / Hôm nay"], ["Ctrl S", "Lưu ghi chú đang soạn"], ["Ctrl B / I / K", "Đậm / nghiêng / chèn [[liên kết]]"], ["[[", "Gợi ý tên ghi chú để nối"], ["Space, 1–4", "Ôn tập: hiện đáp án, chấm Lại/Khó/Được/Dễ"], ["?", "Bảng này"]];
     var dl = h("dl", { class: "kbd-list" }); rows.forEach(function (r) { dl.append(h("dt", { text: r[0] }), h("dd", { text: r[1] })); });
     U.dialog("Phím tắt", [dl, h("p", { class: "faint", text: "Phím chữ chỉ có tác dụng khi bạn không đang gõ trong ô nhập." })]);
   }
@@ -228,6 +233,7 @@
       $("#listPane").append(listPane.el);
       buildNav();
       $("#newBtn").addEventListener("click", function () { newNote({}); });
+      $("#aiBtn").hidden = !(W.api && W.api.has);                                          // Soạn bằng AI cần máy chủ: mở file:// thì ẩn lối vào
       $("#fab").addEventListener("click", function () { newNote({}); });
       $("#topNew").addEventListener("click", function () { newNote({}); });
       $("#topSearch").addEventListener("click", focusSearch);

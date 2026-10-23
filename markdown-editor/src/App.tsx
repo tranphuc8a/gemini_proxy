@@ -13,6 +13,7 @@ import AuthModal from './components/AuthModal'
 import HelpModal from './components/HelpModal'
 import InstallModal from './components/InstallModal'
 import SmartFormatModal from './components/SmartFormatModal'
+import ShareDialog from './components/ShareDialog'
 import CommandPalette from './components/CommandPalette'
 import Toasts from './components/Toasts'
 import StorageBanner from './components/StorageBanner'
@@ -61,6 +62,7 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const dragRef = useRef<Drag>(null)
   /** Whether the split is stacked (tablets) while a divider drag is under way. */
   const stackedRef = useRef(false)
@@ -190,6 +192,7 @@ function App() {
             onOpenInstall={() => setInstallOpen(true)}
             onOpenPalette={() => setPaletteOpen(true)}
             onOpenAuth={() => setAuthOpen(true)}
+            onOpenShare={() => setShareOpen(true)}
           />
         )}
 
@@ -243,8 +246,14 @@ function App() {
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
         <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
         <InstallModal open={installOpen} onClose={() => setInstallOpen(false)} />
+        <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} onOpenAuth={() => setAuthOpen(true)} />
         <SmartFormatModal />
-        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onOpenHelp={() => setHelpOpen(true)} />
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onOpenHelp={() => setHelpOpen(true)}
+          onOpenShare={() => setShareOpen(true)}
+        />
       </div>
 
       {readingOpen && <ReadingView />}

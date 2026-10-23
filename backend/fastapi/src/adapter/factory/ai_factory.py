@@ -21,6 +21,7 @@ from src.application.usecases.ai_speaking_usecase import AiSpeakingUseCase
 from src.application.usecases.ai_spending_usecase import AiSpendingUseCase
 from src.application.usecases.ai_study_usecase import AiStudyUseCase
 from src.application.usecases.ai_usecase import AiUseCase
+from src.application.usecases.ai_wiki_usecase import AiWikiUseCase
 from src.application.usecases.course_usecase import CourseUseCase
 
 
@@ -73,3 +74,7 @@ def get_ai_study_usecase(ai: AiUseCase = Depends(get_ai_usecase),
 
 def get_ai_markdown_usecase(ai: AiUseCase = Depends(get_ai_usecase)) -> AiMarkdownUseCase:
     return AiMarkdownUseCase(ai)
+
+
+def get_ai_wiki_usecase(ai: AiUseCase = Depends(get_ai_usecase)) -> AiWikiUseCase:
+    return AiWikiUseCase(ai)

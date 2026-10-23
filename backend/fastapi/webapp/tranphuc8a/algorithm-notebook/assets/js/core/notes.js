@@ -29,14 +29,51 @@
   function ms(x) { x = Math.floor(+x); return isFinite(x) && x > 0 && x < 8.64e15 ? x : 0; }
   function isObj(x) { return !!x && typeof x === "object" && !Array.isArray(x); }
 
+  /** Bỏ mọi '-', '.', '/' ở hai đầu — bằng tay: regex /^[-./]+|[-./]+$/g bậc hai trên một dải './' dài ("a" + "./"×20.000 + "b" mất 4 giây). */
+  function trimTagEdges(s) {
+    var a = 0, b = s.length;
+    while (a < b && "-./".indexOf(s.charAt(a)) !== -1) a++;
+    while (b > a && "-./".indexOf(s.charAt(b - 1)) !== -1) b--;
+    return s.slice(a, b);
+  }
   /** Tag: thường, bỏ #, khoảng trắng → '-', chỉ chữ/số/_-./ ; tối đa 40 ký tự. */
   function normTag(t) {
-    t = String(t == null ? "" : t).normalize("NFC").toLowerCase().trim().replace(/^#+/, "").replace(/\s+/g, "-").replace(/[^\p{L}\p{N}_\-./]/gu, "").replace(/-{2,}/g, "-").replace(/^[-./]+|[-./]+$/g, "");
+    t = trimTagEdges(String(t == null ? "" : t).normalize("NFC").toLowerCase().trim().replace(/^#+/, "").replace(/\s+/g, "-").replace(/[^\p{L}\p{N}_\-./]/gu, "").replace(/-{2,}/g, "-"));
     return t.slice(0, LIM.tag);
   }
   function normTags(list) {
     if (typeof list === "string") list = list.split(/[,\n]/);
     return T.uniq((Array.isArray(list) ? list : []).map(normTag).filter(Boolean)).slice(0, LIM.tags);
+  }
+
+  /** Một dòng với các đoạn `code` nội tuyến thành khoảng trắng (cùng độ dài). Luật gốc là regex /(`+)(?!`)([^\n]*?[^`\n])\1(?!`)/g, bậc hai
+      trên một dải dấu huyền dài (20.000 dấu: 2,8 giây MỖI lần gọi, mà AI soạn tới 40.000 ký tự) — đây là đúng kết quả đó trong một lượt, cùng thuật
+      toán với wiki_links.py `mask_inline_code` (kiem.js so với regex gốc trên hàng nghìn dòng ngẫu nhiên). Với mỗi dải dấu huyền, thử các hậu tố dài
+      trước (cả dải, rồi bỏ dấu đầu…): hậu tố dài m mở một đoạn khi có một dải SAU đó trên dòng đúng m dấu — đoạn kết thúc ở dải gần nhất như vậy.
+      Hậu tố không mở gì thì giữ nguyên dấu huyền. */
+  function maskInlineCode(line) {
+    if (line.indexOf("`") === -1) return line;
+    var starts = [], sizes = [], bySize = {}, seen = {}, m, re = /`+/g;      // bySize[độ dài] = chỉ số các dải có độ dài đó, theo thứ tự
+    while ((m = re.exec(line))) { (bySize[m[0].length] || (bySize[m[0].length] = [])).push(starts.length); starts.push(m.index); sizes.push(m[0].length); }
+    var out = "", cursor = 0, i = 0;
+    while (i < starts.length) {
+      var start = starts[i], size = sizes[i], nxt = i + 1;
+      for (var want = size; want > 0; want--) {
+        var later = bySize[want];
+        if (!later) continue;
+        var p = seen[want] || 0;                                             // seen[độ dài]: dải đầu tiên của độ dài đó chưa bị bỏ qua
+        while (p < later.length && later[p] <= i) p++;
+        seen[want] = p;
+        if (p < later.length) {
+          var j = later[p], a = start + size - want, b = starts[j] + want;
+          out += line.slice(cursor, a) + " ".repeat(b - a);
+          cursor = b; nxt = j + 1;
+          break;
+        }
+      }
+      i = nxt;
+    }
+    return cursor ? out + line.slice(cursor) : line;
   }
 
   /** Chữ đã che phần code (khối ``` và `inline`) bằng khoảng trắng GIỮ NGUYÊN độ dài/vị trí — để quét [[…]], Q:/A: mà không dính code. */
@@ -50,7 +87,7 @@
       } else if (m) {
         inFence = true; fence = m[1]; out.push(" ".repeat(ln.length));
       } else {
-        out.push(ln.replace(/(`+)(?!`)([^\n]*?[^`\n])\1(?!`)/g, function (s) { return " ".repeat(s.length); }));
+        out.push(maskInlineCode(ln));
       }
     }
     return out.join("\n");
@@ -175,7 +212,7 @@
 
   W.notes = {
     STATUSES: STATUSES, KINDS: KINDS, REL_TYPES: REL_TYPES, LINK: LINK, REL_LABEL: REL_LABEL, SYMMETRIC: SYMMETRIC, LIM: LIM, DAILY_TEMPLATE: DAILY_TEMPLATE,
-    normTag: normTag, normTags: normTags, maskCode: maskCode, parseLinks: parseLinks, rewriteLinks: rewriteLinks, plainSnippet: plainSnippet, titleFromContent: titleFromContent,
+    normTag: normTag, normTags: normTags, maskCode: maskCode, maskInlineCode: maskInlineCode, parseLinks: parseLinks, rewriteLinks: rewriteLinks, plainSnippet: plainSnippet, titleFromContent: titleFromContent,
     normalizeNote: normalizeNote, newNote: newNote, headOf: headOf, dailyTitle: dailyTitle, dailyId: dailyId, isBlank: isBlank, relationView: relationView
   };
   if (typeof module !== "undefined" && module.exports) module.exports = W.notes;

@@ -8,13 +8,16 @@ tests/adapter/output/mysql/test_ai_repository.py.
 from __future__ import annotations
 
 import asyncio
+import random
+import re
+import time
 
 import pytest
 
 from src.application.config.config import settings
 from src.application.exceptions.exceptions import AppException
 from src.application.usecases import ai_usecase
-from src.application.usecases.ai_usecase import AiUseCase, generation_config, parse_json, text_turn
+from src.application.usecases.ai_usecase import AiUseCase, generation_config, parse_json, strip_code_fence, text_turn
 from src.application.utils import admin_session
 from src.domain.models.ai_domain import AiCaller
 from tests.support.fake_ai import FakeModel, FakeStore
@@ -227,8 +230,68 @@ def test_generation_config_json_mode_and_thinking(monkeypatch):
 
 def test_parse_json_tolerates_a_code_fence():
     assert parse_json('```json\n{"a": 1}\n```') == {"a": 1}
+    assert parse_json('```JSON {"a": 2}```') == {"a": 2} and parse_json('  ```\n[1]\n  ```  ') == [1]
     with pytest.raises(ValueError):
         parse_json("nope")
+    with pytest.raises(ValueError):
+        parse_json("```")
+
+
+def test_parse_json_stays_linear_on_whitespace_inside_a_fence():
+    # the fence used to be cut with `\s*```$`, which backtracks quadratically over a long whitespace run — inside the
+    # parse callback, i.e. with the event loop blocked
+    import time
+    body = '```json\n{"a": "x",' + " " * 20000 + '"b": 1}\n```'
+    t0 = time.perf_counter()
+    assert parse_json(body) == {"a": "x", "b": 1}
+    assert time.perf_counter() - t0 < 0.3
+
+
+#: The fence rule as parse_json first wrote it — the SPEC of `strip_code_fence` (which must agree on every text and not
+#: backtrack): a fence is only looked for when the text starts with one.
+_OLD_FENCE = re.compile(r"^```[a-zA-Z]*\s*|\s*```$")
+
+
+def test_strip_code_fence_is_the_old_rule_without_the_backtracking():
+    rnd = random.Random(7)
+    for _ in range(6000):
+        s = "".join(rnd.choice(["`", "``", "```", "json", "a", "Z", " ", "\n", "\t", "x", "1", "é", "{", "}"]) for _ in range(rnd.randint(0, 14)))
+        body = s.strip()
+        if body.startswith("```"):
+            assert strip_code_fence(s) == _OLD_FENCE.sub("", body), repr(s)
+        else:
+            assert strip_code_fence(s) == (body[:-3].rstrip() if body.endswith("```") else body), repr(s)
+    assert strip_code_fence(None) == "" and strip_code_fence('```json\n{"a": 1}\n```') == '{"a": 1}'
+    assert strip_code_fence("SELECT 1 ```") == "SELECT 1", "a closing fence alone is cut too (the sql / script sites rely on it)"
+
+
+@pytest.mark.parametrize("make", [
+    lambda n: '```json\n{"a": "x",' + " " * n + '"b": 1}\n```',
+    lambda n: "```" + " " * n + "x",
+    lambda n: "x" + " " * n + "y",
+    lambda n: "```" + "\n" * n + "```" + " " * n + "x```",
+], ids=["inside", "after-fence", "plain", "mixed"])
+def test_strip_code_fence_stays_linear(make):
+    t0 = time.perf_counter()
+    strip_code_fence(make(200000))
+    assert time.perf_counter() - t0 < 0.3
+
+
+def test_parse_json_turns_a_too_deep_answer_into_a_value_error_and_ask_into_a_502(ai):
+    # json.loads("[" * 200000) is a RecursionError — not a ValueError — so `ask` answered 500 instead of 502
+    with pytest.raises(ValueError):
+        parse_json("[" * 200000)
+    with pytest.raises(ValueError):
+        parse_json("```json\n" + '{"a":' * 100000 + "\n```")
+    uc, store, model = ai
+    model.answers = ["[" * 200000, '{"ok": true}']
+    with pytest.raises(AppException) as exc:
+        _ask(uc, cache="deep", parse=parse_json)
+    assert exc.value.status_code == 502 and "deep" not in store.cache
+    assert _ask(uc, cache="deep", parse=parse_json)[0] == {"ok": True}
+    store.cache["deep"] = "[" * 200000                                    # a cached answer that cannot be read is dropped, then asked again
+    model.answers = ['{"ok": 2}']
+    assert _ask(uc, cache="deep", parse=parse_json)[0] == {"ok": 2}
 
 
 def test_cache_keys_depend_on_inputs_and_model(monkeypatch):

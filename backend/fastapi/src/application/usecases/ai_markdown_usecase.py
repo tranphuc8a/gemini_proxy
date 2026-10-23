@@ -64,9 +64,34 @@ def _words(text: str) -> int:
 
 
 def _unwrap(md: str) -> str:
-    """An answer that put the whole document inside ```markdown … ``` is the document itself."""
-    m = re.match(r"^\s*```(?:markdown|md)?\s*\n(.*)\n```\s*$", md, flags=re.S | re.I)
-    return m.group(1) if m and "```" not in m.group(1) else md
+    """An answer that put the whole document inside ```markdown … ``` is the document itself.
+
+    By hand and in one pass, on purpose: this runs on whatever the model wrote, inside the event loop, and the regex it
+    replaced — ^\\s*```(?:markdown|md)?\\s*\\n(.*)\\n```\\s*$ with S and I — backtracks quadratically over a long run of
+    line breaks after the opening fence (20,000 of them took 7 seconds, with every route frozen). Same result:
+    the text after the last line break of the whitespace that follows the opening fence (and its optional language word),
+    up to the line break before a closing fence that ends the text; if that text holds a ``` of its own, the answer is
+    returned as it is (a document with code blocks is not "wrapped").
+    """
+    s = md.lstrip()
+    if not s.startswith("```"):
+        return md
+    end = len(s.rstrip())                              # the closing fence ends here (only whitespace may follow it)
+    close = end - 4                                    # where the line break before it must be
+    if close < 3 or s[close] != "\n" or s[close + 1:end] != "```":
+        return md
+    i = 3
+    word = s[3:11].lower()
+    if word.startswith("markdown"):
+        i += 8
+    elif word.startswith("md"):
+        i += 2
+    gap = len(s) - len(s[i:].lstrip())                 # the whitespace run after the fence word ends at `gap`
+    start = s.rfind("\n", i, min(gap, close))         # its last line break that still leaves room for the closing one
+    if start == -1:
+        return md
+    inner = s[start + 1:close]
+    return md if "```" in inner else inner
 
 
 def _formatted(source_words: int, mode: str):

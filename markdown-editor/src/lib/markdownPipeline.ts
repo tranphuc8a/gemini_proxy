@@ -10,6 +10,7 @@ import 'katex/contrib/mhchem'
 // Without this stylesheet KaTeX output renders as unstyled spans.
 import 'katex/dist/katex.min.css'
 import { KATEX_MACROS, katexOptions } from './katexOptions'
+import { classifyHref } from './share'
 import { rehypeEnhance, sanitizeSchema } from './rehypeEnhance'
 import rehypeStyleGuard from './rehypeStyleGuard'
 import remarkMathPromote from './remarkMathPromote'
@@ -84,28 +85,58 @@ export function fenceLanguage(className: string | undefined): string {
   return /language-([^\s:]+)/.exec(className ?? '')?.[1] ?? ''
 }
 
+/**
+ * How links behave. `app` (the editor, reading mode): as always. `shared` (a read-only link opened by anyone, md-share
+ * V9): a link to another document of the owner's tree, an empty or `javascript:` target becomes plain text; images load
+ * without a referrer and a relative image (there is no asset store) becomes a placeholder; task boxes are disabled.
+ */
+export type LinkPolicy = 'app' | 'shared'
+
 export interface ComponentOptions {
   /** Picks the highlighter and Mermaid palettes. */
   theme: 'light' | 'dark'
   /** Background behind code blocks; when set, token colours are held to 4.5:1 against it. */
   codeBackground?: string
+  /** See `LinkPolicy`; default `app`. */
+  links?: LinkPolicy
 }
 
+const DEAD_LINK_TITLE = "Links to another document that isn't part of this share"
+
 /** The element overrides react-markdown renders with. */
-export function markdownComponents({ theme, codeBackground }: ComponentOptions): Options['components'] {
+export function markdownComponents({ theme, codeBackground, links = 'app' }: ComponentOptions): Options['components'] {
+  const shared = links === 'shared'
   return {
     a: ({ node, ...props }: any) => {
       void node
       const href = String(props.href ?? '')
+      if (shared) {
+        const kind = classifyHref(href)
+        if (kind === 'anchor') return createElement('a', props)
+        if (kind === 'external') return createElement('a', { ...props, target: '_blank', rel: 'noopener noreferrer', referrerPolicy: 'no-referrer' })
+        const { href: _href, target: _target, rel: _rel, ...rest } = props
+        void _href
+        void _target
+        void _rel
+        return createElement('span', { ...rest, className: 'md-dead-link', title: DEAD_LINK_TITLE })
+      }
       // In-document anchors must scroll the preview, not open a new tab.
       return href.startsWith('#') ? createElement('a', props) : createElement('a', { ...props, target: '_blank', rel: 'noopener noreferrer' })
     },
     img: ({ node, ...props }: any) => {
       void node
+      if (shared) {
+        const src = String(props.src ?? '')
+        if (!/^data:image\//i.test(src) && classifyHref(src) !== 'external') {
+          return createElement('span', { className: 'md-missing-image' }, `[image${props.alt ? `: ${props.alt}` : ''}]`)
+        }
+        return createElement('img', { ...props, loading: 'lazy', decoding: 'async', referrerPolicy: 'no-referrer' })
+      }
       return createElement('img', { ...props, loading: 'lazy', decoding: 'async' })
     },
     input: ({ node, ...props }: any) => {
       void node
+      if (shared) return createElement('input', { ...props, readOnly: true, disabled: true })
       return createElement('input', { ...props, readOnly: false, onChange: () => undefined, disabled: false })
     },
     code: ({ node, className, children, ...props }: any) => {

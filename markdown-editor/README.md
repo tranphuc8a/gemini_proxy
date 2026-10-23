@@ -131,7 +131,8 @@ markdown-editor/
 
 3. **Admin Login**
    - Click the 🔐 button at bottom-right
-   - Enter admin key: `markdown-editor-admin-2024`
+   - Enter the backend's `MARKDOWN_ADMIN_KEY`. The built-in default (`markdown-editor-admin-2024`) is public and only
+     works when the browser and the backend run on the same machine; set your own key everywhere else
    - Now you can create, edit, and delete files
 
 ### Building for Production
@@ -183,8 +184,8 @@ Set it at build time so it does not have to be edited in source:
 VITE_MARKDOWN_ADMIN_KEY=your-custom-admin-key
 VITE_MARKDOWN_API_URL=http://localhost:6789/api/v1/markdown/files
 ```
-It must match the backend's `MARKDOWN_ADMIN_KEY`. Without the variable the default
-`markdown-editor-admin-2024` is used.
+It must match the backend's `MARKDOWN_ADMIN_KEY`. The default `markdown-editor-admin-2024` is public: the backend
+accepts it only from the machine it runs on (see `docs/markdown-share-api.md`).
 
 > The key only gates the UI; it ships in the bundle. Real protection comes from the
 > backend, which requires `X-Admin-Key` on every write.
@@ -329,7 +330,25 @@ MARKDOWN_JSON_FILE=data/markdown-files.json
 MARKDOWN_ADMIN_KEY=markdown-editor-admin-2024
 ```
 
-For MySQL, set `MARKDOWN_STORAGE_BACKEND=mysql` and configure the existing `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` values. The backend creates `markdown_files` on first save. Reads are public; saves require `X-Admin-Key`.
+For MySQL, set `MARKDOWN_STORAGE_BACKEND=mysql` and configure the existing `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` values. The backend creates `markdown_files` on first save. The store is **private** by default (`MARKDOWN_PUBLIC_READ=false`): loading and saving both need the admin session; a guest who clicks "Load from backend" is told the documents are private and offered the unlock dialog. Set `MARKDOWN_PUBLIC_READ=true` to let anyone read them again.
+
+## Sharing a read-only link
+
+File → **Share read-only link…** (admin) freezes the open document into a snapshot and gives a link
+`…/markdown-editor-pro/#share=<token>&backend=<store>`. Anyone holding it can read that snapshot — with maths, diagrams and
+code highlighting — but cannot edit it or see any other document. Sharing again (**Update snapshot**) refreshes the text and
+keeps the link; **Revoke link…** kills it (sharing again then makes a different link). Optional expiry: 1, 7 or 30 days. An
+expired link is dead for good: the dialog says so and **Create new link** gives a different address (the old one stays dead).
+
+- One link per document, at most 50 per store, snapshots up to 2 MB (pasted `data:` images count).
+- Links to other documents show as plain text on the shared page; relative images cannot be shown; pictures from other sites
+  load in the viewer's browser without a referrer. The dialog warns about all three before you share.
+- The token stays after `#` and goes to the API in a header, so it never appears in a server log. The shared page sets
+  `noindex`, `no-referrer` and a strict Content-Security-Policy, registers no service worker and keeps nothing on the device.
+- On a serverless deployment choose MySQL or MongoDB under Sync → Storage: links kept in the JSON file die with the instance
+  (the dialog says so).
+
+API and settings: `docs/markdown-share-api.md`. Browser check: `markdown-editor/scripts/kiem-chia-se.py`.
 
 The frontend defaults to `http://localhost:6789/api/v1/markdown/files`; override it with `VITE_MARKDOWN_API_URL`.
 

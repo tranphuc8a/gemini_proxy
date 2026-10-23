@@ -50,10 +50,54 @@ class Settings(BaseSettings): # type: ignore
 
     MARKDOWN_STORAGE_BACKEND: str = "json"
     MARKDOWN_JSON_FILE: str = "data/markdown-files.json"
+    # The default is public (it is in this file): the server accepts it only from
+    # this machine itself (loopback, no proxy) unless MARKDOWN_ALLOW_DEFAULT_KEY is
+    # true. Set a private value on every deployment (Q1, ke-hoach §6).
     MARKDOWN_ADMIN_KEY: str = "markdown-editor-admin-2024"
+    MARKDOWN_ALLOW_DEFAULT_KEY: bool = False
     # How long an unlocked browser stays unlocked. The key itself is never
     # stored client-side; what the browser keeps is a signed token that expires.
     MARKDOWN_SESSION_HOURS: int = 12
+    # Wrong admin keys / forged sessions per client address before 429 (Retry-After).
+    MARKDOWN_ADMIN_MAX_FAILURES: int = 20
+    MARKDOWN_ADMIN_FAILURE_WINDOW_S: int = 600
+    # False (the default) = the store is PRIVATE: reading the stored documents
+    # (GET /markdown/files, /markdown/sync/changes and /markdown/docs/{id})
+    # needs the administrator too. History, trash and share links always do.
+    MARKDOWN_PUBLIC_READ: bool = False
+    # Read-only share links (/markdown/shares, /markdown/shared).
+    MARKDOWN_SHARES_JSON_FILE: str = "data/markdown-shares.json"
+    MARKDOWN_MAX_SHARES: int = 50
+    MARKDOWN_SHARE_READS_PER_MIN: int = 120
+    # Size budget of the markdown API, in UTF-8 bytes. One request body may not
+    # exceed 4.5 MB on Vercel, and JSON escaping of "\n" and '"' makes a body larger
+    # than its text, so: a share snapshot <= 2 MB (this setting), one synced document
+    # <= 3.5 MB and one sync push <= 4 MB (md-sync, below).
+    # Raising MARKDOWN_SHARE_MAX_BYTES above 2 MB risks hitting the platform limit.
+    MARKDOWN_SHARE_MAX_BYTES: int = 2_000_000
+    # Delta sync (/markdown/sync/*, /markdown/docs/*; md-sync M4a): one record per node of
+    # the editor's tree. Tables (markdown_docs, markdown_doc_revisions, markdown_meta) are
+    # created on first use. Raising either limit past 3.5 MB / 4 MB risks the 4.5 MB body
+    # limit of the platform.
+    MARKDOWN_DOCS_JSON_FILE: str = "data/markdown-docs.json"
+    MARKDOWN_DOC_MAX_BYTES: int = 3_500_000
+    MARKDOWN_PUSH_MAX_BYTES: int = 4_000_000
+    MARKDOWN_MAX_DOCS: int = 20_000
+    # What the OLD whole-tree PUT /markdown/files does once the store has been copied to the
+    # delta store: "allow" (default until the new client ships, M4b: the old editor keeps
+    # working on the old store, GET /files keeps reading it too) or "reject" (409
+    # md_legacy_client - the old editor must not overwrite the delta store).
+    MARKDOWN_LEGACY_PUT: str = "allow"
+    # Version history of each document: the newest MARKDOWN_HISTORY_KEEP_RECENT, the newest
+    # of each local day (MARKDOWN_HISTORY_TZ) for MARKDOWN_HISTORY_DAILY_DAYS days, and named
+    # ones; edits of one device within MARKDOWN_HISTORY_COALESCE_S seconds share one row.
+    MARKDOWN_HISTORY_KEEP_RECENT: int = 50
+    MARKDOWN_HISTORY_DAILY_DAYS: int = 90
+    MARKDOWN_HISTORY_COALESCE_S: int = 600
+    MARKDOWN_HISTORY_TZ: str = "+07:00"
+    # A deleted node (tombstone) and its history are dropped after this many days; a device
+    # away for longer re-reconciles with the server.
+    MARKDOWN_TOMBSTONE_DAYS: int = 90
 
     # graphuc (/graphuc front-end): graph drawings saved server-side.
     GRAPHUC_STORAGE_BACKEND: str = "json"

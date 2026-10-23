@@ -231,3 +231,13 @@ def test_an_empty_collection_still_gets_an_answer(ai):
     out = _mongo(uc)
     assert "collection rỗng" in model.calls[0]["contents"][0]["parts"][0]["text"]
     assert out["filter"] == {} and out["fields"] == 0
+
+
+def test_a_sql_answer_with_a_long_blank_run_is_cut_in_linear_time():
+    import time
+    raw = json.dumps({"sql": "```sql\nSELECT 1" + " " * 200000 + "\n```", "explanation": "x"})
+    t0 = time.perf_counter()
+    assert ai_query_usecase._sql_answer(raw)["sql"] == "SELECT 1"
+    assert time.perf_counter() - t0 < 0.5
+    with pytest.raises(ValueError):                                              # nested beyond what json can read: RecursionError
+        ai_query_usecase._json_part("[" * 100000, "filter", dict)

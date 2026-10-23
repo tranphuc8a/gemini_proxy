@@ -122,6 +122,7 @@ budget and the books are skipped with a warning; the per-address limits stay.
 | `POST /ai/code/explain` | `AI_ACCESS` | Code Studio: explain a compile or run error. Body `{language, filename, kind: compile|runtime, code ≤ 30 000, diagnostics[≤20] {line, col, severity, message}, stderr ≤ 4 000}` → `{summary, items[1–8] {line|null, title, why, fix}, patch|null {line, endLine, replacement}, cached}`. Source and compiler output are fenced as untrusted data; the answer is re-checked against the file (a `line` or `patch` outside it is dropped, a patch is ≤ 40 lines / 4 000 chars, never identical to the text it replaces, an empty `replacement` deletes the lines). Cached per (language, file name, kind, code, diagnostics, stderr, model); no address or name reaches the model |
 | `POST /ai/ask` also takes `course` | `AI_ACCESS` | with `course`, answers only from that course's own lessons (an unpublished course stays an administrator's) |
 | `POST /ai/spending` | `AI_ACCESS` | Quản lý chi tiêu: free text → proposed expenses/incomes (date, whole đồng, category, who paid, who shares, group). The model sees the text and the NAMES with ids of the user's categories, accounts, people and groups — never balances or past transactions; ids the page did not send are dropped, amounts must be whole positive đồng, exact splits must add up. Nothing is saved server-side and the answer is never cached |
+| `POST /ai/wiki` | `AI_ACCESS` | Personal Wiki "Soạn bằng AI": raw notes → 1–5 wiki notes `{text ≤ 12 000, hint ≤ 300, maxNotes 1–5, candidates[≤40] {ref c1…, title ≤ 200, tags ≤ 8, snippet ≤ 160}, tags[≤60]}` → `{notes[] {key, title, tags, markdown, summary, relations[] {type, target {kind: existing|batch|new, …}, reason}, existing}, newTopics[], dropped[], words, shrunk, truncated}`. The page picks the related notes on the device and sends only a ref, title, a few tags and a snippet (or titles only). A `[[link]]` or relation stays only when it names a candidate, a note of the same answer or a declared new topic; links inside code or math are not links (`application/utils/wiki_links.py`, same rules and shared fixture as the page). Nothing is saved; never cached |
 | `POST /ai/chat` | `AI_ACCESS` | one stateless answer from a chosen model (`gemini-2.5-pro`, `…-flash`, `…-flash-lite`, `2.0-flash`, `2.0-flash-lite`, `flash-latest`) — Gemini Chat's "compare two models" sends two of these side by side. Never cached |
 
 Each feature books its usage under its own name (`tutor_summary`, `ask`, `sql`,
@@ -163,6 +164,42 @@ first use). `SPENDING_MAX_BYTES` (4 000 000) caps the serialised document.
 | `GET /spending/workspaces/{id}?since=N` | yes | the workspace; when `N` is still the current revision: `{unchanged: true}` and no `data`. 404 before 401 |
 | `PUT /spending/workspaces/{id}` | yes | `{revision, name?, data}` → the new view (`revision + 1`). **409** with `data.current` when `revision` is stale or a concurrent save won (atomic compare-and-set in all three stores) |
 | `DELETE /spending/workspaces/{id}` | yes | `{deleted: true}` |
+
+## Markdown Editor: store, admin and read-only links (`/markdown`)
+
+One document tree per backend (`?backend=json|mysql|mongo`, default `MARKDOWN_STORAGE_BACKEND`). Admin = `X-Admin-Session`
+(minted by `/markdown/admin/verify`) or `X-Admin-Key`; the key is compared in constant time, wrong keys / forged sessions are
+counted per address (`MARKDOWN_ADMIN_MAX_FAILURES` in `MARKDOWN_ADMIN_FAILURE_WINDOW_S`, then `429 markdown_admin_locked` +
+`Retry-After`, even for the right key), and the public default key is accepted only from this machine itself (loopback, no proxy
+header) unless `MARKDOWN_ALLOW_DEFAULT_KEY=true` — elsewhere `403 markdown_default_key_refused`. One check for every route:
+`adapter/input/controllers/markdown_admin.py` (`require_markdown_admin`, `require_markdown_reader`). Details:
+`docs/markdown-share-api.md`; delta sync, history and the old tree: `docs/markdown-sync-api.md`.
+
+| Endpoint | Who | What |
+|---|---|---|
+| `POST /markdown/admin/verify` · `/admin/session` | key · session | `{session, expiresAt}` (`MARKDOWN_SESSION_HOURS`) |
+| `GET /markdown/files` | **admin** while `MARKDOWN_PUBLIC_READ=false` (default), else public | the whole tree; a guest gets `403 markdown_private` |
+| `PUT /markdown/files` | admin | replaces the whole tree. With `MARKDOWN_LEGACY_PUT=reject`, once the delta store holds a copy: `409 md_legacy_client` (default `allow`: unchanged) |
+| `GET /markdown/sync/changes?since=&limit=&device=` | **reader** (admin unless `MARKDOWN_PUBLIC_READ=true`) | delta pull: `{items: [record], cursor, more, horizon, reset}`; records newer than the cursor, a page ≤ 200 records / ~3 MB; the device's own writes come without text. The first call copies the old tree into the delta store (lazy, once, read-only on the old data) |
+| `POST /markdown/sync/push` | admin | `{device, ops[≤ 200]}`, each op `{id, kind, baseRev, set?, content \| patch + baseHash, hash, deleted?, updatedAt}` → `{results: [ok \| conflict \| rejected], serverTime}`; compare-and-set on `rev`, line patches verified by hash, history written from the first push |
+| `GET /markdown/docs/{id}` | **reader** | the latest text of one document (what md-share's live mode will read); `404 md_doc_not_found` |
+| `GET /markdown/docs/{id}/revisions` · `/revisions/{rev}` | admin | version history (50 newest + one per day for 90 days + named), newest first without text · one version rebuilt |
+| `POST /markdown/shares` | admin | `{docId, title ≤ 200, content, expiresInDays: null\|1\|7\|30}` → `201` new link / `200` refreshed snapshot (same token, same `sharedAt`): `{token, docId, title, mode, sharedAt, updatedAt, expiresAt, bytes, contentHash}`. `docId` matches `^[A-Za-z0-9_.:-]{1,80}$` (shared with the sync), `root` refused; ≤ `MARKDOWN_SHARE_MAX_BYTES` UTF-8 bytes (`400 markdown_share_too_large`); ≤ `MARKDOWN_MAX_SHARES` links (expired ones are dropped first; `400 markdown_too_many_shares`) |
+| `GET /markdown/shares` | admin | `{shares: [summary + expired], limits: {maxShares, maxBytes}, persistent}` — newest first, no snapshots; `persistent: false` = JSON file in a temporary directory |
+| `DELETE /markdown/shares?docId=` | admin | `{revoked: true}` (`404 markdown_share_not_found`) |
+| `GET /markdown/shared` + header `X-Share-Token` | — (**public**) | `{title, content, mode, sharedAt, updatedAt, expiresAt}` — nothing else (no doc id, token, hash, store). Unknown, malformed, revoked and expired tokens: the same `404`; `MARKDOWN_SHARE_READS_PER_MIN` reads per address, 20 wrong tokens / 10 min → `429 markdown_rate_limited`. `no-store`, `X-Robots-Tag: noindex`. The token never travels in a URL |
+
+Sharing a document whose link has **expired** makes a new link (`201`, new token): the old address stays dead.
+Two documents whose ids differ only in letter case collide on MySQL's default collation: `409 markdown_share_conflict`.
+A store failure while a stranger opens a link is one generic `503 markdown_share_unavailable` (the driver's message carries the
+token, so it is neither logged nor returned). `X-Admin-Key` has no length cap of its own (anything a header can carry); the client
+address of the wrong-key counter is `X-Real-IP` / `X-Forwarded-For` when present (shared with `/codestore`, `/wiki`, `/courses`, `/ai`): Vercel's
+documentation says the platform sets/overwrites them (not verified in this repo), but a self-hosted deployment needs a proxy that
+overwrites them too, or a client can dodge the counter - or burn it on somebody else's address - by sending the header.
+
+`markdown_shares` (MySQL) is created on first use (`CREATE TABLE IF NOT EXISTS`) — by the first request of any kind that reaches the
+store in a process, including a guest's `GET /markdown/shared?backend=mysql`; Mongo uses the `markdown_shares` collection; the
+JSON backend `MARKDOWN_SHARES_JSON_FILE`. On a serverless platform choose mysql or mongo: the JSON file lives in a temporary directory there.
 
 ## Code Studio: running code (`/run`) and syncing it (`/codestore`)
 

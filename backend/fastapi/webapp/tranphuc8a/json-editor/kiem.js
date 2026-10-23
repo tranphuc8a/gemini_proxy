@@ -632,30 +632,33 @@ const dongBang = (v) => {
 }
 }
 
-/* ====================== kiem/*.js — cac nhom moi ====================== */
+/* ====================== kiem/*.js — cac nhom moi (co the bat dong bo: tra Promise) ====================== */
 const thuMuc = path.join(__dirname, "kiem");
 const tep = fs.existsSync(thuMuc)
   ? fs.readdirSync(thuMuc).filter((f) => f.endsWith(".js") && f !== "chung.js").sort()
   : [];
-for (const f of tep) {
-  const ten = f.slice(0, -3);
-  if (!chayNhom(ten)) continue;
-  console.log("\n[" + ten + "]");
-  try {
-    require(path.join(thuMuc, f))(C);
-  } catch (e) {
-    C.kiem("kiem/" + f + " chay het khong nem loi", false, e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : String(e));
-  }
-}
 
-/* ---------------------------------------------------------------- */
-console.log("-".repeat(58));
-if (!C.soDat() && !C.soSai()) {
-  console.log("Khong co nhom nao khop bo loc: " + LOC.join(", ") + "\n");
-  process.exit(1);
-}
-if (C.soSai()) {
-  console.log(C.soSai() + " muc SAI (" + C.soDat() + " dat).\n");
-  process.exit(1);
-}
-console.log("Dat — " + C.soDat() + " phep, moi ham thuan cua json-editor hoat dong dung.\n");
+(async function () {
+  for (const f of tep) {
+    const ten = f.slice(0, -3);
+    if (!chayNhom(ten)) continue;
+    console.log("\n[" + ten + "]");
+    try {
+      await require(path.join(thuMuc, f))(C);
+    } catch (e) {
+      C.kiem("kiem/" + f + " chay het khong nem loi", false, e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : String(e));
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  console.log("-".repeat(58));
+  if (!C.soDat() && !C.soSai()) {
+    console.log("Khong co nhom nao khop bo loc: " + LOC.join(", ") + "\n");
+    process.exit(1);
+  }
+  if (C.soSai()) {
+    console.log(C.soSai() + " muc SAI (" + C.soDat() + " dat).\n");
+    process.exit(1);
+  }
+  console.log("Dat — " + C.soDat() + " phep, moi ham thuan cua json-editor hoat dong dung.\n");
+})();

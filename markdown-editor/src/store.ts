@@ -84,7 +84,8 @@ interface StoreState extends EditorState {
   toggleBackendStorage: () => void
   setBackendStorageType: (storageType: StorageBackend) => void
 
-  loadBackendStorage: () => Promise<void>
+  /** Replaces the local tree with the server's; `prefetched` = an answer already fetched (a guest asks first). */
+  loadBackendStorage: (prefetched?: FileNode[]) => Promise<void>
   saveBackendStorage: () => Promise<void>
 
   /** Settles once the stored admin session has been re-checked. */
@@ -540,8 +541,9 @@ export const useEditorStore = create<StoreState>((set, get) => {
      * confirmation first (see Header): nothing is merged, so local edits that
      * were never saved to the backend are gone afterwards.
      */
-    loadBackendStorage: async () => {
-      const files = await loadMarkdownFiles(get().backendStorageType)
+    loadBackendStorage: async (prefetched?: FileNode[]) => {
+      // A guest's load asks the server before confirming (see Header) and hands the answer in.
+      const files = prefetched ?? (await loadMarkdownFiles(get().backendStorageType))
       if (!files.length) {
         get().pushToast('Backend returned no files', 'info')
         return

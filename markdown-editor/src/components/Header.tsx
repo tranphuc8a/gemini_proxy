@@ -5,7 +5,7 @@ import { resolveTheme, useEditorStore } from '../store'
 import { useReadingStore } from '../readingStore'
 import { countNodes, findNode, getPath } from '../lib/tree'
 import { exportHtml, exportImage, exportMarkdown, exportPdf } from '../lib/exporters'
-import { listBackends, type BackendInfo } from '../services/markdownStorage'
+import { StorageError, listBackends, loadMarkdownFiles, type BackendInfo } from '../services/markdownStorage'
 import { TOUCH_TEXT_QUERY, showsInline, type HeaderTier } from '../lib/responsive'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import type { StorageBackend, ViewMode } from '../types'
@@ -82,11 +82,13 @@ interface HeaderProps {
   onOpenInstall: () => void
   onOpenPalette: () => void
   onOpenAuth: () => void
+  /** "Share read-only link…" in the File menu. */
+  onOpenShare?: () => void
   /** How much of the header fits inline; desktop (`full`) shows everything. */
   tier?: HeaderTier
 }
 
-function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = 'full' }: HeaderProps) {
+function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenShare, tier = 'full' }: HeaderProps) {
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const theme = useEditorStore((state) => state.theme)
   const scrollSync = useEditorStore((state) => state.scrollSync)
@@ -176,18 +178,43 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
     reader.readAsText(file)
   }
 
+  const confirmReplace = (): boolean => {
+    const count = countNodes(useEditorStore.getState().files).files
+    const local = count === 1 ? 'the 1 document' : `all ${count} documents`
+    return window.confirm(
+      `Load from backend replaces ${local} in this browser with the copy on the server.\n\n` +
+        'Local changes that were never saved to the backend will be lost. Continue?'
+    )
+  }
+
+  /**
+   * A guest loads in the other order: ask the server first, confirm after. The store is private by default
+   * (MARKDOWN_PUBLIC_READ=false), and asking "replace all your documents?" only to be refused is the wrong question:
+   * the answer to a guest is "unlock admin mode", so that dialog opens.
+   */
+  const guestLoad = async () => {
+    setBusy('load')
+    try {
+      const files = await loadMarkdownFiles(useEditorStore.getState().backendStorageType)
+      if (files.length && !confirmReplace()) return
+      await loadBackendStorage(files)
+    } catch (error) {
+      if (error instanceof StorageError && error.code === 'markdown_private') {
+        pushToast("This server's documents are private. Unlock admin mode to load them.", 'error')
+        onOpenAuth()
+      } else {
+        pushToast(error instanceof Error ? error.message : 'Backend unavailable', 'error')
+      }
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const syncBackend = async (action: 'load' | 'save') => {
+    if (action === 'load' && !isAdmin) return guestLoad()
     // Loading replaces the whole local workspace -- nothing is merged -- so it
     // is never a single click away from losing unsaved local edits.
-    if (action === 'load') {
-      const count = countNodes(useEditorStore.getState().files).files
-      const local = count === 1 ? 'the 1 document' : `all ${count} documents`
-      const confirmed = window.confirm(
-        `Load from backend replaces ${local} in this browser with the copy on the server.\n\n` +
-          'Local changes that were never saved to the backend will be lost. Continue?'
-      )
-      if (!confirmed) return
-    }
+    if (action === 'load' && !confirmReplace()) return
     setBusy(action)
     try {
       if (action === 'load') await loadBackendStorage()
@@ -284,6 +311,12 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
         <IconLink2 size={14} />
         Export HTML
       </button>
+      {onOpenShare && (
+        <button className="menu-item" onClick={onOpenShare}>
+          <IconLink2 size={14} />
+          Share read-only link…
+        </button>
+      )}
       <div className="menu-separator" />
       <button className="menu-item" onClick={() => void withPreview('PDF', (preview) => exportPdf(fileName, preview, background))}>
         <IconDownload size={14} />
@@ -352,7 +385,9 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, tier = '
         Save to backend overwrites the whole server copy with this browser&apos;s documents, including changes made
         from other devices.
       </p>
-      {!isAdmin && <p className="menu-note">Saving to the backend needs admin access.</p>}
+      {!isAdmin && (
+        <p className="menu-note">Saving needs admin access. On a private server (the default), loading needs it too.</p>
+      )}
     </>
   )
 

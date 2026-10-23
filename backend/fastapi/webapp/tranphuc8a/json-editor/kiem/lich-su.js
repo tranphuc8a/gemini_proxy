@@ -108,8 +108,20 @@ module.exports = function (C) {
   kiem("denViTri · chon dung doan [2, 4)", nhap.selectionStart === 2 && nhap.selectionEnd === 4);
   A.denViTri(-5, 999);
   kiem("denViTri · ket vao trong van ban", nhap.selectionStart === 0 && nhap.selectionEnd === nhap.value.length);
-  kiem("denDuong · tab Soan chua ho tro (can vi-tri.js) — tra false, khong nem",
+  /* J3: tab Soan dung vi-tri.timViTri (chon doan van ban cua duong dan). Van ban o day khong phai JSON → khong co duong dan nao. */
+  kiem("denDuong · tab Soan: duong dan khong co trong van ban → false, khong nem",
     A.denDuong(["a"], { tab: "soan" }) === false);
+  A.datVanBan('{\n  "a": [10, {"b": "x"}],\n  "k": 5\n}', { nhan: "JSON" });
+  kiem("denDuong · tab Soan chon DUNG doan gia tri cua duong dan (chuoi / so / object)",
+    A.denDuong(["a", 1, "b"], { tab: "soan" }) === true && nhap.value.slice(nhap.selectionStart, nhap.selectionEnd) === '"x"' &&
+    A.denDuong(["k"], { tab: "soan" }) === true && nhap.value.slice(nhap.selectionStart, nhap.selectionEnd) === "5" &&
+    A.denDuong(["a", 1], { tab: "soan" }) === true && nhap.value.slice(nhap.selectionStart, nhap.selectionEnd) === '{"b": "x"}');
+  kiem("denDuong · tab Soan, chon:'khoa' chon token khoa (kem dau nhay); khoa khong co -> chon gia tri",
+    A.denDuong(["k"], { tab: "soan", chon: "khoa" }) === true && nhap.value.slice(nhap.selectionStart, nhap.selectionEnd) === '"k"' &&
+    A.denDuong(["a", 0], { tab: "soan", chon: "khoa" }) === true && nhap.value.slice(nhap.selectionStart, nhap.selectionEnd) === "10");
+  kiem("denDuong · tab Soan dung duoc ca khi JSON dang LOI (thieu ngoac dong)",
+    (A.datVanBan('{"a": [1, 2', { nhan: "hong" }), A.denDuong(["a", 1], { tab: "soan" }) === true && nhap.value.slice(nhap.selectionStart, nhap.selectionEnd) === "2"));
+
 
   /* ================= Phim tat trong #nhap: luat giao cho hoan tac goc ================= */
   C.nhom("Ctrl+Z / Ctrl+Y / Tab trong o Soan (su kien gia)");

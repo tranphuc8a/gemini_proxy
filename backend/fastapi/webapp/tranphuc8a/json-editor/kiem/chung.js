@@ -154,7 +154,60 @@ function taoNgauNhien(hat) {
   return () => (h = (h * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 }
 
+/** Chay bang ca JSON Schema. Moi ca = [ten, schema, [hang…], tuyChon?]; moi hang = [duLieu, hopLe, kyVong?, conTro?]:
+      kyVong = chuoi tuKhoa (kem conTro tuy chon) hoac doi tuong { tuKhoa, conTro, conTroSchema, hien, tb (chuoi con cua thongBao),
+               n (so loi), canh: true (xet canhBao thay vi loi), con: true (loi dau co `con`) }.
+    tuyChon.json = true: duLieu la VAN BAN JSON (parse truoc khi kiem — de co khoa __proto__). Moi hang la MOT phep.
+    Tra ve so phep da chay. */
+function chaySchema(JE, ca) {
+  let so = 0;
+  const ngan = (d) => { let s; try { s = JSON.stringify(d); } catch (e) { s = String(d); } s = s === undefined ? "undefined" : s; return s.length > 44 ? s.slice(0, 42) + "…" : s; };
+  for (const [ten, schema, hang, opt] of ca) {
+    const tc = Object.assign({}, opt || {});
+    let bd;
+    try { bd = JE.schema.bienDich(schema, tc); }
+    catch (e) { kiem(ten + " · bienDich khong nem loi", false, e && e.stack ? e.stack.split("\n").slice(0, 2).join(" | ") : String(e)); continue; }
+    for (const h of hang) {
+      let d = h[0];
+      const mong = h[1], kv = h[2], conTro = h[3];
+      if (tc.json) d = JSON.parse(d);
+      const nhan = ten + " · " + ngan(tc.json ? JSON.parse(h[0]) : d) + " → " + (mong ? "hop le" : "SAI") + (kv ? " [" + (typeof kv === "object" ? kv.tuKhoa || "" : kv) + "]" : "");
+      let kq;
+      try { kq = JE.schema.kiem(d, bd, tc); }
+      catch (e) { kiem(nhan, false, "NEM LOI " + (e && e.stack ? e.stack.split("\n").slice(0, 2).join(" | ") : e)); so++; continue; }
+      let ok = kq.hopLe === mong, chiTiet = "";
+      if (ok && kv !== undefined) {
+        const yc = typeof kv === "object" ? kv : { tuKhoa: kv, conTro: conTro };
+        const ds = yc.canh ? kq.canhBao : kq.loi;
+        if (yc.n !== undefined && ds.length !== yc.n) { ok = false; chiTiet = "so " + (yc.canh ? "canh bao" : "loi") + " = " + ds.length + " (mong " + yc.n + ")"; }
+        else {
+          const khop = ds.some((e) => (yc.tuKhoa === undefined || e.tuKhoa === yc.tuKhoa) && (yc.conTro === undefined || e.conTro === yc.conTro) &&
+            (yc.conTroSchema === undefined || e.conTroSchema === yc.conTroSchema) && (yc.hien === undefined || e.hien === yc.hien) &&
+            (yc.tb === undefined || e.thongBao.indexOf(yc.tb) >= 0) && (!yc.con || (e.con && e.con.length > 0)));
+          if (!khop && (yc.tuKhoa !== undefined || yc.conTro !== undefined || yc.conTroSchema !== undefined || yc.tb !== undefined || yc.hien !== undefined || yc.con)) {
+            ok = false; chiTiet = "khong co loi khop " + JSON.stringify(yc) + " trong " + JSON.stringify(ds.map((e) => [e.tuKhoa, e.conTro, e.conTroSchema, e.thongBao]).slice(0, 3));
+          }
+        }
+      } else if (!ok) chiTiet = "hopLe = " + kq.hopLe + "; " + JSON.stringify(kq.loi.map((e) => [e.tuKhoa, e.conTro, e.thongBao]).slice(0, 3));
+      kiem(nhan, ok, chiTiet);
+      so++;
+    }
+  }
+  return so;
+}
+
+/** Thoi gian (ms) NHO NHAT trong `lan` lan chay `f` — dung lam do chuan cho phep do hieu nang (tai may luc do). */
+function hieuChuan(f, lan) {
+  let tot = Infinity;
+  for (let i = 0; i < (lan || 3); i++) {
+    const t0 = process.hrtime.bigint();
+    f();
+    tot = Math.min(tot, Number(process.hrtime.bigint() - t0) / 1e6);
+  }
+  return tot;
+}
+
 module.exports = {
-  GOC, dsScript, taoMoiTruong, kiem, nhom, bang, nemLoi, longSau, taoNgauNhien,
+  GOC, dsScript, taoMoiTruong, kiem, nhom, bang, nemLoi, longSau, taoNgauNhien, chaySchema, hieuChuan,
   soDat: () => dat, soSai: () => hong
 };

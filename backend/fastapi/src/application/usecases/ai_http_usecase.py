@@ -22,7 +22,7 @@ import re
 from typing import Any, Dict, List, Sequence
 from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
-from src.application.usecases.ai_usecase import AiUseCase, cache_key, generation_config, parse_json, text_turn
+from src.application.usecases.ai_usecase import AiUseCase, cache_key, generation_config, parse_json, strip_code_fence, text_turn
 from src.domain.models.ai_domain import AiCaller
 
 REQUEST_BODY_CHARS = 4000
@@ -168,7 +168,7 @@ def _script(raw: str) -> Dict[str, str]:
     script = data.get("script") if isinstance(data, dict) else None
     if not isinstance(script, str):
         raise ValueError("no script")
-    script = re.sub(r"^\s*```[A-Za-z]*\s*\n?|\n?\s*```\s*$", "", script).strip()
+    script = strip_code_fence(script)
     if "pm.test(" not in script or len(script) > SCRIPT_CHARS:
         raise ValueError("not a test script")
     unsafe = _UNSAFE.search(script)

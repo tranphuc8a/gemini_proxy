@@ -139,3 +139,11 @@ doc-10k p95 89 ms > 50 ms **chưa đạt**, chuyển M5. JSON thô ở `%TEMP%/m
 - Làn A: **M3** liên kết chia sẻ → **M4a** đồng bộ delta backend → **M4b** đồng bộ delta frontend + IndexedDB → **M5** render theo khối.
 - Làn B: **W3** AI soạn note → **J2** metadata khi gập → **J3** Schema: kiểm → **W4** toán Wiki + Notebook → **W5** render theo khối ở Wiki.
 - Lệnh kiểm từng đợt ở `ke-hoach.md` §2. Mỗi đợt con: agent cài → agent kiểm độc lập → sửa (≤ 2 vòng) → `dot/<mã>.md`. Không commit khi chủ dự án chưa yêu cầu.
+
+## Sự cố ghi nhận trong đợt 2 (24/10) — người kiểm M3 có thể đã thử nối DB thật
+
+- Trong lúc kiểm M3 (lượt kiểm lại 01:05–01:42), agent kiểm chạy một script nháp ngoài pytest **không đặt `DB_URL` / `RATE_LIMIT_BACKEND`**. Mã backend nạp `backend/fastapi/.env` và `build_rate_limiter` ở chế độ `auto` chọn bộ đếm `database`, nên **đã thử nối Aiven MySQL thật**.
+- Nhật ký của nó: `shared counter failed (TimeoutError); counts in memory` → kết nối hết giờ, nên rất có thể **không có bản ghi nào được ghi** (chỉ bộ đếm tạm trong bộ nhớ). Chưa chứng minh được.
+- Cái có thể bị ghi nếu kết nối thành công: bảng `rate_limit_hits (limiter, subject, bucket, hits, expires_at)` — `CREATE TABLE IF NOT EXISTS` + `INSERT … ON DUPLICATE KEY UPDATE hits = hits + 1` (`adapter/output/ratelimit/database_rate_limiter.py`). Không có bảng markdown/wiki nào bị chạm bởi script đó.
+- **Chủ dự án nên tự kiểm (chỉ đọc):** trên Aiven chạy `SELECT limiter, subject, COUNT(*) FROM rate_limit_hits GROUP BY limiter, subject ORDER BY 3 DESC LIMIT 20;` và xem có hàng nào có `limiter` liên quan markdown (tên có chữ `markdown`/`share`/`admin`) với `expires_at` quanh 24/10 01:05–01:42 (giờ máy dev) hay không. Có thì bảng chỉ chứa bộ đếm tạm, tự hết hạn; không có thì script chưa ghi gì.
+- Đã khắc phục cho phần còn lại của đợt 2: mọi prompt agent (cài, kiểm, sửa, kiểm tổng) nay có mục **BẢO VỆ DATABASE THẬT** bắt buộc đặt `DB_URL=sqlite…`, `MONGO_URI=`, `RATE_LIMIT_BACKEND=memory`, `AI_ENABLED=false`, `*_STORAGE_BACKEND=json` cho MỌI tiến trình import mã backend, kể cả script nháp. Đề xuất thêm: sửa `build_rate_limiter(auto)` để không chọn `database` khi đang chạy dưới pytest/không có cờ rõ ràng (chủ dự án quyết).

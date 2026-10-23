@@ -160,6 +160,19 @@ def seeded_data_path(configured: str | Path) -> Path:
     return target
 
 
+def is_temporary_data_root() -> bool:
+    """Do JSON stores write under the system temp dir (lost on restart / per serverless instance)?
+
+    The same test as `codestore_factory._json_status`; an unwritable root counts as temporary.
+    """
+    try:
+        root = data_root().resolve()
+    except Exception:  # noqa: BLE001
+        return True
+    temporary = Path(tempfile.gettempdir()).resolve()
+    return temporary == root or temporary in root.parents
+
+
 def reset_for_tests() -> None:
     """Forget the probed root so a test can change the environment."""
     global _writable_root

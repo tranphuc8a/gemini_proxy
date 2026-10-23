@@ -1,0 +1,263 @@
+[
+ {
+  "name": "empty to text",
+  "base": "",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     0,
+     1,
+     [
+      "hello"
+     ]
+    ]
+   ]
+  },
+  "result": "hello"
+ },
+ {
+  "name": "one line edited",
+  "base": "a\nb\nc",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     1,
+     1,
+     [
+      "B"
+     ]
+    ]
+   ]
+  },
+  "result": "a\nB\nc"
+ },
+ {
+  "name": "insert at start",
+  "base": "a\nb",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     0,
+     0,
+     [
+      "z"
+     ]
+    ]
+   ]
+  },
+  "result": "z\na\nb"
+ },
+ {
+  "name": "insert at end",
+  "base": "a\nb",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     2,
+     0,
+     [
+      "c"
+     ]
+    ]
+   ]
+  },
+  "result": "a\nb\nc"
+ },
+ {
+  "name": "delete a middle line",
+  "base": "a\nb\nc",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     1,
+     1,
+     []
+    ]
+   ]
+  },
+  "result": "a\nc"
+ },
+ {
+  "name": "delete everything but the empty last line",
+  "base": "a\nb\n",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     0,
+     2,
+     []
+    ]
+   ]
+  },
+  "result": ""
+ },
+ {
+  "name": "replace all",
+  "base": "x\ny",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     0,
+     2,
+     [
+      "z"
+     ]
+    ]
+   ]
+  },
+  "result": "z"
+ },
+ {
+  "name": "no change",
+  "base": "x\ny",
+  "patch": {
+   "v": 1,
+   "h": []
+  },
+  "result": "x\ny"
+ },
+ {
+  "name": "crlf is kept on the line",
+  "base": "a\r\nb\r\n",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     1,
+     1,
+     [
+      "B\r"
+     ]
+    ]
+   ]
+  },
+  "result": "a\r\nB\r\n"
+ },
+ {
+  "name": "trailing newline is an empty last line",
+  "base": "a\n",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     1,
+     0,
+     [
+      "b"
+     ]
+    ]
+   ]
+  },
+  "result": "a\nb\n"
+ },
+ {
+  "name": "append after a trailing newline",
+  "base": "a\n",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     1,
+     1,
+     [
+      "b",
+      ""
+     ]
+    ]
+   ]
+  },
+  "result": "a\nb\n"
+ },
+ {
+  "name": "vietnamese and symbols",
+  "base": "Xin chào\nthế giới\n$x^2$",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     1,
+     1,
+     [
+      "thế giới ệ",
+      "ữ"
+     ]
+    ]
+   ]
+  },
+  "result": "Xin chào\nthế giới ệ\nữ\n$x^2$"
+ },
+ {
+  "name": "two hunks",
+  "base": "1\n2\n3\n4\n5\n6",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     0,
+     1,
+     [
+      "one"
+     ]
+    ],
+    [
+     4,
+     2,
+     [
+      "five",
+      "six",
+      "seven"
+     ]
+    ]
+   ]
+  },
+  "result": "one\n2\n3\n4\nfive\nsix\nseven"
+ },
+ {
+  "name": "adjacent hunks",
+  "base": "a\nb\nc\nd",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     0,
+     2,
+     [
+      "x"
+     ]
+    ],
+    [
+     2,
+     2,
+     [
+      "y"
+     ]
+    ]
+   ]
+  },
+  "result": "x\ny"
+ },
+ {
+  "name": "blank lines",
+  "base": "a\n\n\nb",
+  "patch": {
+   "v": 1,
+   "h": [
+    [
+     1,
+     2,
+     [
+      "m"
+     ]
+    ]
+   ]
+  },
+  "result": "a\nm\nb"
+ }
+]

@@ -20,21 +20,27 @@ import os
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
+from src.adapter.input.controllers import markdown_admin
+from src.adapter.input.controllers.markdown_admin import (  # noqa: F401 - re-exported (B0): other markdown routes import them from here
+    SESSION_SALT,
+    check_markdown_admin,
+    check_markdown_admin_request,
+    require_markdown_admin,
+    require_markdown_reader,
+)
+from src.adapter.factory.markdown_docs_factory import get_markdown_docs_usecase
 from src.adapter.output.mongostore import client as mongo_store
 from src.adapter.output.mysql.db.base import get_async_session
 from src.application.config.config import settings
+from src.application.exceptions.exceptions import AppException
 from src.application.utils import admin_session
 from src.application.utils.data_paths import seeded_data_path
 
 router = APIRouter(prefix="/markdown", tags=["markdown-storage"])
-
-#: Namespaces the HMAC so a token minted here cannot be replayed against another
-#: app that shares the same admin key.
-SESSION_SALT = "markdown-editor"
 
 MONGO_COLLECTION = "markdown_files"
 
@@ -76,26 +82,19 @@ def _storage_backend(requested: str | None = None) -> str:
 
 
 def _admin_key() -> str:
-    return os.getenv("MARKDOWN_ADMIN_KEY", getattr(settings, "MARKDOWN_ADMIN_KEY", "markdown-editor-admin-2024"))
+    return markdown_admin.admin_key()
 
 
-def _check_admin(admin_key: str | None, session_token: str | None = None) -> None:
-    """Accept either the key itself or a session token issued in exchange for it.
+#: The check used to live here as `_check_admin` (sync, `==`, no lock-out). It is now
+#: `markdown_admin.check_markdown_admin` (async: it counts wrong guesses); the old name
+#: stays as an alias so callers keep working - remember to `await` it.
+_check_admin = check_markdown_admin
 
-    The token exists so a reload does not sign the user out: the key stays in the
-    user's head and the server's config, while the browser only ever stores a
-    signed expiry.
-    """
-    expected = _admin_key()
-    if admin_key and admin_key == expected:
-        return
-    if session_token:
-        try:
-            admin_session.verify(session_token, expected, salt=SESSION_SALT)
-            return
-        except admin_session.SessionError as cause:
-            raise HTTPException(status_code=403, detail=str(cause)) from cause
-    raise HTTPException(status_code=403, detail="Admin key required")
+
+def _legacy_put_mode() -> str:
+    """`MARKDOWN_LEGACY_PUT`: `allow` (default until the new client ships, M4b) or `reject`."""
+    value = os.getenv("MARKDOWN_LEGACY_PUT") or getattr(settings, "MARKDOWN_LEGACY_PUT", "allow")
+    return "reject" if str(value).strip().lower() == "reject" else "allow"
 
 
 def _json_path() -> Path:
@@ -256,7 +255,7 @@ async def list_backends():
 
 
 @router.post("/admin/verify", response_model=AdminSessionResponse)
-async def verify_admin_key(x_admin_key: str | None = Header(default=None)):
+async def verify_admin_key(request: Request, x_admin_key: str | None = Header(default=None)):
     """Exchange the admin key for a session token.
 
     The key must not travel in the bundle: a VITE_* value is compiled into the
@@ -265,7 +264,8 @@ async def verify_admin_key(x_admin_key: str | None = Header(default=None)):
     then exchanged for a token, so the browser has something it can keep across a
     reload without ever storing the key.
     """
-    _check_admin(x_admin_key)
+    # The key itself, never a session: this is where a session comes from.
+    await check_markdown_admin_request(request, x_admin_key, None)
     issued = admin_session.issue(
         _admin_key(),
         salt=SESSION_SALT,
@@ -275,13 +275,13 @@ async def verify_admin_key(x_admin_key: str | None = Header(default=None)):
 
 
 @router.post("/admin/session", response_model=AdminSessionResponse)
-async def refresh_admin_session(x_admin_session: str | None = Header(default=None)):
+async def refresh_admin_session(request: Request, x_admin_session: str | None = Header(default=None, max_length=600)):
     """Check a stored token on page load, and hand back a fresh one.
 
     Re-issuing keeps an active user signed in without ever extending the life of
     a token that has already expired.
     """
-    _check_admin(None, x_admin_session)
+    await check_markdown_admin_request(request, None, x_admin_session)
     issued = admin_session.issue(
         _admin_key(),
         salt=SESSION_SALT,
@@ -290,9 +290,18 @@ async def refresh_admin_session(x_admin_session: str | None = Header(default=Non
     return AdminSessionResponse(session=issued.token, expiresAt=issued.expires_at)
 
 
-@router.get("/files", response_model=MarkdownDocument)
+@router.get("/files", response_model=MarkdownDocument, dependencies=[Depends(require_markdown_reader)])
 async def get_markdown_files(backend: str | None = Query(default=None)):
+    """The whole stored tree. Private by default (`MARKDOWN_PUBLIC_READ=false`): then only
+    the administrator reads it, and a guest gets 403 `markdown_private`."""
     chosen = _storage_backend(backend)
+    if _legacy_put_mode() == "reject":
+        # Once the store has been copied to the delta store, the delta store is the truth: rebuild the
+        # tree from it (the old whole-tree store is frozen, and an old editor must not read stale data).
+        # Under `allow` the old store keeps being read and written exactly as before.
+        rows = await get_markdown_docs_usecase(chosen).legacy_rows()
+        if rows is not None:
+            return MarkdownDocument(files=_rows_to_tree(rows))
     if chosen == "json":
         path = _json_path()
         if not path.exists():
@@ -302,15 +311,19 @@ async def get_markdown_files(backend: str | None = Query(default=None)):
     return MarkdownDocument(files=_rows_to_tree(rows))
 
 
-@router.put("/files", response_model=MarkdownDocument)
+@router.put("/files", response_model=MarkdownDocument, dependencies=[Depends(require_markdown_admin)])
 async def save_markdown_files(
     document: MarkdownDocument,
     backend: str | None = Query(default=None),
-    x_admin_key: str | None = Header(default=None),
-    x_admin_session: str | None = Header(default=None),
 ):
-    _check_admin(x_admin_key, x_admin_session)
     chosen = _storage_backend(backend)
+    if _legacy_put_mode() == "reject" and await get_markdown_docs_usecase(chosen).is_migrated():
+        # An old editor saves the WHOLE tree: on a store the delta sync owns, that would overwrite other
+        # devices' work without a version check. Refuse; the old editor keeps its local copy.
+        raise AppException(
+            message="Bản Markdown Editor này đã cũ — hãy tải lại trang để dùng đồng bộ mới (dữ liệu trên máy bạn vẫn còn)",
+            status_code=409, code="md_legacy_client", payload={"code": "md_legacy_client"},
+        )
 
     if chosen == "json":
         path = _json_path()

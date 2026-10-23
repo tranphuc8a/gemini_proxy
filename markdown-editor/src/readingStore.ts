@@ -15,6 +15,8 @@ import {
 
 interface ReadingState extends ReadingSettings {
   open: boolean
+  /** Load the saved text settings without opening reading mode or touching `?read=1` (a shared page's own surface). */
+  loadSettings: () => void
   openReading: () => void
   closeReading: () => void
   toggleReading: () => void
@@ -50,6 +52,8 @@ export const useReadingStore = create<ReadingState>((set, get) => {
   return {
     ...DEFAULT_READING_SETTINGS,
     open: false,
+
+    loadSettings: () => set(loadReadingSettings(appTheme())),
 
     openReading: () => {
       if (get().open) return

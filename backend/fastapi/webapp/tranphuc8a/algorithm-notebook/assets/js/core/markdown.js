@@ -20,7 +20,7 @@
 
   var MAX_DEPTH = 6, MAX_INPUT = 600000;
   var FENCE = /^ {0,3}(`{3,}|~{3,})[ \t]*([\w+#.\-]*)[^\n]*$/;
-  var HEADING = /^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/;
+  var HEAD_OPEN = /^ {0,3}(#{1,6})[ \t]+/, LINE_END = /[\n\r\u2028\u2029]/;
   var HR = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
   var ITEM = /^(\s*)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/;
   var TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
@@ -121,8 +121,29 @@
     return cells;
   }
 
+  /** Phần chữ của tiêu đề `# Chữ ##`: bỏ cụm # đóng và khoảng trắng cuối (`r` = dòng sau dấu mở). BẰNG TAY — regex gốc
+      /(.*?)(?:[ \t]+#+)?[ \t]*$/ bậc hai trên một dải khoảng trắng dài trong dòng tiêu đề (câu trả lời AI có thể có: 40.000 ký tự → ~9 giây). */
+  function closeStrip(r) {
+    var e = r.length, h;
+    while (e > 0 && (r.charAt(e - 1) === " " || r.charAt(e - 1) === "\t")) e--;
+    h = e;
+    while (h > 0 && r.charAt(h - 1) === "#") h--;
+    if (h < e && h > 0 && (r.charAt(h - 1) === " " || r.charAt(h - 1) === "\t")) {            // `#` cuối chỉ là cụm đóng khi đứng sau khoảng trắng
+      while (h > 0 && (r.charAt(h - 1) === " " || r.charAt(h - 1) === "\t")) h--;
+      e = h;
+    }
+    return r.slice(0, e);
+  }
+  /** Dòng tiêu đề ATX → {level, text} hoặc null — đúng kết quả của /^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/ (kiem.js so từng ca). */
+  function headingOf(line) {
+    var m = HEAD_OPEN.exec(line);
+    if (!m) return null;
+    var r = line.slice(m[0].length);
+    return LINE_END.test(r) ? null : { level: m[1].length, text: closeStrip(r) };
+  }
+
   function startsBlock(line, next) {
-    return FENCE.test(line) || HEADING.test(line) || HR.test(line) || /^ {0,3}>/.test(line) || ITEM.test(line) || Q_LINE.test(line) ||
+    return FENCE.test(line) || headingOf(line) || HR.test(line) || /^ {0,3}>/.test(line) || ITEM.test(line) || Q_LINE.test(line) ||
       (line.indexOf("|") !== -1 && next != null && TABLE_SEP.test(next) && next.indexOf("-") !== -1 && (next.indexOf("|") !== -1 || line.indexOf("|") !== -1) && splitRow(line).length > 1);
   }
 
@@ -140,8 +161,8 @@
         html += '<pre class="code"' + (lang ? ' data-lang="' + esc(lang) + '"' : "") + "><code>" + (hl != null ? hl : esc(code)) + "</code></pre>";
         continue;
       }
-      if ((m = HEADING.exec(line))) {
-        var lv = m[1].length, txt = m[2], id = "h-" + (T.slug(txt) || "muc"), k = (state.ids[id] = (state.ids[id] || 0) + 1);
+      if ((m = headingOf(line))) {
+        var lv = m.level, txt = m.text, id = "h-" + (T.slug(txt) || "muc"), k = (state.ids[id] = (state.ids[id] || 0) + 1);
         html += "<h" + lv + ' id="' + esc(k > 1 ? id + "-" + k : id) + '">' + inline(txt, ctx) + "</h" + lv + ">";
         i++; continue;
       }
@@ -232,14 +253,14 @@
   function headings(md) {
     var masked = N.maskCode(md).split("\n"), orig = String(md || "").split("\n"), out = [], ids = {};
     masked.forEach(function (ln, idx) {
-      var m = HEADING.exec(ln);
+      var m = headingOf(ln);
       if (!m) return;
-      var text = N.plainSnippet(orig[idx].replace(/^ {0,3}#{1,6}[ \t]+/, "").replace(/[ \t]+#+[ \t]*$/, ""), 120), id = "h-" + (T.slug(text) || "muc"), k = (ids[id] = (ids[id] || 0) + 1);
-      out.push({ level: m[1].length, text: text, id: k > 1 ? id + "-" + k : id, line: idx });
+      var o = HEAD_OPEN.exec(orig[idx]), text = N.plainSnippet(o ? closeStrip(orig[idx].slice(o[0].length)) : orig[idx], 120), id = "h-" + (T.slug(text) || "muc"), k = (ids[id] = (ids[id] || 0) + 1);
+      out.push({ level: m.level, text: text, id: k > 1 ? id + "-" + k : id, line: idx });
     });
     return out;
   }
 
-  W.markdown = { render: render, headings: headings, safeUrl: safeUrl, safeImg: safeImg, inline: function (s, o) { return inline(s, o || {}); } };
+  W.markdown = { render: render, headings: headings, headingOf: headingOf, safeUrl: safeUrl, safeImg: safeImg, inline: function (s, o) { return inline(s, o || {}); } };
   if (typeof module !== "undefined" && module.exports) module.exports = W.markdown;
 })(typeof globalThis !== "undefined" ? globalThis : this);

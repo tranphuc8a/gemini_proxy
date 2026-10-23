@@ -303,7 +303,7 @@ class AiUseCase:
             if stored is not None:
                 try:
                     return parse(stored), AiCompletion(text=stored, cached=True)
-                except ValueError:
+                except (ValueError, RecursionError):
                     logger.warning("Dropping an unreadable cached AI answer for %s", feature)
         await self.admit(caller, feature)
         try:
@@ -317,7 +317,7 @@ class AiUseCase:
             raise BadGatewayError("AI trả lời quá dài và bị cắt — thử hỏi ngắn hơn")
         try:
             result = parse(completion.text)
-        except ValueError as exc:
+        except (ValueError, RecursionError) as exc:
             logger.warning("AI answer for %s did not parse: %s", feature, exc)
             raise BadGatewayError("AI trả lời sai định dạng — thử lại") from exc
         if cache and completion.text:
@@ -353,12 +353,34 @@ class AiUseCase:
         }
 
 
-def parse_json(text: str) -> Any:
-    """JSON mode answers are JSON; a stray code fence is tolerated."""
+_FENCE_LANG = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+
+def strip_code_fence(text: Optional[str]) -> str:
+    """The text without a ``` fence around it (opening line with its language word, closing ```), stripped.
+
+    By hand and in one pass, on purpose: this runs on whatever the model wrote, inside the event loop, and the regex it
+    replaced (a regex with "optional whitespace, then the closing fence, then the end") backtracks quadratically over a
+    long run of whitespace — a 200 KB answer froze every route for half a minute. The two ends are independent; a text
+    with no fence comes back stripped.
+    """
     body = (text or "").strip()
     if body.startswith("```"):
-        body = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", body)
+        i, n = 3, len(body)
+        while i < n and body[i] in _FENCE_LANG:
+            i += 1
+        body = body[i:].lstrip()
+    if body.endswith("```"):
+        body = body[:-3].rstrip()
+    return body
+
+
+def parse_json(text: str) -> Any:
+    """JSON mode answers are JSON; a stray code fence is tolerated. Anything else is a ValueError (→ 502 in `ask`)."""
+    body = (text or "").strip()
+    if body.startswith("```"):
+        body = strip_code_fence(body)
     try:
         return json.loads(body)
-    except ValueError as exc:
-        raise ValueError(f"not JSON: {exc}") from exc
+    except (ValueError, RecursionError) as exc:       # "[" * 200000 is a RecursionError, not a ValueError
+        raise ValueError(f"not JSON: {type(exc).__name__}: {str(exc)[:200]}") from exc

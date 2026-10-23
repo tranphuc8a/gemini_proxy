@@ -42,6 +42,11 @@
   if (!JE || !JE.chung) throw new Error("json-editor.js cần nạp je-chung.js trước");
   var coRieng = JE.chung.coRieng, catNgan = JE.chung.catNgan, moTaDuong = JE.chung.moTaDuong;
   var kieuCua = JE.chung.kieuCua;
+  if (!JE.tomTat) throw new Error("json-editor.js cần nạp tom-tat.js trước");
+  var TT = JE.tomTat;
+  var xemTruoc = TT.xemTruoc, truongNoiBat = TT.truongNoiBat;
+  if (!JE.viTri) throw new Error("json-editor.js cần nạp vi-tri.js trước");
+  var VT = JE.viTri;
 
   var $ = function (s) { return document.querySelector(s); };
   var els = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -64,6 +69,7 @@
   var vanBanDaDoc = null;    /* van ban ma doc() vua parse */
   var oHien = "soan";        /* tab dang mo */
   var chuTrangThai = "";     /* dong trang thai doc() vua dat (de tra lai sau thong bao tam) */
+  var tabDuLieuGan = "cay";  /* tab du lieu (cay / soan) nguoi dung vua dung — denDuong(tab:"tu-dong") */
 
   /* --- su kien cho cac module ngoai (JE_APP.dangKy) --- */
   var nguoiNghe = Object.create(null);
@@ -438,6 +444,14 @@
   var cayBan = true;                       /* phai ve lai khi tab Cay hien ra */
   var cuonCay = { top: 0, left: 0 };
   var hienKieu = true;
+  var hienKichThuoc = true;                /* hop kiem "Kích thước" (nho o localStorage) */
+  /* Ngan sach dem kich thuoc cho metadata cua nhanh gap: tong so nut duoc
+     duyet moi lan ve (veCay / mo mot nhanh: `ve`) — het thi cac hang con lai
+     chua co kich thuoc, den khi re chuot / focus vao tung hang (moi hang
+     toi da `hang` nut, thu mot lan). Doi tuong song: kiem thu hep lai duoc
+     qua JE_APP.hangSo.NGAN_SACH. */
+  var NGAN_SACH = { ve: 250000, hang: 5000000 };
+  var nganVe = { con: NGAN_SACH.ve };
   var dangSua = null;                      /* phien sua dang mo, neu co */
   var nhanChuot = false;                   /* dang bam chuot trong cay khi o sua mo */
 
@@ -478,17 +492,62 @@
     return "";
   }
 
-  function htmlGiaTri(v) {
+  /** `meta`: kq cua taoMeta (nhanh dang gap) hoac null (nhanh dang mo). */
+  function htmlGiaTri(v, meta) {
     if (!laNhanh(v)) {
       return nutLa(v) + (hienKieu
         ? '<span class="kieu" data-hd="sua" title="Bấm để sửa hoặc đổi kiểu">' + kieuCua(v) + "</span>"
         : "");
     }
     var mang = Array.isArray(v), sl = mang ? v.length : Object.keys(v).length;
-    var xt = xemTruoc(v);
     return '<span class="dau-2cham ngoac" data-hd="mo-dong">' + (mang ? "[ ]" : "{ }") + "</span>" +
-      '<span class="dem" data-hd="mo-dong">' + sl + (mang ? " phần tử" : " khoá") + "</span>" +
-      (xt ? '<span class="xem-truoc" data-hd="mo-dong">' + thoat(xt) + "</span>" : "");
+      '<span class="dem" data-hd="mo-dong">' + TT.soCoDau(sl) + (mang ? " phần tử" : " khoá") + "</span>" +
+      (meta ? meta.html : "");
+  }
+
+  /** Metadata cua nhanh dang GAP: kich thuoc khi nen, kieu phan tu (mang),
+      dong xem truoc (khoa noi bat + vai khoa), kem tooltip day du (duong
+      dan, sau, so nut…) va phan them cho ten truy cap. Khong do kich thuoc
+      khi o "Kích thước" tat. `ngan` het thi `dayDu` = false (chua co kich
+      thuoc — capNhatMeta se dem lai khi re chuot / focus). Moi chuoi tu du
+      lieu di qua thoat() (HTML) hoac duoc gan bang thuoc tinh DOM (title,
+      aria-label), khong bao gio noi vao HTML. */
+  function taoMeta(v, duong, ngan) {
+    var t = TT.tomTatNut(v, { byte: hienKichThuoc, ngan: ngan });
+    var h = "";
+    if (t.byte !== null) {
+      h += '<span class="dem-byte" data-hd="mo-dong">· ' + thoat(TT.dinhDangByte(t.byte)) + "</span>";
+    }
+    if (t.kieuCon && hienKieu) h += '<span class="kieu-con" data-hd="mo-dong">' + thoat(t.kieuCon) + "</span>";
+    if (t.dong) h += '<span class="xem-truoc" data-hd="mo-dong">' + thoat(t.dong) + "</span>";
+    return {
+      html: h, dayDu: !hienKichThuoc || t.daTinh,
+      title: TT.moTaNut(t, moTaDuong(duong)), aria: TT.moTaAria(t)
+    };
+  }
+
+  /** Gan metadata (da co `meta`) vao hang `n` vua dung xong. `daThu`: lan do
+      rieng hang nay (re chuot / focus / gap) — van het ngan sach thi dung han,
+      khong thu lai o moi lan re chuot. */
+  function ganMeta(n, meta, daThu) {
+    /* 2: day du; 1: chua co kich thuoc (se thu khi re chuot / focus); 3: da thu, qua lon */
+    n._meta = meta.dayDu ? 2 : daThu ? 3 : 1;
+    n._dong.title = meta.title + (n._meta === 3 ? " · quá lớn để đo kích thước ngay" : "");
+    n.setAttribute("aria-label", n._nhanGoc + (meta.aria ? ", " + meta.aria : ""));
+  }
+
+  /** Nhanh vua gap (hoac hang chua co kich thuoc khi re chuot / focus):
+      dung metadata cho nhanh nay. Chi tinh khi can — nhanh dang mo khong
+      hien metadata nen khong ton gi. */
+  function capNhatMeta(n, ngan) {
+    if (!n || !n._con || n._meta >= 2) return;
+    var dong = n._dong, tt = dong.querySelector ? dong.querySelector(".thao-tac") : null;
+    if (!tt || dong.classList.contains("dang-sua")) return;     /* dang sua tai cho */
+    var meta = taoMeta(n._v, n._duong, ngan || { con: NGAN_SACH.hang });
+    var cu = dong.querySelectorAll(".dem-byte, .kieu-con, .xem-truoc");
+    for (var i = 0; i < cu.length; i++) cu[i].parentNode.removeChild(cu[i]);
+    tt.insertAdjacentHTML("beforebegin", meta.html);
+    ganMeta(n, meta, true);
   }
 
   function nutTT(hd, kyHieu, nhan, tat) {
@@ -524,11 +583,14 @@
 
   function veNut(khoa, v, duong, soAnhEm) {
     var kd = khoaDuong(duong);
+    var coCon = laNhanh(v), mo = coCon && laMo(duong);
+    var meta = coCon && !mo ? taoMeta(v, duong, nganVe) : null;   /* chi nhanh dang gap */
     var n = document.createElement("div");
     n.className = "n";
     n.setAttribute("role", "treeitem");
     n.setAttribute("aria-level", String(duong.length + 1));
-    n.setAttribute("aria-label", nhanNut(khoa, v));
+    n._nhanGoc = nhanNut(khoa, v);
+    n.setAttribute("aria-label", n._nhanGoc);
     n.setAttribute("data-p", kd);
     n.tabIndex = -1;
     n._duong = duong; n._v = v; n._khoa = khoa; n._soAnhEm = soAnhEm;
@@ -536,12 +598,13 @@
 
     var dong = document.createElement("div");
     dong.className = "dong";
-    dong.innerHTML = htmlKhoa(khoa) + htmlGiaTri(v) + htmlThaoTac(khoa, v, duong, soAnhEm);
+    dong.innerHTML = htmlKhoa(khoa) + htmlGiaTri(v, meta) + htmlThaoTac(khoa, v, duong, soAnhEm);
     n._dong = dong;
+    n._meta = 0;
     n.appendChild(dong);
+    if (meta) ganMeta(n, meta);
 
-    if (laNhanh(v)) {
-      var mo = laMo(duong);
+    if (coCon) {
       var nut = document.createElement("span");
       nut.className = "mo-dong";
       nut.setAttribute("aria-hidden", "true");
@@ -558,7 +621,53 @@
       n.setAttribute("aria-expanded", mo ? "true" : "false");
       if (mo) veCon(n); else n.classList.add("dong-lai");
     }
+    if (huyHieuCay) capNhatHuyHieu(n);
     return n;
+  }
+
+  /* ---------------------------------------------- huy hieu loi (schema…)
+     ui-schema.js dua vao Map(khoaDuong -> {a: [thong bao cua CHINH nut nay],
+     b: so loi o nut con chau}). Hang co loi: vien do ben trai + "⛔ N"
+     (nhanh dang GAP gom ca loi ben trong). Cap nhat TAI CHO — khong ve lai
+     ca cay, de khong pha o dang sua. Chu tu du lieu chi gan bang textContent /
+     title, khong qua innerHTML. */
+  var huyHieuCay = null;
+
+  function capNhatHuyHieu(n) {
+    var kd = n.getAttribute("data-p"), h = huyHieuCay ? huyHieuCay.get(kd) : null;
+    var mo = !!n._con && !n.classList.contains("dong-lai");
+    var tong = h ? h.a.length + (n._con && !mo ? h.b : 0) : 0;
+    var cu = n._huyHieu || null;
+    if (!tong) {
+      if (cu && cu.parentNode) cu.parentNode.removeChild(cu);
+      n._huyHieu = null;
+      n.classList.remove("co-loi-schema");
+      return;
+    }
+    if (!cu) {
+      cu = document.createElement("span");
+      cu.className = "huy-hieu-loi";
+      var tt = n._dong.querySelector ? n._dong.querySelector(".thao-tac") : null;
+      if (tt) n._dong.insertBefore(cu, tt); else n._dong.appendChild(cu);
+      n._huyHieu = cu;
+    }
+    cu.textContent = "⛔ " + tong;
+    var dong = h.a.slice(0, 5);
+    if (h.a.length > 5) dong.push("… và " + (h.a.length - 5) + " lỗi nữa ở đây");
+    if (h.b && n._con) dong.push("+ " + h.b + " lỗi ở bên trong");
+    cu.title = dong.join("\n");
+    cu.setAttribute("aria-label", tong + " lỗi schema");
+    n.classList.toggle("co-loi-schema", h.a.length > 0);
+  }
+
+  /** Doi bang huy hieu (null = xoa het) va cap nhat cac hang DANG HIEN co lien quan. */
+  function datHuyHieuCay(map) {
+    var cu = huyHieuCay;
+    huyHieuCay = map && map.size ? map : null;
+    var khoa = new Set();
+    if (cu) cu.forEach(function (x, k) { khoa.add(k); });
+    if (huyHieuCay) huyHieuCay.forEach(function (x, k) { khoa.add(k); });
+    khoa.forEach(function (k) { var n = bangNut[k]; if (n) capNhatHuyHieu(n); });
   }
 
   function veCon(n) {
@@ -582,6 +691,8 @@
     dangSua = null;
     bangNut = Object.create(null);
     hienKieu = $("#cay-kieu").checked;
+    hienKichThuoc = $("#cay-kich-thuoc").checked;
+    nganVe = { con: NGAN_SACH.ve };
     cayEl.textContent = "";
     if (!hopLe) {
       cayEl.removeAttribute("role");
@@ -697,10 +808,12 @@
     if (!n || !n._con) return;
     if (mo === undefined) mo = n.classList.contains("dong-lai");
     trangThaiMo[n.getAttribute("data-p")] = mo;
-    if (mo && !n._daVe) veCon(n);
+    if (mo && !n._daVe) { nganVe = { con: NGAN_SACH.ve }; veCon(n); }
+    if (!mo) capNhatMeta(n);                          /* vua gap: dung metadata lan dau */
     n.classList.toggle("dong-lai", !mo);
     n.setAttribute("aria-expanded", mo ? "true" : "false");
     n._nutMo.textContent = mo ? "−" : "+";
+    if (huyHieuCay) capNhatHuyHieu(n);
   }
 
   /* ---------------------------------------------- thong bao trong tab Cay */
@@ -1367,82 +1480,7 @@
     return moi;
   }
 
-  /* --- xem truoc nhanh dang gap --- */
-  /* Khoa "dang doc" nhat, theo thu tu uu tien. So sanh sau khi chuan hoa:
-     chu thuong, bo dau tieng Viet, bo _ - va khoang trang — nen "Title",
-     "tieu_de", "tieuDe", "Tiêu đề", "tên", "Mã" deu khop. */
-  var KHOA_UU_TIEN = ["name", "title", "ten", "tieude", "label", "id", "key", "code",
-                      "ma", "slug", "email", "username", "type", "kind"];
-
-  function chuanKhoa(k) {
-    var s = String(k).toLowerCase();
-    if (s.normalize) s = s.normalize("NFD").replace(/[̀-ͯ]/g, "");
-    return s.replace(/đ/g, "d").replace(/[\s_\-]/g, "");
-  }
-
-  function giaTriNgan(v) {
-    return typeof v === "string" ? JSON.stringify(v) : String(v);
-  }
-
-  /** Khoa "dang doc" nhat cua object: khoa uu tien co gia tri nguyen thuy
-      (khac null, khac chuoi rong); khong co thi truong nguyen thuy dau
-      tien (uu tien co gia tri). Khong co truong nguyen thuy nao: null. */
-  function truongNoiBat(o) {
-    if (!laNhanh(o) || Array.isArray(o)) return null;
-    var ks = Object.keys(o), tot = null, hang = Infinity, dauTien = null, dauRong = null, i, v;
-    for (i = 0; i < ks.length; i++) {
-      v = o[ks[i]];
-      if (laNhanh(v)) continue;
-      var coNghia = v !== null && !(typeof v === "string" && !v.trim());
-      if (!coNghia) { if (dauRong === null) dauRong = ks[i]; continue; }
-      if (dauTien === null) dauTien = ks[i];
-      var h = KHOA_UU_TIEN.indexOf(chuanKhoa(ks[i]));
-      if (h >= 0 && h < hang) { hang = h; tot = ks[i]; }
-    }
-    return tot !== null ? tot : dauTien !== null ? dauTien : dauRong;
-  }
-
-  function tomTatObject(o) {
-    var k = truongNoiBat(o);
-    if (k !== null) return k + ": " + giaTriNgan(o[k]);
-    var ks = Object.keys(o);
-    if (!ks.length) return "";
-    return ks.slice(0, 4).join(", ") + (ks.length > 4 ? ", …" : "");
-  }
-
-  /** Dong xem truoc ngan (~60 ky tu) cho nhanh dang gap, de phan biet cac
-      phan tu ma khong phai mo ra:
-        object  -> name: "Phúc"            (truong noi bat)
-        object  -> a, b, c, …              (khong co truong nguyen thuy)
-        mang    -> [0] name: "A" …         (phan tu dau la object)
-        mang    -> 1, 2, 3 …               (phan tu nguyen thuy)
-      `muc` (noi bo): so lop mang-trong-mang da di qua. Moi lop them "[0] "
-      (4 ky tu), nen qua gioiHan/4 lop thi phan nhin thay da toan la tien to —
-      dung som, ket qua y het ma khong de quy 20 000 lop (tran ngan xep). */
-  function xemTruoc(v, gioiHan, muc) {
-    gioiHan = gioiHan || 60;
-    muc = muc || 0;
-    if (muc > gioiHan / 4 + 1) return "…";
-    var s = "";
-    if (Array.isArray(v)) {
-      if (!v.length) return "";
-      var dau = v[0];
-      if (laNhanh(dau)) {
-        s = "[0] " + (Array.isArray(dau) ? (xemTruoc(dau, gioiHan, muc + 1) || "[ ]") : (tomTatObject(dau) || "{ }"));
-        if (v.length > 1) s += " …";
-      } else {
-        var phan = [];
-        for (var i = 0; i < v.length && phan.length < 3; i++) {
-          if (laNhanh(v[i])) break;
-          phan.push(giaTriNgan(v[i]));
-        }
-        s = phan.join(", ") + (v.length > phan.length ? " …" : "");
-      }
-    } else if (laNhanh(v)) {
-      s = tomTatObject(v);
-    }
-    return catNgan(s, gioiHan);
-  }
+  /* --- xem truoc nhanh dang gap: da chuyen sang tom-tat.js (JE.tomTat) --- */
 
   /* ==================================================================
      3c. Lich su sua (hoan tac / lam lai) — DUNG CHUNG moi tab
@@ -2296,7 +2334,8 @@
     var r = new FileReader();
     r.onload = function () {
       coTep.textContent = f.name + " · " + coChu(f.size);
-      datVanBan(String(r.result), {
+      var vanBanTep = String(r.result);
+      datVanBan(vanBanTep, {
         nhan: "Mở tệp " + catNgan(f.name, 40),
         /* Tep moi: cay quay ve trang thai gap/mo mac dinh — doi SAU khi
            chup, de hoan tac tra lai ca trang thai cay cu. */
@@ -2306,6 +2345,7 @@
           cayEl.scrollTop = 0;
         }
       });
+      phat("mo-tep", { ten: f.name, vanBan: vanBanTep });
     };
     r.readAsText(f);
     e.target.value = "";
@@ -2352,6 +2392,24 @@
     veCay();
   };
   $("#cay-kieu").onchange = veCay;
+  (function () {
+    var luu = null;
+    try { luu = localStorage.getItem("json-editor:kich-thuoc"); } catch (e) {}
+    if (luu === "0") $("#cay-kich-thuoc").checked = false;
+    hienKichThuoc = $("#cay-kich-thuoc").checked;
+  })();
+  $("#cay-kich-thuoc").onchange = function () {
+    try { localStorage.setItem("json-editor:kich-thuoc", this.checked ? "1" : "0"); } catch (e) {}
+    veCay();
+  };
+  /* Hang gap ma ngan sach ve da het (tai lieu lon): do kich thuoc rieng hang
+     do khi nguoi dung re chuot toi hoac focus bang phim. */
+  function doKichThuocHang(e) {
+    var n = e.target && e.target.closest ? e.target.closest(".n") : null;
+    if (n && n._meta === 1 && n.classList.contains("dong-lai")) capNhatMeta(n);
+  }
+  cayEl.addEventListener("mouseover", doKichThuocHang);
+  cayEl.addEventListener("focusin", doKichThuocHang);
 
   cayEl.addEventListener("scroll", function () {
     cuonCay.top = cayEl.scrollTop;
@@ -2445,6 +2503,7 @@
     if (!b) return false;
     els(".o").forEach(function (x) { x.classList.toggle("dang", x.dataset.o === o); });
     oHien = o;
+    if (o === "cay" || o === "soan") tabDuLieuGan = o;
     if (oHien === "cay") {
       if (cayBan) veCay();
       else { cayEl.scrollTop = cuonCay.top; cayEl.scrollLeft = cuonCay.left; }
@@ -2490,6 +2549,9 @@
     doThut: doThut, vietTheoKieu: vietTheoKieu,
     /* xem truoc nhanh gap */
     xemTruoc: xemTruoc, truongNoiBat: truongNoiBat,
+    /* dot J2: metadata nhanh gap */
+    tomTatNut: TT.tomTatNut, doDaiByte: TT.doDaiByte, dinhDangByte: TT.dinhDangByte,
+    thongKeNhanh: TT.thongKeNhanh, moTaNut: TT.moTaNut, moTaAria: TT.moTaAria,
     /* sua theo duong dan */
     layTai: layTai, datTai: datTai, doiTenKhoa: doiTenKhoa, themVao: themVao,
     xoaTai: xoaTai, diChuyen: diChuyen, doiKieu: doiKieu, docGiaTri: docGiaTri,
@@ -2539,14 +2601,27 @@
     return denViTri(i, i);
   }
 
+  /** Chon gia tri (hoac khoa) o `duong` trong o Soan nho vi-tri.timViTri —
+      dung duoc ca khi JSON dang loi (timViTri chiu JSON hong). `chon`:
+      "gia-tri" (mac dinh) hoac "khoa" (token khoa neu co). */
+  function denDuongSoan(duong, tc) {
+    var vt = VT.timViTri(nhap.value, duong);
+    if (!vt) return false;
+    var bd = vt.bd, kt = vt.kt;
+    if (tc.chon === "khoa" && vt.khoaBd >= 0) { bd = vt.khoaBd; kt = vt.khoaKt; }
+    return denViTri(bd, kt);
+  }
+
   /** Mo cac to tien, dung dan nhanh can thiet roi focus nut theo duong dan
-      tren tab Cay. Tab Soan can vi tri van ban cua duong dan — co khi co
-      vi-tri.js (dot sau); hien chi ho tro tab Cay. */
+      tren tab Cay, hoac chon doan van ban tuong ung o tab Soan.
+        tc.tab   "cay" (mac dinh) | "soan" | "tu-dong" (tab du lieu dung gan nhat)
+        tc.chon  "gia-tri" | "khoa" (chi o Soan) */
   function denDuong(duong, tc) {
     tc = tc || {};
-    if (tc.tab === "soan") return false;
-    if (!dongBoDoc()) return false;
     duong = duong || [];
+    var tab = tc.tab === "tu-dong" ? tabDuLieuGan : tc.tab;
+    if (tab === "soan") return denDuongSoan(duong, tc);
+    if (!dongBoDoc()) return false;
     if (duong.length && layTai(duLieu, duong) === undefined) return false;
     chuyenTab("cay");
     if (cayBan) veCay();
@@ -2578,16 +2653,22 @@
     /* di chuyen */
     chuyenTab: chuyenTab,
     tabHien: function () { return oHien; },
+    tabDuLieuGan: function () { return tabDuLieuGan; },       /* "cay" | "soan": tab du lieu nguoi dung vua dung */
     denDuong: denDuong,
     denViTri: denViTri,
     denDong: denDong,
-    /* su kien: "doi-du-lieu" (sau moi doc()), "doi-tab", "doi-chon", "doi-lich-su" */
+    /* su kien: "doi-du-lieu" (sau moi doc()), "doi-tab", "doi-chon", "doi-lich-su", "mo-tep" ({ten, vanBan}) */
     dangKy: dangKy,
     thongBao: thongBao,
+    /* huy hieu loi tren cay: Map(JSON.stringify(duong) -> {a:[thongBao…], b:soLoiBenTrong}); null = xoa */
+    datHuyHieuCay: datHuyHieuCay,
     hangSo: {
       GIOI_HAN_MAU: GIOI_HAN_MAU,
       GIOI_HAN_LICH_SU: GIOI_HAN_LICH_SU,
-      GIOI_HAN_KY_TU_LICH_SU: GIOI_HAN_KY_TU_LICH_SU
+      GIOI_HAN_KY_TU_LICH_SU: GIOI_HAN_KY_TU_LICH_SU,
+      NGAN_SACH: NGAN_SACH,
+      NGUONG_KIEM_TU_DONG: 1024 * 1024,                /* schema tu kiem moi lan sua khi du lieu <= 1 MB */
+      CHAY_NEN: JE.chayNen ? JE.chayNen.cauHinh : null  /* {han, nganLuongChinh}: doi duoc luc chay (kiem thu) */
     }
   };
 

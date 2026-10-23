@@ -838,6 +838,291 @@ function wordTests() {
   kiem("note 400k ký tự: bản mới nhanh hơn bản cũ (nhanh nhất trong 5 lần xen kẽ: " + tNew.toFixed(1) + " ms so với " + tOld.toFixed(1) + " ms" + (slack > 1 ? ", PW_PERF_SLACK=" + slack : "") + ")", tNew < tOld * slack);
 }
 
+/* ======================================================================== Soạn bằng AI (POST /ai/wiki): core/compose.js, repo.related, data/ai.js
+   Luật liên kết/vùng toán dùng CHUNG bộ ca kiem-lien-ket.json với bản Python (pytest -k ai_wiki): hai bên phải cho đúng một kết quả. */
+async function composeTests() {
+  var C = require(path.join(J, "core/compose.js")), FX = JSON.parse(fs.readFileSync(path.join(__dirname, "kiem-lien-ket.json"), "utf8"));
+  var slack = Math.max(1, Number(process.env.PW_PERF_SLACK) || 1);
+  sec("soạn bằng AI — liên kết + vùng toán (bộ ca dùng chung với pytest)");
+  var badP = FX.parseLinks.filter(function (c) { return !bang(C.parseLinks(c.in).map(function (l) { return [l.type, l.title, l.alias]; }), c.links); });
+  kiem("parseLinks bỏ qua code + toán ($$, \\[ \\], \\( \\), $ theo luật pandoc; không vượt dòng trống; dấu mở không đóng không mở gì): " + FX.parseLinks.length + " ca", !badP.length,
+    badP.map(function (c) { return JSON.stringify(c.in) + " → " + JSON.stringify(C.parseLinks(c.in).map(function (l) { return l.title; })); }).join(" ; "));
+  var badD = FX.defangMath.filter(function (c) { return C.defangMath(c.in) !== c.out || C.defangMath(c.out) !== c.out; });
+  kiem("defangMath: [[ ]] trong toán thành [ [ ] ] (TeX vẽ y hệt), ngoài toán giữ nguyên, chạy lại không đổi: " + FX.defangMath.length + " ca", !badD.length, badD.map(function (c) { return JSON.stringify(C.defangMath(c.in)); }).join(" ; "));
+  var badR = FX.rewriteLinks.filter(function (c) {
+    var m = {}; c.valid.forEach(function (t) { m[T.titleKey(t)] = t; });
+    var r = C.rewriteLinks(c.in, function (t) { return m[T.titleKey(t)] || null; });
+    return r.text !== c.out || !bang(r.dropped, c.dropped);
+  });
+  kiem("rewriteLinks: giữ liên kết hợp lệ đúng chữ gốc, [[link::X]] → [[X]], còn lại thành chữ thường + báo dropped: " + FX.rewriteLinks.length + " ca", !badR.length);
+  var badV = FX.verify.filter(function (c) {
+    var m = {}; c.valid.forEach(function (x) { m[T.titleKey(x)] = x; });
+    var canon = function (x) { return m[T.titleKey(x)] || null; }, r = C.verifyLinks(c.in, canon), again = C.verifyLinks(r.text, canon);
+    return r.text !== c.out || !bang(r.dropped, c.dropped) || again.text !== r.text || again.dropped.length || C.verify(c.in, canon).text !== r.text ||
+      N.parseLinks(r.text).some(function (l) { return !canon(l.title); }) ||                     // bộ đọc của ĐỒ THỊ (che code, không che toán) chỉ thấy tiêu đề thật
+      C.parseLinks(r.text).some(function (l) { return !canon(l.title); });                       // bộ đọc của TRANG (che cả toán) cũng vậy
+  });
+  kiem("verifyLinks (gỡ ngòi toán → rewriteLinks → sealLinks; bộ ca dùng chung với pytest): gỡ liên kết lồng nhau không để lại liên kết sống tới tiêu đề lạ, kiểm lần hai không đổi gì, cả hai bộ đọc (đồ thị / trang) chỉ thấy tiêu đề thật, compose.verify là tên cũ: " + FX.verify.length + " ca",
+    !badV.length, badV.map(function (c) { return JSON.stringify(c.in) + " → " + JSON.stringify(C.verifyLinks(c.in, function () { return null; }).text); }).join(" ; "));
+  var nested = C.verify("A [[ngoài [[Bịa]] cuối]] B", function () { return null; });
+  kiem("ca người kiểm bắt được: verify('A [[ngoài [[Bịa]] cuối]] B') → 'A [ [ngoài Bịa cuối] ] B' (chứ không phải liên kết sống [[ngoài Bịa cuối]]), dropped = [[Bịa]], [[ngoài Bịa cuối]]",
+    nested.text === "A [ [ngoài Bịa cuối] ] B" && bang(nested.dropped, ["[[Bịa]]", "[[ngoài Bịa cuối]]"]), JSON.stringify(nested));
+  var badM = FX.maskCode.filter(function (c) { return N.maskCode(c[0]) !== c[1]; });
+  kiem("maskCode (code nội tuyến trong MỘT lượt) cho đúng kết quả của luật regex gốc trên bộ ca dùng chung: " + FX.maskCode.length + " ca", !badM.length, badM.map(function (c) { return JSON.stringify(c[0]) + " → " + JSON.stringify(N.maskCode(c[0])); }).join(" ; "));
+  var badK = FX.titleKey.filter(function (p) { return T.titleKey(p[0]) !== p[1]; }), badT = FX.normTag.filter(function (p) { return N.normTag(p[0]) !== p[1]; });
+  kiem("titleKey + normTag khớp bản Python (" + (FX.titleKey.length + FX.normTag.length) + " ca)", !badK.length && !badT.length, JSON.stringify(badK.concat(badT)));
+  var patho = ["\\(".repeat(6000), "\\[ a".repeat(3000), "$$ x".repeat(3000), "$a ".repeat(4000), ("x $" + "\\".repeat(5)).repeat(1500)], worst = 0;
+  patho.forEach(function (s) { var t0 = process.hrtime.bigint(); C.mathRanges(N.maskCode(s)); worst = Math.max(worst, Number(process.hrtime.bigint() - t0) / 1e6); });
+  kiem("vùng toán tuyến tính: 12.000 ký tự '\\(' / '\\[' / '$$' / '$' không đóng < 50 ms (chậm nhất " + worst.toFixed(1) + " ms)", worst < 50 * slack);
+
+  sec("soạn bằng AI — chọn ghi chú liên quan (compose.rank, repo.related)");
+  var tick = 1.97e12, R = W.repo.create(W.store.memory(), { now: function () { return (tick += 1000); } });
+  await R.open();
+  var docker = (await R.save({ title: "Docker", tags: ["devops", "container"], content: "Docker đóng gói ứng dụng vào container image, chạy giống nhau ở mọi máy." })).note;
+  var pod = (await R.save({ title: "Kubernetes Pod", tags: ["kubernetes", "devops"], content: "Pod là đơn vị nhỏ nhất Kubernetes lập lịch." })).note;
+  await R.save({ title: "Nấu phở", tags: ["nau-an"], content: "Hầm xương bò tám tiếng, quế hồi thảo quả." });
+  var runtime = (await R.save({ title: "Container Runtime", content: "containerd và CRI-O chạy container cho kubelet." })).note;
+  var meshTag = (await R.save({ title: "Mạng trong cụm", tags: ["kubernetes"], content: "CNI, Calico." })).note;
+  var old = (await R.save({ title: "Docker cũ", content: "Docker docker docker container." })).note; await R.save({ id: old.id, status: "trashed" });
+  var filler = []; for (var i = 0; i < 70; i++) filler.push({ title: "Phụ " + i, content: "chung chung " + i });
+  await R.bulkAdd(filler);
+  var TEXT = "Hôm nay học về Kubernetes Pod và Docker: một pod chạy nhiều container chung mạng, image build bằng docker. Chung quy là kubernetes lập lịch pod. Bỏ qua phần cũ, bộ nhớ đủ dùng.";
+  var rel = await R.related(TEXT), titles = rel.map(function (r) { return r.h.title; });
+  kiem("tiêu đề được NHẮC NGUYÊN VĂN lên đầu (Kubernetes Pod, Docker)", titles.length >= 2 && bang(titles.slice(0, 2).sort(), ["Docker", "Kubernetes Pod"]), titles.join(" | "));
+  kiem("ghi chú không liên quan không được gửi (Nấu phở: chỉ trùng token 2 ký tự 'bo' do bỏ dấu — bỏ/bò/bộ); ghi chú trong thùng rác bị loại", titles.indexOf("Nấu phở") === -1 && titles.indexOf("Docker cũ") === -1, titles.join(" | "));
+  kiem("token quá phổ biến (> max(50, 5 %) ghi chú, vd 'chung') bị bỏ: 70 ghi chú phụ không lọt vào", !titles.some(function (t) { return /^Phụ /.test(t); }), titles.join(" | "));
+  kiem("khớp tag (#kubernetes) và nội dung (container) cũng được xếp hạng", titles.indexOf("Mạng trong cụm") !== -1 && titles.indexOf("Container Runtime") !== -1, titles.join(" | "));
+  var lone = C.rank([{ n: 1, id: "a", title: "Nấu phở", tk: "nau pho", tags: [], u: 1, s: "active" }, { n: 2, id: "b", title: "Docker", tk: "docker", tags: [], u: 2, s: "active" }],
+    [{ tok: "bo", a: [S.mk(1, 4)], idf: 1.1 }, { tok: "docker", a: [S.mk(2, 5)], idf: 1.1 }], C.textInfo("bỏ qua docker"));
+  kiem("chỉ giữ ghi chú có điểm ≥ 10 % ghi chú đứng đầu; token 2 ký tự tính 1/4", lone.length === 1 && lone[0].h.title === "Docker" &&
+    C.rank([{ n: 1, id: "a", title: "Nấu phở", tk: "nau pho", tags: [], u: 1, s: "active" }], [{ tok: "bo", a: [S.mk(1, 4)], idf: 1.1 }], C.textInfo("bỏ qua")).length === 1, JSON.stringify(lone.map(function (r) { return [r.h.title, r.score]; })));
+  kiem("K giới hạn (k = 1 → 1; mặc định ≤ 25; trần 40)", (await R.related(TEXT, { k: 1 })).length === 1 && rel.length <= 25 && C.rank([], [], C.textInfo("x"), { k: 999 }).length === 0);
+  kiem("văn bản rỗng / kho rỗng → không có ứng viên", (await R.related("")).length === 0 && (await W.repo.create(W.store.memory()).open().then(function (e) { return e.related(TEXT); })).length === 0);
+  var sel = C.candidates(rel, { exclude: new Set([pod.id]) });
+  kiem("candidates: ref c1…cK theo thứ tự, bảng ref → id, bỏ ghi chú người dùng bỏ chọn, tag ≤ 8, trích ≤ 110 ký tự, KHÔNG có id/ngày",
+    sel.list.length === rel.length - 1 && sel.list[0].ref === "c1" && sel.refs.c1 === R.findByTitle(sel.list[0].title).id && !sel.list.some(function (c) { return c.title === "Kubernetes Pod"; }) &&
+    sel.list.every(function (c, k) { return c.ref === "c" + (k + 1) && c.tags.length <= 8 && c.snippet.length <= 110 && Object.keys(c).sort().join() === "ref,snippet,tags,title"; }));
+  var only = C.candidates(rel, { titlesOnly: true });
+  var body = C.request({ text: "x".repeat(13000), hint: "  gợi\n ý  ", maxNotes: 9, candidates: only.list, tags: R.tags(), titlesOnly: true });
+  kiem("request: cắt 12.000 ký tự, gợi ý một dòng, maxNotes ≤ 5; 'Chỉ gửi tiêu đề' → không tag, không trích, không danh sách tag",
+    body.text.length === 12000 && body.hint === "gợi ý" && body.maxNotes === 5 && body.tags.length === 0 && body.candidates.every(function (c) { return !c.tags.length && !c.snippet; }));
+  kiem("request thường: gửi ≤ 60 tag của wiki (nhiều ghi chú nhất trước)", bang(C.request({ text: "a", tags: R.tags() }).tags.slice(0, 2), ["devops", "kubernetes"]));
+
+  // 10.000 ghi chú: xếp hạng (compose.rank) < 100 ms — dựng chỉ mục y như repo (search.indexTerms) rồi đo riêng phần xếp hạng
+  var seed = 11, rnd = function () { seed = (seed * 48271) % 2147483647; return seed / 2147483647; };
+  var vocab = []; for (i = 0; i < 4000; i++) vocab.push("tu" + i.toString(36) + "x");
+  var pick = function (k) { var o = []; for (var q = 0; q < k; q++) o.push(vocab[Math.floor(rnd() * rnd() * vocab.length)]); return o.join(" "); };
+  var heads = [], posting = new Map();
+  for (i = 1; i <= 10000; i++) {
+    var note = { title: "Chủ đề " + pick(3), content: pick(60), tags: ["t" + (i % 37), "g" + (i % 11)] };
+    heads.push({ n: i, id: "id" + i, title: note.title, tk: T.titleKey(note.title), tags: note.tags, u: i, s: i % 50 ? "active" : "trashed", sn: N.plainSnippet(note.content, 110) });
+    S.indexTerms(note).forEach(function (bits, tok) { var a = posting.get(tok); if (!a) posting.set(tok, a = []); a.push(S.mk(i, bits)); });
+  }
+  var bigText = pick(1500) + " " + heads[123].title + " t5 " + heads[4567].title, info = C.textInfo(bigText), lists = [];
+  info.tokens.forEach(function (tok) { var a = posting.get(tok); if (a && a.length <= Math.max(50, 500)) lists.push({ tok: tok, a: Uint32Array.from(a), idf: Math.log(1 + 10000 / a.length) }); });
+  var best = Infinity, top = null;
+  for (i = 0; i < 5; i++) { var t0 = process.hrtime.bigint(); top = C.rank(heads, lists, info, { k: 25 }); best = Math.min(best, Number(process.hrtime.bigint() - t0) / 1e6); }
+  kiem("10.000 ghi chú: xếp hạng < 100 ms (nhanh nhất 5 lần: " + best.toFixed(1) + " ms, " + lists.length + " danh sách)" + (slack > 1 ? ", PW_PERF_SLACK=" + slack : ""), best < 100 * slack && top.length === 25);
+  kiem("…tiêu đề nhắc nguyên văn nằm trong top 25", top.some(function (r) { return r.h.n === 124; }) && top.some(function (r) { return r.h.n === 4568; }), top.slice(0, 5).map(function (r) { return r.h.title; }).join(" | "));
+  var big = W.repo.create(W.store.memory(), { now: function () { return (tick += 1); } }); await big.open();
+  await big.bulkAdd(heads.map(function (hd, k) { return { title: hd.title, content: pick(60), tags: hd.tags }; }));
+  var tr = Infinity; for (i = 0; i < 3; i++) { var t1 = process.hrtime.bigint(); await big.related(bigText); tr = Math.min(tr, Number(process.hrtime.bigint() - t1) / 1e6); }
+  kiem("10.000 ghi chú trong kho (bộ nhớ): repo.related đọc danh sách + xếp hạng < 300 ms (" + tr.toFixed(1) + " ms)", tr < 300 * slack);
+
+  sec("soạn bằng AI — xem trước → kế hoạch (kiểm lại liên kết lúc áp dụng; AI không sửa ghi chú cũ; hoàn tác)");
+  var res = { notes: [
+    { key: "n1", title: "Kubernetes Pod (bài 2)", tags: ["Kubernetes", "devops"], summary: "Tóm tắt.", existing: null,
+      markdown: "## Pod\n\nChạy trong [[Docker]]; vòng đời ở [[Pod lifecycle]]; sau này [[Service Mesh]]. Bịa: [[Không Có]]. Toán $[[0,1]]$.\n```\n[[trong code]]\n```",
+      relations: [{ type: "depends_on", target: { kind: "existing", ref: "c1", title: "Docker" }, reason: "chạy [[container]]\nhai dòng" }, { type: "parent_of", target: { kind: "batch", key: "n2", title: "Pod lifecycle" } },
+        { type: "related_to", target: { kind: "new", title: "Service Mesh" } }, { type: "weird", target: { kind: "new", title: "X" } }, { type: "link", target: { kind: "lạ", title: "Y" } }] },
+    { key: "n2", title: "Pod lifecycle", tags: ["kubernetes"], markdown: "Các pha của [[Kubernetes Pod (bài 2)]].", relations: [], existing: null },
+    { key: "n3", title: "Docker", tags: [], markdown: "Ghi chú trùng tên một ghi chú có sẵn.", relations: [], existing: { ref: "c1", title: "Docker" } }],
+    newTopics: [{ title: "Service Mesh", reason: "sẽ học" }, { title: "service  mesh" }], dropped: ["[[Bịa Ở Máy Chủ]]"], truncated: true };
+  var env = { resolve: function (t) { return R.resolve(t); }, head: function (id) { return R.head(id); }, today: "2026-10-23" };
+  var d = C.fromResult(res); d.refs = { c1: docker.id };
+  kiem("fromResult: 3 ghi chú, quan hệ kiểu/loại lạ bị bỏ, chủ đề trùng gộp, mọi thứ mặc định giữ, trùng tiêu đề mặc định 'tạo bản mới'",
+    d.notes.length === 3 && d.notes[0].relations.length === 3 && d.topics.length === 1 && d.notes[2].mode === "new" && d.notes.every(function (n) { return n.on; }) && d.truncated && d.dropped.length === 1);
+  var junk = C.fromResult({ notes: [{ title: "", markdown: "x" }, { title: "A", markdown: "  " }, 5, null, { title: "## [[B]]|c", markdown: "y", tags: "x, y", relations: "rác" }], newTopics: "rác" });
+  kiem("fromResult không tin dữ liệu: bỏ ghi chú thiếu tiêu đề/nội dung, tiêu đề bỏ [ ] | #, không ném", bang(junk.notes.map(function (n) { return n.title; }), ["B c"]) && bang(junk.notes[0].tags, ["x", "y"]) && !junk.topics.length);
+  d.notes[1].title = "Vòng đời Pod";                       // người dùng đổi tên ghi chú trong lô
+  d.notes[0].relations[2].on = false;                      // bỏ quan hệ tới chủ đề mới (chủ đề vẫn giữ)
+  var p = C.plan(d, env), c0 = p.ops[0] && p.ops[0].content || "", c1 = p.ops[1] && p.ops[1].content || "";
+  kiem("plan: 3 thao tác TẠO (không đụng ghi chú cũ); trùng tiêu đề → 'Docker (2)'", bang(p.ops.map(function (o) { return o.op + ":" + o.title; }), ["create:Kubernetes Pod (bài 2)", "create:Vòng đời Pod", "create:Docker (2)"]) && bang(p.renamed, [{ from: "Docker", to: "Docker (2)" }]), JSON.stringify(p.ops.map(function (o) { return o.title; })));
+  kiem("plan: [[Docker]] giữ (có sẵn), [[Pod lifecycle]] theo tên mới [[Vòng đời Pod]], chủ đề mới giữ = [[Service Mesh]] mờ, [[Không Có]] → chữ thường",
+    has(c0, "[[Docker]]") && has(c0, "[[Vòng đời Pod]]") && !has(c0, "Pod lifecycle") && has(c0, "[[Service Mesh]]") && has(c0, "Bịa: Không Có.") && p.dropped.indexOf("[[Không Có]]") !== -1, c0);
+  kiem("plan: toán được gỡ ngòi ($[ [0,1] ]$), code giữ nguyên ([[trong code]])", has(c0, "$[ [0,1] ]$") && has(c0, "```\n[[trong code]]\n```"));
+  kiem("plan: mục '## Liên kết' chỉ có quan hệ được giữ, lý do một dòng không [[ ]]", has(c0, "## Liên kết\n\n- [[depends_on::Docker]] — chạy container hai dòng\n- [[parent_of::Vòng đời Pod]]\n") && !/Liên kết[\s\S]*Service Mesh/.test(c0), c0.slice(c0.indexOf("## Liên kết")));
+  kiem("plan: ghi chú trong lô trỏ lại nhau theo tiêu đề cuối; tag chuẩn hoá", has(c1, "[[Kubernetes Pod (bài 2)]]") && bang(p.ops[0].tags, ["kubernetes", "devops"]));
+  d.topics[0].on = false; d.notes[2].on = false;
+  var p2 = C.plan(d, env), c2 = p2.ops[0].content;
+  kiem("bỏ chủ đề mới → liên kết tới nó thành chữ thường; bỏ một ghi chú → còn 2 thao tác", !has(c2, "[[Service Mesh]]") && has(c2, "sau này Service Mesh.") && p2.ops.length === 2);
+  await R.save({ id: docker.id, status: "trashed" });       // ứng viên vừa bị xoá trên máy trước khi áp dụng
+  var p3 = C.plan(d, env), c3 = p3.ops[0].content;
+  kiem("ứng viên bị xoá/đổi tên trước lúc áp dụng → [[Docker]] thành chữ thường, quan hệ depends_on bị bỏ (kiểm trên kho LÚC ÁP DỤNG)", !has(c3, "[[Docker]]") && !has(c3, "depends_on::") && p3.dropped.indexOf("[[Docker]]") !== -1, c3);
+  await R.save({ id: docker.id, status: "active" });
+  d.notes[2].on = true; d.notes[2].mode = "append";
+  var p4 = C.plan(d, env), ap = p4.ops[2];
+  kiem("người dùng chọn rõ 'Gộp vào ghi chú có sẵn' → thao tác append vào đúng id, mục '## Bổ sung <ngày>'", ap.op === "append" && ap.id === docker.id && ap.add.indexOf("\n\n## Bổ sung 2026-10-23\n\nGhi chú trùng tên") === 0, JSON.stringify(ap));
+  var dx = C.fromResult({ notes: [{ title: "Container Runtime", markdown: "Gộp theo id." }] }); dx.refs = {};
+  dx.notes[0].existing = { ref: "", id: runtime.id, title: "Container Runtime" }; dx.notes[0].mode = "append";
+  var px = C.plan(dx, env);
+  kiem("trùng một ghi chú KHÔNG nằm trong ứng viên (existing theo id): gộp đúng ghi chú đó; để mặc định thì tạo 'Container Runtime (2)'",
+    px.ops[0].op === "append" && px.ops[0].id === runtime.id && (dx.notes[0].mode = "new", C.plan(dx, env).ops[0].title === "Container Runtime (2)"));
+  kiem("unappend (hàm ngược của gộp): gỡ đúng đoạn đã nối; ghi chú đã sửa sau đó → không đụng (null)",
+    C.unappend("cũ" + ap.add, ap.add) === "cũ" && C.unappend("cũ" + ap.add + "sửa thêm", ap.add) === null && C.unappend("x", "") === null);
+  kiem("build: markdown + '## Liên kết' (kiểu link không có tiền tố)", C.build("A\n\n", [{ type: "link", title: "B", reason: "" }, { type: "child_of", title: "C", reason: "vì" }]) === "A\n\n## Liên kết\n\n- [[B]]\n- [[child_of::C]] — vì\n" && C.build("A", []) === "A\n");
+  // áp dụng thật trên kho: liên kết giải, quan hệ hiện ở ghi chú cũ (cạnh vào), hoàn tác = Thùng rác (bản ghi mới hơn)
+  d.notes[2].mode = "new"; d.topics[0].on = true;
+  var p5 = C.plan(d, env), made = [];
+  for (i = 0; i < p5.ops.length; i++) made.push((await R.save({ title: p5.ops[i].title, content: p5.ops[i].content, tags: p5.ops[i].tags })).note);
+  var relNew = await R.relations(made[0].id), relOld = await R.relations(docker.id);
+  kiem("áp dụng: ghi chú mới nối tới Docker (depends_on) và tới ghi chú trong lô; Service Mesh là liên kết mờ",
+    relNew.items.some(function (x) { return x.type === "depends_on" && x.head.id === docker.id; }) && relNew.items.some(function (x) { return x.head.id === made[1].id; }) && relNew.ghosts.some(function (g) { return g.title === "Service Mesh"; }));
+  kiem("áp dụng: ghi chú cũ KHÔNG bị sửa nhưng thấy cạnh vào (Được phụ thuộc bởi)", (await R.get(docker.id)).content === docker.content && relOld.items.some(function (x) { return x.dir === "in" && x.head.id === made[0].id; }));
+  var u0 = made[0].updated_at; await R.save({ id: made[0].id, status: "trashed" });
+  kiem("hoàn tác = chuyển vào Thùng rác bằng bản ghi MỚI HƠN (đồng bộ đẩy lên như thường)", R.head(made[0].id).s === "trashed" && (await R.get(made[0].id)).updated_at > u0 && (await R.pendingChanges()).some(function (c) { return c.rid === made[0].id; }));
+}
+
+/* ======================================================================== chống regex bậc hai: câu trả lời AI xấu nhất
+   Một câu trả lời AI cho phép tới 40.000 ký tự × 5 ghi chú và trang kiểm/xem nó NGAY trong luồng chính (compose.plan gọi maskCode ≥ 3 lần mỗi ghi chú):
+   regex bậc hai trên một dải ký tự lặp thì treo tab. Các luật cũ nằm ở đây làm ĐẶC TẢ (kết quả phải y hệt), bản mới phải tuyến tính. */
+function hostileTests() {
+  sec("chống regex bậc hai trên câu trả lời AI xấu nhất (40.000 ký tự × 5 ghi chú)");
+  var C = require(path.join(J, "core/compose.js")), slack = Math.max(1, Number(process.env.PW_PERF_SLACK) || 1);
+  var seed = 23, rnd = function () { seed = (seed * 48271) % 2147483647; return seed / 2147483647; };
+  var pick = function (pool) { return pool[Math.floor(rnd() * pool.length)]; };
+  function ms(f) { var t0 = process.hrtime.bigint(); f(); return Number(process.hrtime.bigint() - t0) / 1e6; }
+
+  // 1. code nội tuyến: một lượt = regex gốc
+  var OLD_INLINE = /(`+)(?!`)([^\n]*?[^`\n])\1(?!`)/g, oldInline = function (ln) { return ln.replace(OLD_INLINE, function (s) { return " ".repeat(s.length); }); };
+  var bad = 0, first = "";
+  for (var k = 0; k < 6000; k++) {
+    var ln = "", len = Math.floor(rnd() * 28);
+    for (var i = 0; i < len; i++) ln += pick(["`", "`", "`", "`", "a", "b", " ", "[", "$", "|"]);
+    if (N.maskInlineCode(ln) !== oldInline(ln)) { bad++; if (!first) first = JSON.stringify(ln); }
+  }
+  kiem("maskInlineCode = luật regex gốc trên 6.000 dòng ngẫu nhiên nhiều dấu huyền (cùng kết quả, cùng độ dài)", bad === 0, bad + " lệch, vd " + first);
+  var multi = "a [[x]] `[[y]]` b\n```js\n`[[z]]`\n```\n``[[w]]`` [[v]] `` x ` `";
+  kiem("maskCode: khối rào + code nội tuyến nhiều dấu huyền giữ nguyên độ dài và dòng", N.maskCode(multi).length === multi.length && N.maskCode(multi).split("\n").length === 5 && bang(N.parseLinks(multi).map(function (l) { return l.title; }), ["x", "v"]), JSON.stringify(N.parseLinks(multi).map(function (l) { return l.title; })));
+
+  // 1b. kiểm lại liên kết: an toàn với CẢ HAI bộ đọc và ổn định, trên văn bản ngẫu nhiên đầy ngoặc / toán / code / escape
+  var VT = ["[[", "]]", "[", "]", "$", "$$", "\(", "\)", "\[", "\]", "`", "``", "```", "\n", "\n", "\n\n", " ", " ", "Docker", "docker", "Bịa", "x", "|", "::", "link::", "depends_on::", "\\", "~~~", "a b", "é"];
+  var canonD = function (x) { return T.titleKey(x) === "docker" ? "Docker" : null; };
+  bad = 0; first = "";
+  for (k = 0; k < 6000; k++) {
+    var vs = "", vn = Math.floor(rnd() * 23);
+    for (i = 0; i < vn; i++) vs += pick(VT);
+    var v1 = C.verifyLinks(vs, canonD), v2 = C.verifyLinks(v1.text, canonD);
+    if (v2.text !== v1.text || v2.dropped.length || N.parseLinks(v1.text).some(function (l) { return !canonD(l.title); }) || C.parseLinks(v1.text).some(function (l) { return !canonD(l.title); })) { bad++; if (!first) first = JSON.stringify(vs); }
+  }
+  kiem("verifyLinks trên 6.000 văn bản ngẫu nhiên (ngoặc, $, \( \[, `, escape): không bộ đọc nào (đồ thị / trang) còn thấy liên kết tới tiêu đề lạ, kiểm lần hai không đổi gì", bad === 0, bad + " sai, vd " + first);
+
+  // 2. thời gian trên các hình dạng xấu, kích cỡ trần của một ghi chú AI
+  var big = C.LIM.note, shapes = {
+    "dải ` 40.000": "## A\n\nx " + "`".repeat(big), "`a × 20.000": "`a".repeat(big / 2), "``x` × 10.000": "``x`".repeat(big / 4), "` ` × 20.000 rồi ``": "` ".repeat(big / 2) + "``",
+    "`` [[Docker]] ` × 2.500": "`` [[Docker]] `".repeat(big / 16), "hai dòng": "a`".repeat(big / 5) + "\n" + "`".repeat(big / 2),
+    "\\( không đóng": "\\(".repeat(big / 2), "$a không đóng": "$a ".repeat(big / 3), "[[ lồng": "[[".repeat(big / 4) + "x" + "]]".repeat(big / 4)
+  }, worst = 0, worstName = "", sizes = [];
+  Object.keys(shapes).forEach(function (name) {
+    var s = shapes[name], d = ms(function () { N.maskCode(s); N.parseLinks(s); C.parseLinks(s); C.defangMath(s); C.verifyLinks(s, function () { return null; }); });
+    if (d > worst) { worst = d; worstName = name; }
+    sizes.push(s.length);
+  });
+  kiem("maskCode + parseLinks + defangMath + verifyLinks trên " + Object.keys(shapes).length + " hình dạng xấu (≤ " + Math.max.apply(null, sizes) + " ký tự): mỗi hình < 500 ms (chậm nhất " + worst.toFixed(0) + " ms: " + worstName + "; luật cũ: dải ` 5.000 → 0,2 s, 20.000 → 2,8 s, 40.000 → 6,9 s)", worst < 500 * slack);
+  var t5 = [], d5 = ms(function () {
+    for (var q = 0; q < 5; q++) t5.push({ title: "N" + q, tags: ["a" + "./".repeat(20000) + "b"], markdown: shapes[Object.keys(shapes)[q]] });
+    var dr = C.fromResult({ notes: t5 });
+    dr.refs = {};
+    t5 = C.plan(dr, { resolve: function () { return null; }, head: function () { return null; }, today: "2026-10-24" });
+  });
+  kiem("compose.fromResult + plan trên 5 ghi chú xấu nhất (40.000 ký tự, tag './' × 20.000): < 750 ms (" + d5.toFixed(0) + " ms), đủ 5 thao tác", d5 < 750 * slack && t5.ops.length === 5, JSON.stringify(t5.ops && t5.ops.length));
+
+  // 3. tiêu đề ATX: headingOf = regex gốc
+  var OLD_HEAD = /^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/, oldHead = function (l) { var m = OLD_HEAD.exec(l); return m ? { level: m[1].length, text: m[2] } : null; };
+  bad = 0; first = "";
+  for (k = 0; k < 8000; k++) {
+    var hl = "", hn = Math.floor(rnd() * 10);
+    for (i = 0; i < hn; i++) hl += pick(["#", "#", "##", "###", "#######", " ", " ", "  ", "\t", "a", "b c", "x#", "\r", "\u2028", "é"]);
+    if (JSON.stringify(M.headingOf(hl)) !== JSON.stringify(oldHead(hl))) { bad++; if (!first) first = JSON.stringify(hl); }
+  }
+  kiem("headingOf = regex tiêu đề gốc trên 8.000 dòng ngẫu nhiên (cả # đóng, tab, \\r, \\u2028)", bad === 0, bad + " lệch, vd " + first);
+  var wall = "# a" + " ".repeat(big) + "b", dh = ms(function () { M.headings(wall + "\n\n" + wall); M.render(wall, {}); M.headingOf("# a " + "#".repeat(big)); M.headingOf("#" + " ".repeat(big)); });
+  kiem("tiêu đề có dải 40.000 khoảng trắng: headings + render + headingOf < 250 ms (" + dh.toFixed(0) + " ms; regex cũ ~9 s)", dh < 250 * slack);
+
+  // 4. tag: cắt '-./' ở hai đầu bằng tay = regex gốc
+  var oldTag = function (t) {
+    t = String(t).normalize("NFC").toLowerCase().trim().replace(/^#+/, "").replace(/\s+/g, "-").replace(/[^\p{L}\p{N}_\-./]/gu, "").replace(/-{2,}/g, "-").replace(/^[-./]+|[-./]+$/g, "");
+    return t.slice(0, N.LIM.tag);
+  };
+  bad = 0; first = "";
+  for (k = 0; k < 4000; k++) {
+    var tg = "", tn = Math.floor(rnd() * 12);
+    for (i = 0; i < tn; i++) tg += pick(["a", "Z", "-", ".", "/", "#", " ", "_", "é", "--", "./"]);
+    if (N.normTag(tg) !== oldTag(tg)) { bad++; if (!first) first = JSON.stringify(tg); }
+  }
+  kiem("normTag = luật gốc trên 4.000 tag ngẫu nhiên đầy '-./' và '#'", bad === 0, bad + " lệch, vd " + first);
+  var dt = ms(function () { N.normTag("a" + "./".repeat(20000) + "b"); N.normTag("-./".repeat(15000)); });
+  kiem("tag 'a' + './' × 20.000 + 'b' và '-./' × 15.000: < 100 ms (" + dt.toFixed(0) + " ms; regex cũ ~4 s); kết quả đúng", dt < 100 * slack && N.normTag("a" + "./".repeat(20000) + "b").indexOf("a./") === 0 && N.normTag("-./".repeat(15000)) === "");
+
+  // 5. build: bỏ khoảng trắng cuối không dùng /\s+$/
+  var db = ms(function () { C.build("x" + " ".repeat(big) + "\n\n", []); });
+  kiem("build: markdown có dải 40.000 khoảng trắng cuối → 'x\\n' (< 50 ms, " + db.toFixed(0) + " ms)", db < 50 * slack && C.build("x" + " ".repeat(big) + "\n\n", []) === "x\n");
+}
+
+async function aiClientTests() {
+  sec("soạn bằng AI — data/ai.js (giao thức + chỗ cất token chung với ai-khach.js)");
+  var AIm = require(path.join(J, "data/ai.js"));
+  function memLS() { var m = {}; return { getItem: function (k) { return k in m ? m[k] : null; }, setItem: function (k, v) { m[k] = String(v); }, removeItem: function (k) { delete m[k]; } }; }
+  var ls = memLS(), calls = [], answers = [], KEY = "ai.phien@http://may.test/api/v1", MKEY = "ai.model@http://may.test/api/v1";
+  function fakeFetch(url, o) {
+    calls.push({ url: url, o: o });
+    var a = answers.shift();
+    if (a === "net" || !a) return Promise.reject(new TypeError("Failed to fetch"));
+    return Promise.resolve({ ok: a.status < 400, status: a.status, json: function () { return a.body === undefined ? Promise.reject(new Error("no json")) : Promise.resolve(a.body); } });
+  }
+  var mk = function (base, has) { return AIm.create({ fetch: fakeFetch, storage: ls, href: function () { return "http://may.test/webapp/tranphuc8a/personal-wiki/index.html?source=pwa"; }, api: function () { return { has: has !== false, base: base }; }, online: function () { return true; } }); };
+  var cli = mk("/api/v1");
+  ls.setItem(KEY, JSON.stringify({ token: "tok-1", het: Date.now() + 3600e3 }));
+  ls.setItem(MKEY, JSON.stringify("gemini-x-flash"));
+  answers.push({ status: 200, body: { notes: [] } });
+  await cli.compose({ text: "x" });
+  var c0 = calls[0];
+  kiem("compose: POST <gốc API>/ai/wiki, X-AI-Session từ khoá ai.phien@<địa chỉ tuyệt đối của gốc API>, X-AI-Model, không cache",
+    c0.url === "/api/v1/ai/wiki" && c0.o.method === "POST" && c0.o.headers["X-AI-Session"] === "tok-1" && c0.o.headers["X-AI-Model"] === "gemini-x-flash" && c0.o.cache === "no-store" && JSON.parse(c0.o.body).text === "x");
+  kiem("API_PREFIX trống: khoá ai.phien@http://may.test (giống ai-khach.js / quan-ly-chi-tieu)", mk("").keys().ai === "ai.phien@http://may.test" && cli.keys().ai === KEY && cli.keys().admin === "qlkh.phien@http://may.test/api/v1.token");
+  answers.push({ status: 400, body: { message: "Máy chủ không có model", data: { code: "ai_model_unknown" } } }, { status: 200, body: { notes: [1] } });
+  var r2 = await cli.compose({ text: "y" });
+  kiem("ai_model_unknown → bỏ model đã chọn, gọi lại MỘT lần không kèm X-AI-Model", r2.notes.length === 1 && calls.length === 3 && !("X-AI-Model" in calls[2].o.headers) && ls.getItem(MKEY) === null);
+  answers.push("net");
+  var e3 = await loi(function () { return cli.compose({ text: "z" }); });
+  kiem("mất mạng → lỗi code 'network' (thông báo tiếng Việt)", e3 && e3.code === "network" && /máy chủ|ngoại tuyến/i.test(e3.message));
+  answers.push({ status: 429, body: { message: "Bạn hỏi AI nhanh quá", data: { code: "ai_rate_limited", retryAfter: 42 } } });
+  var e4 = await loi(function () { return cli.compose({ text: "z" }); });
+  kiem("429 → code ai_rate_limited + retryAfter + thông báo máy chủ", e4 && e4.code === "ai_rate_limited" && e4.retryAfter === 42 && e4.status === 429 && e4.message === "Bạn hỏi AI nhanh quá");
+  answers.push({ status: 404, body: { detail: "Not Found" } });
+  var e5 = await loi(function () { return cli.compose({ text: "z" }); });
+  kiem("404 không mã (máy chủ cũ chưa có /ai/wiki) → 'ai_no_route', nói rõ bằng tiếng Việt", e5 && e5.code === "ai_no_route" && /chưa có tính năng/.test(e5.message));
+  answers.push({ status: 422, body: { detail: [{ msg: "x" }] } });
+  var e6 = await loi(function () { return cli.compose({ text: "z" }); });
+  kiem("422 → thông báo 'không nhận dữ liệu' (không in mảng lỗi thô)", e6 && /không nhận dữ liệu/.test(e6.message));
+  ls.setItem(KEY, JSON.stringify({ token: "cu", het: 1000 }));
+  answers.push({ status: 200, body: { enabled: true, allowed: false, needs: "code" } });
+  var s1 = await cli.status(true), n1 = calls.length;
+  kiem("token hết hạn: không gửi và bị xoá khỏi máy; status trả needs=code", !("X-AI-Session" in calls[n1 - 1].o.headers) && ls.getItem(KEY) === null && s1.needs === "code" && calls[n1 - 1].o.method === "GET" && calls[n1 - 1].url === "/api/v1/ai/status");
+  await cli.status();
+  kiem("status nhớ 30 s (không hỏi lại)", calls.length === n1);
+  answers.push({ status: 200, body: { ok: true, session: "tok-2", expiresAt: Math.floor(Date.now() / 1000) + 3600 } }, { status: 200, body: { enabled: true, allowed: true, needs: null } });
+  var s2 = await cli.unlock("  ma-lop  ");
+  kiem("unlock: POST /ai/session {code đã cắt khoảng trắng}, cất token vào ai.phien@<gốc>, hỏi lại status kèm token mới",
+    JSON.parse(calls[n1].o.body).code === "ma-lop" && JSON.parse(ls.getItem(KEY)).token === "tok-2" && s2.allowed === true && calls[n1 + 1].o.headers["X-AI-Session"] === "tok-2");
+  var n2 = calls.length, e7 = await loi(function () { return mk("", false).compose({ text: "x" }); });
+  kiem("không có máy chủ (file://) → từ chối 'no_server', không gọi mạng", e7 && e7.code === "no_server" && calls.length === n2);
+  kiem("blocker: tắt / dùng được / cần mã / chỉ quản trị", /tắt/.test(AIm.blocker({ enabled: false })) && AIm.blocker({ enabled: true, allowed: true }) === null && AIm.blocker({ enabled: true, allowed: false, needs: "code" }) === "code" && /quản trị/.test(AIm.blocker({ enabled: true, allowed: false, needs: "admin" })));
+  var blocked = AIm.create({ fetch: fakeFetch, storage: { getItem: function () { throw new Error("chặn"); }, setItem: function () { throw new Error("chặn"); }, removeItem: function () {} }, href: function () { return "http://may.test/"; }, api: function () { return { has: true, base: "" }; } });
+  answers.push({ status: 200, body: { enabled: true, allowed: true } });
+  kiem("localStorage bị chặn (riêng tư) vẫn gọi được, không ném", (await blocked.status(true)).allowed === true);
+}
+
 (async function main() {
   try {
     await zipTests();
@@ -849,6 +1134,9 @@ function wordTests() {
     await syncUxTests();
     qrTests();
     wordTests();
+    await composeTests();
+    hostileTests();
+    await aiClientTests();
   } catch (e) { sai++; console.log("  [SAI] ngoại lệ không bắt: " + (e && e.stack || e)); }
   console.log("\n" + "=".repeat(58));
   if (sai) { console.log("SAI " + sai + " / " + (ok + sai) + " phép kiểm"); process.exit(1); }

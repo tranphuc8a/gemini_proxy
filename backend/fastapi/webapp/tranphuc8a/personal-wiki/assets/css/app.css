@@ -477,6 +477,58 @@ body[data-route="n"] .toasts { bottom: calc(var(--safe-b) + 14px); }
 @media (min-width: 900px) { .toasts { bottom: 20px; left: calc(76px + 12px); } }
 @media (min-width: 1200px) { .toasts { left: calc(var(--side-w) + 12px); } }
 
+/* ------------------------------------------------------------------ Soạn bằng AI (#/ai, ui/aicompose.js) */
+.aibtn { margin-top: -4px; }
+.aic { max-width: 880px; }
+.aic-in { gap: 14px; }
+.field .aic-ta { min-height: 200px; font-size: 15px; line-height: 1.55; }
+.aic-count { text-align: right; font-variant-numeric: tabular-nums; }
+.aic-split { align-self: flex-start; }
+.aic-cands { display: flex; flex-direction: column; gap: 8px; }
+.aic-ch { font-size: 14px; color: var(--text-2); }
+.aic-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto; }
+.aic-cand { cursor: pointer; padding-left: 8px; }
+.aic-cand input { width: 16px; height: 16px; margin: 0; flex: none; accent-color: var(--accent); }
+.aic-cand:not(.on) span { text-decoration: line-through; opacity: 0.8; }
+.aic-only { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-2); cursor: pointer; }
+.aic-only > span:last-child { min-width: 0; }
+.aic-code { display: flex; flex-direction: column; gap: 6px; }
+.aic-code label { font-weight: 600; font-size: 14px; }
+.aic-code-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.aic-code input { flex: 1 1 180px; min-width: 0; min-height: 40px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--elev); font-size: 16px; }
+.aic-go { min-width: 120px; }
+.aic-why:empty, .aic-err:empty { display: none; }
+.aic-out { display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 12px; }
+.aic-warn { display: flex; flex-direction: column; gap: 4px; list-style: none; }
+.aic-notes { display: flex; flex-direction: column; gap: 14px; }
+.aic-note { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--elev); box-shadow: var(--shadow-1); }
+.aic-note.off { opacity: 0.6; }
+.aic-nh { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.aic-on { display: flex; align-items: center; gap: 6px; flex: none; font-weight: 600; font-size: 14px; cursor: pointer; }
+.aic-on input, .aic-rel input, .aic-tlist input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--accent); }
+.aic-nh .aic-title { flex: 1 1 auto; min-width: 0; width: 100%; font-weight: 700; font-size: 17px; }
+.aic-dup { display: flex; flex-direction: column; gap: 6px; }
+.aic-dup-seg, .aic-tabs { align-self: flex-start; }
+.aic-sum { color: var(--text-2); font-size: 14px; }
+.aic-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.aic-tags .tag-in { flex: 1 1 110px; min-width: 90px; max-width: 220px; min-height: 30px; padding: 0 8px; border: 1px dashed var(--border-strong); border-radius: 999px; font-size: 14px; background: transparent; }
+.aic-md { max-height: 420px; overflow: auto; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.aic-ed { width: 100%; min-height: 260px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--elev); font: 14px/1.55 var(--mono); resize: vertical; }
+.aic-note h4 { font-size: 14px; color: var(--text-2); }
+.aic-rels { display: flex; flex-direction: column; gap: 6px; }
+.aic-rel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.aic-rel.off .aic-rtgt { text-decoration: line-through; opacity: 0.7; }
+.aic-rel select { min-height: 34px; font-size: 14px; }
+.aic-rtgt { font-weight: 600; min-width: 0; }
+.aic-kind { padding: 1px 8px; border-radius: 999px; background: var(--sunk); color: var(--text-2); font-size: 12px; font-weight: 600; }
+.aic-kind[data-kind="new"] { background: transparent; border: 1px dashed var(--border-strong); }
+.aic-why-r { flex: 1 1 100%; color: var(--text-3); font-size: 13px; }
+.aic-topics { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px dashed var(--border-strong); border-radius: var(--radius); }
+.aic-topics h3 { font-size: 15px; }
+.aic-tlist { display: flex; flex-direction: column; gap: 6px; }
+.aic-tlist label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; cursor: pointer; }
+.aic-tlist small { color: var(--text-3); }
+
 /* ------------------------------------------------------------------ in / PDF */
 #printArea { display: none; }
 @media print {

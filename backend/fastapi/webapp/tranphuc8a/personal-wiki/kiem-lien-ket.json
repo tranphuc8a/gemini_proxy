@@ -1,0 +1,92 @@
+{
+  "_": "Bộ ca DÙNG CHUNG cho liên kết [[…]] của Personal Wiki: kiem.js (assets/js/core/compose.js + notes.js) và pytest -k ai_wiki (src/application/utils/wiki_links.py) cùng đọc tệp này — hai bên phải cho đúng một kết quả. Sửa luật ở một bên thì sửa cả bên kia và thêm ca vào đây. Không nằm trong vỏ PWA (tao-pwa.py chỉ băm index.html, manifest, assets/).",
+  "_verify": "khoá 'verify' bên dưới: defangMath → rewriteLinks → sealLinks, lặp tới khi không đổi (compose.verifyLinks / wiki_links.verify_links); mỗi ca còn phải ổn định khi kiểm lần hai và không để lại liên kết tới tiêu đề lạ cho CẢ HAI bộ đọc (notes.js parseLinks không che toán; compose.parseLinks che toán)",
+  "parseLinks": [
+    { "in": "Bloom Filter dùng [[Hash Function]] và [[depends_on::Java|ngôn ngữ]]", "links": [["link", "Hash Function", ""], ["depends_on", "Java", "ngôn ngữ"]] },
+    { "in": "`[[bo-qua]]` và\n```\n[[trong-code]]\n```\n[[ngoai]]", "links": [["link", "ngoai", ""]] },
+    { "in": "Giá $5 và $10 xem [[Docker]]", "links": [["link", "Docker", ""]] },
+    { "in": "Đoạn $x [[A]] y$ và [[B]]", "links": [["link", "B", ""]] },
+    { "in": "$$\n[[0,1]] \\cup [[2,3]]\n$$\n[[Sau]]", "links": [["link", "Sau", ""]] },
+    { "in": "\\[ [[x]] \\] rồi \\( [[y]] \\) và [[z]]", "links": [["link", "z", ""]] },
+    { "in": "\\$ [[a]] \\$ là đô la", "links": [["link", "a", ""]] },
+    { "in": "$$ chưa đóng [[A]]\n\n[[B]]", "links": [["link", "A", ""], ["link", "B", ""]] },
+    { "in": "$a\n\nb$ [[C]]", "links": [["link", "C", ""]] },
+    { "in": "[[khong_phai::X]] [[Child_Of::Cha]] [[ ]]", "links": [["link", "khong_phai::X", ""], ["child_of", "Cha", ""]] },
+    { "in": "$x$5 [[D]] $y$", "links": [["link", "D", ""]] },
+    { "in": "Tiền \\\\$ [[E]] $", "links": [["link", "E", ""]] },
+    { "in": "~~~\n[[a]]\n~~~\n`` x [[b]] `` [[c]]", "links": [["link", "c", ""]] },
+    { "in": "[[link::Docker]]", "links": [["link", "link::Docker", ""]] },
+    { "in": "[[Đồ Thị|đồ thị]] và [[  Cây  nhị phân ]]", "links": [["link", "Đồ Thị", "đồ thị"], ["link", "Cây  nhị phân", ""]] },
+    { "in": "$a [[G]]\nb$ [[F]]", "links": [["link", "F", ""]] },
+    { "in": "\\\\[ [[H]] \\\\]", "links": [["link", "H", ""]] },
+    { "in": "$$x$$ [[I]] $$y$$", "links": [["link", "I", ""]] },
+    { "in": "$ không phải [[J]] $", "links": [["link", "J", ""]] },
+    { "in": "\\(chưa đóng [[K]]\n\n\\( [[L]] \\)", "links": [["link", "K", ""]] }
+  ],
+  "defangMath": [
+    { "in": "$[[0,1]]$ và [[A]]", "out": "$[ [0,1] ]$ và [[A]]" },
+    { "in": "$$\n\\left[[a]\\right]] \n$$", "out": "$$\n\\left[ [a]\\right] ] \n$$" },
+    { "in": "giá $5 và [[x]] $10", "out": "giá $5 và [[x]] $10" },
+    { "in": "`$[[x]]$`", "out": "`$[[x]]$`" },
+    { "in": "\\( [[[a]]] \\)", "out": "\\( [ [ [a] ] ] \\)" },
+    { "in": "$[ [x] ]$", "out": "$[ [x] ]$" }
+  ],
+  "rewriteLinks": [
+    {
+      "in": "Dùng [[docker]] và [[depends_on::kubernetes  pod|pod]] với [[Bịa Ra]] và [[link::Docker]] `[[Bịa Code]]` $[[Bịa Math]]$",
+      "valid": ["Docker", "Kubernetes Pod"],
+      "out": "Dùng [[Docker]] và [[depends_on::Kubernetes Pod|pod]] với Bịa Ra và [[Docker]] `[[Bịa Code]]` $[[Bịa Math]]$",
+      "dropped": ["[[Bịa Ra]]"]
+    },
+    {
+      "in": "[[Không có|chữ hiện]] rồi [[related_to::Đồ thị]]",
+      "valid": ["ĐỒ THỊ"],
+      "out": "chữ hiện rồi [[related_to::ĐỒ THỊ]]",
+      "dropped": ["[[Không có|chữ hiện]]"]
+    }
+  ],
+  "verify": [
+    {"in": "A [[ngoài [[Bịa]] cuối]] B", "valid": [], "out": "A [ [ngoài Bịa cuối] ] B", "dropped": ["[[Bịa]]", "[[ngoài Bịa cuối]]"]},
+    {"in": "Xem [[Bia|a\\]]$x [[Ung Thu]] y$ nua.", "valid": [], "out": "Xem a\\$x [ [Ung Thu] ] y$ nua.", "dropped": ["[[Bia|a\\]]"]},
+    {"in": "A [[docker]] [[Bịa [[Docker]] x]]", "valid": ["Docker"], "out": "A [[Docker]] [[Bịa [[Docker]] x]]", "dropped": []},
+    {"in": "A [[ngoài [[Bịa]] cuối]] B [[[[[[Bịa]]]]]] C [[[[Bịa|docker]]]] D [[[[Bịa|link::Bịa Khác]]]]", "valid": ["Docker"], "out": "A [ [ngoài Bịa cuối] ] B [[[ [Bịa] ]]] C [[Docker]] D [ [link::Bịa Khác] ]", "dropped": ["[[Bịa]]", "[[Bịa]]", "[[Bịa|docker]]", "[[Bịa|link::Bịa Khác]]", "[[ngoài Bịa cuối]]", "[[Bịa]]", "[[link::Bịa Khác]]"]},
+    {"in": "`[[Bịa]]` $[[Bịa]]$\n```\n[[Bịa]]\n```\n[[Bịa]]", "valid": [], "out": "`[[Bịa]]` $[ [Bịa] ]$\n```\n[[Bịa]]\n```\nBịa", "dropped": ["[[Bịa]]"]},
+    {"in": "[[kubernetes  pod]] [[related_to::DOCKER|d]]", "valid": ["Kubernetes Pod", "Docker"], "out": "[[Kubernetes Pod]] [[related_to::Docker|d]]", "dropped": []},
+    {"in": "$x$ [[Bịa]] $[[Bịa]] y$", "valid": ["Docker"], "out": "$x$ Bịa $[ [Bịa] ] y$", "dropped": ["[[Bịa]]"]},
+    {"in": "\\(a [[Bịa]] b\\) và [[docker]]", "valid": ["Docker"], "out": "\\(a [ [Bịa] ] b\\) và [[Docker]]", "dropped": []},
+    {"in": "```\n[[Bịa]]\n```\n[[a [[Bịa]] b]]", "valid": ["Docker"], "out": "```\n[[Bịa]]\n```\n[ [a Bịa b] ]", "dropped": ["[[Bịa]]", "[[a Bịa b]]"]},
+    {"in": "[[depends_on::Bịa|x]] [[depends_on::docker|ok]]", "valid": ["Docker"], "out": "x [[depends_on::Docker|ok]]", "dropped": ["[[depends_on::Bịa|x]]"]},
+    {"in": "$$\n[[Docker]] [[Bịa]]\n$$ rồi [[Bịa]]", "valid": ["Docker"], "out": "$$\n[ [Docker] ] [ [Bịa] ]\n$$ rồi Bịa", "dropped": ["[[Bịa]]"]},
+    {"in": "[[ [[Bịa]] ]] và [[Bịa]]]]", "valid": ["Docker"], "out": "[ [ Bịa ] ] và Bịa]]", "dropped": ["[[Bịa]]", "[[Bịa]]", "[[ Bịa ]]"]},
+    {"in": "[[link::link::Docker]] [[link::Bịa|alias \\]]$ [[Ung Thu]] $", "valid": ["Docker"], "out": "link::Docker alias \\$ Ung Thu $", "dropped": ["[[link::link::Docker]]", "[[link::Bịa|alias \\]]", "[[Ung Thu]]"]}
+,
+    {"in": "Xem [[Docker $x$]] và [[Bịa $y$]]", "valid": ["Docker"], "out": "Xem [ [Docker $x$] ] và [ [Bịa $y$] ]", "dropped": ["[[Docker $x$]]", "[[Bịa $y$]]"]},
+    {"in": "[[a b[[\\)]]docker$`link::[[$]]\\[``` \\[", "valid": ["Docker"], "out": "[ [a b\\)docker$`link::[ [$] ]\\[``` \\[", "dropped": ["[[\\)]]", "[[a b\\)docker$`link::[ [$]]"]},
+    {"in": "[[a [[Bịa]]$x$]] và [[Docker]]$y$", "valid": ["Docker"], "out": "[ [a Bịa$x$] ] và [[Docker]]$y$", "dropped": ["[[Bịa]]", "[[a Bịa$x$]]"]},
+    {"in": "[[Docker]]$x$ [[Docker]] $[[Docker]]$", "valid": ["Docker"], "out": "[[Docker]]$x$ [[Docker]] $[ [Docker] ]$", "dropped": []}
+  ],
+  "_maskCode": "khoá 'maskCode': [văn bản, văn bản sau khi che code bằng khoảng trắng (cùng độ dài)] — kết quả của luật GỐC (regex /(`+)(?!`)([^\\n]*?[^`\\n])\\1(?!`)/g cho code nội tuyến); bản một lượt của notes.js maskInlineCode và wiki_links.py mask_inline_code phải cho đúng như vậy",
+  "maskCode": [
+    ["a `x` b", "a     b"],
+    ["``a`b`` c", "        c"],
+    ["`a``b` d", "       d"],
+    ["x ``` y ``` z", "x           z"],
+    ["` ` and `` ` ``", "    and        "],
+    ["`a`b`c`", "   b   "],
+    ["``a`` `b`", "         "],
+    ["`", "`"],
+    ["``", "``"],
+    ["`a", "`a"],
+    ["a`", "a`"],
+    ["```` a ``", "         "],
+    ["`` a ```", "`` a ```"],
+    ["[[ok]] `[[no]]` [[ok2]]", "[[ok]]          [[ok2]]"],
+    ["``[[no]]`` [[ok]] ` [[no2]] `", "           [[ok]]            "],
+    ["`a\n`b` c\n``d`` e", "`a\n    c\n      e"],
+    ["a\n```\n`x`\n```\n`y` b", "a\n   \n   \n   \n    b"],
+    ["~~~\n`\n~~~ `z`", "   \n \n       "],
+    ["`` x ` y `` z ` w", "            z ` w"]
+  ],
+  "titleKey": [["  Hash   Function ", "hash function"], ["Đồ Thị", "do thi"], ["Kubernetes\tPod", "kubernetes pod"], ["ĐƯỜNG đi ngắn nhất", "duong di ngan nhat"], ["", ""]],
+  "normTag": [["  #Thuật Toán ", "thuật-toán"], ["C++", "c"], ["a/b.c_d", "a/b.c_d"], ["###", ""], ["Machine  Learning!!", "machine-learning"], ["--x--", "x"], ["DevOps/CI", "devops/ci"], ["Cơ sở dữ liệu", "cơ-sở-dữ-liệu"]]
+}

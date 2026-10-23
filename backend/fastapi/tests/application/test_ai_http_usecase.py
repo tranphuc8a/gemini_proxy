@@ -107,3 +107,12 @@ def test_an_answer_without_tests_is_refused(http):
     uc, _, _ = http({"script": "console.log(1)"})
     with pytest.raises(BadGatewayError):
         asyncio.run(uc.tests(ADMIN, request=REQUEST, response=RESPONSE))
+
+
+def test_a_script_with_a_long_blank_run_is_cut_in_linear_time():
+    # the fence was cut with a regex that backtracks quadratically over whitespace — on the event loop
+    import time
+    raw = json.dumps({"script": "```js\npm.test('ổn', function () {})" + " " * 200000 + "\n```"})
+    t0 = time.perf_counter()
+    assert ai_http_usecase._script(raw)["script"] == "pm.test('ổn', function () {})"
+    assert time.perf_counter() - t0 < 0.5

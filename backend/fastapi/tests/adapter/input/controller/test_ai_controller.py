@@ -401,3 +401,57 @@ def test_the_study_and_editing_routes_over_http(client, monkeypatch):
     assert client.post(f"{AI}/draft/assist", json={**passage, "action": "poem"}, headers=admin).status_code == 422
     assert client.post(f"{AI}/review", json={"question": "Q?", "expected": "A", "answer": "x"}).status_code == 403
 
+
+def test_the_wiki_compose_route_over_http(client, monkeypatch):
+    """POST /ai/wiki (Personal Wiki "Soạn bằng AI"): access first, tight limits, bare JSON checked by the server, never cached."""
+    monkeypatch.setattr(settings, "GEMINI_URL", "https://gemini.test/v1beta/models/gemini-3.5-flash:generateContent")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "k")
+    monkeypatch.setattr(settings, "AI_MODEL", "gemini-3.5-flash")
+    answer = {"notes": [{"title": "Kubernetes Pod", "tags": ["Kubernetes"], "markdown": "Chạy trong [[docker]] và [[Bịa Ra]].",
+                         "relations": [{"type": "depends_on", "target": "Docker"}]}], "newTopics": []}
+    model = FakeModel([json.dumps(answer)], models=["gemini-3.5-flash", "gemini-3.8-flash"])
+    store = FakeStore()
+    app.dependency_overrides[get_ai_usecase] = lambda: AiUseCase(store, model)
+    admin = {"X-Admin-Key": ADMIN_KEY}
+    url = f"{AI}/wiki"
+    ask = {"text": "ghi chép về pod", "hint": "k8s", "maxNotes": 2,
+           "candidates": [{"ref": "c1", "title": "Docker", "tags": ["devops"], "snippet": "Docker đóng gói…"}], "tags": ["devops"]}
+
+    r = client.post(url, json=ask)
+    assert r.status_code == 403 and r.json()["data"]["code"] == "ai_admin_only" and model.calls == []
+    cand = ask["candidates"][0]
+    for bad in ({**ask, "text": ""}, {**ask, "text": "x" * 12001}, {**ask, "hint": "h" * 301}, {**ask, "maxNotes": 0}, {**ask, "maxNotes": 6},
+                {**ask, "candidates": [{**cand, "ref": f"c{i}"} for i in range(41)]}, {**ask, "candidates": [{**cand, "ref": "x1"}]},
+                {**ask, "candidates": [{**cand, "ref": "c1000"}]}, {**ask, "candidates": [cand, cand]},
+                {**ask, "candidates": [{**cand, "title": ""}]}, {**ask, "candidates": [{**cand, "title": "t" * 201}]},
+                {**ask, "candidates": [{**cand, "snippet": "s" * 161}]}, {**ask, "candidates": [{**cand, "tags": ["t"] * 9}]},
+                {**ask, "candidates": [{**cand, "tags": ["t" * 41]}]}, {**ask, "tags": ["t"] * 61}, {k: v for k, v in ask.items() if k != "text"}):
+        assert client.post(url, json=bad, headers=admin).status_code == 422, bad
+    assert model.calls == [], "a body that breaks the limits costs nothing"
+
+    r = client.post(url, json=ask, headers=admin)
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
+    out = r.json()
+    n = out["notes"][0]
+    assert n["markdown"] == "Chạy trong [[Docker]] và Bịa Ra." and out["dropped"] == ["[[Bịa Ra]]"]
+    assert n["relations"] == [{"type": "depends_on", "target": {"kind": "existing", "ref": "c1", "title": "Docker"}, "reason": ""}]
+    assert n["tags"] == ["kubernetes"] and out["maxNotes"] == 2 and out["truncated"] is False
+    assert store.cache == {}, "someone's notes are never cached"
+    assert client.post(url, json=ask, headers=admin).status_code == 200 and len(model.calls) == 2
+
+    r = client.post(url, json=ask, headers={**admin, "X-AI-Model": "gemini-3.8-flash"})
+    assert r.status_code == 200 and model.calls[-1]["model"] == "gemini-3.8-flash"
+    r = client.post(url, json=ask, headers={**admin, "X-AI-Model": "gemini-0-nope"})
+    assert r.status_code == 400 and r.json()["data"]["code"] == "ai_model_unknown"
+
+    monkeypatch.setattr(settings, "AI_ACCESS", "code")
+    monkeypatch.setattr(settings, "AI_ACCESS_CODE", "lop-10a")
+    r = client.post(url, json=ask)
+    assert r.status_code == 403 and r.json()["data"]["code"] == "ai_code_required"
+    token = client.post(f"{AI}/session", json={"code": "lop-10a"}).json()["session"]
+    assert client.post(url, json=ask, headers={"X-AI-Session": token}).status_code == 200
+
+    model.answers = ["không phải JSON"]
+    model.calls.clear()
+    r = client.post(url, json=ask, headers=admin)
+    assert r.status_code == 502 and store.cache == {}
