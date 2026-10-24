@@ -14,6 +14,7 @@
 
    API (JE.viTri):
      chiSoDong(s)                  -> Uint32Array dau moi dong
+     chiSoDongTang(cu, chiCu, moi) -> nhu chiSoDong(moi), tang dan tu chi so cua `cu` (mot doan doi)
      dongCuaViTri(chiSo, i)        -> so dong (dem tu 1), tim nhi phan
      timViTri(s, duong)            -> {khoaBd, khoaKt, bd, kt} | null
      timNhieuViTri(s, dsDuong)     -> Map(JSON.stringify(duong) -> {…}) mot luot
@@ -125,6 +126,46 @@
     for (k = s.indexOf("\n"); k >= 0; k = s.indexOf("\n", k + 1)) n++;
     var ra = new Uint32Array(n), j = 1;
     for (k = s.indexOf("\n"); k >= 0; k = s.indexOf("\n", k + 1)) ra[j++] = k + 1;
+    return ra;
+  }
+
+  /** chiSoDong(moi) TANG DAN tu chiSoDong(cu) khi `moi` chi khac `cu` o MOT doan lien (go / dan / xoa mot cho):
+      chi quet "\n" trong doan doi, phan sau dich mot hang so. `goiY` (tuy chon) = vi tri con tro trong `moi`: go / xoa
+      thuong de dau con tro dung cuoi doan doi, nen thu a = goiY - d (chen) hoac a = goiY (xoa) truoc — chi 2 phep so sanh
+      chuoi goc (~0,6 ms o 1 M ky tu). Goi y SAI hay khong co thi tim tien to + hau to chung bang tim nhi phan (~12 ms).
+      Goi y chi de nhanh: moi phep thu deu duoc XAC MINH (tien to va hau to bang nhau), nen ket qua LUON == chiSoDong(moi). */
+  function chiSoDongTang(cu, chiCu, moi, goiY) {
+    var L0 = cu.length, L1 = moi.length, m = Math.min(L0, L1), d = L1 - L0;
+    if (!chiCu || L0 < 4096 || L1 < 4096) return chiSoDong(moi);
+    var a = -1, b = 0, dx = d < 0 ? -d : 0, dm = d > 0 ? d : 0;       /* doan cu [a, a+dx), doan moi [a, a+dm) */
+    if (typeof goiY === "number" && goiY >= 0) {
+      var ung = d > 0 ? goiY - d : goiY;
+      if (ung >= 0 && ung <= m && ung + dx <= L0 && ung + dm <= L1 &&
+          cu.slice(0, ung) === moi.slice(0, ung) && cu.slice(ung + dx) === moi.slice(ung + dm)) a = ung;
+    }
+    if (a < 0) {
+      var lo = 0, hi = m, mid;
+      while (lo < hi) { mid = (lo + hi + 1) >> 1; if (cu.slice(0, mid) === moi.slice(0, mid)) lo = mid; else hi = mid - 1; }
+      a = lo;
+      lo = 0; hi = m - a;
+      while (lo < hi) { mid = (lo + hi + 1) >> 1; if (cu.slice(L0 - mid) === moi.slice(L1 - mid)) lo = mid; else hi = mid - 1; }
+      b = lo; dx = L0 - a - b; dm = L1 - a - b;
+    }
+    var nc = chiCu.length, k1, k2;
+    var cuoiCu = a + dx, cuoiMoi = a + dm;
+    /* k1 = so muc co chiCu[k] <= a (dong bat dau trong tien to); k2 = muc dau tien co chiCu[k] > cuoiCu (newline nam trong hau to) */
+    lo = 0; hi = nc;
+    while (lo < hi) { mid = (lo + hi) >> 1; if (chiCu[mid] <= a) lo = mid + 1; else hi = mid; }
+    k1 = lo;
+    lo = k1; hi = nc;
+    while (lo < hi) { mid = (lo + hi) >> 1; if (chiCu[mid] <= cuoiCu) lo = mid + 1; else hi = mid; }
+    k2 = lo;
+    var giua = [], q = moi.indexOf("\n", a);
+    while (q >= 0 && q < cuoiMoi) { giua.push(q + 1); q = moi.indexOf("\n", q + 1); }
+    var ra = new Uint32Array(k1 + giua.length + (nc - k2)), j, t = k1;
+    ra.set(chiCu.subarray(0, k1), 0);
+    for (j = 0; j < giua.length; j++) ra[t++] = giua[j];
+    for (j = k2; j < nc; j++) ra[t++] = chiCu[j] + d;
     return ra;
   }
 
@@ -599,7 +640,7 @@
   }
 
   JE.viTri = {
-    chiSoDong: chiSoDong, dongCuaViTri: dongCuaViTri,
+    chiSoDong: chiSoDong, chiSoDongTang: chiSoDongTang, dongCuaViTri: dongCuaViTri,
     timViTri: timViTri, timNhieuViTri: timNhieuViTri, duongTaiViTri: duongTaiViTri,
     taoBoQuetKhoi: taoBoQuetKhoi, loiNhe: loiNhe,
     cuoiGiaTri: cuoiGiaTri, cuoiChuoi: cuoiChuoi, giaiKhoa: giaiKhoa,

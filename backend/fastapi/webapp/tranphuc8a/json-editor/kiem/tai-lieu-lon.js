@@ -16,6 +16,59 @@ module.exports = function (C) {
   const rnd = C.taoNgauNhien(20261024);
   const ngauNhien = (n) => Math.floor(rnd() * n);
 
+  /* ====================== chiSoDongTang == chiSoDong (doi chieu vet can + ngau nhien) ====================== */
+  {
+    const V = MT.JE && MT.JE.viTri;
+    if (!kiem("chiSoDongTang · JE.viTri co chiSoDongTang", !!(V && V.chiSoDongTang))) throw new Error("thieu chiSoDongTang");
+    const bangU = (x, y) => x.length === y.length && x.every((v, i) => v === y[i]);
+    const nenS = (n) => { let r = ""; for (let i = 0; i < n; i++) r += (ngauNhien(7) === 0 ? "\n" : "ab{}:,\" "[ngauNhien(9)]); return r; };
+    let sai = "", ca = 0;
+    const thu = (cu, moi, nhan) => {
+      ca++;
+      if (sai) return;
+      const chi = V.chiSoDong(cu), ref = V.chiSoDong(moi);
+      /* khong goi y / goi y DUNG (cuoi doan doi) / goi y SAI (ngau nhien, am, ngoai bien) — ket qua phai luon dung */
+      let a = 0; while (a < cu.length && a < moi.length && cu.charCodeAt(a) === moi.charCodeAt(a)) a++;
+      for (const gy of [undefined, a + Math.max(0, moi.length - cu.length), a, ngauNhien(moi.length + 1), -5, moi.length + 9, NaN]) {
+        if (!bangU(V.chiSoDongTang(cu, chi, moi, gy), ref)) { sai = nhan + " (" + cu.length + " -> " + moi.length + ", goi y " + gy + ")"; return; }
+      }
+    };
+    const goc = [nenS(5000), nenS(9000), "x".repeat(6000), "\n".repeat(6000), ("a\n").repeat(3000), "\n" + "q".repeat(5000)];
+    for (const cu of goc) {
+      const n = cu.length;
+      thu(cu, cu, "giong het");
+      thu(cu, "", "xoa het");
+      thu(cu, nenS(6000), "thay het");
+      for (const v of [0, 1, n >> 1, n - 1, n]) {
+        thu(cu, cu.slice(0, v) + "x" + cu.slice(v), "chen 1 ky tu @" + v);
+        thu(cu, cu.slice(0, v) + "\n" + cu.slice(v), "chen newline @" + v);
+        thu(cu, cu.slice(0, v) + nenS(300) + cu.slice(v), "chen doan @" + v);
+        thu(cu, cu.slice(0, v) + cu.slice(Math.min(n, v + 1)), "xoa 1 @" + v);
+        thu(cu, cu.slice(0, v) + cu.slice(Math.min(n, v + 700)), "xoa doan @" + v);
+      }
+      for (let i = 0; i < 400; i++) {
+        const a = ngauNhien(n + 1), b = Math.min(n, a + ngauNhien(900));
+        thu(cu, cu.slice(0, a) + nenS(ngauNhien(900)) + cu.slice(b), "ngau nhien #" + i);
+      }
+      /* chuoi cac phim lien tiep (chi so tang dan truyen tu lan truoc) */
+      let hien = cu, chi = V.chiSoDong(cu);
+      for (let i = 0; i < 300 && !sai; i++) {
+        const v = ngauNhien(hien.length + 1), moi = ngauNhien(5) === 0 ? hien.slice(0, v) + hien.slice(Math.min(hien.length, v + 1 + ngauNhien(5))) : hien.slice(0, v) + (ngauNhien(6) === 0 ? "\n" : "k") + hien.slice(v);
+        const kq = V.chiSoDongTang(hien, chi, moi, ngauNhien(2) ? v + (moi.length > hien.length ? 1 : 0) : undefined);
+        ca++;
+        if (!bangU(kq, V.chiSoDong(moi))) sai = "chuoi phim #" + i;
+        hien = moi; chi = kq;
+      }
+    }
+    kiem("chiSoDongTang · " + ca + " ca (chen / xoa / thay / chuoi phim, bien) == chiSoDong day du", !sai, sai);
+    /* dai: tuyen tinh theo thoi gian (khong bac hai) — mot dong 2 M ky tu va 2 M dong rong */
+    const t0 = Date.now(), A = "x".repeat(2e6), B = "\n".repeat(2e6);
+    thu(A, A.slice(0, 1e6) + "y" + A.slice(1e6), "mot dong dai");
+    thu(B, B.slice(0, 1e6) + "y" + B.slice(1e6), "2 M dong rong");
+    thu(B, B.slice(0, 1e6) + B.slice(1e6 + 5), "2 M dong rong xoa");
+    kiem("chiSoDongTang · tai lieu benh ly 2 M ky tu: dung va < " + (6000 * Number(process.env.JE_PERF_SLACK || 3)) + " ms", !sai && Date.now() - t0 < 6000 * Number(process.env.JE_PERF_SLACK || 3), sai || (Date.now() - t0) + " ms");
+  }
+
   /* ====================== chiaNhom / chuoiNhom: vet can ====================== */
   {
     let sai = "", soCa = 0;

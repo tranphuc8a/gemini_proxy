@@ -1782,6 +1782,19 @@ def soan_ao_vua(tb, url):
     _cho_khung(p, 3)
     co = p.evaluate("""k => { const h = Array.from(document.querySelectorAll('#lop-mau .h')).find(x => x.textContent.startsWith('§')); return !!h; }""", gt[0])
     check(co, "gõ ‘§’ đầu dòng giữa tài liệu 1 MB → lớp màu cập nhật đúng hàng")
+    # cập nhật từng hàng (chỉ hàng đổi) phải cho CÙNG HTML với vẽ lại cả cửa sổ: gõ ngoặc kép (đổi màu các dòng sau), Enter, xoá; rồi cuộn đi/về để ép vẽ lại hết
+    p.keyboard.type('"x')
+    p.keyboard.press("Enter")
+    p.keyboard.press("Backspace")
+    p.wait_for_timeout(1200)                                  # qua debounce 700 ms: doc() xong, vị trí lỗi đã tô — hai bên so cùng trạng thái
+    _cho_khung(p, 3)
+    truoc = p.evaluate("() => { const c = document.querySelector('#lop-mau .mau-cua'); return [c.getAttribute('data-tu'), c.innerHTML]; }")
+    st = p.evaluate("() => { const n = document.querySelector('#nhap'); const t = n.scrollTop; n.scrollTop = 0; return t; }")
+    _cho_khung(p, 3)
+    p.evaluate("t => { document.querySelector('#nhap').scrollTop = t; }", st)
+    _cho_khung(p, 3)
+    sau = p.evaluate("() => { const c = document.querySelector('#lop-mau .mau-cua'); return [c.getAttribute('data-tu'), c.innerHTML]; }")
+    check(truoc[0] == sau[0] and truoc[1] == sau[1], "lớp màu sau gõ liên tiếp (cập nhật từng hàng) == lớp màu vẽ lại toàn cửa sổ", [truoc[0], sau[0], len(truoc[1]), len(sau[1])])
 
     # dòng lỗi: số dòng đỏ + ký tự lỗi gạch đỏ, dù cuộn đi xa rồi quay lại
     loi_vb = vb.replace('"id": 3000,', '"id": 3000 ,,', 1)
@@ -2336,25 +2349,32 @@ def tang_hieu_nang(mb=10.0, chi=None):
     check(not LOI_TRANG, "không có lỗi console / pageerror trong phép đo", LOI_TRANG[:4])
 
 
-def _go_phim_tran(tb, vb):
-    """Trung vị (ms) của insertText → rAF kế tiếp trên một <textarea> TRẦN (không app, cùng font / cỡ / white-space: pre) chứa vb —
-    cái trần mà chính trình duyệt đặt ra, đo ngay lúc chạy để so (máy chậm hơn máy thiết kế thì cả hai cùng chậm)."""
-    pg = tb.new_page(viewport={"width": 1200, "height": 800})
-    try:
-        pg.goto("about:blank")
-        return pg.evaluate("""async ([css, txt]) => {
-            document.body.innerHTML = '<textarea id="t" style="' + css + '"></textarea>';
-            const n = document.getElementById('t'); n.value = txt; n.focus();
-            await new Promise(r => setTimeout(r, 300));
-            const s = n.value; let i = 0; for (let d = 0; d < 3000; d++) i = s.indexOf('\\n', i) + 1;
-            n.scrollTop = 3000 * 21 - 300; n.setSelectionRange(i, i);
-            await new Promise(r => setTimeout(r, 300));
+def _tran_mo(tb, vb, kich):
+    """Mở một trang <textarea> TRẦN (không app, cùng font / cỡ / white-space: pre / KÍCH THƯỚC với textarea của app) chứa vb và gắn
+    window.__chay() = mảng ms của 15 lần insertText → rAF kế tiếp. Đây là cái trần mà chính trình duyệt đặt ra: đo ngay lúc chạy để so
+    (máy chậm hơn máy thiết kế thì cả hai cùng chậm). Textarea cùng kích thước vì rộng/cao hơn thì xếp chữ + vẽ lại tốn hơn."""
+    pg = tb.new_page(viewport={"width": 1440, "height": 900})
+    pg.goto("about:blank")
+    pg.evaluate("""async ([css, txt]) => {
+        document.body.innerHTML = '<textarea id="t" style="' + css + '"></textarea>';
+        const n = document.getElementById('t'); n.value = txt; n.focus();
+        await new Promise(r => setTimeout(r, 300));
+        const s = n.value; let i = 0; for (let d = 0; d < 3000; d++) i = s.indexOf('\\n', i) + 1;
+        n.scrollTop = 3000 * 21 - 300; n.setSelectionRange(i, i);
+        window.__chay = async () => {
+            n.focus();
             const ds = [];
             for (let k = 0; k < 15; k++) { const t0 = performance.now(); document.execCommand('insertText', false, 'x'); await new Promise(r => requestAnimationFrame(() => r())); ds.push(performance.now() - t0); }
-            ds.sort((a, b) => a - b); return ds[7];
-        }""", ["width:1000px;height:700px;font:13px/21px Consolas,monospace;padding:12px 16px;box-sizing:border-box;white-space:pre;", vb])
-    finally:
-        pg.close()
+            return ds;
+        };
+        await new Promise(r => setTimeout(r, 300));
+    }""", ["width:%dpx;height:%dpx;font:13px/21px ui-monospace,'Cascadia Code',Consolas,monospace;padding:12px 16px;box-sizing:border-box;white-space:pre;border:0;margin:0;" % (kich[0], kich[1]), vb])
+    return pg
+
+
+def _trung_vi(xs):
+    xs = sorted(xs)
+    return xs[len(xs) // 2]
 
 
 def hn_nho(tb, url):
@@ -2368,26 +2388,39 @@ def hn_nho(tb, url):
     p.wait_for_timeout(300)
     info("input sau khi dán %.2f M ký tự: %.2f ms (mục tiêu < 50; trước J5 ≈ 2 162 ms đo ở thiết kế, 5 125 ms đo lại đầu đợt)" % (len(vb) / 1e6, t))
     check(t < 50 * SLACK, "[1 MB] sự kiện input < %d ms" % (50 * SLACK), "%.2f ms" % t)
-    # gõ phím giữa tài liệu: đúng phép đo của thiết kế (execCommand insertText → rAF kế tiếp), trung vị 15 phím liên tiếp
-    kq = p.evaluate("""async () => {
+    # gõ phím giữa tài liệu: đúng phép đo của thiết kế (execCommand insertText → rAF kế tiếp). Đo XEN KẼ app / textarea trần (4 vòng × 15 phím
+    # mỗi bên, bên nào cũng bring_to_front trước khi gõ) rồi lấy trung vị gộp: máy nhiễu (Edge nền, dòng việc khác) làm cả hai lệch cùng chiều,
+    # còn đo lần lượt thì mỗi bên dính một nhịp nhiễu khác nhau (đã thấy tỉ lệ 1,2x–1,4x giữa các lần chạy với cách đo cũ).
+    p.evaluate("""() => {
         const n = document.querySelector('#nhap'); n.focus();
         n.scrollTop = 0.5 * (n.scrollHeight - n.clientHeight);
         const lh = parseFloat(getComputedStyle(n).lineHeight), s = n.value; let i = 0;
         for (let d = 0; d < Math.floor(n.scrollTop / lh) + 10; d++) i = s.indexOf('\\n', i) + 1;
         n.setSelectionRange(i, i);
-        await new Promise(r => setTimeout(r, 300));
-        const ds = [];
-        for (let k = 0; k < 15; k++) {
-            const t0 = performance.now();
-            document.execCommand('insertText', false, 'x');
-            await new Promise(r => requestAnimationFrame(() => r()));
-            ds.push(performance.now() - t0);
-        }
-        ds.sort((a, b) => a - b);
-        return { p50: ds[7], p90: ds[13], max: ds[14], min: ds[0] };
+        window.__chayApp = async () => {
+            n.focus();
+            const ds = [];
+            for (let k = 0; k < 15; k++) { const t0 = performance.now(); document.execCommand('insertText', false, 'x'); await new Promise(r => requestAnimationFrame(() => r())); ds.push(performance.now() - t0); }
+            return ds;
+        };
     }""")
-    p50 = kq["p50"]
-    tran = _go_phim_tran(tb, vb)
+    p.wait_for_timeout(300)
+    kich = p.evaluate("() => { const n = document.querySelector('#nhap'); return [n.clientWidth, n.clientHeight]; }")
+    pg = _tran_mo(tb, vb, kich)
+    ds_app, ds_tran = [], []
+    try:
+        for _ in range(4):
+            p.bring_to_front()
+            ds_app += p.evaluate("() => window.__chayApp()")
+            pg.bring_to_front()
+            ds_tran += pg.evaluate("() => window.__chay()")
+    finally:
+        pg.close()
+    p.bring_to_front()
+    ds_app.sort()
+    kq = {"p90": ds_app[int(len(ds_app) * .9)], "max": ds_app[-1]}
+    p50 = _trung_vi(ds_app)
+    tran = _trung_vi(ds_tran)
     info("gõ 1 phím giữa tài liệu 1 M ký tự (insertText → rAF kế tiếp, 15 phím): app trung vị %.0f ms (p90 %.0f, lớn nhất %.0f); <textarea> TRẦN cùng nội dung: %.0f ms; app / trần = %.2f"
          % (p50, kq["p90"], kq["max"], tran, p50 / tran))
     # Mục tiêu thiết kế "< 150 ms" đặt ra khi textarea trần đo 97–113 ms (tỉ lệ ≈ 1,33–1,5). Máy chậm hơn thì cả trần cũng chậm hơn: đạt khi

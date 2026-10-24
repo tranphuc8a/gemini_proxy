@@ -308,7 +308,7 @@
 
   /** Chi so dau dong cua van ban `s` (nho theo CHUOI: doi van ban moi tinh lai). */
   function chiSoCua(s) {
-    if (chiSoS !== s || !chiSoVb) { chiSoVb = VT.chiSoDong(s); chiSoS = s; }
+    if (chiSoS !== s || !chiSoVb) { chiSoVb = chiSoVb && chiSoS !== null ? VT.chiSoDongTang(chiSoS, chiSoVb, s, vbNgoai === null ? nhap.selectionStart : -1) : VT.chiSoDong(s); chiSoS = s; }
     return chiSoVb;
   }
 
@@ -2632,6 +2632,7 @@
      nen toMauDong (ham thuan, khong doi) dung nguyen. --- */
   var maKhung = null, maCua = null;
   var maVe = { s: null, tu: -1, den: -1, loi: -2, lh: 0 };
+  var maHang = [];               /* HTML trong tung hang dang ve (so sanh de chi viet lai hang doi) */
 
   /** Dong sau `den` (0-based): ky tu that dau tien co phai ":" khong (de to dung khoa
       o cuoi cua so). Nhin toi da 64 dong. */
@@ -2665,11 +2666,10 @@
     var ld = -1, lc = -1, i, dong = [];
     if (loi >= 0) { ld = VT.dongCuaViTri(chiSo, loi) - 1; lc = loi - chiSo[ld]; }
     for (i = cs.tu; i < cs.den; i++) dong.push(s.slice(chiSo[i], i + 1 < n ? chiSo[i + 1] - 1 : s.length));
-    var co = haiChamSau(dong, haiChamSauCuaSo(s, chiSo, cs.den)), html = "";
+    var co = haiChamSau(dong, haiChamSauCuaSo(s, chiSo, cs.den)), hs = [];
     for (i = 0; i < dong.length; i++) {
       var d = dong[i];
-      html += '<span class="h">' + (!d ? "" : d.length > HS.DONG_DAI_MAU ? thoat(d)
-              : toMauDong(d, co[i], cs.tu + i === ld ? lc : -1)) + "</span>";
+      hs.push(!d ? "" : d.length > HS.DONG_DAI_MAU ? thoat(d) : toMauDong(d, co[i], cs.tu + i === ld ? lc : -1));
     }
     maKhung.style.height = (n * lh) + "px";
     /* Be rong cuon ngang = cua textarea (no thay CA van ban, lop mau chi thay ~100 hang): neu khong, hang dai nam ngoai cua so
@@ -2677,7 +2677,16 @@
     maKhung.style.width = Math.max(0, (nhap.scrollWidth || 0) - 32) + "px";
     maCua.style.top = (cs.tu * lh) + "px";
     maCua.setAttribute("data-tu", String(cs.tu));
-    maCua.innerHTML = html;
+    /* Cung cua so hang (go phim thuong): chi viet lai HANG DOI HTML — thay ~100 hang moi phim la phan lon chi phi xep chu o 1,3 MB. */
+    if (maVe.s !== null && maVe.tu === cs.tu && maVe.den === cs.den && maHang.length === hs.length && maCua.children.length === hs.length) {
+      var con = maCua.children;
+      for (i = 0; i < hs.length; i++) if (hs[i] !== maHang[i]) con[i].innerHTML = hs[i];
+    } else {
+      var html = "";
+      for (i = 0; i < hs.length; i++) html += '<span class="h">' + hs[i] + "</span>";
+      maCua.innerHTML = html;
+    }
+    maHang = hs;
     maVe = { s: s, tu: cs.tu, den: cs.den, loi: loi, lh: lh };
     phat("ve-mau", { tu: cs.tu, den: cs.den });          /* cho ui-* (tim / thay) to them len cac hang vua ve */
   }

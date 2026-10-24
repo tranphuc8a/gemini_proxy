@@ -159,6 +159,117 @@
     return ra.join("");
   }
 
+
+  /* ------------------------------------------------- regex an toan (khong thay doi quay lui) */
+  /** Kiem mot mau regex NGUOI DUNG go co AN TOAN khong (mot lan quet tuyen tinh, khong regex long regex).
+      Tra ve null neu an toan, hoac chuoi ly do (tieng Viet). Chan nhung dang gay quay lui theo cap so:
+      - lap (* + {n,}) len mot nhom co lap ben trong ("(a+)+", "(a*)*b"),
+      - lap len mot nhom luan phien ma cac nhanh co the trung dau ("(a|aa)*", "(.|a)+"); nhom luan phien chi
+        duoc lap neu moi nhanh la chuoi ky tu thuong va ky tu dau doi mot khac nhau ("(foo|bar)+"),
+      - tham chieu nguoc (\1, \k<ten>) va nhin truoc / nhin sau ("(?=" "(?!" "(?<=" "(?<!"),
+      - so lan lap qua lon ({n} > 1000), mau dai qua 2000 ky tu.
+      Dang da thuc (a*a*a*b) KHONG bi chan: no chi cham khi du lieu rat dai — nguoi goi nen cat do dai. */
+  function kiemRegexAnToan(mau) {
+    mau = String(mau);
+    if (mau.length > 2000) return "Mẫu regex dài quá 2000 ký tự";
+    var ngan = [], cur = { luong: false, nhanh: [], hienTai: { dau: undefined, thuan: true, dem: 0 } };
+    var i = 0, n = mau.length, c, truocLaNhom = null;     /* truocLaNhom: nhom vua dong, chua biet co luong theo sau khong */
+    function sauNhom() {                                    /* xet luong theo sau mot nhom vua dong */
+      return truocLaNhom;
+    }
+    function ghiKyTu(ch, thuan) {                          /* mot "don vi" moi trong nhanh hien tai */
+      var h = cur.hienTai;
+      if (h.dem === 0) h.dau = thuan ? String(ch).toLowerCase() : null;
+      if (!thuan) h.thuan = false;
+      h.dem++;
+    }
+    while (i < n) {
+      c = mau.charAt(i);
+      var luongSauNhom = null;
+      if (c === "\\") {
+        var d = mau.charAt(i + 1);
+        if (/[1-9]/.test(d)) return "Mẫu regex dùng tham chiếu ngược (\\" + d + ") — không hỗ trợ";
+        if (d === "k") return "Mẫu regex dùng tham chiếu ngược có tên — không hỗ trợ";
+        ghiKyTu(d, /[^A-Za-z0-9]/.test(d) && d !== "");
+        i += 2;
+        truocLaNhom = null;
+      } else if (c === "[") {
+        i++;
+        if (mau.charAt(i) === "^") i++;
+        if (mau.charAt(i) === "]") i++;
+        while (i < n && mau.charAt(i) !== "]") i += mau.charAt(i) === "\\" ? 2 : 1;
+        i++;
+        ghiKyTu("[", false);
+        truocLaNhom = null;
+      } else if (c === "(") {
+        var sau = mau.substr(i + 1, 3);
+        if (sau.charAt(0) === "?") {
+          if (sau.charAt(1) === "=" || sau.charAt(1) === "!" || (sau.charAt(1) === "<" && (sau.charAt(2) === "=" || sau.charAt(2) === "!"))) {
+            return "Mẫu regex dùng nhìn trước / nhìn sau — không hỗ trợ";
+          }
+          if (sau.charAt(1) === ":") i += 3;
+          else if (sau.charAt(1) === "<") { var k = mau.indexOf(">", i); if (k < 0) return "Mẫu regex thiếu dấu > của tên nhóm"; i = k + 1; }
+          else return "Mẫu regex có dạng nhóm “(?” không hỗ trợ";
+        } else i++;
+        ngan.push(cur);
+        cur = { luong: false, nhanh: [], hienTai: { dau: undefined, thuan: true, dem: 0 } };
+        truocLaNhom = null;
+      } else if (c === ")") {
+        if (!ngan.length) return "Mẫu regex thừa dấu )";
+        cur.nhanh.push(cur.hienTai);
+        var nhom = cur;
+        cur = ngan.pop();
+        i++;
+        ghiKyTu("(", false);
+        cur.luong = cur.luong;
+        truocLaNhom = nhom;
+      } else if (c === "|") {
+        cur.nhanh.push(cur.hienTai);
+        cur.hienTai = { dau: undefined, thuan: true, dem: 0 };
+        i++;
+        truocLaNhom = null;
+      } else if (c === "*" || c === "+" || c === "?" || c === "{") {
+        var vo = false, toiDa = 1;
+        if (c === "{") {
+          var m = i + 1, a = "", b = null, coPhay = false;
+          while (m < n && mau.charAt(m) >= "0" && mau.charAt(m) <= "9") a += mau.charAt(m++);
+          if (mau.charAt(m) === ",") { coPhay = true; m++; b = ""; while (m < n && mau.charAt(m) >= "0" && mau.charAt(m) <= "9") b += mau.charAt(m++); }
+          if (mau.charAt(m) !== "}" || a === "") { ghiKyTu("{", true); i++; truocLaNhom = null; continue; }
+          toiDa = coPhay ? (b === "" ? Infinity : +b) : +a;
+          if ((coPhay ? Math.max(+a, b === "" ? 0 : +b) : +a) > 1000) return "Mẫu regex lặp quá nhiều lần ({" + a + (coPhay ? "," + b : "") + "} > 1000)";
+          i = m + 1;
+        } else {
+          toiDa = c === "?" ? 1 : Infinity;
+          i++;
+        }
+        if (mau.charAt(i) === "?") i++;                    /* lap luoi */
+        if (toiDa > 1) {
+          if (truocLaNhom) {
+            if (truocLaNhom.luong) return "Mẫu regex lặp lồng nhau (kiểu “(a+)+”) có thể treo trình duyệt";
+            var nh = truocLaNhom.nhanh;
+            if (nh.length > 1) {
+              var thay = {}, ok = true;
+              for (var q = 0; q < nh.length; q++) {
+                if (!nh[q].thuan || nh[q].dau === null || nh[q].dau === undefined || thay[nh[q].dau]) { ok = false; break; }
+                thay[nh[q].dau] = 1;
+              }
+              if (!ok) return "Mẫu regex lặp một nhóm “|” có nhánh trùng đầu (kiểu “(a|aa)*”) có thể treo trình duyệt";
+            }
+          }
+          cur.luong = true;
+        }
+        if (truocLaNhom && truocLaNhom.luong) cur.luong = true;
+        truocLaNhom = null;
+      } else {
+        ghiKyTu(c, c !== "." && c !== "^" && c !== "$");
+        i++;
+        truocLaNhom = null;
+      }
+    }
+    if (ngan.length) return "Mẫu regex thiếu dấu )";
+    return null;
+  }
+
   JE.chung = {
     coRieng: coRieng,
     kieuCua: kieuCua,
@@ -168,7 +279,8 @@
     duongSangConTro: duongSangConTro,
     conTroSangDuong: conTroSangDuong,
     bangNhauSau: bangNhauSau,
-    khoaChuan: khoaChuan
+    khoaChuan: khoaChuan,
+    kiemRegexAnToan: kiemRegexAnToan
   };
   if (typeof module !== "undefined" && module.exports) module.exports = JE.chung;
 });
