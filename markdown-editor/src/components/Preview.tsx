@@ -100,6 +100,8 @@ function Preview() {
     const offScroll = onScrollSync((event) => {
       if (event.source === 'preview' || !scrollSync || !scrollRef.current) return
       lockRef.current.engage()
+      // The block at the editor's line may still be a placeholder: it is built first, so the preview lands on real content.
+      if (articleRef.current && revealIn(articleRef.current, { line: event.line })) markAnchorsStale()
       scrollRef.current.scrollTo({ top: offsetForLine(getAnchors(), event.line) })
     })
     const offJump = onJump((event) => {

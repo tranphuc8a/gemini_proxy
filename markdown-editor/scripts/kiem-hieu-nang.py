@@ -463,10 +463,10 @@ def cho_yen(page, mode, han_s, mang=None):
     deadline = time.time() + han_s
     s = {}
     while time.time() < deadline:
-        s = page.evaluate("""() => { const now = performance.now(); const lt = window.__lt; const lastLt = lt.length ? lt[lt.length-1].s + lt[lt.length-1].d : 0;
+        s = page.evaluate("""(mode) => { const now = performance.now(); const lt = window.__lt; const lastLt = lt.length ? lt[lt.length-1].s + lt[lt.length-1].d : 0;
           let lastRes = 0; for (const e of performance.getEntriesByType('resource')) lastRes = Math.max(lastRes, e.responseEnd);
-          return {now, lastLt, lastRes, t: window.__t, loading: document.querySelectorAll('.mermaid-loading:not(.is-waiting)').length + document.querySelectorAll('.md-block.is-pending').length,
-                  admin: !!document.querySelector('.status-role.is-admin')}; }""")
+          return {now, lastLt, lastRes, t: window.__t, loading: document.querySelectorAll('.mermaid-loading:not(.is-waiting)').length + document.querySelectorAll((mode === 'reading' ? '.reading-article' : '.preview-scroll') + ' .md-block.is-pending').length,
+                  admin: !!document.querySelector('.status-role.is-admin')}; }""", mode)
         t = s["t"]
         ok = t.get("reading") if mode == "reading" else (t.get("editor") and (mode == "editor" or t.get("preview")))
         if ok and s["now"] - max(s["lastLt"], s["lastRes"], t.get("lastMut", 0)) > 1500 and s["loading"] == 0 and (mang is None or mang.yen()):

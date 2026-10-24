@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useEditorStore } from '../store'
 import { extractHeadings } from '../lib/markdown'
 import { emitJump } from '../lib/paneSync'
-import { revealIn } from '../lib/previewController'
+import { revealIn, settleScroll } from '../lib/previewController'
 import { useIdleValue } from '../hooks/useIdleValue'
 import { IconHash } from './Icons'
 import './Outline.css'
@@ -51,13 +51,8 @@ function Outline() {
               const scroller = target.closest<HTMLElement>('.preview-scroll')
               const far = !scroller || Math.abs(target.getBoundingClientRect().top - scroller.getBoundingClientRect().top) > scroller.clientHeight * 3
               target.scrollIntoView({ behavior: far ? 'auto' : 'smooth', block: 'start' })
-              if (far) {
-                requestAnimationFrame(() => {
-                  target.scrollIntoView({ behavior: 'auto', block: 'start' })
-                  requestAnimationFrame(() => target.scrollIntoView({ behavior: 'auto', block: 'start' }))
-                })
-              }
-            }
+              if (far && scroller) settleScroll(scroller, target)
+                        }
           }}
           title={heading.text}
         >

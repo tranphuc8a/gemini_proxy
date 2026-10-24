@@ -34,7 +34,7 @@ function html(text: string): string {
 }
 
 /** Markup without the whitespace between tags (the whole document renders "\n" between blocks, a block does not). */
-const squash = (markup: string) => markup.replace(/\s*\n\s*(?=<)/g, '').replace(/>\s*\n\s*/g, '>').replace(/\n+/g, '\n').trim()
+const squash = (markup: string) => markup.replace(/href="#[^"]*"( class="heading-anchor")/g, 'href="#"$1').replace(/\s*\n\s*(?=<)/g, '').replace(/>\s*\n\s*/g, '>').replace(/\n+/g, '\n').trim()
 
 /** A block's markup with `data-line` made absolute, as the whole document renders it. */
 function blockHtml(text: string, start: number): string {

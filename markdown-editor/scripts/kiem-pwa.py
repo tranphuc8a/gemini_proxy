@@ -682,13 +682,15 @@ M2_INLINE = 3    # \( E = mc^2 \), \ce, \eqref
 M2_COUNT_JS = """(root) => {
   const el = document.querySelector(root);
   if (!el) return null;
+  // render theo khối (M5): data-line là dòng TRONG khối; dòng tuyệt đối = data-block-line của khung khối + data-line - 1
+  const abs = (b) => { const w = b.closest('.md-block'); return String(Number(b.getAttribute('data-line')) + (w ? Number(w.dataset.blockLine) - 1 : 0)); };
   const display = el.querySelectorAll('.katex-display').length;
   return {
     display, inline: el.querySelectorAll('.katex').length - display,
     errors: el.querySelectorAll('.katex-error').length + (el.innerHTML.includes('#cc0000') ? 1 : 0),
-    blocks: Array.from(el.querySelectorAll('div.math-block')).map((b) => b.getAttribute('data-line')),
+    blocks: Array.from(el.querySelectorAll('div.math-block')).map(abs),
     blocksWithKatex: Array.from(el.querySelectorAll('div.math-block')).filter((b) => b.querySelector('.katex-display')).length,
-    h2: (Array.from(el.querySelectorAll('h2')).find((h) => h.textContent.includes('Sau toán')) || {getAttribute: () => null}).getAttribute('data-line'),
+    h2: (() => { const h = Array.from(el.querySelectorAll('h2')).find((x) => x.textContent.includes('Sau toán')); return h ? abs(h) : null; })(),
     text: el.textContent,
     ce: Array.from(el.querySelectorAll('annotation')).some((a) => a.textContent.includes('\\\\ce{')),
   };
@@ -744,7 +746,9 @@ def run_m2(browser, srv: Server, shots: str | None) -> None:
     snap("06-toan-llm")
 
     # Nhấp đúp một khối toán → con trỏ editor về đúng dòng nguồn (cần data-line trên khối; trước M2 KaTeX xoá mất).
-    page.locator('.preview-scroll div.math-block[data-line="9"]').dblclick()
+    page.evaluate("""() => { for (const b of document.querySelectorAll('.preview-scroll div.math-block')) { const w = b.closest('.md-block');
+      if (Number(b.getAttribute('data-line')) + (w ? Number(w.dataset.blockLine) - 1 : 0) === 9) b.setAttribute('data-kiem-dong9', '1'); } }""")
+    page.locator('.preview-scroll div.math-block[data-kiem-dong9]').dblclick()
     page.wait_for_timeout(400)
     line = page.evaluate("() => { const t = document.querySelector('.editor-input'); return t.value.slice(0, t.selectionStart).split('\\n').length; }")
     check("nhấp đúp khối toán (align, dòng 9) → con trỏ editor nhảy tới dòng 9", line == 9, f"dòng {line}")

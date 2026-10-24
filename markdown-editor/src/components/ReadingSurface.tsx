@@ -20,7 +20,7 @@ import {
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useIdleValue } from '../hooks/useIdleValue'
 import BlockedMarkdownView from './BlockedMarkdownView'
-import { revealIn } from '../lib/previewController'
+import { revealIn, settleScroll } from '../lib/previewController'
 import Drawer from './Drawer'
 import { IconClose, IconOutline } from './Icons'
 import './ReadingView.css'
@@ -310,6 +310,13 @@ function ReadingSurface({
     jumpingUntil.current = Date.now() + (smooth ? JUMP_SETTLE_MS : 300)
     setBarHidden(false)
     scroller.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' })
+    // A long jump aims at estimated heights: keep aiming until the blocks around the target have their real size.
+    if (!smooth) {
+      settleScroll(scroller, element, HEADING_OFFSET, (next) => {
+        jumpTarget.current = next
+        jumpingUntil.current = Date.now() + 300
+      })
+    }
     // Reading continues from the heading for keyboard and screen-reader users
     // too. Deferred so the closing drawer's focus hand-back does not win.
     if (!element.hasAttribute('tabindex')) element.setAttribute('tabindex', '-1')

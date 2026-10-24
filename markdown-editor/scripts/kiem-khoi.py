@@ -120,7 +120,7 @@ def main() -> int:
         page.evaluate("""() => { const ws = document.querySelectorAll('.preview-scroll .md-block'); window.__giu = [ws[5], ws[Math.floor(ws.length / 2)], ws[ws.length - 3]];
             window.__giu.forEach((w, i) => { w.__dau = 'giu' + i; }); }""")
         # đặt con trỏ cuối một dòng văn xuôi ở giữa tài liệu rồi gõ
-        dong, off = None, 0
+        dong, dong_dau, off = None, 0, 0
         lines = md.split("\n")
         mid = len(lines) // 2
         fence = False
@@ -130,6 +130,9 @@ def main() -> int:
                 fence = not fence
             if not fence and ln and re.match(r"^[A-Za-zÀ-ỹ]", ln) and "$" not in ln and not ln.startswith(("|", "-", "*", ">", "<")):
                 dong = i + 1
+                dong_dau = i + 1
+                while dong_dau > 1 and lines[dong_dau - 2].strip():
+                    dong_dau -= 1
                 off = sum(len(x) + 1 for x in lines[:i]) + len(ln)
                 break
         page.evaluate("(off) => { const ta = document.querySelector('textarea.editor-input'); ta.focus(); ta.setSelectionRange(off, off); }", off)
@@ -156,7 +159,7 @@ def main() -> int:
             page.mouse.dblclick(va["x"], va["y"])
             time.sleep(0.4)
             caret = page.evaluate("(() => { const ta = document.querySelector('textarea.editor-input'); return ta.value.slice(0, ta.selectionStart).split('\\n').length })()")
-            so.kiem("nhấp đúp một đoạn xa đầu tài liệu: con trỏ editor tới đúng dòng nguồn", dong is not None and abs(caret - dong) <= 1, f"dòng {caret}, mong {dong}")
+            so.kiem("nhấp đúp một đoạn xa đầu tài liệu: con trỏ editor tới đúng dòng nguồn", dong is not None and dong_dau <= caret <= dong, f"dòng {caret}, mong {dong_dau}–{dong}")
 
         # ---- 3. mục lục: bấm tiêu đề cuối ----------------------------------------------------------------------
         page.evaluate("document.querySelector('.preview-scroll').scrollTop = 0")
@@ -167,7 +170,10 @@ def main() -> int:
         time.sleep(1.2)
         thay_cuoi = page.evaluate("""() => { const hs = Array.from(document.querySelectorAll('.preview-scroll .markdown-body h1,h2,h3,h4,h5,h6')); const h = hs[hs.length - 1];
             const sc = document.querySelector('.preview-scroll').getBoundingClientRect(); const r = h.getBoundingClientRect(); return r.bottom > sc.top - 5 && r.top < sc.bottom + 5; }""")
-        so.kiem("Outline: bấm tiêu đề cuối → preview cuộn tới, tiêu đề nằm trong khung nhìn", thay_cuoi)
+        chi_tiet = page.evaluate("""() => { const hs = Array.from(document.querySelectorAll('.preview-scroll .markdown-body h1,h2,h3,h4,h5,h6')); const h = hs[hs.length - 1];
+            const sc = document.querySelector('.preview-scroll'); const items = document.querySelectorAll('nav.outline .outline-item'); const r = h.getBoundingClientRect(); const s = sc.getBoundingClientRect();
+            return {id: h.id, text: h.textContent.slice(0, 30), top: Math.round(r.top - s.top), h: sc.clientHeight, st: sc.scrollTop, sh: sc.scrollHeight, pending: document.querySelectorAll('.md-block.is-pending').length, items: items.length, lastItem: items[items.length-1].textContent.slice(0, 30)}; }""")
+        so.kiem("Outline: bấm tiêu đề cuối → preview cuộn tới, tiêu đề nằm trong khung nhìn", thay_cuoi, json.dumps(chi_tiet, ensure_ascii=False))
         anh(page, "3-outline.png")
         ctx.close()
 

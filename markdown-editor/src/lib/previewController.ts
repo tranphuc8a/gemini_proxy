@@ -98,3 +98,37 @@ export function revealIn(scope: Element, detail: RevealDetail): boolean {
   target.dispatchEvent(new CustomEvent<RevealDetail>(REVEAL_EVENT, { bubbles: true, detail }))
   return true
 }
+
+/**
+ * Keeps a long jump on its target while the page settles. Far from the viewport the height of a block is an estimate
+ * (placeholders, `content-visibility`), so one `scrollTo` lands short once the blocks near the target get their real size.
+ * Re-aims every frame for `maxMs`, and stops at once if the reader takes over (wheel, touch, key, pointer).
+ */
+export function settleScroll(
+  scroller: HTMLElement,
+  target: HTMLElement,
+  offset = 0,
+  onAdjust?: (top: number) => void,
+  maxMs = 900
+): void {
+  const start = performance.now()
+  let cancelled = false
+  const events = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+  const stop = () => {
+    cancelled = true
+    for (const name of events) scroller.removeEventListener(name, stop)
+  }
+  for (const name of events) scroller.addEventListener(name, stop, { passive: true, once: true })
+  const step = () => {
+    if (cancelled || !target.isConnected || !scroller.isConnected) return stop()
+    const wanted = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - offset
+    const top = Math.min(Math.max(0, wanted), scroller.scrollHeight - scroller.clientHeight)
+    if (Math.abs(top - scroller.scrollTop) > 2) {
+      onAdjust?.(top)
+      scroller.scrollTo({ top, behavior: 'auto' })
+    }
+    if (performance.now() - start < maxMs) requestAnimationFrame(step)
+    else stop()
+  }
+  requestAnimationFrame(step)
+}
