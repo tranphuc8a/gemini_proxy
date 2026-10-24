@@ -491,6 +491,8 @@
       var tn = bd.taiNguyen.get(uriGoc), d = tn ? giaiConTroTrongTaiNguyen(tn, String(conTro).replace(/^#/, "")) : null;
       return d ? nutCua(bd, d.gt, d.co, d.cp) : null;
     };
+    /** Cho bo sinh du lieu (schema-sinh.js): giai `ref` tuong doi voi URI co so `co` -> { nut } | { loi, ngoai? } (co cache nhu luc kiem). */
+    bd.giaiRefTu = function (co, ref, kw) { return giaiRef(bd, { co: co }, ref, kw || "$ref"); };
     return bd;
   }
 

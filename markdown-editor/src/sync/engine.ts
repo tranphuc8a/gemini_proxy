@@ -160,7 +160,9 @@ function shadowFromRecord(record: ServerRecord, text: string | null): Shadow {
     kind: record.kind,
     parentId: record.parentId,
     name: record.name,
-    content: record.kind === 'file' ? text ?? '' : null,
+    // `null` stays null: a shadow that kept its hash but not its text (the localStorage fallback drops texts over 32 KB) must not
+    // turn into an EMPTY base -- patches and 3-way merges would be computed against text that was never agreed.
+    content: record.kind === 'file' ? text : null,
     hash: record.kind === 'file' ? record.hash : '',
     rev: record.rev,
     contentRev: record.contentRev,
@@ -654,7 +656,11 @@ export class SyncEngine {
         await this.reconcile('reset')
         return false
       }
-      if (response.items.length) await this.applyRecords(response.items)
+      if (response.items.length && !(await this.applyRecords(response.items))) {
+        // The page could not be applied (the person kept typing into its nodes): the cursor stays where it was, so the next
+        // cycle (`again`) reads this very page again. Moving it on would drop those records for good.
+        return false
+      }
       since = Math.max(since, response.cursor)
       await ws.apply({ meta: { [cursorKey(deps.backend)]: since } })
       if (!response.more) break
@@ -677,8 +683,11 @@ export class SyncEngine {
     }
   }
 
-  /** Applies a batch of server records (a pull page, or the conflicts of a push) to the workspace as one commit. */
-  private async applyRecords(records: ServerRecord[]): Promise<void> {
+  /**
+   * Applies a batch of server records (a pull page, or the conflicts of a push) to the workspace as one commit. False when it
+   * could not be applied this time (the nodes kept changing under it): `again` is set, and the caller must not move on.
+   */
+  private async applyRecords(records: ServerRecord[]): Promise<boolean> {
     const { ws } = this
     for (let attempt = 0; attempt < 4; attempt += 1) {
       ws.capture()
@@ -698,11 +707,12 @@ export class SyncEngine {
       if (!plan.expect.size || (await this.commitPlan(plan))) {
         for (const note of plan.notes) this.deps.notify?.(note.message, note.tone)
         this.refreshCounts()
-        return
+        return true
       }
     }
-    // The person kept typing into the very nodes this batch touches: the next cycle reads them again.
+    // The person kept typing into the very nodes this batch touches: the next cycle reads them again (the cursor did not move).
     this.again = true
+    return false
   }
 
   private async commitPlan(plan: Plan): Promise<boolean> {

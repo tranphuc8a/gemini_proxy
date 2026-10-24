@@ -136,6 +136,10 @@ Ví dụ:
       </label>
       <button class="nut nho" id="sc-dinh-dang" type="button" title="Định dạng JSON của schema (thụt 2)">⇥ Định dạng schema</button>
       <span class="vach"></span>
+      <button class="nut nho" id="sc-suy" type="button" title="Suy ra JSON Schema từ dữ liệu đang soạn (tab Soạn)">✨ Suy schema từ dữ liệu</button>
+      <label class="o-chon" title="Thêm minimum / maximum, minLength / maxLength, minItems / maxItems và enum nhỏ"><input type="checkbox" id="sc-suy-chat"> Chặt chẽ</label>
+      <button class="nut nho" id="sc-sinh-mo" type="button" aria-expanded="false" aria-controls="sc-sinh" title="Sinh dữ liệu mẫu ngẫu nhiên, hợp lệ theo schema (có seed)">🎲 Sinh dữ liệu mẫu</button>
+      <span class="vach"></span>
       <label class="o-chon">Draft
         <select id="sc-draft" class="chon-nho" aria-label="Phiên bản JSON Schema">
           <option value="tu-dong">Tự động (theo $schema)</option>
@@ -154,6 +158,12 @@ Ví dụ:
       <label class="o-chon"><input type="checkbox" id="sc-tu-kiem" checked> Tự kiểm</label>
       <button class="nut nho" id="sc-kiem-ngay" type="button">✓ Kiểm ngay</button>
       <input type="file" id="sc-tep" accept=".json,.txt,application/json,application/schema+json" hidden>
+    </div>
+    <!-- Hoi truoc khi ghi de schema bang schema suy tu du lieu (ui-schema.js). -->
+    <div class="bang-goi-y" id="sc-suy-hoi" role="alert" hidden>
+      <span id="sc-suy-hoi-chu">Schema hiện có sẽ bị thay bằng schema suy ra từ dữ liệu (Ctrl+Z trong ô schema hoàn tác được).</span>
+      <button class="nut nho" id="sc-suy-dong-y" type="button">Ghi đè schema</button>
+      <button class="nut nho" id="sc-suy-bo" type="button">Huỷ</button>
     </div>
     <div class="sc-khung">
       <div class="sc-trai">
@@ -175,6 +185,24 @@ Ví dụ:
       </div>
       <div class="sc-phai">
         <div class="sc-tom" id="sc-tom" role="status" aria-live="polite">Chưa có schema</div>
+        <section class="sc-sinh" id="sc-sinh" aria-label="Sinh dữ liệu mẫu" hidden>
+          <div class="sc-sinh-tc">
+            <label class="o-chon">Seed <input type="text" id="sc-sinh-seed" class="nhap-dong sc-seed" maxlength="40" spellcheck="false" autocomplete="off" aria-label="Seed (cùng seed → cùng kết quả)"></label>
+            <button class="nut nho" id="sc-sinh-doi" type="button" aria-label="Đổi seed ngẫu nhiên" title="Đổi seed ngẫu nhiên rồi sinh lại">🎲</button>
+            <label class="o-chon">Số mẫu <input type="number" id="sc-sinh-so" class="nhap-dong sc-so" min="1" max="100" step="1" aria-label="Số mẫu"></label>
+            <label class="o-chon" title="Xác suất mỗi khoá tuỳ chọn (không bắt buộc) xuất hiện">Khoá tuỳ chọn <input type="number" id="sc-sinh-tile" class="nhap-dong sc-so" min="0" max="100" step="10" aria-label="Phần trăm khoá tuỳ chọn">%</label>
+            <label class="o-chon" title="Độ sâu tối đa trước khi chuyển sang chế độ tối thiểu (chống đệ quy vô hạn)">Độ sâu <input type="number" id="sc-sinh-sau" class="nhap-dong sc-so" min="1" max="12" step="1" aria-label="Độ sâu tối đa"></label>
+            <button class="nut nho" id="sc-sinh-chay" type="button">Sinh</button>
+          </div>
+          <div class="sc-sinh-bao" id="sc-sinh-bao" role="status" aria-live="polite" data-tt="chua">Bấm “Sinh” để tạo dữ liệu mẫu hợp lệ theo schema.</div>
+          <pre class="sc-sinh-xem" id="sc-sinh-xem" tabindex="0" aria-label="Xem trước dữ liệu mẫu"></pre>
+          <div class="sc-sinh-hd">
+            <button class="nut nho" id="sc-sinh-dung" type="button" disabled>Dùng làm dữ liệu</button>
+            <button class="nut nho" id="sc-sinh-chep" type="button" disabled>Chép mẫu</button>
+            <button class="nut nho" id="sc-sinh-tai" type="button" disabled>Tải mẫu về</button>
+            <button class="nut nho" id="sc-sinh-lai" type="button" title="Tăng seed thêm 1 rồi sinh lại">Sinh lại (seed+1)</button>
+          </div>
+        </section>
         <ul class="sc-loi" id="sc-loi" aria-label="Danh sách lỗi theo schema"></ul>
       </div>
     </div>
@@ -201,6 +229,9 @@ Ví dụ:
 <script src="assets/vi-tri.js"></script>
 <script src="assets/schema-format.js"></script>
 <script src="assets/schema-kiem.js"></script>
+<script src="assets/regex-sinh.js"></script>
+<script src="assets/schema-sinh.js"></script>
+<script src="assets/schema-suy.js"></script>
 <script src="assets/chay-nen.js"></script>
 <script src="assets/json-editor.js"></script>
 <script src="assets/ui-schema.js"></script>

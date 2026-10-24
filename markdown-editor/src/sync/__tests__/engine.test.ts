@@ -916,6 +916,57 @@ describe('the cursor and echoes', () => {
   })
 })
 
+describe('a page of changes that could not be applied', () => {
+  it('does not move the cursor past it: the next cycle reads the same page again', async () => {
+    const { a, b } = await withSharedDoc()
+    a.addFile('root', 'other.md', 'unrelated', 'other')
+    a.edit('doc', 'edited on A')
+    await a.sync()
+    const before = await b.store.getMeta('cursor:json')
+    // The person keeps typing into the nodes of the batch: the workspace refuses it on every attempt.
+    const real = b.ws.commitRemote.bind(b.ws)
+    let refusals = 0
+    b.ws.commitRemote = async () => {
+      refusals += 1
+      return false
+    }
+    await b.engine.syncNow().catch(() => undefined)
+    expect(refusals).toBeGreaterThanOrEqual(4)
+    expect(await b.store.getMeta('cursor:json')).toBe(before)
+    expect(b.text('other')).toBeUndefined()
+    b.ws.commitRemote = real
+    await b.sync()
+    expect(b.text('doc')).toBe('edited on A')
+    expect(b.text('other')).toBe('unrelated')
+    expect(await b.store.getMeta('cursor:json')).toBeGreaterThan(before as number)
+  })
+})
+
+const SEVEN_A = ['one', 'two', 'three', 'four', 'five', 'six', 'seven (A)'].join(String.fromCharCode(10))
+
+describe('a shadow that has no text (the localStorage fallback drops texts over 32 KB)', () => {
+  it('stays without text when the server only renamed the node: no empty base for the next patch or merge', async () => {
+    const { a, b } = await withSharedDoc()
+    // A edits the text and cannot push yet (read-only for now); its shadow is hash-only, as the fallback stores it.
+    a.canWrite = false
+    a.edit('doc', SEVEN_A)
+    const shadow = (await a.store.getShadows(['doc'])).get('doc')!
+    await a.store.commit({ shadows: { put: [{ ...shadow, content: null }] } })
+    b.rename('doc', 'renamed.md')
+    await b.sync()
+    await a.sync()
+    const after = (await a.store.getShadows(['doc'])).get('doc')!
+    expect(a.name('doc')).toBe('renamed.md')
+    expect(after.content).toBeNull()
+    expect(after.hash).toBe(shadow.hash)
+    // And once A may push, the edit goes up without a detour through md_patch_mismatch.
+    a.canWrite = true
+    await a.sync()
+    expect(a.engine.state.conflicts).toEqual([])
+    expect(b.server.text('doc')).toBe(SEVEN_A)
+  })
+})
+
 describe('memory', () => {
   it('remembers the hashes of only a few texts: each key is a whole document, up to 3.5 MB', async () => {
     const server = new FakeServer()

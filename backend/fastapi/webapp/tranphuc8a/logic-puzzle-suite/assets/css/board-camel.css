@@ -1,0 +1,118 @@
+/* board-camel.css — bàn LẠC ĐÀ CHỞ CHUỐI + trình soạn. Token + --pz-* của puzzle.css; màu riêng của bàn là --pz-cm-* (bản sáng/tối; check_board_camel.py đo tương phản).
+   Trục km dựng bằng HTML định vị theo % (chữ không co theo bề rộng): kho = cột cát có số quả, 🐪 + thẻ tải ở trên, vạch đích D (nét liền xanh), km đang chọn (nét đứt), điểm gợi ý (nét chấm cam).
+   Mọi nghĩa đều có CHỮ (số quả, "D · km …", "→ km …"), không chỉ màu. Cỡ co theo khung (.board-host là container). */
+:root {
+  --pz-cm-depot: #8a6a1c;
+  --pz-cm-depot-ink: #2e2000;
+  --pz-cm-tag: #fff1cf;
+  --pz-cm-tag-ink: #3a2a00;
+  --pz-cm-tag-edge: #8a6a1c;
+  --pz-cm-dest: #1a4ac0;
+  --pz-cm-hint: #9a5a05;
+  --pz-cm-ground: var(--pz-line-strong);
+}
+:root[data-theme="dark"] {
+  --pz-cm-depot: #d9b45a;
+  --pz-cm-depot-ink: #f6e7bd;
+  --pz-cm-tag: #3b2f12;
+  --pz-cm-tag-ink: #ffe9b0;
+  --pz-cm-tag-edge: #d9b45a;
+  --pz-cm-dest: #8fb4ff;
+  --pz-cm-hint: #ffc27a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) { --pz-cm-depot: #d9b45a; --pz-cm-depot-ink: #f6e7bd; --pz-cm-tag: #3b2f12; --pz-cm-tag-ink: #ffe9b0; --pz-cm-tag-edge: #d9b45a; --pz-cm-dest: #8fb4ff; --pz-cm-hint: #ffc27a; }
+}
+
+.pz-cm { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
+
+/* ---- thông số */
+.pz-cm-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pz-cm-stat { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--elev); color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.pz-cm-stat b { font-size: 18px; line-height: 1.1; }
+.pz-cm-goal { border-color: var(--accent); }
+
+/* ---- trục km */
+.pz-cm-trackbox { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 8px 8px; border: 2px solid var(--pz-line-strong); border-radius: 18px; background: var(--elev); }
+.pz-cm-track { position: relative; height: 176px; margin: 0 6px; padding: 0 24px; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: pointer; outline: none; border-radius: 12px; }
+.pz-cm-track:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cm-layer { position: relative; height: 100%; }
+.pz-cm-ground { position: absolute; left: 0; right: 0; bottom: 34px; height: 4px; border-radius: 2px; background: var(--pz-cm-ground); }
+.pz-cm-tickmark { position: absolute; bottom: 30px; width: 2px; height: 12px; margin-left: -1px; background: var(--pz-cm-ground); }
+.pz-cm-tick { position: absolute; bottom: 8px; transform: translateX(-50%); font-size: 12.5px; line-height: 1; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pz-cm-flag { position: absolute; bottom: 38px; transform: translateX(-50%); }
+.pz-cm-flag span { display: block; padding: 0 6px; border-radius: 6px; background: var(--s2); color: var(--text); font-weight: 700; font-size: 13px; line-height: 20px; border: 1px solid var(--border-strong); }
+.pz-cm-dest { position: absolute; top: 0; bottom: 34px; width: 0; border-left: 3px solid var(--pz-cm-dest); }
+.pz-cm-dest span { position: absolute; top: 2px; left: 4px; padding: 0 5px; border-radius: 6px; background: var(--elev); color: var(--pz-cm-dest); font-weight: 700; font-size: 13px; line-height: 20px; white-space: nowrap; }
+.pz-cm-target { position: absolute; top: 40px; bottom: 34px; width: 0; border-left: 3px dashed var(--accent); pointer-events: none; }
+.pz-cm-target span { position: absolute; top: 0; left: 4px; padding: 0 5px; border-radius: 6px; background: var(--elev); color: var(--accent-text); font-weight: 700; font-size: 13px; line-height: 20px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pz-cm-hintpos { position: absolute; top: 40px; bottom: 34px; width: 0; border-left: 4px dotted var(--pz-cm-hint); pointer-events: none; }
+.pz-cm-hintpos span { position: absolute; bottom: 4px; left: 4px; padding: 0 5px; border-radius: 6px; background: var(--elev); color: var(--pz-cm-hint); font-weight: 700; font-size: 13px; line-height: 20px; white-space: nowrap; }
+.pz-cm-depot { position: absolute; bottom: 38px; width: 16px; height: var(--h, 20px); margin-left: -8px; border-radius: 5px 5px 0 0; background: var(--pz-cm-depot); border: 2px solid var(--pz-cm-depot-ink); border-bottom: 0; }
+.pz-cm-depot.here { box-shadow: 0 0 0 3px var(--accent); }
+.pz-cm-dn { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 2px; font-size: 13px; line-height: 16px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pz-cm-camel { position: absolute; top: 4px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0; pointer-events: none; transition: left 250ms ease; z-index: 2; }
+.pz-cm-emoji { font-size: 30px; line-height: 34px; }
+.pz-cm-cload { padding: 0 8px; border: 2px solid var(--pz-cm-tag-edge); border-radius: 999px; background: var(--pz-cm-tag); color: var(--pz-cm-tag-ink); font-size: 13px; line-height: 18px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pz-cm-dest.flip span, .pz-cm-target.flip span { left: auto; right: 4px; }
+.pz-cm-hintpos.flip span { left: auto; right: 4px; }
+.pz-cm-status { margin: 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+
+/* ---- điều khiển */
+.pz-cm-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.pz-cm-ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 14px; background: var(--elev); }
+.pz-cm-lab, .pz-cm-flab { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.pz-cm-line { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; min-width: 0; }
+.pz-cm-num { flex: 1 1 90px; min-width: 0; min-height: 44px; padding: 0 10px; border: 2px solid var(--border-strong); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
+.pz-cm-num:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cm-mini { min-height: 44px; padding: 0 12px; }
+.pz-cm-act { min-height: 44px; }
+.pz-cm-act:focus-visible, .pz-cm-mini:focus-visible, .pz-cm-cut:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cm-note { margin: 0; min-height: 20px; font-size: 13.5px; color: var(--text-2); overflow-wrap: anywhere; }
+.pz-cm-note.bad { color: var(--pz-conflict-text); }
+.pz-cm-quick .pz-cm-line .pz-cm-act { flex: 1 1 150px; }
+
+/* ---- kế hoạch */
+.pz-cm-planbox { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pz-cm-h { margin: 0; font-size: 15px; }
+.pz-cm-plan { list-style: decimal inside; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow: auto; }
+.pz-cm-step { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; min-width: 0; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--elev); color: var(--text); font-size: 14.5px; }
+.pz-cm-step::marker { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.pz-cm-stext { font-weight: 600; overflow-wrap: anywhere; }
+.pz-cm-safter { color: var(--text-2); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.pz-cm-cut { min-height: 44px; padding: 0 10px; font-size: 13.5px; }
+.pz-cm-step.hint { background-image: linear-gradient(var(--pz-hint), var(--pz-hint)); border-color: var(--pz-cm-hint); }
+.pz-cm-step.replay { background-image: linear-gradient(var(--pz-replay), var(--pz-replay)); border-color: var(--pz-good); }
+.pz-cm-empty { list-style: none; padding: 6px 2px; }
+.pz-cm-ghost { margin: 0; padding: 8px 12px; border: 2px dotted var(--pz-cm-hint); border-radius: 10px; background: var(--elev); color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.pz-cm-ghost[hidden], .pz-cm-confirm[hidden] { display: none; }
+.pz-cm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-cm-actions .pz-cm-act { flex: 1 1 150px; }
+.pz-cm-confirm { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 2px solid var(--accent); border-radius: 14px; background: var(--elev); }
+.pz-cm-cp { margin: 0; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+
+/* ---- zigzag */
+.pz-cm-zigbox { border: 1px solid var(--border-strong); border-radius: 12px; background: var(--elev); padding: 6px 10px; }
+.pz-cm-zigbox summary { min-height: 36px; display: flex; align-items: center; cursor: pointer; font-size: 14px; color: var(--text); }
+.pz-cm-zigbox summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cm-zigsvg { display: block; width: 100%; background: var(--sunk); border-radius: 8px; }
+.pz-cm-zigline { fill: none; stroke: var(--pz-cm-depot); stroke-width: 2.4; stroke-linejoin: round; }
+
+/* ---- trình soạn */
+.pz-cm-ed { gap: 14px; }
+.pz-cm-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pz-cm-field .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-cm-field .chip { min-height: 44px; padding: 0 14px; }
+.pz-cm-field .chip.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.pz-cm-field .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cm-fhint { margin: 0; font-size: 13.5px; }
+.pz-cm-samples { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-cm-samples .btn { min-height: 44px; }
+.pz-cm-edinfo { margin: 0; font-weight: 600; text-align: center; overflow-wrap: anywhere; color: var(--text); }
+.pz-cm-edinfo.bad { color: var(--pz-conflict-text); }
+.pz-cm-edinfo.good { color: var(--pz-good); }
+.pz-cm-tip { font-size: 13.5px; }
+
+@media (prefers-reduced-motion: reduce) { .pz-cm-camel { transition: none; } }
+@media (forced-colors: active) { .pz-cm-depot { background: ButtonText; } .pz-cm-target, .pz-cm-dest { border-color: Highlight; } }
+@container (max-width: 420px) { .pz-cm-stat { font-size: 13px; padding: 4px 10px; } .pz-cm-track { height: 168px; padding: 0 20px; } .pz-cm-controls { grid-template-columns: 1fr; } }

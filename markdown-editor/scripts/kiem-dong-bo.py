@@ -283,6 +283,16 @@ def buoc_lo_lon_viet(browser, srv, so: SoKiem, ses: Sesion, token: str):
     h = mo_app(ctx, srv, ses, "H")
     mark = ses.marca(h)
     want = {i: sha(t) for i, _, t in viet}
+
+    # IndexedDB có thể mở chậm (đo được ~22 giây trên máy bận). Phép kiểm này nói về cỡ lô, không về tốc độ mở, nên chờ cho kho
+    # chép xong rồi mới đo; và nói rõ nếu app đã hạ xuống localStorage dự phòng (kho 5 MB không nhét vừa ở đó).
+    def kho_idb_da_co() -> bool:
+        try:
+            return len(doc_idb(h)["hashes"]) >= len(viet)
+        except Exception:  # noqa: BLE001 - kho chưa mở xong: thử lại
+            return False
+
+    so.kiem("kho tài liệu nằm ở IndexedDB (không bị hạ xuống localStorage dự phòng khi mở chậm)", bool(poll(kho_idb_da_co, timeout=120, step=2.0)))
     def da_len_may_chu() -> bool:
         da_co = server_docs(srv)
         return all(da_co.get(i, {}).get("hash") == want[i] for i in want)

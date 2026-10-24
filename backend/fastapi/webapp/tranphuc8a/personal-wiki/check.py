@@ -8,6 +8,8 @@
     ... check.py --song-sot      # tầng 3: sập giữa chừng không mất chữ; offline qua service worker; PWA
     ... check.py --co-gian       # tầng 4: dữ liệu xấu nhất × nhiều bề rộng (không tràn ngang)
     ... check.py --hieu-nang [N] # tầng 5: N note (mặc định 100000) trong IndexedDB thật: tìm kiếm < 1 s? — IN SỐ ĐO THẬT
+    ... check.py --khoi          # chỉ phần "xem trước theo khối" của tầng 2 (≈ 30 s; đã nằm trong --chuc-nang)
+    ... check.py --dai           # chỉ kịch bản "ghi chú dài" của tầng 5 (≈ 1 phút; đã nằm trong --hieu-nang): 400.000 ký tự, gõ giữa note, IN SỐ TRƯỚC/SAU
     ... check.py --dong-bo       # tầng 6: đồng bộ qua /wiki (cần máy chủ + SQLite tạm) — 3 biến thể: API_PREFIX=/api/v1; API_PREFIX trống
                                  #         + A mở start_url PWA index.html?source=pwa (Chromium); biến thể đó trên Edge thật (msedge)
     ... check.py --ai            # tầng 7: Soạn bằng AI (POST /ai/wiki) — Gemini giả: page.route trong trình duyệt (Chromium máy tính, Pixel 5) và
@@ -57,7 +59,7 @@ OK = FAIL = 0
 ERRORS: list = []
 
 # Máy chủ thử không chạm dịch vụ thật: .env có thể đặt MONGO_URI thật, và /wiki/backends (Cài đặt → Đồng bộ) sẽ PING nó.
-ENV_AN_TOAN = {"MONGO_URI": ""}
+ENV_AN_TOAN = {"MONGO_URI": "", "RATE_LIMIT_BACKEND": "memory"}
 
 # ---------------------------------------------------------------- kiểm đột biến: tạm gỡ một bản sửa để chứng minh bộ kiểm bắt được lỗi cũ
 # PW_HOAN_NGUYEN=may-chu   máy chủ thử chạy với việc 1 bị gỡ: …/index.html gọi đích danh KHÔNG được chèn __WEBAPP_CONFIG__ (vá lúc nạp bằng
@@ -2063,6 +2065,227 @@ def tang_5(may, n):
         br.close()
 
 
+# ============================================================================================ xem trước theo khối (perf-md W3/W4)
+# editor.js chỉ dựng lại KHỐI đổi của xem trước (M.blocks → <div class="mdb"> mỗi khối) thay vì cả note. Hai phần:
+#  · tang_khoi (trong --chuc-nang): nội dung vá DOM == render cả note sau mỗi lần sửa (id tiêu đề trùng được đánh số lại, XSS vẫn không chạy,
+#    khối không đổi vẫn là CÙNG phần tử DOM, content-visibility áp đúng chỗ, đổi chế độ rồi quay lại vẫn đúng);
+#  · tang_5_dai (trong --hieu-nang): ghi chú ~400.000 ký tự / ~9.000 dòng, chia đôi, gõ 21 phím cách 150 ms giữa note. IN SỐ ĐO TRƯỚC/SAU
+#    ("trước" = ép M.blocks trả MỘT khối duy nhất ⇒ dựng lại cả note mỗi lần như bản cũ).
+SEED_NOTE_JS = """async ([title, content]) => { const s = await Wiki.store.openBest('personal-wiki'); const r = Wiki.repo.create(s); await r.open();
+  const res = await r.save({ title: title, content: content }); return res.note.id; }"""
+CMP_KHOI_JS = """() => {
+  const prev = document.querySelector('.ed-prev'), ta = document.querySelector('.ed-ta');
+  const norm = h => { const d = document.createElement('div'); d.innerHTML = h; return d.innerHTML; };
+  const got = norm([...prev.children].map(c => c.classList.contains('mdb') ? c.innerHTML : c.outerHTML).join('')).replace(/ data-hid="[^"]*"/g, '');   // data-hid = id gốc, giữ lại để đặt lại id khi vá
+  const want = norm(Wiki.markdown.render(ta.value, { highlight: Wiki.highlight, resolve: () => null }));
+  let i = 0; while (i < got.length && got.charAt(i) === want.charAt(i)) i++;
+  return { same: got === want, blocks: prev.querySelectorAll(':scope > .mdb').length, loose: [...prev.children].filter(c => !c.classList.contains('mdb')).length,
+           ids: [...prev.querySelectorAll('h1,h2,h3,h4,h5,h6')].map(h => h.id), noId: prev.querySelectorAll('[data-hid]:not([id])').length,
+           at: i, got: got.slice(Math.max(0, i - 40), i + 80), want: want.slice(Math.max(0, i - 40), i + 80) };
+}"""
+MARK_KHOI_JS = "() => { document.querySelectorAll('.ed-prev > .mdb').forEach(e => { e.__giu = true; }); return document.querySelectorAll('.ed-prev > .mdb').length; }"
+GIU_KHOI_JS = "() => ({ giu: [...document.querySelectorAll('.ed-prev > .mdb')].filter(e => e.__giu).length, tong: document.querySelectorAll('.ed-prev > .mdb').length })"
+CV_JS = """() => { const cv = s => { const e = document.querySelector('.ed-prev .mdb > ' + s); return e ? getComputedStyle(e).contentVisibility : null; };
+  return { p: cv('p'), pre: cv('pre'), h2: cv('h2'), h1: cv('h1') }; }"""
+
+KHOI_BASE = "\n".join([
+    "# A", "", "Đoạn đầu có **đậm**, [[Hash Function]] và $x^2$.", "", "## B", "", "```js", "const a = 1;", "", "const b = 2;", "```", "",
+    "# A", "", "- mục 1", "- mục 2", "", "$$", "\\sum_{i=1}^{n} i", "$$", "", "| H1 | H2 |", "|----|----|", "| 1  | 2  |", "",
+    "<img src=x onerror=\"window.__xss=1\"> và `<script>window.__xss=2</script>`", "", "Q: hỏi gì?", "A: đáp", "", "# A", "cuối"])
+
+
+def _cho_khoi(pg, marker, timeout=6000):
+    pg.wait_for_function("m => document.querySelector('.ed-prev').textContent.includes(m)", arg=marker, timeout=timeout)
+    pg.wait_for_timeout(120)
+
+
+def tang_khoi(may):
+    section("XEM TRƯỚC THEO KHỐI — nội dung vá DOM == render cả note (Edge qua Playwright)")
+    from playwright.sync_api import sync_playwright
+    url = may.goc + PATH
+    with sync_playwright() as pw:
+        try:
+            br = pw.chromium.launch(channel="msedge")
+        except Exception:
+            br = pw.chromium.launch()
+        P = Page(br, url, "khoi", viewport={"width": 1440, "height": 900})
+        pg = P.pg
+        nid = pg.evaluate(SEED_NOTE_JS, ["Khối thử", KHOI_BASE])
+        pg.reload(wait_until="load")
+        pg.wait_for_function("document.body.classList.contains('ready')")
+        P.go("#/n/" + nid)
+        pg.wait_for_selector(".ed-ta")
+        if pg.locator(".modes button[data-mode=split]").count() and pg.is_visible(".modes button[data-mode=split]"):
+            pg.click(".modes button[data-mode=split]")
+        pg.wait_for_selector(".ed-prev .mdb")
+
+        def so_sanh(msg, ids=None):
+            r = pg.evaluate(CMP_KHOI_JS)
+            check(r["same"], msg + ": nội dung vá DOM == render cả note", (r["at"], r["got"], r["want"]))
+            check(r["loose"] == 0 and r["noId"] == 0, msg + ": mọi khối bọc trong .mdb, mọi tiêu đề đã có id", (r["loose"], r["noId"]))
+            if ids is not None:
+                check(r["ids"] == ids, msg + ": id tiêu đề %s" % ids, r["ids"])
+            return r
+
+        r = so_sanh("mở note", ["h-a", "h-b", "h-a-2", "h-a-3"])
+        check(r["blocks"] >= 8, "note mẫu được cắt thành nhiều khối (%d)" % r["blocks"])
+        check(pg.evaluate("window.__xss") is None, "XSS trong xem trước theo khối không chạy (img onerror, <script> trong code)")
+        check(pg.locator(".ed-prev .math-d, .ed-prev div.math").count() >= 1 and pg.locator(".ed-prev pre.code[data-lang=js] code").inner_text().count("\n") == 2, "khối toán và khối code (có dòng trống bên trong) vẫn nguyên MỘT khối")
+        cv = pg.evaluate(CV_JS)
+        check(cv["p"] == "auto" and cv["pre"] == "auto" and cv["h2"] == "visible" and cv["h1"] == "visible", "content-visibility:auto cho đoạn/code, tiêu đề thì không (mục lục cần vị trí thật)", cv)
+
+        # sửa 1: xoá tiêu đề "# A" đầu → các id trùng đánh số lại
+        n0 = pg.evaluate(MARK_KHOI_JS)
+        pg.fill(".ed-ta", KHOI_BASE.replace("# A\n\nĐoạn đầu", "Đoạn đầu", 1))
+        pg.wait_for_function("() => document.querySelectorAll('.ed-prev h1').length === 2", timeout=6000)
+        pg.wait_for_timeout(150)
+        so_sanh("xoá tiêu đề A đầu", ["h-b", "h-a", "h-a-2"])
+        g = pg.evaluate(GIU_KHOI_JS)
+        check(g["giu"] >= g["tong"] - 1, "xoá tiêu đề: các khối còn lại vẫn là CÙNG phần tử DOM (giữ %d/%d)" % (g["giu"], g["tong"]), g)
+        # sửa 2: thêm lại → id đổi ngược
+        n0 = pg.evaluate(MARK_KHOI_JS)
+        pg.fill(".ed-ta", KHOI_BASE)
+        pg.wait_for_function("() => document.querySelectorAll('.ed-prev h1').length === 3", timeout=6000)
+        pg.wait_for_timeout(150)
+        so_sanh("thêm lại tiêu đề A đầu", ["h-a", "h-b", "h-a-2", "h-a-3"])
+        # sửa 3: đổi một chữ trong khối code → đúng MỘT khối bị thay
+        n0 = pg.evaluate(MARK_KHOI_JS)
+        pg.fill(".ed-ta", KHOI_BASE.replace("const b = 2;", "const b = 3; // khac"))
+        _cho_khoi(pg, "khac")
+        r = so_sanh("sửa một dòng trong khối code")
+        g = pg.evaluate(GIU_KHOI_JS)
+        check(g["tong"] == n0 and g["giu"] == n0 - 1, "sửa một dòng: đúng MỘT khối bị dựng lại (giữ %d/%d)" % (g["giu"], g["tong"]), g)
+        # sửa 4: mở một rào code không đóng ở giữa → mọi thứ phía dưới thành chữ trong rào (khối cuối đổi hình dạng)
+        pg.fill(".ed-ta", KHOI_BASE.replace("- mục 1", "```\n- mục 1", 1))
+        pg.wait_for_function("() => document.querySelectorAll('.ed-prev h1').length === 2", timeout=6000)
+        pg.wait_for_timeout(150)
+        so_sanh("mở rào code chưa đóng giữa note")
+        pg.fill(".ed-ta", KHOI_BASE)
+        pg.wait_for_function("() => document.querySelectorAll('.ed-prev h1').length === 3", timeout=6000)
+        pg.wait_for_timeout(150)
+        so_sanh("đóng lại (về nội dung gốc)", ["h-a", "h-b", "h-a-2", "h-a-3"])
+        # xoá sạch → thông báo trống; có lại → dựng lại đúng
+        pg.fill(".ed-ta", "")
+        pg.wait_for_selector(".ed-prev .faint", timeout=6000)
+        check(pg.locator(".ed-prev .mdb").count() == 0, "note rỗng: hiện 'Chưa có nội dung', không còn khối cũ")
+        pg.fill(".ed-ta", KHOI_BASE)
+        pg.wait_for_selector(".ed-prev .mdb", timeout=6000)
+        pg.wait_for_timeout(150)
+        so_sanh("gõ lại sau khi rỗng", ["h-a", "h-b", "h-a-2", "h-a-3"])
+        # đổi chế độ: ở "Sửa" gõ thêm (không dựng), về chia đôi → dựng đúng ngay
+        if pg.locator(".modes button[data-mode=edit]").count():
+            pg.click(".modes button[data-mode=edit]")
+            pg.fill(".ed-ta", KHOI_BASE + "\n\nthêm-khi-ở-chế-độ-sửa")
+            pg.click(".modes button[data-mode=split]")
+            _cho_khoi(pg, "thêm-khi-ở-chế-độ-sửa")
+            so_sanh("về chế độ chia đôi sau khi sửa ở chế độ Sửa", ["h-a", "h-b", "h-a-2", "h-a-3"])
+        # mục lục bên cạnh / liên kết tới id trùng: phần tử có id h-a-3 nằm trong xem trước
+        check(pg.evaluate("() => !!document.querySelector('.ed-prev #h-a-3')"), "tiêu đề trùng thứ ba có id h-a-3 để cuộn tới")
+        check(not [e for e in P.errors if "pageerror" in e], "không có lỗi trang (pageerror)", [e for e in P.errors if "pageerror" in e][:2])
+        P.close()
+        br.close()
+
+
+def _ghi_chu_dai(muc_tieu=400000):
+    """Ghi chú tất định ≈ muc_tieu ký tự, ≈ 9.000 dòng: đủ loại khối, tiêu đề lặp (id h-phan-N-2…), công thức, code có dòng trống, bảng, thẻ ôn."""
+    fill = "Thêm chữ tiếng Việt cho dài hơn một chút: thuật toán, cấu trúc dữ liệu, đồ thị, cây nhị phân tìm kiếm và bảng băm đều cần ghi chú cẩn thận."
+    out, n, sec = [], 0, 0
+    while n < muc_tieu:
+        sec += 1
+        parts = ["## Phần %d\n\nĐoạn %d có **đậm**, `code`, [[Hash Function]] và $x_%d$ trong câu. %s\n\nCâu thứ hai của phần %d: %s\n" % (sec % 40, sec, sec, fill * 2, sec, fill)]
+        if sec % 2 == 0:
+            parts.append("- mục một\n- mục hai\n  - con\n")
+        if sec % 3 == 0:
+            parts.append("```cpp\nint f(int x) {\n\n  return x + %d;\n}\n```\n" % sec)
+        if sec % 5 == 0:
+            parts.append("$$\n\\sum_{i=1}^{%d} i\n$$\n\n| A | B |\n|---|---|\n| %d | x |\n" % (sec, sec))
+        if sec % 7 == 0:
+            parts.append("Q: câu hỏi %d?\nA: đáp\n\n> trích dẫn %d\n" % (sec, sec))
+        s = "\n".join(parts) + "\n"
+        out.append(s)
+        n += len(s)
+    return "".join(out)
+
+
+GO_JS = """([pos, ban_cu]) => {
+  window.__pw = { keys: [], long: [] };
+  if (ban_cu) Wiki.markdown.blocks = function (md) { return String(md).trim() ? [{ start: 0, text: String(md).replace(/\\r\\n?/g, '\\n') }] : []; };
+  try { new PerformanceObserver(l => l.getEntries().forEach(e => window.__pw.long.push(e.duration))).observe({ type: 'longtask' }); } catch (e) {}
+  const ta = document.querySelector('.ed-ta');
+  ta.addEventListener('keydown', (e) => { const t0 = e.timeStamp; requestAnimationFrame(() => setTimeout(() => window.__pw.keys.push(performance.now() - t0), 0)); }, true);
+  ta.focus(); ta.setSelectionRange(pos, pos); ta.scrollTop = ta.scrollHeight / 2;
+}"""
+
+
+def _pct(xs, q):
+    xs = sorted(xs)
+    return xs[min(len(xs) - 1, int(round(q * (len(xs) - 1))))] if xs else float("nan")
+
+
+def _do_ghi_chu_dai(br, url, nd, ban_cu, so_phim):
+    P = Page(br, url, "dai-" + ("cu" if ban_cu else "moi"), viewport={"width": 1440, "height": 900})
+    pg = P.pg
+    pg.set_default_timeout(60000)
+    nid = pg.evaluate(SEED_NOTE_JS, ["Ghi chú dài", nd])
+    pg.reload(wait_until="load")
+    pg.wait_for_function("document.body.classList.contains('ready')")
+    t0 = time.time()
+    P.go("#/n/" + nid)
+    pg.wait_for_selector(".ed-ta")
+    if pg.locator(".modes button[data-mode=split]").count() and pg.is_visible(".modes button[data-mode=split]"):
+        pg.click(".modes button[data-mode=split]")
+    pg.wait_for_selector(".ed-prev .mdb", state="attached")
+    mo = time.time() - t0
+    pg.wait_for_timeout(1500)                                   # để lần dựng đầu + lưu nháp yên
+    pos = nd.index("## Phần 20\n") + 200
+    marker = "".join(chr(97 + i % 26) for i in range(so_phim))
+    pg.evaluate(GO_JS, [pos, ban_cu])
+    n_truoc = pg.evaluate(MARK_KHOI_JS)
+    pg.keyboard.type(marker, delay=150)
+    t_end = time.time()
+    pg.wait_for_function("m => document.querySelector('.ed-prev').textContent.includes(m)", arg=marker, timeout=30000)
+    cap_nhat = (time.time() - t_end) * 1000
+    pg.wait_for_timeout(600)
+    r = pg.evaluate("() => ({ keys: window.__pw.keys, long: window.__pw.long })")
+    g = pg.evaluate(GIU_KHOI_JS)
+    same = pg.evaluate(CMP_KHOI_JS)
+    nodes = pg.evaluate("document.querySelectorAll('.ed-prev *').length")
+    P.close()
+    return {"mo": mo, "keys": r["keys"], "long": r["long"], "cap_nhat": cap_nhat, "giu": g, "n_truoc": n_truoc, "same": same, "nodes": nodes}
+
+
+def tang_5_dai(may):
+    slack = max(1.0, float(os.environ.get("PW_PERF_SLACK", "1") or 1))
+    nd = _ghi_chu_dai()
+    section("TẦNG 5b — ghi chú dài: %s ký tự, %s dòng, chia đôi, gõ giữa note cách 150 ms%s" % (format(len(nd), ","), format(nd.count("\n") + 1, ","), (" (PW_PERF_SLACK=%g)" % slack) if slack > 1 else ""))
+    from playwright.sync_api import sync_playwright
+    url = may.goc + PATH
+    with sync_playwright() as pw:
+        try:
+            br = pw.chromium.launch(channel="msedge")
+        except Exception:
+            br = pw.chromium.launch()
+        cu = _do_ghi_chu_dai(br, url, nd, True, 10)
+        moi = _do_ghi_chu_dai(br, url, nd, False, 21)
+        br.close()
+
+    def dong(ten, x):
+        k = x["keys"]
+        print("    %-34s mở %.2f s · gõ %2d phím: p50 %5.0f / p95 %5.0f / max %5.0f ms · long task: %d (max %.0f ms) · preview cập nhật sau phím cuối %.0f ms · %s nút DOM"
+              % (ten, x["mo"], len(k), _pct(k, .5), _pct(k, .95), max(k) if k else 0, len(x["long"]), max(x["long"]) if x["long"] else 0, x["cap_nhat"], format(x["nodes"], ",")))
+    print("    (so sánh: «cũ» = ép M.blocks trả MỘT khối ⇒ dựng lại cả note mỗi lần như bản trước; thiết kế đo cũ: p95 656 ms)")
+    dong("cũ (một khối = cả note)", cu)
+    dong("mới (theo khối)", moi)
+    k, lg = moi["keys"], moi["long"]
+    check(len(k) >= 18, "đo được độ trễ của ≥ 18/21 phím gõ", len(k))
+    check(_pct(k, .95) <= 120 * slack, "note %s ký tự chia đôi: gõ p95 ≤ %d ms (đo %.0f ms; bản cũ %.0f ms)" % (format(len(nd), ","), 120 * slack, _pct(k, .95), _pct(cu["keys"], .95)))
+    check((max(lg) if lg else 0) <= 100 * slack, "mỗi lần cập nhật xem trước: long task lớn nhất ≤ %d ms (đo %.0f ms)" % (100 * slack, max(lg) if lg else 0), lg)
+    check(moi["cap_nhat"] <= 1000 * slack, "xem trước kịp chữ cuối ≤ %d ms sau phím cuối (đo %.0f ms)" % (1000 * slack, moi["cap_nhat"]))
+    check(moi["same"]["same"], "sau khi gõ: nội dung vá DOM == render cả note (%d khối)" % moi["same"]["blocks"], (moi["same"]["at"], moi["same"]["got"], moi["same"]["want"]))
+    check(moi["giu"]["giu"] >= moi["n_truoc"] - 3 and moi["giu"]["tong"] >= moi["n_truoc"] - 3, "gõ 21 phím giữa note: ≥ %d/%d khối giữ nguyên phần tử DOM (giữ %d)" % (moi["n_truoc"] - 3, moi["n_truoc"], moi["giu"]["giu"]), (moi["giu"], moi["n_truoc"]))
+    check(moi["mo"] <= 6 * slack, "mở note dài ra xem trước ≤ %d s (đo %.2f s)" % (6 * slack, moi["mo"]))
+
+
 # ============================================================================================ tầng 7 — Soạn bằng AI (POST /ai/wiki)
 # Không bao giờ gọi Gemini thật. Hai cách giả:
 #  · GiaAI: page.route chặn /ai/* NGAY TRONG trình duyệt (Chromium máy tính, Pixel 5) — điều khiển được từng câu trả lời, kể cả câu trả lời
@@ -2454,7 +2677,7 @@ def main():
         print("!! PW_HOAN_NGUYEN=%s — kiểm đột biến: một bản sửa bị gỡ tạm, phép kiểm mới PHẢI đỏ" % HOAN_NGUYEN)
         if HOAN_NGUYEN not in ("may-chu", "may-khach", "tieu-de", "dem-moi-phim", "bieu-ngu-chet", "noi-cung-the", "ai-khong-kiem", "ai-khong-chot", "ai-regex-cu", "toan-khoi-png", "toan-khong-thoat"):
             raise SystemExit("PW_HOAN_NGUYEN chỉ nhận may-chu, may-khach, tieu-de, dem-moi-phim, bieu-ngu-chet, noi-cung-the, ai-khong-kiem, ai-khong-chot, ai-regex-cu, toan-khoi-png hoặc toan-khong-thoat")
-    needs_server = tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang", "--toan"}
+    needs_server = tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang", "--toan", "--khoi", "--dai"}
     if needs_server:
         may = K.MayChuThu([], env=env_may_chu()).__enter__()
         try:
@@ -2462,12 +2685,18 @@ def main():
                 chay("tầng 2b", tang_toan, may)                     # chỉ phần toán của tầng 2 (đã nằm trong --chuc-nang)
             if tat_ca or default or "--chuc-nang" in todo:
                 chay("tầng 2", tang_2, may)
+                chay("tầng 2c (xem trước theo khối)", tang_khoi, may)
+            elif "--khoi" in todo:
+                chay("tầng 2c (xem trước theo khối)", tang_khoi, may)
             if "--song-sot" in todo or tat_ca:
                 chay("tầng 3", tang_3, may)
             if "--co-gian" in todo or tat_ca:
                 chay("tầng 4", tang_4, may)
             if "--hieu-nang" in todo or tat_ca:
                 chay("tầng 5", tang_5, may, next((int(a) for a in args if a.isdigit()), 100000))
+                chay("tầng 5b (ghi chú dài)", tang_5_dai, may)
+            elif "--dai" in todo:
+                chay("tầng 5b (ghi chú dài)", tang_5_dai, may)
         finally:
             may.__exit__(None, None, None)
     if "--dong-bo" in todo or tat_ca:

@@ -178,17 +178,83 @@
     root.addEventListener("resize", onResize); cleanup.push(function () { root.removeEventListener("resize", onResize); });
 
     // ------------------------------------------------------------------------------------------- xem trước
-    var prevTimer = 0;
+    /* Xem trước theo KHỐI (perf-md W3): M.blocks cắt note thành các khối dựng độc lập (render từng khối nối lại == render cả note); mỗi khối là một
+       <div class="mdb"> trong `prev`. Lần dựng sau chỉ thay đoạn khối KHÁC so với lần trước (tiền tố + hậu tố chung giữ nguyên là cùng phần tử DOM) —
+       gõ một phím giữa note 400k ký tự chỉ dựng lại MỘT khối thay vì cả note (550–650 ms → vài chục ms).
+       · Khoá khối = chữ của khối (khối có [[liên kết]] thêm số phiên bản kho: `repo.version()` đổi thì liên kết thật/mờ có thể đổi ⇒ dựng lại các khối đó).
+       · Bộ nhớ đệm giữ HTML của khối TRƯỚC khi "hydrate" (W6: KaTeX/mermaid vẽ lên nút `.math`/`.mmd`); chỉ phần tử MỚI được hydrate, phần tử giữ lại mang
+         sẵn kết quả (hydrate phải đánh dấu `data-hydrated` và chạy lại không đổi gì) — hook: `U.rich.hydrate(phầnTửKhốiMới[])`, chưa có thì bỏ qua.
+       · id tiêu đề phụ thuộc cả note (`h-a`, `h-a-2`): khối mang `data-hid` (gốc), id thật do `fixHeadingIds` đặt theo thứ tự DOM sau khi vá. */
+    var prevTimer = 0, pv = { keys: [], els: [], cache: new Map(), chars: 0, ver: -1, empty: false, tpl: null };
     function schedulePreview(now) {
       if (!prev || st.mode === "edit") return;
       clearTimeout(prevTimer);
       prevTimer = setTimeout(renderPreview, now ? 0 : 140);
     }
+    function resolveTitle(title) { var hd = repo.resolve(title); return hd ? { id: hd.id, status: hd.s } : null; }
+    function blockKey(text) { return text.indexOf("[[") === -1 ? text : text + "\u0001" + pv.ver; }
+    /** HTML đã bọc (+ cờ có tiêu đề) của một khối; nhớ tối đa 400 khối / 2 triệu ký tự (quay lại chữ cũ khi xoá lùi / hoàn tác thì khỏi dựng lại). */
+    function blockEntry(key, text) {
+      var e = pv.cache.get(key);
+      if (e) { pv.cache.delete(key); pv.cache.set(key, e); return e; }
+      var html = M.render(text, { blockMode: true, highlight: W.highlight, resolve: resolveTitle });
+      e = { html: '<div class="mdb">' + html + "</div>", hh: html.indexOf("data-hid=") !== -1 };
+      pv.cache.set(key, e); pv.chars += e.html.length;
+      while (pv.cache.size > 1 && (pv.cache.size > 400 || pv.chars > 2000000)) {
+        var oldest = pv.cache.keys().next().value;
+        pv.chars -= pv.cache.get(oldest).html.length; pv.cache.delete(oldest);
+      }
+      return e;
+    }
+    /** Đặt id thật cho tiêu đề theo thứ tự tài liệu (chỉ duyệt các khối CÓ tiêu đề). Chỉ ghi khi id đổi. */
+    function fixHeadingIds() {
+      var hs = [], bases = [], i, j, found;
+      for (i = 0; i < pv.els.length; i++) {
+        if (!pv.els[i]._hh) continue;
+        found = pv.els[i].querySelectorAll("[data-hid]");
+        for (j = 0; j < found.length; j++) { hs.push(found[j]); bases.push(found[j].getAttribute("data-hid")); }
+      }
+      var ids = M.dedupeIds(bases);
+      for (i = 0; i < hs.length; i++) if (hs[i].id !== ids[i]) hs[i].id = ids[i];
+    }
     function renderPreview() {
       if (st.destroyed || !prev) return;
-      var top = prev.scrollTop;
-      prev.innerHTML = M.render(st.cur.content, { highlight: W.highlight, resolve: function (title) { var hd = repo.resolve(title); return hd ? { id: hd.id, status: hd.s } : null; } }) || '<p class="faint">Chưa có nội dung để xem.</p>';
-      prev.scrollTop = top;
+      var ver = repo.version();
+      if (ver !== pv.ver) { pv.ver = ver; pv.cache.clear(); pv.chars = 0; }
+      var bl = M.blocks(st.cur.content), nk = bl.length, keys = new Array(nk), i;
+      for (i = 0; i < nk; i++) keys[i] = blockKey(bl[i].text);
+      if (!nk) {                                                                       // note trống
+        if (!pv.empty) { prev.innerHTML = '<p class="faint">Chưa có nội dung để xem.</p>'; pv.empty = true; pv.keys = []; pv.els = []; }
+        return;
+      }
+      if (pv.empty) { prev.replaceChildren(); pv.empty = false; }
+      var top = prev.scrollTop, old = pv.keys, oldEls = pv.els, ol = old.length, lim = Math.min(ol, nk), p = 0, s = 0;
+      while (p < lim && old[p] === keys[p]) p++;                                       // tiền tố chung
+      while (s < lim - p && old[ol - 1 - s] === keys[nk - 1 - s]) s++;                 // hậu tố chung
+      var delEnd = ol - s, insEnd = nk - s, k, headings = false;                       // thay old[p, delEnd) bằng mới[p, insEnd)
+      if (p === delEnd && p === insEnd) return;                                        // không khối nào đổi (vd. chỉ thêm dòng trống giữa các khối)
+      for (k = p; k < delEnd; k++) if (oldEls[k]._hh) headings = true;
+      var html = "", ent = [];
+      for (k = p; k < insEnd; k++) { var e = blockEntry(keys[k], bl[k].text); html += e.html; ent.push(e.hh); if (e.hh) headings = true; }
+      var tpl = pv.tpl || (pv.tpl = root.document.createElement("template"));
+      tpl.innerHTML = html;
+      var frag = tpl.content, fresh = Array.prototype.slice.call(frag.children);
+      if (fresh.length !== insEnd - p) {                                               // không xảy ra (mỗi khối đúng một <div>) — phòng hờ: về cách dựng cả note, lần sau thử lại theo khối
+        prev.innerHTML = M.render(st.cur.content, { highlight: W.highlight, resolve: resolveTitle });
+        pv.keys = []; pv.els = [];
+        return;
+      }
+      for (k = 0; k < fresh.length; k++) fresh[k]._hh = ent[k];
+      if (p === 0 && s === 0) prev.replaceChildren(frag);
+      else {
+        var ref = delEnd < ol ? oldEls[delEnd] : null;
+        for (k = p; k < delEnd; k++) prev.removeChild(oldEls[k]);
+        prev.insertBefore(frag, ref);
+      }
+      pv.keys = keys; pv.els = oldEls.slice(0, p).concat(fresh, oldEls.slice(delEnd));
+      if (headings) fixHeadingIds();
+      if (U.rich && typeof U.rich.hydrate === "function") U.rich.hydrate(fresh);
+      if (prev.scrollTop !== top) prev.scrollTop = top;
     }
 
     // ------------------------------------------------------------------------------------------- tag, banner, trạng thái

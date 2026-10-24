@@ -131,13 +131,18 @@ function taoMoiTruong() {
 }
 
 /* ---------------------------------------------------------------- dem */
-let dat = 0, hong = 0;
+let dat = 0, hong = 0, im = false;
+/** Kho schema da qua chaySchema (ten, schema, tuyChon, co hang "hop le") — bo sinh du lieu (schema-sinh.js) dung lai de kiem sinh <-> kiem. */
+const kho = [];
+/** Che do im lang: kiem() khong in, khong dem (de chay lai kiem/schema-1.js, schema-2.js chi de thu kho schema khi chay loc mot nhom). */
+function datIm(b) { im = !!b; }
 function kiem(ten, ok, chiTiet) {
+  if (im) return !!ok;
   console.log("  " + (ok ? "[ok]  " : "[SAI] ") + ten + (chiTiet ? "   " + chiTiet : ""));
   if (ok) dat++; else hong++;
   return !!ok;
 }
-function nhom(ten) { console.log("\n  — " + ten + " —"); }
+function nhom(ten) { if (!im) console.log("\n  — " + ten + " —"); }
 const bang = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const nemLoi = (f) => { try { f(); return false; } catch (e) { return true; } };
 
@@ -164,6 +169,7 @@ function chaySchema(JE, ca) {
   const ngan = (d) => { let s; try { s = JSON.stringify(d); } catch (e) { s = String(d); } s = s === undefined ? "undefined" : s; return s.length > 44 ? s.slice(0, 42) + "…" : s; };
   for (const [ten, schema, hang, opt] of ca) {
     const tc = Object.assign({}, opt || {});
+    kho.push({ ten, schema, tc, thoaDuoc: hang.some((h) => h[1] === true) });
     let bd;
     try { bd = JE.schema.bienDich(schema, tc); }
     catch (e) { kiem(ten + " · bienDich khong nem loi", false, e && e.stack ? e.stack.split("\n").slice(0, 2).join(" | ") : String(e)); continue; }
@@ -208,6 +214,6 @@ function hieuChuan(f, lan) {
 }
 
 module.exports = {
-  GOC, dsScript, taoMoiTruong, kiem, nhom, bang, nemLoi, longSau, taoNgauNhien, chaySchema, hieuChuan,
+  GOC, dsScript, taoMoiTruong, kiem, nhom, bang, nemLoi, longSau, taoNgauNhien, chaySchema, hieuChuan, kho, datIm,
   soDat: () => dat, soSai: () => hong
 };

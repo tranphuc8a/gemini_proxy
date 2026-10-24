@@ -375,6 +375,11 @@ button.chip:hover { background: var(--s2); }
 /* ------------------------------------------------------------------ Markdown đã dựng */
 .md { line-height: 1.7; overflow-wrap: anywhere; }
 .md > :first-child { margin-top: 0; }
+/* Xem trước theo khối (ui/editor.js): mỗi khối markdown nằm trong một <div class="mdb"> trơn (không đệm/viền ⇒ lề của phần tử con vẫn gộp như trước).
+   content-visibility:auto để trình duyệt bỏ qua dựng/vẽ khối ngoài màn hình (note 400k ký tự: ~60k nút DOM); đặt lên PHẦN TỬ CON, không lên khối, để lề giữa các
+   khối vẫn gộp; không áp cho tiêu đề (scroll-margin + bấm mục lục cần vị trí thật). contain-intrinsic-size `auto` nhớ cỡ thật sau khi đã dựng một lần. */
+.md > .mdb:first-child > :first-child { margin-top: 0; }
+.ed-prev .mdb > :not(h1, h2, h3, h4, h5, h6) { content-visibility: auto; contain-intrinsic-size: auto 3em; }
 .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { margin: 1.3em 0 0.5em; line-height: 1.3; scroll-margin-top: 12px; }
 .md h1 { font-size: 1.7em; } .md h2 { font-size: 1.4em; padding-bottom: 0.2em; border-bottom: 1px solid var(--border); } .md h3 { font-size: 1.2em; } .md h4, .md h5, .md h6 { font-size: 1em; }
 .md p, .md ul, .md ol, .md blockquote, .md pre, .md .tbl, .md .fc { margin: 0 0 0.9em; }

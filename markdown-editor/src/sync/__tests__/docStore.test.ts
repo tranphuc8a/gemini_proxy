@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FILES_KEY, loadFiles } from '../../lib/persistence'
-import { FALLBACK_SHADOW_TEXT_MAX, IdbDocStore, LocalStorageDocStore, MemoryDocStore, SYNC_KEY, failureOf, openIdbDocStore, type DocStore } from '../docStore'
+import { FALLBACK_SHADOW_TEXT_MAX, IdbDocStore, OPEN_TIMEOUT_MS, LocalStorageDocStore, MemoryDocStore, SYNC_KEY, failureOf, openIdbDocStore, type DocStore } from '../docStore'
 import type { LocalDoc, OutboxEntry, Shadow } from '../records'
 
 const doc = (id: string, content = 'text', name = `${id}.md`, parentId: string | null = 'root'): LocalDoc => ({ id, kind: 'file', parentId, name, content, updatedAt: 1 })
@@ -114,6 +114,48 @@ describe('LocalStorageDocStore: the fallback keeps the editor\'s v2 key', () => 
     expect(store.commitSync({ docs: { put: [root] } })).toBeNull()
   })
 
+  /** localStorage that refuses only the key of the documents (they are the big ones), as a full quota does. */
+  const refuseKey = (key: string) => {
+    const real = Storage.prototype.setItem
+    return vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, name: string, value: string) {
+      if (name === key) throw new DOMException('full', 'QuotaExceededError')
+      real.call(this, name, value)
+    })
+  }
+
+  it('writes no bookkeeping for documents the same commit could not store (a cursor must not outlive its refused documents)', async () => {
+    const store = new LocalStorageDocStore(null)
+    expect(store.commitSync({ docs: { put: [root, doc('a', 'kept')] } })).toBeNull()
+    const spy = refuseKey(FILES_KEY)
+    const failure = store.commitSync({
+      docs: { put: [doc('b', 'a document of the server, too big for the quota')] },
+      shadows: { put: [shadow('b')] },
+      outbox: { put: [entry('b')] },
+      meta: { 'cursor:mysql': 7, 'reconciled:mysql': true, seq: 3 }
+    })
+    spy.mockRestore()
+    expect(failure).toBe('quota')
+    expect(localStorage.getItem(SYNC_KEY)).toBeNull() // nothing of the commit reached the bookkeeping key
+    expect((await store.getShadows(null)).size).toBe(0)
+    expect(await store.getMeta('cursor:mysql')).toBeUndefined()
+    expect((await store.load()).outbox).toEqual([])
+    // After a reload the device does not believe it is synced: no cursor, no shadow.
+    const fresh = new LocalStorageDocStore(loadFiles())
+    expect(await fresh.getMeta('cursor:mysql')).toBeUndefined()
+    expect((await fresh.getShadows(null)).size).toBe(0)
+  })
+
+  it('puts the bookkeeping back in memory when its own write is refused', async () => {
+    const store = new LocalStorageDocStore(null)
+    expect(store.commitSync({ shadows: { put: [shadow('a')] }, meta: { 'cursor:json': 1 } })).toBeNull()
+    const spy = refuseKey(SYNC_KEY)
+    expect(store.commitSync({ shadows: { put: [shadow('b')], delete: ['a'] }, outbox: { put: [entry('b')] }, meta: { 'cursor:json': 2 } })).toBe('quota')
+    spy.mockRestore()
+    expect([...(await store.getShadows(null)).keys()]).toEqual(['a'])
+    expect(await store.getMeta('cursor:json')).toBe(1)
+    expect((await store.load()).outbox).toEqual([])
+  })
+
   it('throws from the async commit when localStorage refuses', async () => {
     const store = new LocalStorageDocStore(null)
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
@@ -147,7 +189,35 @@ describe('openIdbDocStore', () => {
 
 /** IndexedDB itself is checked in a real browser; these two edges need a browser that misbehaves, so a hand-made stand-in plays it. */
 describe('IndexedDB edges', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  it('waits for a slow open instead of dropping to the localStorage fallback (measured: 22 s on a busy disk)', async () => {
+    vi.useFakeTimers()
+    const request: { onsuccess?: () => void; result?: { onversionchange?: unknown; close(): void } } = {}
+    vi.stubGlobal('indexedDB', { open: () => request })
+    expect(OPEN_TIMEOUT_MS).toBeGreaterThanOrEqual(25_000)
+    const opening = openIdbDocStore('slow-test')
+    let outcome = 'pending'
+    opening.then(() => (outcome = 'opened'), () => (outcome = 'rejected'))
+    await vi.advanceTimersByTimeAsync(22_000)
+    expect(outcome).toBe('pending')
+    request.result = { close: vi.fn() }
+    request.onsuccess?.()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(outcome).toBe('opened')
+  })
+
+  it('still gives up on a database that never answers', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('indexedDB', { open: () => ({}) })
+    const opening = openIdbDocStore('never-test')
+    const settled = expect(opening).rejects.toThrow(/did not answer/)
+    await vi.advanceTimersByTimeAsync(OPEN_TIMEOUT_MS + 10)
+    await settled
+  })
 
   it('closes the connection that opens late, after the open was given up as blocked', async () => {
     const request: { onblocked?: () => void; onsuccess?: () => void; result?: { close(): void } } = {}

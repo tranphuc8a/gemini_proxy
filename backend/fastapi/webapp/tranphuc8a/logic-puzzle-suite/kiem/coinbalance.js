@@ -54,7 +54,8 @@ module.exports = function (t) {
   }
 
   // ====================================================================== nguồn độc lập 2: vét cạn mức tập giả thuyết (xu cùng chữ ký thay thế được cho nhau)
-  function setSolvable(n, ref, fake, needDir, k) {
+  /** H0 (tuỳ chọn): bắt đầu từ MỘT TẬP GIẢ THUYẾT cho trước (thế giữa ván, lọc bằng mô phỏng vật lý) thay cho tập đầy đủ — để kiểm "thế hiện tại còn thắng chắc không" độc lập với DP đếm lớp. */
+  function setSolvable(n, ref, fake, needDir, k, H0) {
     var memo = {};
     function sig(H, coins) { var s = []; for (var c = 0; c < coins; c++) s.push({ h: false, l: false }); H.forEach(function (hy) { if (hy[1] === 1) s[hy[0]].h = true; else s[hy[0]].l = true; }); return s; }
     function term(H) { if (H.length <= 1) return true; if (needDir) return false; for (var i = 1; i < H.length; i++) if (H[i][0] !== H[0][0]) return false; return true; }
@@ -86,7 +87,7 @@ module.exports = function (t) {
       })(0, zeros(coins), 0, 0);
       memo[key] = ok; return ok;
     }
-    return rec(hyps0(n, fake), k);
+    return rec(H0 || hyps0(n, fake), k);
   }
   function maxBy(f, k, hi) { var best = 0; for (var n = 1; n <= hi; n++) if (f(n, k)) best = n; return best; }
 
@@ -474,7 +475,7 @@ module.exports = function (t) {
     u.applyHint(hu);
     t.ok("mở lại → cân tiếp được", plan.isSubmitted(u.state) === false && !!T.moveFor(p, u.state, { k: "weigh", L: [0], R: [1] }));
     var x = fromIn(mkInput({ n: 9, k: 2, fake: "heavy", ref: 0, dir: 0 }, "fixed", { coin: 4, heavy: 1 })), hx = T.hint(x, T.newState(x), 3);
-    t.ok("biết nặng 9 xu / 2 lần: cân {1–3} với {4–6}; vì sao: nhánh nào cũng còn 3 xu ≤ 3", hx.text === "Cân {1–3} với {4–6}." && hx.why.some(function (w) { return /Nếu cân bằng: .*3 khả năng/.test(w); }));
+    t.ok("biết nặng 9 xu / 2 lần: cân {1–3} với {4–6}; vì sao: nhánh nào cũng còn 3 xu ≤ 3", hx.text === "Cân {1–3} với {4–6}." && hx.why.some(function (w) { return /Nếu cân bằng: .*3 xu còn nghi ≤ 3/.test(w); }));
   })();
 
   // ====================================================================== 6. grade
@@ -694,6 +695,141 @@ module.exports = function (t) {
     t.ok("fromText: các cách viết đúng vẫn nhận ('nặng hơn', 'heavy', 'nặng hoặc nhẹ', 'either', 'Nặng/Nhẹ') và cho đúng loại xu", [["nặng hơn", "heavy", "xu: 9\nlần cân: 2\nchế độ: đối thủ\nxu giả: "], ["heavy", "heavy", "xu: 9\nlần cân: 2\nchế độ: đối thủ\nxu giả: "], ["nặng hoặc nhẹ", "either", base], ["either", "either", base], ["Nặng/Nhẹ", "either", base]].every(function (c) { var r = T.fromText(c[2] + c[0]); return r.ok && r.puzzle.data.fake === c[1]; }));
     var rin = T.fromInput({ n: 13, k: 3, fake: "either", ref: 1, dir: 1, mode: "adv" }), gen = T.generate(4, { sizeId: "nn3", tier: "easy" });
     t.ok("sizeText: đề tự nhập hiện '13 xu + chuẩn · 3 lần cân' (không phải '13×3'); đề sinh ra cũng có nhãn; đề lạ → chuỗi rỗng, không ném lỗi", T.sizeText(rin.puzzle) === "13 xu + chuẩn · 3 lần cân" && T.sizeText(gen) === gen.data.n + " xu · 3 lần cân" && T.sizeText({ data: null }) === "" && T.sizeText(null) === "" && Puz.types.conformance(T).length === 0, T.sizeText(rin.puzzle));
+  })();
+
+  // ====================================================================== 11. sửa sau kiểm (P3 — vòng 2): gợi ý theo thế HIỆN TẠI; đơn vị của mục tiêu "chỉ ra xu"
+  /** Thế giữa ván còn thắng chắc không — nguồn ĐỘC LẬP với DP đếm lớp (k ≤ 3): tập giả thuyết lọc bằng mô phỏng khối lượng + vét cạn mức tập giả thuyết. k = 4 chỉ có DP của engine. */
+  function indepWin(p, st) {
+    var d = p.data, r = L.budget(d, st);
+    if (d.k > 3) { var c = L.countsOf(L.classesOf(d, st)); return L.solv(c.u, c.h, c.l, c.g, r, L.goalFor(d)); }
+    return setSolvable(d.n, d.ref, d.fake, !!d.dir, r, consistent(p, st));
+  }
+  function cloneAfter(p, st, action) { var dd = T.moveFor(p, st, action), q = { v: st.v.slice(), c: null }; if (!dd) return null; G.applyDiff(q, dd.d, false); return q; }
+
+  t.group("coinbalance — gợi ý theo thế HIỆN TẠI: lần cân mất an toàn trong quá khứ nhưng nhờ may thế đã thắng chắc ⇒ KHÔNG khuyên hoàn tác");
+  (function () {
+    var p = fromIn(mkInput({ n: 9, k: 2, fake: "heavy", ref: 0, dir: 0 }, "fixed", { coin: 2, heavy: 1 })), g = G.create(p, {});
+    g.act({ k: "weigh", L: [1, 7], R: [4, 8] });          // 2 với 2 từ 9 xu nặng / 2 lần: nhánh cân bằng còn 5 xu > 3 ⇒ MẤT AN TOÀN; xu giả (chỉ số 2) nằm ngoài đĩa ⇒ cân bằng, thế mất thật
+    var lostHint = g.hint(3), lostNow = L.lostAt(p, g.state);
+    t.ok("ngay sau lần cân mất an toàn (thế mất thật, nguồn độc lập): lostAt = 1, mistakes = 1, hint 'Hoàn tác' + truncate n = 0, mức 1 nói 'không còn cách' — ĐÚNG",
+      lostNow === 1 && g.counters.mistakes === 1 && !indepWin(p, g.state) && lostHint.technique === "Hoàn tác" && lostHint.action.k === "truncate" && lostHint.action.n === 0 && /không còn cách cân nào chắc chắn/.test(g.hint(1).text), [lostNow, lostHint]);
+    g.act({ k: "weigh", L: [1, 5, 8], R: [2, 4, 7] });    // chỉ số 2 (nặng) ở đĩa phải; 1, 4, 7, 8 đã là xu thật ⇒ phải nặng hơn ⇒ chỉ còn xu chỉ số 2: nhờ MAY thế đã thắng chắc
+    var c = T.check(p, g.state), sc = L.lossScan(p, g.state), h1 = g.hint(1), h2 = g.hint(2), h3 = g.hint(3);
+    t.ok("sau đó nhờ may: còn đúng 1 xu nghi (complete), thế thắng chắc (nguồn độc lập), mistakes vẫn 1; lostAt = −1 (thế hiện tại không mất), drop = 1 (từng mất ở lần cân 1)",
+      c.complete === true && c.solved === false && indepWin(p, g.state) && g.counters.mistakes === 1 && L.lostAt(p, g.state) === -1 && sc.now === -1 && sc.drop === 1, [c, sc, g.counters.mistakes]);
+    t.ok("mức 1 KHÔNG nói 'không còn cách'; cả ba mức KHÔNG phải 'Hoàn tác'; mức 2 chỉ xu cần kết luận; mức 3 action = conclude (không phải truncate n = 0 xoá cả kế hoạch)",
+      h1.technique === "Kết luận" && !/không còn cách/.test(h1.text) && h2.technique === "Kết luận" && J(h2.cells) === "[2]" && h3.technique === "Kết luận" && !!h3.action && h3.action.k === "conclude" && h3.action.coin === 2 && g.hint(3).action.k !== "truncate", [h1.text, h2.text, h3.action]);
+    t.ok("mức 3 có dòng 'Lưu ý' CUỐI nêu lần cân mất an toàn và 'tối đa 1★'; mức 1–2 không có why", /^Lưu ý: lần cân thứ 1 \(\{2, 8\} với \{5, 9\}\) đã làm mất an toàn — nếu .*tối đa 1★/.test(h3.why[h3.why.length - 1]) && h1.why.length === 0 && h2.why.length === 0, h3.why);
+    g.applyHint(h3);
+    var gr = g.grade();
+    t.ok("làm theo gợi ý → solved nhưng đúng 1★ (sai sót đã tính, 'thắng nhờ may')", g.status === "solved" && gr.stars === 1 && /sai sót/.test(gr.text), gr);
+    // mất → may thắng lại → mất lại: "Hoàn tác" quay về trước lần cân MỚI NHẤT làm mất (thế thắng gần nhất), không quay về đầu ván
+    var pa = fromIn(mkInput({ n: 7, k: 3, fake: "either", ref: 0, dir: 1 }, "fixed", { coin: 4, heavy: 1 })), ga = G.create(pa, {}), flags = [];
+    [{ L: [2], R: [5] }, { L: [1, 4], R: [3, 5] }, { L: [3], R: [5] }].forEach(function (w) { ga.act({ k: "weigh", L: w.L, R: w.R }); flags.push(indepWin(pa, ga.state)); });
+    var sa = L.lossScan(pa, ga.state), ha = ga.hint(3);
+    t.ok("7 xu / 3 lần, giả = xu 5 nặng: cân 1–1 (xu giả ngoài đĩa) làm MẤT, lần 2 nhờ may THẮNG lại, lần 3 (3 với 5 thật) lại MẤT — nguồn độc lập: [mất, thắng, mất]", J(flags) === J([false, true, false]), flags);
+    t.ok("lossScan = {now: 3, drop: 1}; hint = Hoàn tác về trước lần cân thứ 3 (truncate n = 2, thế thắng gần nhất), KHÔNG về đầu ván (n = 0); lời giải thích nêu lần cân thứ 3", sa.now === 3 && sa.drop === 1 && ha.technique === "Hoàn tác" && ha.action.k === "truncate" && ha.action.n === 2 && /^Lần cân thứ 3 /.test(ha.why[0]) && /Quay về trước lần cân thứ 3/.test(ha.text), [sa, ha]);
+    ga.applyHint(ha);
+    var winAfter = indepWin(pa, ga.state) && plan.count(ga.state) === 2, na = 0; while (ga.status !== "solved" && na++ < 6) { var hx = ga.hint(3); if (!hx.action) break; ga.applyHint(hx); }
+    t.ok("áp truncate n = 2 → còn 2 lần cân và thế thắng chắc (nguồn độc lập); làm theo gợi ý tiếp giải xong ván", winAfter && ga.status === "solved", [winAfter, plan.count(ga.state), ga.status]);
+    // cùng ván nhưng cân an toàn: KHÔNG có dòng lưu ý
+    var gs = G.create(p, {}); gs.act({ k: "weigh", L: [0, 1, 2], R: [3, 4, 5] });
+    t.ok("ván cân an toàn: không có dòng 'Lưu ý' trong hint mức 3, drop = −1", L.lossScan(p, gs.state).drop === -1 && !gs.hint(3).why.some(function (w) { return /^Lưu ý/.test(w); }));
+  })();
+
+  t.group("coinbalance — gợi ý: MỌI thế giữa ván (chơi ngẫu nhiên, 6 phiên bản × 2 chế độ): 'Hoàn tác / không còn cách' ⇔ thế hiện tại MẤT (nguồn độc lập)");
+  (function () {
+    var rng = R.create(7001), bad = [], scanBad = [], states = 0, lostN = 0, luckN = 0, againN = 0, t0 = Date.now();
+    T.sizes.forEach(function (sz, si) { MODES.forEach(function (mode) { for (var seed = 1; seed <= 8; seed++) {
+      var p = T.generate(seed * 313 + si, { sizeId: sz.id, tier: TIERS[seed % 4], options: { mode: mode } }), g = G.create(p, {});
+      for (var step = 0; step <= p.data.k; step++) {
+        var st = g.state, win = indepWin(p, st), sc = L.lossScan(p, st), h1 = T.hint(p, st, 1), h2 = T.hint(p, st, 2), h3 = T.hint(p, st, 3), tag = [sz.id, mode, seed, step];
+        states++;
+        if ((sc.now >= 0) === win) scanBad.push(tag.concat([sc, win]));                 // lossScan.now ≥ 0 ⇔ thế hiện tại không giải được
+        if (win) {
+          if (sc.drop >= 1) luckN++;
+          if (h1.technique === "Hoàn tác" || h2.technique === "Hoàn tác" || h3.technique === "Hoàn tác" || (h3.action && h3.action.k === "truncate") || /không còn cách/.test(h1.text + h2.text + h3.text)) bad.push(tag.concat(["thế thắng chắc mà gợi ý bảo hoàn tác", h3.text]));
+          var last = h3.why.length ? h3.why[h3.why.length - 1] : "";
+          if (sc.drop >= 1 !== /^Lưu ý: lần cân thứ \d+ /.test(last)) bad.push(tag.concat(["dòng 'Lưu ý' sai chỗ", sc.drop, last.slice(0, 40)]));
+        } else {
+          lostN++; if (sc.drop >= 1 && sc.now > sc.drop) againN++;
+          var q = h3.action && h3.action.k === "truncate" ? cloneAfter(p, st, h3.action) : null;
+          if (h3.technique !== "Hoàn tác" || !q || !indepWin(p, q) || h3.action.n !== sc.now - 1 || !/không còn cách cân nào chắc chắn/.test(h1.text)) bad.push(tag.concat(["thế mất mà gợi ý không đưa về thế thắng", h3.text, h3.action]));
+        }
+        if (step === p.data.k) break;
+        g.act(randomWeighing(p, st, rng));
+      }
+    } }); });
+    t.ok("khớp ở " + states + " thế (" + lostN + " thế mất · " + luckN + " thế thắng-sau-từng-mất · " + againN + " thế mất-lại-sau-khi-may): gợi ý 'Hoàn tác' ⇔ mất thật; hoàn tác đưa về thế thắng chắc; thế thắng chắc không bao giờ bị khuyên hoàn tác (" + (Date.now() - t0) + " ms)", bad.length === 0 && states > 250, bad.slice(0, 3));
+    t.ok("lossScan.now ≥ 0 ⇔ thế hiện tại không giải được (nguồn độc lập) ở mọi thế đó", scanBad.length === 0, scanBad.slice(0, 3));
+    t.ok("phép kiểm thật sự phủ hai tình huống chính: thế mất (≥ 40) và thắng-sau-từng-mất = đúng ca của lỗi cũ (≥ 4)", lostN >= 40 && luckN >= 4, [lostN, luckN, againN]);
+  })();
+
+  t.group("coinbalance — chữ giải thích: 'N khả năng ≤ B' / 'N xu còn nghi ≤ B' có N ≤ B và đúng ĐẠI LƯỢNG của mục tiêu (6 phiên bản × 4 bậc × 2 chế độ × 3 seed)");
+  (function () {
+    var NAMES = { 1: "bên trái nặng hơn", 2: "cân bằng", 3: "bên phải nặng hơn" }, bad = [], texts = 0, claims = 0, overs = 0, exact = 0, m, re;
+    T.sizes.forEach(function (sz) { TIERS.forEach(function (tier) { MODES.forEach(function (mode) { [1, 2, 3].forEach(function (seed) {
+      var p = T.generate(seed * 131 + 7, { sizeId: sz.id, tier: tier, options: { mode: mode } }), d = p.data, goal = L.goalFor(d), unit = goal ? "xu còn nghi" : "khả năng", all = [], g = G.create(p, {}), n = 0, tag = [sz.id, tier, mode, seed];
+      T.replay(p).forEach(function (stp) { all.push((stp.text || "") + "\n" + (stp.why || []).join("\n")); });
+      while (g.status !== "solved" && n++ < d.k + 2) {                        // hint mức 3 từng bước; đối chiếu SỐ in ra với số THẬT của nhánh (từ outcomesOf)
+        var st0 = g.state, h = T.hint(p, st0, 3); if (!h.action) break;
+        all.push(h.text + "\n" + h.why.join("\n"));
+        if (h.action.k === "weigh") {
+          var cls = L.classesOf(d, st0), cnt = L.countsOf(cls), first = /^Còn (\d+) (khả năng|xu còn nghi) và /.exec(h.why[0]);
+          exact++;
+          if (!first || Number(first[1]) !== (goal ? cnt.u + cnt.h + cnt.l : L.nposs(cnt.u, cnt.h, cnt.l)) || first[2] !== unit) bad.push(tag.concat(["dòng đầu sai số/đơn vị", h.why[0]]));
+          L.outcomesOf(cnt, L.weighingOf(cls, h.action.L, h.action.R)).forEach(function (o) {
+            var cd = o.u + o.h + o.l, want = goal ? cd : L.nposs(o.u, o.h, o.l);
+            if (!cd) return;
+            var line = h.why.filter(function (w) { return w.indexOf("Nếu " + NAMES[o.code] + ":") === 0; })[0], mm = line && /— (\d+) (khả năng|xu còn nghi)/.exec(line);
+            exact++;
+            if (!mm || Number(mm[1]) !== want || mm[2] !== unit) bad.push(tag.concat(["nhánh " + NAMES[o.code] + ": số/đơn vị sai (cần " + want + " " + unit + ")", line]));
+          });
+        }
+        g.applyHint(h);
+      }
+      all.forEach(function (tx) {
+        texts++;
+        re = /(\d+) (khả năng|xu còn nghi) ≤ (\d+)/g;
+        while ((m = re.exec(tx))) { claims++; if (Number(m[1]) > Number(m[3]) || m[2] !== unit) bad.push(tag.concat(["'" + m[0] + "'"])); }
+        re = /thì còn (\d+) (khả năng|xu còn nghi) mà \d+ lần cân còn lại chỉ phân biệt được tối đa (\d+)/g;
+        while ((m = re.exec(tx))) { overs++; if (Number(m[1]) <= Number(m[3]) || m[2] !== unit) bad.push(tag.concat(["'" + m[0] + "' (phải VƯỢT cận)"])); }
+      });
+    }); }); }); });
+    t.ok("không câu nào tự mâu thuẫn ('10 khả năng ≤ 9'), đơn vị khớp mục tiêu (nặng/nhẹ có hướng: khả năng · chỉ ra xu: xu còn nghi) — " + texts + " đoạn chữ, " + claims + " câu '≤ B', " + overs + " câu 'vượt cận', " + exact + " số đối chiếu với số thật", bad.length === 0 && claims > 300 && overs >= 10 && exact > 400, bad.slice(0, 4));
+    // cùng đơn vị ở cây chiến lược (trace)
+    var trBad = [];
+    T.sizes.forEach(function (sz) {
+      var p = T.generate(5, { sizeId: sz.id, tier: "hard" }), goal = L.goalFor(p.data), labs = T.trace(p, { maxNodes: 400 }).nodes.map(function (nd) { return nd.label; });
+      if (labs.some(function (lb) { return goal ? /khả năng/.test(lb) : /xu còn nghi/.test(lb); }) || !labs.some(function (lb) { return goal ? /xu còn nghi/.test(lb) : /khả năng/.test(lb); })) trBad.push([sz.id, labs.slice(0, 3)]);
+    });
+    t.ok("cây chiến lược (trace): nhãn nút đếm cùng đại lượng với mục tiêu — chỉ-ra-xu/biết-nặng dùng 'xu còn nghi', nặng/nhẹ có hướng dùng 'khả năng' (gốc không còn 'N xu · N khả năng')", trBad.length === 0, trBad.slice(0, 2));
+  })();
+
+  t.group("coinbalance — đề không giải được: n = 2 thiếu xu chuẩn nói đúng lý do (mọi k); đó là ca DUY NHẤT dưới giới hạn mà vẫn không giải được");
+  (function () {
+    var msgBad = [], POW = [1, 3, 9, 27, 81];
+    [1, 2, 3, 4].forEach(function (k) { [0, 1].forEach(function (dir) {
+      var r = T.fromInput(mkInput({ n: 2, k: k, fake: "either", ref: 0, dir: dir }, "adv"));
+      if (r.ok || !/không có chiến lược chắc chắn/.test(r.errors[0]) || !/KHÁC nhau/.test(r.errors[0]) || /dù chưa chạm giới hạn/.test(r.errors[0])) msgBad.push([k, dir, r.errors]);
+    }); });
+    t.ok("n = 2, không xu chuẩn, 'nặng hoặc nhẹ' (k = 1…4 × có/không nói hướng): lý do 'cân hai xu chỉ biết chúng KHÁC nhau', không còn 'dù chưa chạm giới hạn … điều kiện mốc'", msgBad.length === 0, msgBad.slice(0, 2));
+    t.ok("vét cạn tường minh: 2 xu 'nặng hoặc nhẹ' không xu chuẩn KHÔNG giải được dù cân 3 lần (cả hai mục tiêu)", !bruteSolvable(2, 0, "either", true, 3) && !bruteSolvable(2, 0, "either", false, 3));
+    var odd = [];
+    for (var k = 2; k <= 4; k++) [["either", 0, 1], ["either", 0, 0], ["either", 1, 1], ["either", 1, 0], ["heavy", 0, 0], ["heavy", 1, 0]].forEach(function (c) {
+      var tt = POW[k], max = c[0] === "heavy" ? tt : c[2] ? (c[1] ? (tt - 1) / 2 : (tt - 3) / 2) : (c[1] ? (tt + 1) / 2 : (tt - 1) / 2);
+      for (var n = 2; n <= max; n++) if (L.bestK({ n: n, k: k, fake: c[0], ref: c[1], dir: c[2] }) > k && !(n === 2 && c[0] === "either" && c[1] === 0)) odd.push([k, c.join("/"), n]);
+    });
+    t.ok("k = 2…4, 6 cấu hình, mọi 2 ≤ n ≤ giới hạn công thức: không giải được ⇒ chỉ khi n = 2, 'nặng hoặc nhẹ', không xu chuẩn (nên câu 'dù chưa chạm giới hạn' chỉ còn là lời giải thích của chính ca đó)", odd.length === 0, odd.slice(0, 3));
+  })();
+
+  t.group("coinbalance — đối thủ: phá hoà bằng băm CÓ seed (không luôn chọn nhánh đầu); fromText không tra khoá bằng thuộc tính đối tượng");
+  (function () {
+    var p = fromIn(mkInput({ n: 9, k: 2, fake: "heavy", ref: 0, dir: 0 }, "adv")), st = T.newState(p), pans = L.panArray(9, [0, 1, 2], [3, 4, 5]), seen = {}, stable = true;
+    for (var sd = 1; sd <= 60; sd++) { var ps = Object.assign({}, p, { seed: sd }), a = L.advResult(ps, st, pans); seen[a] = (seen[a] || 0) + 1; if (a !== L.advResult(ps, st, pans)) stable = false; }
+    t.ok("3 với 3 từ 9 xu nặng / 2 lần: ba nhánh hoà tuyệt đối (3 xu, cần 1 lần) ⇒ qua 60 seed ra đủ cả ba kết quả 1, 2, 3 (mỗi kết quả ≥ 8 lần), cùng seed luôn cùng kết quả", Object.keys(seen).sort().join() === "1,2,3" && stable && [1, 2, 3].every(function (c) { return seen[c] >= 8; }), seen);
+    var src = fs.readFileSync(path.join(ROOT, "assets/js/puzzles/coinbalance.js"), "utf8"), base = "xu: 12\nlần cân: 3\nchế độ: đối thủ\nxu giả: nặng hoặc nhẹ", r0 = T.fromText(base), r1 = T.fromText("constructor: 99\n__proto__: x\ntoString: 5\nhasOwnProperty: 1\n" + base);
+    t.ok("khoá 'constructor' / '__proto__' / 'toString' / 'hasOwnProperty' bị bỏ qua đúng như khoá lạ: cùng kết quả, không nhiễm prototype; mã tra KEY_MAP bằng hasOwnProperty", r0.ok && r1.ok && J(r1.puzzle.data) === J(r0.puzzle.data) && ({}).x === undefined && ({}).polluted === undefined && /hasOwnProperty\.call\(KEY_MAP/.test(src) && !/KEY_MAP\[ascii\(/.test(src));
   })();
 
   // ====================================================================== 9. pure: engine không phụ thuộc ngoài data-pz

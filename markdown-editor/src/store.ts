@@ -183,6 +183,8 @@ let flushing = false
 /** Outcome of the last document write seen by the host: undefined = none yet, null = stored, else why not. */
 let docsFailure: StorageFailure | null | undefined
 let lastSettingsFailure: StorageFailure | null = null
+/** The same for the boot snapshot: a later IndexedDB write that succeeds (the sync engine's) must not clear a quota banner it knows nothing about. */
+let lastSnapshotFailure: StorageFailure | null = null
 /** A file picked before the documents had loaded: opened as soon as they have. */
 let pendingOpen: string | null = null
 
@@ -284,7 +286,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
       set({ saveState: 'error', storageFailure: failure, storageFailureScope: 'documents' })
       return
     }
-    const rest = lastSettingsFailure
+    const rest = lastSettingsFailure ?? lastSnapshotFailure
     set({ saveState: rest ? 'error' : 'saved', lastSavedAt: Date.now(), storageFailure: rest, storageFailureScope: rest ? 'settings' : null })
   }
 
@@ -908,6 +910,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
       const state = get()
       const settingsFailure = saveSettings(settingsOf(state))
       lastSettingsFailure = settingsFailure
+      lastSnapshotFailure = null
       let filesFailure: StorageFailure | null = null
       let snapshotFailure: StorageFailure | null = null
       let pending = false
@@ -926,7 +929,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
           pending = docsFailure === undefined && ws.dirty
           if (docsMode === 'idb') {
             // The documents are in IndexedDB; what localStorage holds is the small snapshot the first frame is drawn from.
-            snapshotFailure = saveSnapshot({
+            snapshotFailure = lastSnapshotFailure = saveSnapshot({
               files: state.files,
               currentFileId: state.currentFileId,
               expandedFolders: state.expandedFolders,

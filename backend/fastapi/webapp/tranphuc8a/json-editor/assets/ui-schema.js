@@ -13,7 +13,7 @@
   "use strict";
 
   var JE = window.JE, APP = window.JE_APP;
-  if (!JE || !APP || !JE.schema || !JE.chayNen || !JE.viTri || !JE.chung) return;
+  if (!JE || !APP || !JE.schema || !JE.chayNen || !JE.viTri || !JE.chung || !JE.schemaSinh || !JE.schemaSuy) return;
   var S = JE.schema, CN = JE.chayNen, VT = JE.viTri, CH = JE.chung;
   var THU = window.JE_THU || {};
 
@@ -25,7 +25,11 @@
     nhap: $("#sc-nhap"), trangThai: $("#sc-trang-thai"), tom: $("#sc-tom"), loi: $("#sc-loi"), chan: $("#sc-chan"),
     goiY: $("#sc-goi-y"), goiYChu: $("#sc-goi-y-chu"), goiYDung: $("#sc-goi-y-dung"), goiYBo: $("#sc-goi-y-bo"),
     mo: $("#sc-mo"), tep: $("#sc-tep"), viDu: $("#sc-vi-du"), dinhDang: $("#sc-dinh-dang"), draft: $("#sc-draft"),
-    format: $("#sc-format"), tuDong: $("#sc-tu-kiem"), kiemNgay: $("#sc-kiem-ngay"), hoTro: $("#sc-ho-tro")
+    format: $("#sc-format"), tuDong: $("#sc-tu-kiem"), kiemNgay: $("#sc-kiem-ngay"), hoTro: $("#sc-ho-tro"),
+    suy: $("#sc-suy"), suyChat: $("#sc-suy-chat"), suyHoi: $("#sc-suy-hoi"), suyHoiChu: $("#sc-suy-hoi-chu"), suyDongY: $("#sc-suy-dong-y"), suyBo: $("#sc-suy-bo"),
+    sinhMo: $("#sc-sinh-mo"), sinh: $("#sc-sinh"), sinhSeed: $("#sc-sinh-seed"), sinhDoi: $("#sc-sinh-doi"), sinhSo: $("#sc-sinh-so"), sinhTile: $("#sc-sinh-tile"),
+    sinhSau: $("#sc-sinh-sau"), sinhChay: $("#sc-sinh-chay"), sinhBao: $("#sc-sinh-bao"), sinhXem: $("#sc-sinh-xem"), sinhDung: $("#sc-sinh-dung"),
+    sinhChep: $("#sc-sinh-chep"), sinhTai: $("#sc-sinh-tai"), sinhLai: $("#sc-sinh-lai")
   };
 
   /* ----------------------------------------------------- luu tru */
@@ -39,8 +43,16 @@
     format: ["canh-bao", "loi", "bo-qua"].indexOf(tcLuu.format) >= 0 ? tcLuu.format : "canh-bao",
     tuDong: tcLuu.tuDong !== false
   };
+  /* Tuy chon SINH du lieu mau (luu cung khoa; ui giu nguyen truong la khi ghi lai) + "Chat che" cua suy schema. */
+  var SINH_MD = { seed: "mau-1", so: 1, tile: 50, sau: 6 };
+  function kepSo(x, lo, hi, md) { x = typeof x === "number" ? x : parseFloat(x); return isFinite(x) ? Math.min(hi, Math.max(lo, Math.round(x))) : md; }
+  var sinhTc = (function () {
+    var l = tcLuu.sinh && typeof tcLuu.sinh === "object" ? tcLuu.sinh : {};
+    return { seed: typeof l.seed === "string" && l.seed ? l.seed.slice(0, 40) : SINH_MD.seed, so: kepSo(l.so, 1, 100, SINH_MD.so), tile: kepSo(l.tile, 0, 100, SINH_MD.tile), sau: kepSo(l.sau, 1, 12, SINH_MD.sau) };
+  })();
+  var suyChat = tcLuu.suyChat === true;
   function luuTuyChon() {
-    tcLuu = Object.assign({}, tcLuu, { draft: tuyChon.draft, format: tuyChon.format, tuDong: tuyChon.tuDong });
+    tcLuu = Object.assign({}, tcLuu, { draft: tuyChon.draft, format: tuyChon.format, tuDong: tuyChon.tuDong, sinh: sinhTc, suyChat: suyChat });
     ghiLuu(KHOA_TC, JSON.stringify(tcLuu));
   }
 
@@ -93,6 +105,7 @@
   var soLan = 0;                  /* so lan datKetQua da chay (kiem thu doi ket qua moi) */
   var henKiem = null, henLuu = null;
   var viTriCache = null;          /* {van, map} cho "Van ban" — mot luot timNhieuViTri */
+  var dangNen = false, seqNen = 0, kiemBiHuy = false;   /* viec nen sinh / suy dang chay (chung mot Worker voi kiem: lenh moi huy lenh cu) */
 
   function coSchema() { return el.nhap.value.trim() !== ""; }
 
@@ -124,6 +137,7 @@
 
   function chayKiem(thuCong) {
     clearTimeout(henKiem); henKiem = null;
+    if (dangNen) { lenhLai(150); return; }                /* dang sinh / suy: cho xong (lenh nen moi se huy lenh cu) */
     var sc = el.nhap.value;
     if (!sc.trim()) { seq++; dangKiem = false; datKetQua({ tt: "chua-co" }); return; }
     var loiSc = parseSchema(sc);
@@ -418,6 +432,7 @@
   }
 
   function khiSchemaDoi() {
+    if (typeof danhDauSinhCu === "function") danhDauSinhCu();
     clearTimeout(henLuu);
     henLuu = setTimeout(function () { henLuu = null; ghiLuu(KHOA_SCHEMA, el.nhap.value); }, 300);
     capNhatDong();
@@ -567,8 +582,209 @@
     ghiSchema(t.vanBan);
   };
 
+  /* ----------------------------------------------------- viec nen: sinh du lieu mau + suy schema (J4) */
+  /** Chay mot lenh nen (sinh / suy) tren Worker chung. Neu dang kiem thi kiem bi huy -> chay lai sau khi xong. */
+  function batDauNen(loai, du, tc, xong) {
+    var id = ++seqNen;
+    if (dangKiem) kiemBiHuy = true;
+    dangNen = true;
+    CN.chay(loai, du, tc).then(function (r) {
+      if (id !== seqNen) { xong(r); return; }              /* bi viec nen moi hon thay: r = {huy:true}, de nguoi goi don trang thai "dang chay" */
+      dangNen = false;
+      xong(r);
+      if (kiemBiHuy) { kiemBiHuy = false; chayKiem(false); }
+    }).catch(function (e) { if (id === seqNen) dangNen = false; setTimeout(function () { throw e; }, 0); });
+    return id;
+  }
+  function hanNen() { var h = CN.cauHinh && CN.cauHinh.han; return Math.round((h || 8000) / 1000); }
+
+  /* --- sinh du lieu mau --- */
+  var sinh = { kq: null, text: "", id: 0, soLan: 0, cu: false };
+  /** Schema vua doi sau khi sinh: ban xem truoc khong con khop schema — lam mo + nhac, khong xoa (van dung duoc). */
+  function danhDauSinhCu() {
+    if (!sinh || !sinh.kq || sinh.cu || el.sinhBao.getAttribute("data-tt") === "dang") return;
+    sinh.cu = true;
+    el.sinhXem.classList.add("cu");
+    el.sinhBao.appendChild(tao("span", "sc-chip", "schema đã đổi — bấm “Sinh” để cập nhật"));
+  }
+  var TRAN_XEM = 200000, TRAN_TO_MAU = 100000;
+
+  function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function datBaoSinh(tt, chu, ds) {
+    el.sinhBao.setAttribute("data-tt", tt);
+    el.sinhBao.textContent = chu;
+    if (ds && ds.length) {
+      var ul = tao("ul", "sc-khong-dam");
+      for (var i = 0; i < ds.length && i < 4; i++) ul.appendChild(tao("li", null, (ds[i].conTroSchema ? ds[i].conTroSchema + " — " : "") + ds[i].lyDo));
+      if (ds.length > 4) ul.appendChild(tao("li", null, "… và " + (ds.length - 4) + " điểm khác"));
+      el.sinhBao.appendChild(ul);
+    }
+  }
+  function veXem(txt) {
+    if (!txt) { el.sinhXem.textContent = ""; return; }
+    var cat = txt.length > TRAN_XEM ? txt.slice(0, TRAN_XEM) + "\n… (đã cắt khi xem — " + coChu(txt.length) + " tất cả; “Dùng làm dữ liệu” / “Chép” / “Tải” dùng đủ)" : txt;
+    /* toMau thoat HTML tung ky tu; neu thieu thi tu thoat bang esc(). */
+    if (cat.length <= TRAN_TO_MAU) el.sinhXem.innerHTML = THU.toMau ? THU.toMau(cat) : esc(cat);
+    else el.sinhXem.textContent = cat;
+  }
+  function batNutSinh(co) { el.sinhDung.disabled = el.sinhChep.disabled = el.sinhTai.disabled = !co; }
+
+  function docSinhTc() {
+    sinhTc = {
+      seed: (el.sinhSeed.value || "").slice(0, 40) || SINH_MD.seed, so: kepSo(el.sinhSo.value, 1, 100, SINH_MD.so),
+      tile: kepSo(el.sinhTile.value, 0, 100, SINH_MD.tile), sau: kepSo(el.sinhSau.value, 1, 12, SINH_MD.sau)
+    };
+    el.sinhSeed.value = sinhTc.seed; el.sinhSo.value = sinhTc.so; el.sinhTile.value = sinhTc.tile; el.sinhSau.value = sinhTc.sau;
+    luuTuyChon();
+    return sinhTc;
+  }
+
+  function chaySinh() {
+    var sc = el.nhap.value;
+    if (!sc.trim()) {
+      datBaoSinh("loi", "Chưa có schema — dán JSON Schema vào ô bên trái hoặc chọn “Ví dụ” rồi sinh.");
+      batNutSinh(false); veXem(""); sinh.kq = null; sinh.text = "";
+      return;
+    }
+    var lj = parseSchema(sc);
+    if (lj) { datBaoSinh("loi", "Schema không phải JSON hợp lệ" + (lj.dong ? " (dòng " + lj.dong + ", cột " + lj.cot + ")" : "") + " — sửa rồi sinh lại."); return; }
+    var t = docSinhTc();
+    var tc = { seed: t.seed, soLuong: t.so, tiLeTuyChon: t.tile / 100, doSauToiDa: t.sau };
+    if (tuyChon.draft !== "tu-dong") tc.draft = tuyChon.draft;
+    datBaoSinh("dang", "Đang sinh…");
+    var id = ++sinh.id;
+    batDauNen("sinh", { schema: sc }, tc, function (r) { if (id === sinh.id) xuLySinh(r); });
+  }
+
+  function xuLySinh(r) {
+    if (r.huy) { datBaoSinh("chua", "Đã dừng vì có việc nền mới hơn (suy schema / sinh khác) — bấm “Sinh” để chạy lại."); return; }
+    sinh.soLan++;
+    if (r.hetGio) { datBaoSinh("het-gio", "Sinh quá lâu (> " + hanNen() + " s) — thường do một “pattern” quay lui thảm hoạ hoặc schema quá phình. Đơn giản hoá schema rồi thử lại."); return; }
+    if (r.loi) { datBaoSinh("loi", r.loi.phan === "schema" ? "Schema không phải JSON hợp lệ — sửa rồi sinh lại." : "Không sinh được — " + (r.loi.thongBao || "lỗi không rõ")); return; }
+    var k = r.kq;
+    sinh.kq = k;
+    sinh.cu = false;
+    el.sinhXem.classList.remove("cu");
+    sinh.text = JSON.stringify(k.giaTri, null, 2);
+    if (sinh.text === undefined) sinh.text = "null";
+    veXem(sinh.text);
+    batNutSinh(true);
+    var ms = k.thoiGianMs ? " · " + k.thoiGianMs + " ms" : "";
+    if (r.luongChinh) ms += " · luồng chính (trình duyệt không có Worker: pattern xấu có thể làm treo trang)";
+    if (k.hopLe) {
+      var chu = "✔ Hợp lệ theo schema (" + k.soLanThu + " lần thử" + (k.soLuong > 1 ? ", " + k.soLuong + " mẫu" : "") + ") · seed " + k.seed + ms;
+      if (k.ghiChu && k.ghiChu.length) chu += " · " + k.ghiChu.length + " lưu ý";
+      if (k.loiSchema && k.loiSchema.length) { datBaoSinh("khong-dam-bao", chu + " · ⚠ schema có " + k.loiSchema.length + " lỗi — mẫu chỉ mang tính tham khảo"); return; }
+      datBaoSinh("ok", chu);
+    } else {
+      datBaoSinh("khong-dam-bao", "⚠ Không đảm bảo hợp lệ (mẫu gần đúng nhất ở dưới) · seed " + k.seed + ms, k.khongDamBao);
+    }
+  }
+
+  function chepVanBan(t, xong) {
+    function du() {
+      var ta = tao("textarea", null, t, { "aria-hidden": "true", tabindex: "-1" });
+      ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      xong(ok);
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(function () { xong(true); }, du); return; }
+    } catch (e) { /* roi ve du phong */ }
+    du();
+  }
+
+  function moSinh(mo) {
+    el.sinh.hidden = !mo;
+    el.sinhMo.setAttribute("aria-expanded", mo ? "true" : "false");
+  }
+  el.sinhMo.onclick = function () {
+    var mo = el.sinh.hidden;
+    moSinh(mo);
+    if (mo && !sinh.kq) chaySinh();
+  };
+  el.sinhChay.onclick = chaySinh;
+  el.sinhLai.onclick = function () {
+    var m = /^([\s\S]*?)(\d+)$/.exec(el.sinhSeed.value || "");          /* chuoi so cuoi + 1 (mau-1 -> mau-2; abc -> abc1) */
+    el.sinhSeed.value = (m ? m[1] + (parseInt(m[2], 10) + 1) : (el.sinhSeed.value || SINH_MD.seed) + "1").slice(0, 40);
+    chaySinh();
+  };
+  el.sinhDoi.onclick = function () {
+    el.sinhSeed.value = Math.random().toString(36).slice(2, 8);
+    chaySinh();
+  };
+  [el.sinhSeed, el.sinhSo, el.sinhTile, el.sinhSau].forEach(function (e) {
+    e.addEventListener("change", function () { docSinhTc(); });
+    e.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); chaySinh(); } });
+  });
+  el.sinhDung.onclick = function () {
+    if (!sinh.text) return;
+    APP.datVanBan(sinh.text, { nhan: "Sinh dữ liệu mẫu" });
+    APP.thongBao("Đã dùng mẫu làm dữ liệu — Ctrl+Z để hoàn tác");
+  };
+  el.sinhChep.onclick = function () {
+    if (!sinh.text) return;
+    chepVanBan(sinh.text, function (ok) { APP.thongBao(ok ? "Đã chép dữ liệu mẫu" : "Không chép được — trình duyệt chặn clipboard"); });
+  };
+  el.sinhTai.onclick = function () {
+    if (!sinh.text) return;
+    var b = new Blob([sinh.text], { type: "application/json" }), a = document.createElement("a"), u = URL.createObjectURL(b);
+    a.href = u; a.download = "du-lieu-mau.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(u); }, 2000);
+  };
+
+  /* --- suy schema tu du lieu --- */
+  var suyCho = null;              /* schema suy ra dang cho nguoi dung xac nhan ghi de */
+  function anSuyHoi() { el.suyHoi.hidden = true; suyCho = null; }
+  function chaySuy() {
+    var du = APP.layVanBan();
+    if (!du.trim()) { APP.thongBao("Chưa có dữ liệu — soạn JSON ở tab Soạn rồi bấm “Suy schema từ dữ liệu”"); return; }
+    if (!APP.hopLe()) { APP.thongBao("Dữ liệu chưa là JSON hợp lệ — sửa ở tab Soạn rồi bấm lại"); return; }
+    el.suy.disabled = true;
+    var tc = { draft: tuyChon.draft === "07" ? "07" : "2020-12", chat: !!el.suyChat.checked };
+    batDauNen("suy", { du: du }, tc, function (r) {
+      el.suy.disabled = false;
+      if (r.huy) return;
+      if (r.hetGio) { APP.thongBao("Suy schema quá lâu (> " + hanNen() + " s) — dữ liệu quá lớn?"); return; }
+      if (r.loi) { APP.thongBao("Không suy được schema — " + (r.loi.thongBao || "lỗi không rõ")); return; }
+      apDungSuy(JSON.stringify(r.kq.schema, null, 2));
+    });
+  }
+  function apDungSuy(text) {
+    if (coSchema() && el.nhap.value.trim() !== text.trim()) {
+      suyCho = text;
+      el.suyHoiChu.textContent = "Schema hiện có (" + coChu(el.nhap.value.length) + ") sẽ bị thay bằng schema suy ra từ dữ liệu (" + coChu(text.length) + "). Ctrl+Z trong ô schema hoàn tác được.";
+      el.suyHoi.hidden = false;
+      return;
+    }
+    anSuyHoi();
+    ghiSchema(text);
+    APP.thongBao("Đã suy schema từ dữ liệu");
+  }
+  el.suy.onclick = chaySuy;
+  el.suyDongY.onclick = function () {
+    var t = suyCho;
+    anSuyHoi();
+    if (t === null) return;
+    APP.chuyenTab("schema");
+    ghiSchema(t);
+    APP.thongBao("Đã ghi đè schema bằng schema suy từ dữ liệu — Ctrl+Z trong ô schema để hoàn tác");
+  };
+  el.suyBo.onclick = anSuyHoi;
+  el.suyChat.addEventListener("change", function () { suyChat = !!el.suyChat.checked; luuTuyChon(); });
+
   /* ----------------------------------------------------- khoi dong */
   el.draft.value = tuyChon.draft;
+  el.sinhSeed.value = sinhTc.seed; el.sinhSo.value = sinhTc.so; el.sinhTile.value = sinhTc.tile; el.sinhSau.value = sinhTc.sau;
+  el.suyChat.checked = suyChat;
   el.format.value = tuyChon.format;
   el.tuDong.checked = tuyChon.tuDong;
   var luu = docLuu(KHOA_SCHEMA);
@@ -583,6 +799,8 @@
     soLan: function () { return soLan; },
     chay: chayKiem,
     nhaySchema: nhaySchema,
+    sinh: { chay: chaySinh, ketQua: function () { return sinh.kq; }, text: function () { return sinh.text; }, soLan: function () { return sinh.soLan; } },
+    suy: chaySuy,
     viDu: VI_DU
   };
 })();

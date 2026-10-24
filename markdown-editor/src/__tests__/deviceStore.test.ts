@@ -352,6 +352,32 @@ describe('a store that refuses a write', () => {
     expect(memory.docs.get('a')?.content).toBe('edit while the store is full')
   })
 
+  it('keeps the quota banner for a refused boot snapshot when the IndexedDB write of the same save finishes afterwards', async () => {
+    const memory = new MemoryDocStore()
+    seed(memory, [ROOT, doc('a', 'A text')], 1)
+    writeSnapshot(1, 'a', 'A text')
+    await boot(memory)
+
+    // localStorage is full for the snapshot (the documents themselves are safe in the store).
+    const real = Storage.prototype.setItem
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, name: string, value: string) {
+      if (name === FILES_KEY) throw new DOMException('full', 'QuotaExceededError')
+      real.call(this, name, value)
+    })
+    act(() => store().setContent('edit while localStorage is full'))
+    act(() => store().flushPersist())
+    await vi.waitFor(() => expect(memory.docs.get('a')?.content).toBe('edit while localStorage is full'))
+    await new Promise((resolve) => setTimeout(resolve, 20)) // the commit's own "written" notice arrives after flushPersist returned
+    expect(store().storageFailure).toBe('quota')
+    expect(store().storageFailureScope).toBe('settings')
+    expect(store().saveState).toBe('error')
+
+    spy.mockRestore()
+    act(() => store().flushPersist())
+    await vi.waitFor(() => expect(store().storageFailure).toBeNull())
+    expect(store().saveState).toBe('saved')
+  })
+
   it('a saving indicator is not settled by a commit that finished while the person is still typing', async () => {
     const memory = new MemoryDocStore()
     seed(memory, [ROOT, doc('a', 'A text')], 1)

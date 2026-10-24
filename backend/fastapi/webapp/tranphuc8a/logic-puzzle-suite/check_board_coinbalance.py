@@ -337,6 +337,31 @@ def edge_p3(P, check, section, tid):
         fo = pg.evaluate(JS_FOCUS)
         check(pg.locator(".board-host .pz-cb-reopen:not([hidden])").count() == 0 and not fo["inBody"] and "pz-cb-coin" in fo["cls"], "'Mở lại để cân tiếp' bằng Enter (khung bị gỡ): focus về khay xu, không rơi về BODY", fo)
 
+        # ---- gợi ý theo thế HIỆN TẠI (sửa sau kiểm vòng 2): từng có lần cân mất an toàn nhưng nhờ may thế đã thắng chắc ⇒ gợi ý nói 'đủ thông tin → Kết luận', KHÔNG 'không còn cách' / 'Quay về trước lần cân thứ 1'
+        E.start(tid, "nang2", "expert", SEED + 72)
+        g = E.game()
+        d = g["data"]
+        sc = d["secret"]["coin"]
+        a, b = [i for i in range(d["n"]) if i != sc][:2]
+        check(d["fake"] == "heavy" and d["k"] == 2 and d["n"] >= 6 and d["mode"] == "fixed", "ván thử: biết nặng, 2 lần cân, cố định, n ≥ 6 (n = %d) để cân 1 với 1 là lần cân mất an toàn" % d["n"], d)
+        ui_weigh(pg, [a], [b])                                          # 1 với 1, xu giả ngoài đĩa ⇒ cân bằng, còn n − 2 > 3 xu với 1 lần cân: thế mất thật
+        pg.click(".toolbar button:has-text('Gợi ý')")
+        pg.wait_for_selector(".hint-panel:not([hidden]) .hint-text")
+        check("không còn cách cân nào chắc chắn" in pg.inner_text(".hint-panel .hint-text"), "ngay sau lần cân mất an toàn: gợi ý mức 1 nói 'không còn cách' (đúng — thế đã mất)", pg.inner_text(".hint-panel .hint-text"))
+        ui_weigh(pg, [sc], [a])                                         # xu giả (nặng) với một xu thật ⇒ đĩa chứa nó hạ xuống ⇒ chỉ còn 1 xu nghi: nhờ MAY thế đã thắng chắc
+        g = E.game()
+        check(g["mistakes"] == 1 and len(consistent(g)) == 1 and len(records(g)) == 2, "nhờ may: còn đúng 1 giả thuyết vật lý, lỗi vẫn là 1 (không bị xoá)", (g["mistakes"], consistent(g)))
+        pg.click(".toolbar button:has-text('Gợi ý')")
+        pg.wait_for_selector(".hint-panel:not([hidden]) .hint-text")
+        t1 = pg.inner_text(".hint-panel .hint-text")
+        check("không còn cách" not in t1 and "đủ thông tin" in t1, "thế đã thắng chắc: gợi ý mức 1 nói 'đủ thông tin để kết luận', không nói 'không còn cách'", t1)
+        pg.click(".hint-panel button:has-text('Chi tiết hơn')")
+        pg.click(".hint-panel button:has-text('Chi tiết hơn')")
+        t3 = pg.inner_text(".hint-panel .hint-text")
+        whys = pg.evaluate("[...document.querySelectorAll('.hint-panel .why li')].map(li => li.textContent)")
+        check("Quay về trước" not in t3 and ("Kết luận: xu %d" % (sc + 1)) in t3 and len(whys) >= 2 and whys[-1].startswith("Lưu ý: lần cân thứ 1") and "tối đa 1★" in whys[-1],
+              "mức 3: 'Kết luận: xu %d …' (không phải 'Quay về trước lần cân thứ 1') + dòng 'Lưu ý' về lần cân mất an toàn / tối đa 1★" % (sc + 1), (t3, whys[-1:] ))
+
         # ---- chế độ đối thủ qua liên kết seed o=
         pg.evaluate("location.hash = '#/new/coinbalance?size=nn3&tier=expert&seed=%d&o=mode:adv&go=1'" % (SEED + 63))
         pg.wait_for_selector(".board-host .pz-cb-coin", timeout=30000)

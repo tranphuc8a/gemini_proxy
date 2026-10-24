@@ -1,6 +1,6 @@
 # M4b — Đồng bộ delta + lịch sử, frontend (IndexedDB) (24/10/2026, làn A, đợt 2)
 
-**Trạng thái: xong F1–F8, F11 (phần P1).** Chưa commit. Build xuất bản `3ec8112a081a` (`webapp/tranphuc8a/markdown-editor-pro/`, `build-webapps.mjs --check` exit 0, 7 app ok).
+**Trạng thái: xong F1–F8, F11 (phần P1); đã sửa sau kiểm độc lập — xem mục "Sửa sau kiểm" cuối tệp (số liệu ở các bảng trên là của bản đầu).** Chưa commit. Build xuất bản hiện tại `6072167a6a8f` (`webapp/tranphuc8a/markdown-editor-pro/`, `build-webapps.mjs --check` exit 0, 7 app ok).
 Không chạm database thật: mọi tiến trình backend chạy với `DB_URL` SQLite tạm, `MONGO_URI=""`, `RATE_LIMIT_BACKEND=memory`, `AI_ENABLED=false`, mọi `*_STORAGE_BACKEND=json`; không đọc/in `.env`. Không gọi Gemini.
 Thiết kế: `thiet-ke/md-sync.md` (§3.7, F1–F8, F11). API: `docs/markdown-sync-api.md`. Backend (M4a) không đổi trừ **mặc định `MARKDOWN_LEGACY_PUT` → `reject`** (xem dưới).
 
@@ -60,3 +60,48 @@ Thiết kế: `thiet-ke/md-sync.md` (§3.7, F1–F8, F11). API: `docs/markdown-s
 
 ## Ghi chú cho đợt sau
 Xem `ke-hoach.md` §7.1, gạch "M5, M6, M7, M8 (từ dot/M4b.md)". Điểm chính: mọi ghi tài liệu qua `Workspace`; `files` có thể bị thay nguyên cây khi có thay đổi từ xa; test đường IndexedDB bằng `setDocStoreOpener`; engine bằng `FakeServer` + `Device`; giữ xanh `kiem-pwa` 59 / `kiem-chia-se` 34 / `kiem-dong-bo` 42.
+
+## Sửa sau kiểm (24/10, agent sửa — người kiểm độc lập: 1 blocking + 10 góp ý nhỏ)
+
+### Blocking — bộ gom lô push đếm sai cỡ nên có thể kẹt đồng bộ vĩnh viễn
+- **Gốc**: `buildOps` (1) cộng `text.length` (đơn vị UTF-16) trong khi máy chủ tính **byte UTF-8 + 200 mỗi op** và từ chối CẢ yêu cầu bằng 400 `md_push_too_large` khi > 4.000.000; (2) kiểm trần chỉ TRƯỚC khi thêm mục nên mục cuối có thể vượt trần cả một tài liệu; (3) không ai xử lý 400 đó: `fail()` lùi rồi dựng lại ĐÚNG lô cũ (thứ tự outbox cố định) nên lần nào cũng 400, mọi tài liệu của lô và các lô sau không bao giờ lên.
+  Tái hiện trên Edge thật + máy chủ thật (bản xuất bản cũ, `kiem-dong-bo.py --chi-lo-lon`): 8 tài liệu × 450.000 ký tự tiếng Việt = 3,6 triệu ký tự = 5.040.016 byte → "Sync problem — 9 changes waiting", 5 lần liền cùng một yêu cầu 5.041.816 byte bị từ chối, 0 tài liệu lên máy chủ.
+- **Sửa** (`src/sync/engine.ts`):
+  1. `opWeight(op)` = đúng công thức `MarkdownDocsUseCase._op_weight` + 200 (byte UTF-8 của `content`, hoặc của các dòng `patch` + 4 mỗi dòng + 16 mỗi hunk), dùng `utf8Bytes` (chính xác, không cấp phát) của `lib/share.ts`.
+  2. `buildOps` kiểm **sau khi biết op**: `ops.length > 0 && bytes + weight > pushBudget` → để mục đó sang yêu cầu sau (`more`); một op đứng một mình luôn đi (≤ 3,5 MB + 200 < 4 MB). Mục không vừa chưa gây tác dụng phụ nào (drop/block chỉ ghi khi `continue`).
+  3. `pushBatch`: gặp 400 `md_push_too_large` thì **chia đôi lô gửi lại** (đệ quy), và **học** `pushBudget = max(64 KB, nửa cỡ lô vừa bị từ chối)` cho các lô sau (máy chủ cấu hình `MARKDOWN_PUSH_MAX_BYTES` thấp hơn 4 MB không làm mỗi vòng tốn hai yêu cầu hỏng). Op bị từ chối ngay cả khi đi một mình → kết quả `rejected md_push_too_large` → **chỉ tài liệu đó bị chặn** (`blocked`, có câu giải thích, "Try again" gỡ được), hàng đợi vẫn chạy. Lỗi khác (mạng, 5xx…) ném như cũ; yêu cầu đã gửi một nửa rồi lỗi thì gửi lại cả hai nửa ở chu kỳ sau — máy chủ coi op lặp là `ok` (đã có test "câu trả lời bị mất").
+- **Rà cùng mẫu lỗi**: không còn chỗ nào so `.length` với giới hạn byte trong `src/sync` (`MAX_DOC_BYTES` dùng `utf8Length`: chính xác với văn bản lớn, cận trên với văn bản ≤ 1024 ký tự); ngưỡng ảnh khởi động 512 KB đếm ký tự cho `localStorage` (hạn mức tính theo ký tự) nên không cùng mẫu; `ShareDialog` đã dùng `utf8Bytes`.
+- **Phép kiểm** — `FakeServer` có luật cỡ thật (`maxPushBytes` = 4 MB, `requestWeight`/`opWeight` y công thức máy chủ, `refusedPushes`, móc `duringPush`); 5 ca mới `the size of one push request`: 4 tài liệu ASCII 1,1 MB; 8 × 450.000 ký tự tiếng Việt (> 5 MB byte); 3 × 1,4 MB (mục cuối không được đẩy lô vượt trần: lô ≤ 3,5 MB); máy chủ trần 1 MB (chia đôi + nhớ bài học: 6 tài liệu nữa không còn bị từ chối); trần 100 KB (chỉ tài liệu 200 KB bị chặn `md_push_too_large`, hai tài liệu nhỏ lên, "Try again" gỡ sau khi nới trần). Trình duyệt thật: `kiem-dong-bo.py` bước 4b (+4 phép) — kho 8 × 450.000 ký tự đồng bộ lần đầu qua đường `v2 → IndexedDB → reconcile → pushAll`: mọi tài liệu lên đúng SHA-256, "Synced", ≥ 2 yêu cầu, mỗi yêu cầu ≤ 4.000.000 theo cách đếm của máy chủ (`--chi-lo-lon` chỉ chạy bước này).
+- **Đỏ trên bản cũ**: ghi đè `engine.ts`/`workspace.ts`/`docStore.ts` bằng bản `HEAD` rồi chạy `vitest src/sync` → **12 test đỏ** (5 ca cỡ push; reset-toast; replace-refused; cờ blocked đè bản mới; cache băm; mục outbox ở workspace; 2 ca IndexedDB), trong đó các ca cỡ push đỏ đúng vì `refusedPushes = [{ops:5, weight:4401000}]`, `[{ops:9, weight:5212312}]`, `[{ops:4, weight:4200800}]`; bước 4b chạy trên bản xuất bản cũ: **3 SAI** (không lên máy chủ, "Sync problem — 9 changes waiting", 5 yêu cầu × 5.041.816 byte). Đã khôi phục bản sửa (`cmp` với bản lưu trước khi ghi đè).
+
+### Góp ý nhỏ — đã sửa (kèm test)
+1. **Hộp xác nhận "Replace this device's copy…" nói sai khi có tài liệu bị máy chủ từ chối** — `replaceFromServer` nay đưa `{documents, unsent, refused: string[]}` (`ReplaceInfo`); `refused` = tên các tài liệu `blocked` còn trong máy (bản duy nhất). `Header` nêu "N documents the server refused (“a”, “b”, “c” and 2 more) exist only on this device and will be lost for good." Test engine (huge.md bị chặn → `refused:['huge.md']`; huỷ thì không đổi gì; đồng ý thì mất), `m1.test.tsx` (nêu tên + "and 2 more", không còn câu "Nothing waiting…"), `storeSync.test.ts` cập nhật.
+2. **Khoảng trống test (a)** "sửa trong lúc push đang bay thì lần sau vẫn gửi" — ca engine `an edit made while a push is in flight…` (FakeServer `duringPush`). **Đột biến** bỏ `versions.set` ở nhánh `ok` → đỏ (1/59).
+3. **Khoảng trống test (b)** `contentRev` của shadow sau push — ca `a rename pushed on top of a text edit made elsewhere…` (máy đổi tên vẫn nhận chữ của máy kia, rồi sửa tiếp không lệch). **Đột biến** `contentRev: result.contentRev` luôn → đỏ (1/59). Đột biến thêm: `opWeight` đếm `.length` thay byte → ca "UTF-8 bytes" đỏ.
+4. **Race `pushAll`**: `ws.apply` nay áp `ifVersion` cho cả mục **put** của outbox (cờ `blocked`/`forceFull` của phiên bản cũ không còn đè mục mới hơn; mục đã bị xoá không bị hồi sinh); `pushAll` gán `versions` cho mọi mục bị phán xử (ok / forceFull / blocked) và cho mục `block` của `buildOps` (sau `await` băm). Test: `workspace.test.ts` (mục `a` sửa sau push giữ nguyên, `b` nhận cờ) và engine `a node edited while its push was being refused…` (đồng hồ sai → `md_bad_clock`, người dùng sửa lại trong lúc bay → bản mới lên, không bị đánh "refused").
+5. **ReconcileModal** nói "Nothing is deleted without your say-so" nhưng `reset` xoá tài liệu đã đồng bộ mà máy chủ không còn: sửa câu chữ ("Choose what to keep; a document that was deleted on the server is removed here too, and you are told which.") **và** thêm toast nêu số + tên (tối đa 3) tài liệu bị gỡ khỏi máy. Test: ca `after a reset…` kiểm đúng một thông báo, có `gone.md`, không có `keep.md`.
+6. **`engine.cache` giữ 25 chuỗi nguyên văn** → giữ tối đa **4** (bỏ mục cũ nhất, không xoá cả bộ nhớ): ≤ ~14 MB thay vì ~90 MB. Khoá vẫn là chính chuỗi (không khoá theo tiền tố/độ dài: hai văn bản khác nhau trùng khoá sẽ cho băm sai, hỏng dữ liệu). Test `memory`.
+7. **`openIdbDocStore`**: `onblocked`/hết giờ đã từ chối rồi mà `onsuccess` tới muộn → nay **đóng** kết nối (cờ `settled`). **`IdbDocStore.commit`**: một `put` ném (DataCloneError…) nay `abort()` giao dịch (không để nửa commit tự đáp xuống) và gắn `done.catch` (không còn unhandled rejection). Hai test bằng `indexedDB` giả tối thiểu (IndexedDB thật vẫn do `kiem-dong-bo`/`kiem-pwa` kiểm trên Edge).
+8. **Dọn**: `.env.example` bỏ `VITE_MARKDOWN_API_URL` (thay bằng ghi chú API đọc lúc chạy). Các test cũ còn mock `loadMarkdownFiles/saveMarkdownFiles` đã gỡ: vô hại, để nguyên.
+9. **Flake `shareDialog.test.tsx`** ("refreshing the list…"): thêm hạn 20 s riêng cho ca đó (riêng 1,2 s; vượt 5 s mặc định khi cả bộ chạy lúc máy bận). Không phải hồi quy của M4b.
+
+### Không làm / để lại (có lý do)
+- **Ảnh khởi động v3 chỉ chứa chữ tài liệu mở nếu ≤ 512 KB**: sửa tài liệu > 512 KB rồi đóng tab đúng lúc giao dịch IndexedDB chưa xong có thể mất vài ký tự cuối. Sửa gốc cần ghi đồng bộ chữ lớn vào `localStorage` (vượt hạn mức, đúng cái đợt này gỡ) hoặc `BroadcastChannel`/khoá hai tab — không rẻ, thuộc M5+. **Hai TAB cùng máy** dùng chung IndexedDB + `deviceId` vẫn không phối hợp (đã nêu ở "Còn tồn").
+- **Bản app cũ** (`webapp/tranphuc8a/markdown-editor`, "lỗi thời") còn gọi `/markdown/files`: sau lần đồng bộ đầu của bản mới nhận 409 mỗi lần lưu (`MARKDOWN_LEGACY_PUT=reject`, quyết định có chủ ý ở M4b; dữ liệu cục bộ của nó còn nguyên; `allow` để mở lại).
+- **Hiệu năng mở**: không đo lại (tiết kiệm; khung đầu 384 ms so mốc M1 276 ms vẫn trong nhiễu ±35 %, chưa `--ghi-moc`). **M5 nên đo lại mốc** trước khi kết luận có hồi quy do mở IndexedDB hay không.
+- `kiem-chia-se.py` (34) và `check.py` của app khác không chạy lại (đợt sửa không đụng ShareDialog/giao diện chia sẻ; `npm test` phủ ca của `shareDialog`). `audit-webapps.mjs` không chạy (không thêm thư viện).
+
+### Lệnh kiểm sau sửa (kết quả thật, 24/10)
+| Lệnh | Kết quả |
+|---|---|
+| `cd markdown-editor && npm test && npm run type-check && npm run lint` | exit 0 — **52 tệp / 1.075 test** (266 s; bản đầu 1.061, thêm 14), tsc sạch, eslint 0 cảnh báo (chạy sau mọi sửa, một lần cuối) |
+| `kiem-dong-bo.py` | exit 0 — **Đạt 46 · SAI 0** (42 + 4 phép bước 4b) |
+| `pytest -q …test_markdown_docs_controller.py …test_markdown_storage_controller.py` (đặt `DB_URL` SQLite tạm, `MONGO_URI=`, `RATE_LIMIT_BACKEND=memory`, mọi `*_STORAGE_BACKEND=json`) | 107 passed |
+| `node scripts/build-webapps.mjs --only markdown-editor` rồi `--check` | exit 0 / exit 0 (7 app ok); build id `6072167a6a8f` |
+| `kiem-pwa.py` | exit 0 — **Đạt 59 · SAI 0** |
+
+**An toàn DB thật**: mọi tiến trình backend đều có biến chặn (kiem-* đi qua `_kiem_chung.MayChuThat` vốn ép `DB_URL` SQLite tạm, `MONGO_URI=""`, `RATE_LIMIT_BACKEND=memory`, mọi `*_STORAGE_BACKEND=json`; pytest đặt đủ biến ngay trong lệnh). Không đọc/in `.env`, không gọi Gemini, không chạm DB thật.
+
+### Lệch thiết kế mới
+- Bộ gom lô dùng **cân nặng theo cách máy chủ đếm** (không phải "≤ 50 op / ≤ 3,5 MB chữ"): trần 3,5 MB tính byte UTF-8 + 200/op, tự co lại khi máy chủ từ chối (thiết kế md-sync §3.7.3 chỉ nêu "200 op / 4 MB" chung chung).
+- `Workspace.apply(change, ifVersion)`: `ifVersion` nay cũng chặn **put** (trước chỉ chặn delete). `commitRemote` giữ nguyên.

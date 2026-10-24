@@ -34,9 +34,9 @@ LOI_TRANG: list = []
 
 # Thứ tự nạp bắt buộc (index.html): je-chung → module thuần (tom-tat…) → json-editor (lõi + JE_APP) → ui-*.
 THU_TU_SCRIPT = ["assets/je-chung.js", "assets/tom-tat.js", "assets/vi-tri.js", "assets/schema-format.js", "assets/schema-kiem.js",
-                 "assets/chay-nen.js", "assets/json-editor.js"]
+                 "assets/regex-sinh.js", "assets/schema-sinh.js", "assets/schema-suy.js", "assets/chay-nen.js", "assets/json-editor.js"]
 # Module THUẦN (khuôn je-chung.js, đẩy vào JE_NGUON để Worker ghép lại): không DOM / storage / đồng hồ.
-MODULE_THUAN = ("je-chung.js", "tom-tat.js", "vi-tri.js", "schema-format.js", "schema-kiem.js")
+MODULE_THUAN = ("je-chung.js", "tom-tat.js", "vi-tri.js", "schema-format.js", "schema-kiem.js", "regex-sinh.js", "schema-sinh.js", "schema-suy.js")
 NGAN_SACH_ASSETS = 400 * 1024
 # kiem-hinh.py bấm nút THEO TÊN — đổi tên là bộ kiểm bố cục im lặng bỏ qua nút đó.
 TEN_NUT_KIEM_HINH = ["Định dạng", "Nén", "Sắp khoá", "Chạy", "So sánh"]
@@ -262,7 +262,8 @@ def tang_chuc_nang(chi=None):
         with sync_playwright() as pw:
             tb = pw.chromium.launch(channel="msedge")
             for f in (nap_sach, hoan_tac, tab_va_esc, loi_dot_j1, cong_je_app, luu_tru_bi_chan, xss, meta_nhanh_gap,
-                      cong_schema, schema_tab, schema_tuy_chon, schema_xss, schema_360, schema_lon_redos, schema_hien_them, schema_mo_tep, schema_luu_tru_chan):
+                      cong_schema, schema_tab, schema_tuy_chon, schema_xss, schema_360, schema_lon_redos, schema_hien_them, schema_mo_tep, schema_luu_tru_chan,
+                      sinh_giao_dien, sinh_benh_ly, suy_giao_dien, sinh_360):
                 if not chi or f.__name__ in chi:
                     f(tb, url)
             tb.close()
@@ -1226,6 +1227,353 @@ def schema_luu_tru_chan(tb, url):
     T.dong()
 
 
+# ============================================================================================ Sinh dữ liệu mẫu + suy schema (J4)
+DU_VD = {"id": 1, "ten": "An", "email": "an@vd.vn", "ngay": "2024-01-05", "tags": ["a", "b"], "diaChi": {"quan": "1"}}
+
+
+def _sinh_lan(p):
+    return p.evaluate("() => JE.uiSchema.sinh.soLan()")
+
+
+def _sinh_tt(p):
+    return p.evaluate("() => document.querySelector('#sc-sinh-bao').dataset.tt")
+
+
+def _cho_sinh(T, n0, timeout=9000):
+    """Chờ MỘT kết quả sinh mới (soLan tăng) và không còn 'đang sinh'."""
+    return T.cho("n0 => JE.uiSchema.sinh.soLan() > n0 && document.querySelector('#sc-sinh-bao').dataset.tt !== 'dang'", n0, timeout)
+
+
+def _xem(p):
+    return p.evaluate("() => document.querySelector('#sc-sinh-xem').textContent")
+
+
+def _van_ban_sinh(p):
+    return p.evaluate("() => JE.uiSchema.sinh.text()")
+
+
+def _bam_sinh(T, sel="#sc-sinh-chay", timeout=9000):
+    """Bấm một nút sinh và chờ kết quả mới; trả về văn bản mẫu."""
+    p = T.p
+    n0 = _sinh_lan(p)
+    p.click(sel)
+    _cho_sinh(T, n0, timeout)
+    return _van_ban_sinh(p)
+
+
+def _hop_le_trong_trang(p):
+    """Kiểm LẠI mẫu đang xem bằng bộ kiểm J3 với format ở mức 'loi' (độc lập với bộ sinh)."""
+    return p.evaluate("""() => { const d = JSON.parse(JE.uiSchema.sinh.text()), sc = JSON.parse(document.querySelector('#sc-nhap').value);
+        return JE.schema.kiem(d, sc, { format: 'loi' }).hopLe; }""")
+
+
+def sinh_giao_dien(tb, url):
+    section(" · tab Schema: Sinh dữ liệu mẫu — xem trước, báo cáo, seed, số mẫu, khoá tuỳ chọn, Dùng làm dữ liệu + hoàn tác, Chép, Tải (việc 30)")
+    T = Trang(tb, url, "sinh-ui", permissions=["clipboard-read", "clipboard-write"], accept_downloads=True)
+    p = T.p
+    T.dien(J(DU_SAI, 2))
+    _dat_schema(T, SC_NGUOI)
+    nut = p.get_by_role("button", name=re.compile("Sinh dữ liệu mẫu"))
+    check(nut.count() == 1 and p.is_hidden("#sc-sinh") and nut.get_attribute("aria-expanded") == "false",
+          "nút “Sinh dữ liệu mẫu” (đúng 1 nút) có sẵn; khung sinh ẩn lúc đầu (aria-expanded=false)")
+    n0 = _sinh_lan(p)
+    nut.click()
+    ok = _cho_sinh(T, n0)
+    bao = p.inner_text("#sc-sinh-bao")
+    check(ok and p.is_visible("#sc-sinh") and nut.get_attribute("aria-expanded") == "true" and _sinh_tt(p) == "ok" and "Hợp lệ theo schema" in bao and "lần thử" in bao,
+          "bấm nút → mở khung và sinh ngay: báo “✔ Hợp lệ theo schema (… lần thử)”", [_sinh_tt(p), bao])
+    mau1 = _van_ban_sinh(p)
+    d = json.loads(mau1)
+    check(isinstance(d, dict) and {"id", "ten", "meta"} <= set(d) and _xem(p) == mau1 and _hop_le_trong_trang(p),
+          "xem trước = đúng văn bản mẫu, đủ khoá bắt buộc (id, ten, meta), và kiểm LẠI bằng bộ kiểm độc lập: hợp lệ (format ở mức lỗi)", mau1[:120])
+    check(p.evaluate("() => JE.chayNen.thongKe.soWorker >= 2 && JE.chayNen.thongKe.soLuongChinh === 0"), "sinh chạy trong Worker (khi phục vụ qua máy chủ), không rơi về luồng chính")
+    check(p.locator("#sc-sinh-xem span").count() > 5 and p.evaluate("() => !document.querySelector('#sc-sinh-dung').disabled && !document.querySelector('#sc-sinh-chep').disabled && !document.querySelector('#sc-sinh-tai').disabled"),
+          "xem trước có tô màu (span m-…), các nút Dùng / Chép / Tải bật lên")
+
+    # --- cùng seed → cùng kết quả; seed khác → khác
+    mau1b = _bam_sinh(T)
+    p.fill("#sc-sinh-seed", "hat-khac")
+    mau2 = _bam_sinh(T)
+    p.fill("#sc-sinh-seed", "mau-1")
+    mau3 = _bam_sinh(T)
+    check(mau1b == mau1 and mau3 == mau1 and mau2 != mau1, "cùng seed → cùng kết quả (3 lần), seed khác → khác", [mau1[:60], mau2[:60]])
+
+    # --- số mẫu
+    p.fill("#sc-sinh-so", "3")
+    mau_n = _bam_sinh(T)
+    arr = json.loads(mau_n)
+    check(isinstance(arr, list) and len(arr) == 3 and "3 mẫu" in p.inner_text("#sc-sinh-bao") and p.evaluate("() => JE.uiSchema.sinh.ketQua().hopLe"),
+          "số mẫu = 3 → mảng 3 mẫu, báo “3 mẫu”, đều hợp lệ", p.inner_text("#sc-sinh-bao"))
+    p.fill("#sc-sinh-so", "1")
+
+    # --- khoá tuỳ chọn 0 % / 100 %
+    p.fill("#sc-sinh-tile", "0")
+    k0 = list(json.loads(_bam_sinh(T)).keys())
+    p.fill("#sc-sinh-tile", "100")
+    k100 = list(json.loads(_bam_sinh(T)).keys())
+    check(k0 == ["id", "ten", "meta"] and "email" in k100, "khoá tuỳ chọn 0 % → chỉ khoá bắt buộc; 100 % → có cả “email”", [k0, k100])
+    p.fill("#sc-sinh-tile", "50")
+
+    # --- schema đổi sau khi sinh → xem trước bị làm mờ + nhắc
+    sc_cu = p.input_value("#sc-nhap")
+    p.fill("#sc-nhap", sc_cu.replace('"minLength": 2', '"minLength": 3'))
+    ok = T.cho("() => document.querySelector('#sc-sinh-xem').classList.contains('cu')", None, 2000)
+    check(ok and "schema đã đổi" in p.inner_text("#sc-sinh-bao") and not p.is_disabled("#sc-sinh-dung"), "sửa schema sau khi sinh: xem trước bị làm mờ, nhắc “schema đã đổi — bấm Sinh để cập nhật” (nút vẫn dùng được)", p.inner_text("#sc-sinh-bao"))
+    p.fill("#sc-nhap", sc_cu)
+    mau_moi = _bam_sinh(T)
+    check(not p.evaluate("() => document.querySelector('#sc-sinh-xem').classList.contains('cu')") and "schema đã đổi" not in p.inner_text("#sc-sinh-bao") and _sinh_tt(p) == "ok", "sinh lại → hết mờ, hết nhắc", p.inner_text("#sc-sinh-bao"))
+
+    # --- Dùng làm dữ liệu → hợp lệ, một bước hoàn tác mới
+    antoan = _bam_sinh(T)
+    check(T.gt() == J(DU_SAI, 2), "(trước khi dùng) dữ liệu vẫn là bản sai cũ", T.gt()[:60])
+    n1 = _lan(p)
+    p.click("#sc-sinh-dung")
+    check(T.cho_gt(antoan), "“Dùng làm dữ liệu” → ô Soạn nhận đúng văn bản mẫu", T.gt()[:60])
+    ok = _cho_kiem(T, n1)
+    check(ok and _tt(p) == "ok" and p.inner_text("#sc-chan") == "Schema ✓" and p.evaluate("() => JE_APP.lichSu().nhanHoanTac") == "Sinh dữ liệu mẫu",
+          "dùng làm dữ liệu → tự kiểm: “Schema ✓” (0 lỗi); lịch sử có MỘT bước mới “Sinh dữ liệu mẫu”", [_tt(p), p.evaluate("() => JE_APP.lichSu().nhanHoanTac")])
+    p.locator("#sc-sinh-dung").focus()
+    p.keyboard.press("Control+z")
+    check(T.cho_gt(J(DU_SAI, 2)), "Ctrl+Z → về đúng dữ liệu cũ (hoàn tác = bước riêng)", T.gt()[:60])
+    p.keyboard.press("Control+y")
+    check(T.cho_gt(antoan), "Ctrl+Y → làm lại mẫu vừa dùng")
+
+    # --- Sinh lại (seed+1), đổi seed ngẫu nhiên
+    p.fill("#sc-sinh-seed", "mau-1")
+    a = _bam_sinh(T)
+    b = _bam_sinh(T, "#sc-sinh-lai")
+    check(p.input_value("#sc-sinh-seed") == "mau-2" and a == mau1 and b != a, "“Sinh lại (seed+1)”: seed mau-1 → mau-2 và ra mẫu khác", [p.input_value("#sc-sinh-seed")])
+    p.fill("#sc-sinh-seed", "abc")
+    _bam_sinh(T, "#sc-sinh-lai")
+    check(p.input_value("#sc-sinh-seed") == "abc1", "seed không kết thúc bằng số → thêm “1” (abc → abc1)", p.input_value("#sc-sinh-seed"))
+    cu = p.input_value("#sc-sinh-seed")
+    _bam_sinh(T, "#sc-sinh-doi")
+    moi = p.input_value("#sc-sinh-seed")
+    check(moi != cu and re.fullmatch(r"[a-z0-9]{1,6}", moi) and _sinh_tt(p) == "ok" and _hop_le_trong_trang(p), "🎲 đổi seed ngẫu nhiên rồi sinh: mẫu hợp lệ", [cu, moi])
+
+    # --- Chép + Tải
+    p.click("#sc-sinh-chep")
+    p.wait_for_timeout(200)
+    clip = p.evaluate("() => navigator.clipboard.readText()")
+    mong = _van_ban_sinh(p)
+    check(clip.replace("\r\n", "\n") == mong, "“Chép mẫu” → clipboard chứa đúng văn bản mẫu (Windows có thể đổi \\n thành \\r\\n khi đọc lại)", repr(clip[:50]) + " ≠ " + repr(mong[:50]))
+    with p.expect_download() as dl:
+        p.click("#sc-sinh-tai")
+    tep = dl.value
+    noi_dung = io.open(tep.path(), encoding="utf-8").read()
+    check(tep.suggested_filename == "du-lieu-mau.json" and noi_dung == _van_ban_sinh(p), "“Tải mẫu về” → tệp du-lieu-mau.json đúng nội dung mẫu", tep.suggested_filename)
+
+    # --- nhớ tuỳ chọn qua tải lại
+    p.fill("#sc-sinh-seed", "luu-1")
+    p.fill("#sc-sinh-so", "2")
+    p.fill("#sc-sinh-tile", "30")
+    p.fill("#sc-sinh-sau", "4")
+    p.press("#sc-sinh-sau", "Enter")
+    p.wait_for_timeout(600)
+    p.select_option("#sc-format", "loi")
+    p.wait_for_timeout(300)
+    p.reload(wait_until="load")
+    p.wait_for_function("() => !!window.JE_APP && !!window.JE.uiSchema", timeout=10000)
+    p.click('.tab-n[data-o="schema"]')
+    tc = p.evaluate("() => ({ seed: document.querySelector('#sc-sinh-seed').value, so: document.querySelector('#sc-sinh-so').value, tile: document.querySelector('#sc-sinh-tile').value, sau: document.querySelector('#sc-sinh-sau').value, mo: !document.querySelector('#sc-sinh').hidden, fmt: document.querySelector('#sc-format').value })")
+    check(tc == {"seed": "luu-1", "so": "2", "tile": "30", "sau": "4", "mo": False, "fmt": "loi"}, "tải lại: tuỳ chọn sinh (seed, số mẫu, %, độ sâu) được nhớ, khung sinh đóng, Format “lỗi” vẫn còn (không ghi đè nhau)", tc)
+    luu = json.loads(p.evaluate("() => localStorage.getItem('json-editor:schema-tuy-chon')"))
+    check(luu.get("sinh", {}).get("seed") == "luu-1" and luu.get("format") == "loi", "khoá json-editor:schema-tuy-chon chứa cả draft/format/tuDong lẫn “sinh”", luu)
+    # đóng/mở lại khung
+    nut = p.get_by_role("button", name=re.compile("Sinh dữ liệu mẫu"))
+    nut.click()
+    p.wait_for_timeout(100)
+    nut.click()
+    check(p.is_hidden("#sc-sinh") and nut.get_attribute("aria-expanded") == "false", "bấm nút lần nữa → đóng khung")
+    check(not T.loi, "không lỗi console / pageerror", T.loi[:2])
+    T.dong()
+
+
+def sinh_benh_ly(tb, url):
+    section(" · tab Schema: sinh trong ca bệnh lý — mâu thuẫn, trống, JSON hỏng, ReDoS hết giờ, XSS, mẫu lớn bị cắt khi xem, huỷ chéo với việc nền khác")
+    T = Trang(tb, url, "sinh-benh-ly")
+    p = T.p
+    T.dien(J(DU_SAI, 2))
+    # --- chưa có schema
+    T.tab("schema")
+    p.click("#sc-sinh-mo")
+    p.wait_for_timeout(150)
+    check(p.is_visible("#sc-sinh") and _sinh_tt(p) == "loi" and "Chưa có schema" in p.inner_text("#sc-sinh-bao") and p.is_disabled("#sc-sinh-dung"), "chưa có schema → báo “Chưa có schema”, nút Dùng tắt", p.inner_text("#sc-sinh-bao"))
+    # --- schema hỏng JSON
+    _dat_schema(T, '{"type": "object",', cho=False)
+    p.click("#sc-sinh-chay")
+    p.wait_for_timeout(200)
+    check(_sinh_tt(p) == "loi" and "không phải JSON hợp lệ" in p.inner_text("#sc-sinh-bao"), "schema hỏng JSON → báo rõ, không chạy Worker", p.inner_text("#sc-sinh-bao"))
+    # --- mâu thuẫn
+    _dat_schema(T, {"type": "integer", "minimum": 5, "maximum": 1})
+    mau = _bam_sinh(T)
+    bao = p.inner_text("#sc-sinh-bao")
+    check(_sinh_tt(p) == "khong-dam-bao" and "Không đảm bảo" in bao and "Miền số rỗng" in bao and mau != "" and not p.is_disabled("#sc-sinh-dung"),
+          "schema mâu thuẫn (minimum 5 > maximum 1): báo “Không đảm bảo” + lý do “Miền số rỗng”, vẫn cho xem mẫu gần đúng", bao[:140])
+    check(p.locator("#sc-sinh-bao li").count() >= 1, "lý do liệt kê thành danh sách (li)")
+    # --- XSS
+    xss = "<img src=x onerror=window.__xss=1>"
+    _dat_schema(T, {"enum": [xss]})
+    mau = _bam_sinh(T)
+    check(json.loads(mau) == xss and p.evaluate("() => window.__xss === undefined") and p.locator("#sc-sinh-xem img").count() == 0 and p.locator("img").count() == 0 and xss in _xem(p),
+          "mẫu chứa <img onerror>: hiện thành CHỮ trong xem trước, không tạo phần tử, không chạy mã")
+    # --- ReDoS: pattern có nhìn trước; sinh ra chuỗi a×40, RegExp thật kiểm → quay lui thảm hoạ → hết giờ
+    p.evaluate("() => { JE_APP.hangSo.CHAY_NEN.han = 1500; }")
+    _dat_schema(T, {"type": "string", "pattern": "^(?!(a+)+b)a{40,}$"})
+    n0 = _sinh_lan(p)
+    t0 = p.evaluate("() => performance.now()")
+    p.click("#sc-sinh-chay")
+    ok = _cho_sinh(T, n0, 9000)
+    ms = p.evaluate("t0 => performance.now() - t0", t0)
+    info("sinh với pattern ReDoS: báo hết giờ sau %.0f ms (hạn 1500)" % ms)
+    check(ok and _sinh_tt(p) == "het-gio" and "Sinh quá lâu" in p.inner_text("#sc-sinh-bao") and p.evaluate("() => JE.chayNen.thongKe.soHetGio >= 1"), "pattern quay lui thảm hoạ: báo “Sinh quá lâu”, hết giờ có kiểm soát", [_sinh_tt(p), p.inner_text("#sc-sinh-bao")[:80]])
+    r = p.evaluate("() => 21 * 2")
+    check(r == 42 and p.evaluate("() => performance.now()") - t0 < 6000, "trang KHÔNG treo trong lúc Worker bị ReDoS")
+    n_w = p.evaluate("() => JE.chayNen.thongKe.soWorker")
+    _dat_schema(T, {"type": "string", "pattern": "^[a-z]{4}$"})
+    _bam_sinh(T)
+    check(_sinh_tt(p) == "ok" and p.evaluate("n => JE.chayNen.thongKe.soWorker > n && JE.chayNen.thongKe.soLuongChinh === 0", n_w), "sửa pattern lành → sinh lại bằng Worker MỚI, ra ok (phục hồi sau hết giờ)", _sinh_tt(p))
+    p.evaluate("() => { JE_APP.hangSo.CHAY_NEN.han = 8000; }")
+    # --- mẫu lớn: xem trước bị cắt, nhưng Dùng làm dữ liệu dùng ĐỦ
+    _dat_schema(T, {"type": "array", "minItems": 30000, "maxItems": 30000, "items": {"type": "integer", "minimum": 100000, "maximum": 999999}})
+    n0 = _sinh_lan(p)
+    mau = _bam_sinh(T, timeout=20000)
+    xem = _xem(p)
+    check(len(mau) > 200000 and "đã cắt khi xem" in xem and len(xem) < len(mau) and _sinh_tt(p) == "ok",
+          "mẫu 30 000 phần tử (%d KB): xem trước bị cắt ở 200 KB kèm ghi chú" % (len(mau) // 1024), [len(mau), len(xem)])
+    p.click("#sc-sinh-dung")
+    p.wait_for_timeout(500)
+    check(p.evaluate("() => JE_APP.layVanBan().length") == len(mau), "“Dùng làm dữ liệu” dùng ĐỦ mẫu (không phải bản cắt)", p.evaluate("() => JE_APP.layVanBan().length"))
+    T.dong()
+
+    # --- huỷ chéo: sinh rồi suy ngay trong cùng một lượt → sinh báo “đã dừng”, suy chạy xong, không treo "đang"
+    T = Trang(tb, url, "sinh-huy-cheo")
+    p = T.p
+    T.dien(J(DU_VD, 2))
+    _dat_schema(T, SC_NGUOI)
+    p.click("#sc-sinh-mo")
+    _cho_sinh(T, -1)
+    n0 = _sinh_lan(p)
+    p.evaluate("() => { JE.uiSchema.sinh.chay(); JE.uiSchema.suy(); }")
+    ok = T.cho("() => document.querySelector('#sc-sinh-bao').dataset.tt !== 'dang' && !document.querySelector('#sc-suy').disabled", None, 9000)
+    check(ok and _sinh_tt(p) in ("chua", "ok"), "sinh + suy cùng lúc: bên bị thay không kẹt ở “Đang sinh…”, nút suy mở lại", [_sinh_tt(p), p.inner_text("#sc-sinh-bao")[:80]])
+    T.cho("() => document.querySelector('#sc-tom').dataset.tt !== 'dang'", None, 9000)
+    check(_tt(p) != "dang", "kiểm bị huỷ bởi việc nền được chạy lại (khung tóm tắt không kẹt “Đang kiểm…”)", _tt(p))
+    check(not T.loi, "không lỗi console / pageerror", T.loi[:2])
+    T.dong()
+
+
+def suy_giao_dien(tb, url):
+    section(" · tab Schema: Suy schema từ dữ liệu — ghi vào ô schema, hỏi trước khi ghi đè, hoàn tác trong ô, Chặt chẽ, draft 07, dữ liệu lỗi / lớn (việc 31)")
+    T = Trang(tb, url, "suy-ui")
+    p = T.p
+    T.dien(J(DU_VD, 2))
+    T.tab("schema")
+    nut = p.get_by_role("button", name=re.compile("Suy schema từ dữ liệu"))
+    check(nut.count() == 1 and p.input_value("#sc-nhap") == "", "nút “Suy schema từ dữ liệu” (đúng 1 nút); ô schema đang trống")
+    n0 = _lan(p)
+    nut.click()
+    T.cho("() => document.querySelector('#sc-nhap').value.trim() !== ''", None, 6000)
+    _cho_kiem(T, n0)
+    sc = json.loads(p.input_value("#sc-nhap"))
+    props = sc.get("properties", {})
+    check(sc.get("$schema") == "https://json-schema.org/draft/2020-12/schema" and props.get("email", {}).get("format") == "email" and props.get("ngay", {}).get("format") == "date" and props.get("tags", {}).get("items") == {"type": "string"} and set(sc.get("required", [])) == set(DU_VD),
+          "ô schema nhận schema suy ra: $schema 2020-12, email → format email, ngay → date, tags.items string, required đủ", list(props))
+    check(p.is_hidden("#sc-suy-hoi") and _tt(p) == "ok" and "Hợp lệ theo schema" in p.inner_text("#sc-tom"), "ô schema trống thì ghi thẳng (không hỏi); tự kiểm: dữ liệu gốc hợp lệ với schema suy ra")
+    check(p.evaluate("() => JE.chayNen.thongKe.soWorker >= 2 && JE.chayNen.thongKe.soLuongChinh === 0"), "suy chạy trong Worker")
+    sc1 = p.input_value("#sc-nhap")
+
+    # --- hỏi trước khi ghi đè
+    du2 = dict(DU_VD, moi=5)
+    _dat_du_lieu(T, J(du2, 2), cho_kiem=False)
+    T.tab("schema")
+    nut.click()
+    ok = T.cho("() => !document.querySelector('#sc-suy-hoi').hidden", None, 6000)
+    check(ok and "sẽ bị thay" in p.inner_text("#sc-suy-hoi-chu") and p.input_value("#sc-nhap") == sc1, "ô schema đã có nội dung: hiện băng “sẽ bị thay…”, schema CHƯA đổi", p.inner_text("#sc-suy-hoi-chu")[:80])
+    p.click("#sc-suy-bo")
+    check(p.is_hidden("#sc-suy-hoi") and p.input_value("#sc-nhap") == sc1, "“Huỷ” → ẩn băng, schema nguyên vẹn")
+    nut.click()
+    T.cho("() => !document.querySelector('#sc-suy-hoi').hidden", None, 6000)
+    n0 = _lan(p)
+    p.click("#sc-suy-dong-y")
+    T.cho("() => JSON.parse(document.querySelector('#sc-nhap').value).properties.moi", None, 4000)
+    sc2 = json.loads(p.input_value("#sc-nhap"))
+    check(sc2["properties"]["moi"] == {"type": "integer"} and p.is_hidden("#sc-suy-hoi"), "“Ghi đè schema” → schema có thêm khoá “moi” (integer), băng ẩn", list(sc2.get("properties", {})))
+    _cho_kiem(T, n0)
+    check(_tt(p) == "ok", "sau khi ghi đè: tự kiểm lại → ok", _tt(p))
+    p.locator("#sc-nhap").focus()
+    p.keyboard.press("Control+z")
+    p.wait_for_timeout(150)
+    check(p.input_value("#sc-nhap") == sc1, "Ctrl+Z trong ô schema → về đúng schema trước khi ghi đè (execCommand insertText)", p.input_value("#sc-nhap")[:60])
+
+    # --- Chặt chẽ + draft 07
+    p.check("#sc-suy-chat")
+    nut.click()
+    T.cho("() => !document.querySelector('#sc-suy-hoi').hidden", None, 6000)
+    p.click("#sc-suy-dong-y")
+    T.cho("() => JSON.parse(document.querySelector('#sc-nhap').value).properties.id.minimum !== undefined", None, 4000)
+    sc3 = json.loads(p.input_value("#sc-nhap"))
+    check(sc3["properties"]["id"].get("minimum") == 1 and sc3["properties"]["ten"].get("minLength") == 2 and sc3["properties"]["tags"].get("minItems") == 2,
+          "bật “Chặt chẽ” → có minimum / minLength / minItems theo dữ liệu", sc3["properties"]["id"])
+    check(p.evaluate("() => JSON.parse(localStorage.getItem('json-editor:schema-tuy-chon')).suyChat") is True, "“Chặt chẽ” được nhớ trong tuỳ chọn lưu")
+    p.uncheck("#sc-suy-chat")
+    p.select_option("#sc-draft", "07")
+    p.wait_for_timeout(300)
+    nut.click()
+    T.cho("() => !document.querySelector('#sc-suy-hoi').hidden", None, 6000)
+    p.click("#sc-suy-dong-y")
+    T.cho("() => JSON.parse(document.querySelector('#sc-nhap').value).$schema.indexOf('draft-07') >= 0", None, 4000)
+    check(json.loads(p.input_value("#sc-nhap"))["$schema"] == "http://json-schema.org/draft-07/schema#", "Draft 07 ở thanh công cụ → schema suy ra có $schema draft-07")
+    p.select_option("#sc-draft", "tu-dong")
+
+    # --- dữ liệu hỏng / trống
+    sc_truoc = p.input_value("#sc-nhap")
+    _dat_du_lieu(T, '{"a": ', cho_kiem=False)
+    T.tab("schema")
+    nut.click()
+    ok = T.cho("() => /chưa là JSON hợp lệ/.test(document.querySelector('#trang-thai').textContent)", None, 2500)
+    check(ok and p.input_value("#sc-nhap") == sc_truoc and p.is_hidden("#sc-suy-hoi") and not p.is_disabled("#sc-suy"), "dữ liệu chưa là JSON hợp lệ: báo, schema giữ nguyên, nút không kẹt")
+    _dat_du_lieu(T, "", cho_kiem=False)
+    T.tab("schema")
+    nut.click()
+    ok = T.cho("() => /Chưa có dữ liệu/.test(document.querySelector('#trang-thai').textContent)", None, 2500)
+    check(ok and p.input_value("#sc-nhap") == sc_truoc, "dữ liệu trống: báo “Chưa có dữ liệu”, schema giữ nguyên")
+
+    # --- dữ liệu lớn > 1 MB: không tự kiểm nhưng suy vẫn chạy trong Worker
+    p.evaluate("() => JE_APP.datVanBan(JSON.stringify(Array.from({ length: 190000 }, (_, i) => i)), { nhan: 'Mảng lớn' })")
+    T.tab("schema")
+    p.fill("#sc-nhap", "")
+    p.wait_for_timeout(200)
+    sl0 = p.evaluate("() => JE.chayNen.thongKe.soLuongChinh")
+    t0 = p.evaluate("() => performance.now()")
+    nut.click()
+    T.cho("() => document.querySelector('#sc-nhap').value.trim() !== ''", None, 15000)
+    ms = p.evaluate("t0 => performance.now() - t0", t0)
+    info("suy từ 1,1 MB (190 000 số) trong Worker: %.0f ms" % ms)
+    sc4 = json.loads(p.input_value("#sc-nhap"))
+    check(sc4.get("type") == "array" and sc4.get("items") == {"type": "integer"} and p.evaluate("sl0 => JE.chayNen.thongKe.soLuongChinh === sl0", sl0), "dữ liệu 1,1 MB: suy ra {array, items integer} trong Worker (không rơi về luồng chính)", sc4)
+    check(not T.loi, "không lỗi console / pageerror", T.loi[:2])
+    T.dong()
+
+
+def sinh_360(tb, url):
+    section(" · tab Schema: Sinh / Suy ở 360 px — khung xếp dọc, không tràn ngang, nút trong màn hình")
+    T = Trang(tb, url, "sinh-360", viewport={"width": 360, "height": 740}, color_scheme="dark")
+    p = T.p
+    T.dien(J(DU_SAI, 2))
+    _dat_schema(T, SC_NGUOI)
+    p.click("#sc-sinh-mo")
+    _cho_sinh(T, -1)
+    tran = p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    ngoai = p.evaluate("""() => Array.from(document.querySelectorAll('#sc-sinh button, #sc-sinh input, .sc-thanh button, .sc-thanh label')).filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.right > 361 || r.left < -1); }).map(e => e.id || e.textContent.trim().slice(0, 20))""")
+    kt = p.evaluate("() => { const s = document.querySelector('#sc-sinh').getBoundingClientRect(), x = document.querySelector('#sc-sinh-xem').getBoundingClientRect(); return { rongKhung: s.width, rongXem: x.width }; }")
+    check(tran <= 1 and not ngoai and kt["rongKhung"] <= 361 and kt["rongXem"] <= 361, "360 px: trang không tràn ngang, mọi nút / ô của khung sinh và thanh công cụ nằm trong màn hình (%dpx)" % tran, [ngoai, kt])
+    p.locator("#sc-sinh-xem").scroll_into_view_if_needed()
+    check(p.is_visible("#sc-sinh-xem") and p.is_visible("#sc-sinh-dung"), "xem trước + nút Dùng làm dữ liệu cuộn tới được")
+    check(not T.loi, "không lỗi console / pageerror", T.loi[:2])
+    T.dong()
+
+
 def schema_file(tb, url=None):
     """--file: mở index.html bằng file:// — nạp sạch, Worker từ Blob chạy được, kiểm + hết giờ hoạt động."""
     section(" · mở bằng file:// (Worker từ Blob, kiểm schema, ReDoS hết giờ)")
@@ -1245,6 +1593,20 @@ def schema_file(tb, url=None):
     p.fill("#sc-nhap", J({"type": "object", "properties": {"s": {"pattern": "(a+)+$"}}}))
     ok = _cho_kiem(T, n0, 9000)
     check(ok and _tt(p) == "het-gio", "file://: ReDoS (a+)+$ báo hết giờ, trang không treo", _tt(p))
+    # J4: sinh + suy trên file:// (Worker từ Blob đã ghép cả regex-sinh, schema-sinh, schema-suy)
+    p.evaluate("() => { JE_APP.hangSo.CHAY_NEN.han = 8000; }")
+    _dat_schema(T, SC_NGUOI)
+    p.click("#sc-sinh-mo")
+    ok = _cho_sinh(T, -1)
+    check(ok and _sinh_tt(p) == "ok" and _hop_le_trong_trang(p) and p.evaluate("() => JE.chayNen.thongKe.soLuongChinh === 0"),
+          "file://: “Sinh dữ liệu mẫu” chạy trong Worker (Blob), mẫu hợp lệ theo schema", _sinh_tt(p))
+    _dat_du_lieu(T, J(DU_VD, 2), cho_kiem=False)
+    p.fill("#sc-nhap", "")
+    p.click("#sc-suy")
+    T.cho("() => document.querySelector('#sc-nhap').value.trim() !== ''", None, 8000)
+    sc = json.loads(p.input_value("#sc-nhap") or "{}")
+    check(sc.get("type") == "object" and sc.get("properties", {}).get("email", {}).get("format") == "email" and p.evaluate("() => JE.chayNen.thongKe.soLuongChinh === 0"),
+          "file://: “Suy schema từ dữ liệu” chạy trong Worker, ra schema đúng (email → format email)", list(sc.get("properties", {})))
     T.dong()
 
 

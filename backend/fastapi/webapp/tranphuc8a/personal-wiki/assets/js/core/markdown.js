@@ -35,7 +35,7 @@
   var TEX_LIKE = /[\\^_{}=]/;                                                   // `\[Enter\]` giữa câu không phải toán; `\[ a^2 \]` thì có
   var ENVS = "equation|align|gather|multline|flalign|alignat|eqnarray|split|cases|pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|smallmatrix|array|CD|aligned|gathered";
   var ENV_OPEN = new RegExp("^ {0,3}\\\\begin\\{((?:" + ENVS + ")\\*?)\\}");  // \begin{ENV} trần ở đầu dòng
-  var NO_SPANS = [];
+  var NO_SPANS = [], NO_CTX = {};
 
   /** Địa chỉ liên kết an toàn hoặc "" (bị từ chối). */
   function safeUrl(u) {
@@ -55,9 +55,9 @@
   }
   function attrUrl(u) { return esc(u); }
 
-  // ----------------------------------------------------------------------------------------------- to\u00E1n
-  /** C\u00F4ng th\u1EE9c \u2192 HTML. TeX gi\u1EEF nguy\u00EAn ch\u1EEF (ch\u1EC9 c\u1EAFt kho\u1EA3ng tr\u1EAFng hai \u0111\u1EA7u); esc() cho C\u1EA2 thu\u1ED9c t\u00EDnh data-tex l\u1EABn ch\u1EEF d\u1EF1 ph\u00F2ng (ch\u1EB7n tho\u00E1t kh\u1ECFi d\u1EA5u ngo\u1EB7c k\u00E9p).
-      Xu\u1ED1ng d\u00F2ng \u2192 `&#10;`: \u0111o\u1EA1n v\u0103n/m\u1EE5c danh s\u00E1ch \u0111\u1ED5i "\n" th\u00E0nh <br> tr\u00EAn HTML \u0111\u00E3 d\u1EF1ng (k\u1EC3 c\u1EA3 b\u00EAn trong thu\u1ED9c t\u00EDnh!), c\u00F2n getAttribute gi\u1EA3i m\u00E3 `&#10;` v\u1EC1 "\n". */
+  // ----------------------------------------------------------------------------------------------- toán
+  /** Công thức → HTML. TeX giữ nguyên chữ (chỉ cắt khoảng trắng hai đầu); esc() cho CẢ thuộc tính data-tex lẫn chữ dự phòng (chặn thoát khỏi dấu ngoặc kép).
+      Xuống dòng → `&#10;`: đoạn văn/mục danh sách đổi "\n" thành <br> trên HTML đã dựng (kể cả bên trong thuộc tính!), còn getAttribute giải mã `&#10;` về "\n". */
   function mathHtml(tex, display, block) {
     var t = esc(String(tex).trim()).replace(/\n/g, "&#10;");
     return block ? '<div class="math math-d" data-tex="' + t + '">' + t + "</div>"
@@ -65,9 +65,9 @@
   }
   function notBlank(s) { return /\S/.test(s); }
 
-  /** C\u00E1c v\u00F9ng to\u00E1n INLINE c\u1EE7a m\u1ED9t \u0111o\u1EA1n \u2192 [{a, b, html}] theo th\u1EE9 t\u1EF1, kh\u00F4ng ch\u1ED3ng l\u1EA5n. V\u00F9ng = notes.js mathRanges (code \u0111\u00E3 che); r\u1ED3i l\u1ECDc theo lu\u1EADt hi\u1EC3n th\u1ECB:
-      c\u00F4ng th\u1EE9c r\u1ED7ng th\u00EC \u0111\u1EC3 nguy\u00EAn ch\u1EEF; `\[\u2026\]` GI\u1EEEA C\u00C2U ch\u1EC9 l\u00E0 to\u00E1n khi n\u1ED9i dung gi\u1ED1ng TeX (`B\u1EA5m \[Enter\]` kh\u00F4ng ph\u1EA3i); `\[\u2026\]` v\u00E0 `$$\u2026$$` \u0111\u1EE9ng m\u1ED9t m\u00ECnh
-      trong \u0111o\u1EA1n th\u00EC hi\u1EC3n th\u1ECB (math-d), c\u00F2n `$$\u2026$$` gi\u1EEFa c\u00E2u v\u1EABn l\u00E0 inline. M\u1ECDi b\u01B0\u1EDBc tuy\u1EBFn t\u00EDnh (kh\u00F4ng c\u1EAFt \u0111u\u00F4i chu\u1ED7i, kh\u00F4ng trim c\u1EA3 chu\u1ED7i m\u1ED7i v\u00F9ng). */
+  /** Các vùng toán INLINE của một đoạn → [{a, b, html}] theo thứ tự, không chồng lấn. Vùng = notes.js mathRanges (code đã che); rồi lọc theo luật hiển thị:
+      công thức rỗng thì để nguyên chữ; `\[…\]` GIỮA CÂU chỉ là toán khi nội dung giống TeX (`Bấm \[Enter\]` không phải); `\[…\]` và `$$…$$` đứng một mình
+      trong đoạn thì hiển thị (math-d), còn `$$…$$` giữa câu vẫn là inline. Mọi bước tuyến tính (không cắt đuôi chuỗi, không trim cả chuỗi mỗi vùng). */
   function inlineMath(src) {
     if (src.indexOf("$") === -1 && src.indexOf("\\") === -1) return NO_SPANS;
     var rs = N.mathRanges(N.maskCode(src)), out = [];
@@ -76,7 +76,7 @@
     while (hi > 0 && /\s/.test(src.charAt(hi - 1))) hi--;
     for (var k = 0; k < rs.length; k++) {
       var a = rs[k][0], b = rs[k][1], kind, body;
-      if (src.charAt(a) === "\\") { kind = src.charAt(a + 1); body = src.slice(a + 2, b - 2); }          // "(" ho\u1EB7c "["
+      if (src.charAt(a) === "\\") { kind = src.charAt(a + 1); body = src.slice(a + 2, b - 2); }          // "(" hoặc "["
       else if (src.charAt(a + 1) === "$") { kind = "$$"; body = src.slice(a + 2, b - 2); }
       else { kind = "$"; body = src.slice(a + 1, b - 1); }
       if (!notBlank(body)) continue;
@@ -87,14 +87,14 @@
     return out;
   }
 
-  /** D\u00F2ng c\u1EE7a t\u00E0i li\u1EC7u sau r\u00E0o code m\u1EDF \u1EDF d\u00F2ng i (r\u00E0o ch\u01B0a \u0111\u00F3ng th\u00EC t\u1EDBi h\u1EBFt). */
+  /** Dòng của tài liệu sau rào code mở ở dòng i (rào chưa đóng thì tới hết). */
   function fenceEnd(lines, i, fence) {
     var close = new RegExp("^ {0,3}" + fence.charAt(0) + "{" + fence.length + ",}[ \\t]*$"), n = lines.length;
     i++;
     while (i < n && !close.test(lines[i])) i++;
     return i + 1;
   }
-  /** V\u1ECB tr\u00ED c\u1EE7a l\u1EC7nh `token` (b\u1EAFt \u0111\u1EA7u b\u1EB1ng \) t\u1EEB `from`, b\u1ECF qua `\\begin` (d\u1EA5u \ \u0111\u1EE9ng tr\u01B0\u1EDBc ch\u1EB5n m\u1EDBi l\u00E0 l\u1EC7nh). */
+  /** Vị trí của lệnh `token` (bắt đầu bằng \) từ `from`, bỏ qua `\\begin` (dấu \ đứng trước chẵn mới là lệnh). */
   function findCmd(line, token, from) {
     var p = line.indexOf(token, from);
     while (p !== -1) {
@@ -105,8 +105,8 @@
     }
     return -1;
   }
-  /** `\end{name}` kh\u1EDBp (\u0111\u1EBFm l\u1ED3ng) v\u1EDBi `\begin{name}` \u1EDF d\u00F2ng k, t\u00ECm t\u1EEB c\u1ED9t `from` c\u1EE7a d\u00F2ng k; kh\u00F4ng v\u01B0\u1EE3t kh\u1ECFi `parts` (m\u1ED9t \u0111o\u1EA1n, kh\u00F4ng c\u00F3 d\u00F2ng tr\u1ED1ng).
-      \u2192 {line, col (sau \end{name})} | null. M\u1ED7i d\u00F2ng ch\u1EC9 t\u00ECm l\u1EA1i c\u00E1i \u0111\u00E3 d\u00F9ng (o, e nh\u1EDB v\u1ECB tr\u00ED k\u1EBF ti\u1EBFp) n\u00EAn tuy\u1EBFn t\u00EDnh. */
+  /** `\end{name}` khớp (đếm lồng) với `\begin{name}` ở dòng k, tìm từ cột `from` của dòng k; không vượt khỏi `parts` (một đoạn, không có dòng trống).
+      → {line, col (sau \end{name})} | null. Mỗi dòng chỉ tìm lại cái đã dùng (o, e nhớ vị trí kế tiếp) nên tuyến tính. */
   function envEnd(parts, k, name, from) {
     var open = "\\begin{" + name + "}", close = "\\end{" + name + "}", depth = 1;
     for (var j = k; j < parts.length; j++) {
@@ -120,8 +120,8 @@
     }
     return null;
   }
-  /** Kh\u1ED1i to\u00E1n hi\u1EC3n th\u1ECB trong m\u1ED9t \u0110O\u1EA0N lines[s, e): {ch\u1EC9 s\u1ED1 d\u00F2ng b\u1EAFt \u0111\u1EA7u \u2192 {end, tex, rest}} c\u1ED9ng v\u00E0o `out`. Kh\u1ED1i b\u1EAFt \u0111\u1EA7u \u1EDF \u0111\u1EA7u d\u00F2ng (th\u1EE5t \u2264 3):
-      `$$\u2026$$` / `\[\u2026\]` (nhi\u1EC1u d\u00F2ng \u0111\u01B0\u1EE3c, \u0111\u00F3ng \u1EDF cu\u1ED1i m\u1ED9t d\u00F2ng, kh\u00F4ng v\u01B0\u1EE3t d\u00F2ng tr\u1ED1ng), ho\u1EB7c `\begin{ENV}\u2026\end{ENV}` tr\u1EA7n. */
+  /** Khối toán hiển thị trong một ĐOẠN lines[s, e): {chỉ số dòng bắt đầu → {end, tex, rest}} cộng vào `out`. Khối bắt đầu ở đầu dòng (thụt ≤ 3):
+      `$$…$$` / `\[…\]` (nhiều dòng được, đóng ở cuối một dòng, không vượt dòng trống), hoặc `\begin{ENV}…\end{ENV}` trần. */
   function paragraphMath(lines, s, e, out) {
     var parts = lines.slice(s, e), text = parts.join("\n"), offs = new Array(parts.length), o = 0, k;
     for (k = 0; k < parts.length; k++) { offs[k] = o; o += parts[k].length + 1; }
@@ -133,13 +133,13 @@
       if (ind > 3) { k++; continue; }
       var p = offs[k] + ind;
       while (r < rs.length && rs[r][1] <= p) r++;
-      if (r < rs.length && rs[r][0] < p) { k++; continue; }                   // d\u00F2ng n\u1EB1m gi\u1EEFa m\u1ED9t v\u00F9ng to\u00E1n \u0111\u00E3 m\u1EDF t\u1EEB d\u00F2ng tr\u01B0\u1EDBc
+      if (r < rs.length && rs[r][0] < p) { k++; continue; }                   // dòng nằm giữa một vùng toán đã mở từ dòng trước
       if (r < rs.length && rs[r][0] === p) {
         var a = rs[r][0], b = rs[r][1], two = text.substr(a, 2);
         if (two === "$$" || two === "\\[") {
           var eol = text.indexOf("\n", b), body = text.slice(a + 2, b - 2);
           if (eol === -1) eol = text.length;
-          if (notBlank(body) && !notBlank(text.slice(b, eol))) {              // sau d\u1EA5u \u0111\u00F3ng kh\u00F4ng c\u00F2n ch\u1EEF \u21D2 c\u1EA3 \u0111o\u1EA1n l\u00E0 m\u1ED9t c\u00F4ng th\u1EE9c hi\u1EC3n th\u1ECB
+          if (notBlank(body) && !notBlank(text.slice(b, eol))) {              // sau dấu đóng không còn chữ ⇒ cả đoạn là một công thức hiển thị
             j = k;
             while (j + 1 < parts.length && offs[j + 1] <= b - 1) j++;
             (out = out || {})[s + k] = { end: s + j, tex: body, rest: "" };
@@ -150,7 +150,7 @@
       }
       if (ln.charAt(ind) === "\\" && (m = ENV_OPEN.exec(ln)) && !failEnv[m[1]]) {
         var en = envEnd(parts, k, m[1], m[0].length);
-        if (!en) { failEnv[m[1]] = true; k++; continue; }                     // kh\u00F4ng c\u00F3 \end: c\u00F9ng t\u00EAn trong \u0111o\u1EA1n n\u00E0y c\u0169ng b\u1ECF (gi\u1EEF tuy\u1EBFn t\u00EDnh)
+        if (!en) { failEnv[m[1]] = true; k++; continue; }                     // không có \end: cùng tên trong đoạn này cũng bỏ (giữ tuyến tính)
         (out = out || {})[s + k] = { end: s + en.line, tex: text.slice(offs[k] + ind, offs[en.line] + en.col), rest: parts[en.line].slice(en.col) };
         k = en.line + 1; continue;
       }
@@ -158,16 +158,27 @@
     }
     return out;
   }
-  /** M\u1ECDi kh\u1ED1i to\u00E1n hi\u1EC3n th\u1ECB trong `lines` \u2192 {ch\u1EC9 s\u1ED1 d\u00F2ng b\u1EAFt \u0111\u1EA7u \u2192 {end, tex, rest}} ho\u1EB7c null. B\u1ECF qua r\u00E0o code; chia theo d\u00F2ng tr\u1ED1ng. Tuy\u1EBFn t\u00EDnh. */
-  function mathBlocks(lines) {
+  /** Dòng CÓ THỂ mở một khối toán hiển thị: sau ≤ 3 dấu cách bắt đầu bằng `$$`, `\[` hoặc `\begin{`. paragraphMath chỉ tạo khối ở đúng những dòng như vậy,
+      nên đoạn không có dòng nào thế khỏi phải quét (trước đây: mọi đoạn có `$` hay `\` đều bị quét — ghi chú nhiều `$x$` trong dòng tốn ~9 ms/lần). */
+  function mathOpener(ln) {
+    var ind = 0;
+    while (ind < 4 && ln.charCodeAt(ind) === 32) ind++;
+    if (ind > 3) return false;
+    var c = ln.charCodeAt(ind);
+    return (c === 36 && ln.charCodeAt(ind + 1) === 36) || (c === 92 && (ln.charCodeAt(ind + 1) === 91 || ln.substr(ind, 7) === "\\begin{"));
+  }
+  /** Mọi khối toán hiển thị trong `lines` → {chỉ số dòng bắt đầu → {end, tex, rest}} hoặc null. Bỏ qua rào code; chia theo dòng trống. Tuyến tính.
+      `spans` (tuỳ chọn, mảng): nhận từng cặp [dòng mở rào, dòng sau rào] mà hàm này coi là rào code — M.blocks cần biết (mô hình rào của hàm này thô hơn
+      của renderBlocks: mọi dòng giống rào đều mở rào, kể cả dòng thụt trong mục danh sách), vì không được cắt khối ngay giữa một rào như vậy. */
+  function mathBlocks(lines, spans) {
     var n = lines.length, out = null, i = 0;
     while (i < n) {
       var line = lines[i], fm;
       if (!notBlank(line)) { i++; continue; }
-      if ((fm = FENCE.exec(line))) { i = fenceEnd(lines, i, fm[1]); continue; }
-      var e = i + 1, hot = line.indexOf("$") !== -1 || line.indexOf("\\") !== -1;
+      if ((fm = FENCE.exec(line))) { var fe = fenceEnd(lines, i, fm[1]); if (spans) spans.push(i, fe); i = fe; continue; }
+      var e = i + 1, hot = mathOpener(line);
       while (e < n && notBlank(lines[e]) && !FENCE.test(lines[e])) {
-        if (!hot && (lines[e].indexOf("$") !== -1 || lines[e].indexOf("\\") !== -1)) hot = true;
+        if (!hot && mathOpener(lines[e])) hot = true;
         e++;
       }
       if (hot) out = paragraphMath(lines, i, e, out);
@@ -189,7 +200,7 @@
       return j === i ? i + 1 : j;
     }
     while (i < n) {
-      if (ns) {                                                                              // c\u00F4ng th\u1EE9c TR\u01AF\u1EDAC m\u1ECDi lu\u1EADt kh\u00E1c: b\u00EAn trong kh\u00F4ng c\u00F3 nh\u1EA5n m\u1EA1nh, li\u00EAn k\u1EBFt, escape
+      if (ns) {                                                                              // công thức TRƯỚC mọi luật khác: bên trong không có nhấn mạnh, liên kết, escape
         while (si < ns && spans[si].a < i) si++;
         if (si < ns && spans[si].a === i) { out += hold(spans[si].html); i = spans[si].b; si++; continue; }
       }
@@ -280,20 +291,33 @@
   }
 
   function startsBlock(line, next) {
+    var c = line.charCodeAt(0);                                                           // đường nhanh: dòng mở bằng chữ cái ASCII (trừ Q/q của thẻ ôn) và không có `|` thì không luật nào dưới đây khớp
+    if (((c >= 65 && c <= 90 && c !== 81) || (c >= 97 && c <= 122 && c !== 113)) && line.indexOf("|") === -1) return false;
     return FENCE.test(line) || headingOf(line) || HR.test(line) || /^ {0,3}>/.test(line) || ITEM.test(line) || Q_LINE.test(line) ||
       (line.indexOf("|") !== -1 && next != null && TABLE_SEP.test(next) && next.indexOf("-") !== -1 && (next.indexOf("|") !== -1 || line.indexOf("|") !== -1) && splitRow(line).length > 1);
   }
 
+  /** Dựng HTML của các dòng `lines`. `state`:
+        ids        bộ đếm id tiêu đề toàn tài liệu (`h-slug`, `h-slug-2`, …);
+        block      (render theo khối) tiêu đề mang `data-hid="h-slug"` THAY cho `id` — id phụ thuộc cả tài liệu nên do M.dedupeIds đặt sau;
+        scan       (M.blocks) CHỈ quét cấu trúc cấp cao nhất: chạy đúng các vòng nhận khối bên dưới nhưng bỏ mọi việc dựng HTML / inline, và ghi vào
+                   `starts` số dòng của MỖI khối đứng sau dòng trống (+ khối đầu); `spans` nhận các rào code theo mô hình của mathBlocks;
+                   `unclosed` đặt true nếu có rào code mở mà không đóng (nuốt tới hết tài liệu).
+      Chia khối dùng CHÍNH vòng lặp này nên luật nhận khối chỉ có một bản — đừng tách ra một bản thứ hai. */
   function renderBlocks(lines, ctx, depth, state) {
-    var html = "", i = 0, m, mb = mathBlocks(lines), own = false;                              // own: `lines` đã là bản chép riêng (chữ sau \end{ENV} ghi đè dòng — không được sửa mảng của người gọi, W5 sẽ truyền mảng dùng lại)
+    var html = "", i = 0, m, mb = mathBlocks(lines, state.spans), own = false;                // own: `lines` đã là bản chép riêng (chữ sau \end{ENV} ghi đè dòng — không được sửa mảng của người gọi)
+    var scan = !!state.scan, sawBlank = false;
     while (i < lines.length) {
       var line = lines[i];
-      if (/^\s*$/.test(line)) { i++; continue; }
+      if (/^\s*$/.test(line)) { i++; sawBlank = true; continue; }
+      if (scan) { if (sawBlank || !state.starts.length) state.starts.push(i); sawBlank = false; }
       if ((m = FENCE.exec(line))) {
-        var fence = m[1], lang = (m[2] || "").toLowerCase(), body = [];
+        var fence = m[1], lang = (m[2] || "").toLowerCase(), body = [], closeRe = new RegExp("^ {0,3}" + fence.charAt(0) + "{" + fence.length + ",}[ \\t]*$");
         i++;
-        while (i < lines.length && !(new RegExp("^ {0,3}" + fence.charAt(0) + "{" + fence.length + ",}[ \\t]*$").test(lines[i]))) body.push(lines[i++]);
+        while (i < lines.length && !closeRe.test(lines[i])) { if (!scan) body.push(lines[i]); i++; }
+        if (scan && i >= lines.length) state.unclosed = true;
         i++;                                                                                  // dòng đóng (nếu chưa đóng thì i vượt qua cuối, vòng lặp kết thúc)
+        if (scan) continue;
         var code = body.join("\n");
         if (lang === "math" && notBlank(code)) { html += mathHtml(code, true, true); continue; }   // ```math: TeX thuần, hiển thị
         var hl = ctx.highlight && lang ? ctx.highlight(code, lang) : null;
@@ -303,23 +327,31 @@
       if (mb && mb[i]) {                                                                      // khối toán hiển thị: $$…$$, \[…\], \begin{ENV}…\end{ENV} (tìm sẵn bằng mathBlocks)
         var mbk = mb[i];
         mb[i] = null;
-        html += mathHtml(mbk.tex, true, true);
+        if (!scan) html += mathHtml(mbk.tex, true, true);
         if (mbk.rest && notBlank(mbk.rest)) { if (!own) { lines = lines.slice(); own = true; } lines[mbk.end] = mbk.rest; i = mbk.end; } else i = mbk.end + 1;     // chữ còn lại sau \end{ENV} trên cùng dòng tiếp tục như đoạn văn
         continue;
       }
       if ((m = headingOf(line))) {
-        var lv = m.level, txt = m.text, id = "h-" + (T.slug(txt) || "muc"), k = (state.ids[id] = (state.ids[id] || 0) + 1);
-        html += "<h" + lv + ' id="' + esc(k > 1 ? id + "-" + k : id) + '">' + inline(txt, ctx) + "</h" + lv + ">";
+        if (!scan) {
+          var lv = m.level, txt = m.text, id = "h-" + (T.slug(txt) || "muc");
+          if (state.block) html += "<h" + lv + ' data-hid="' + esc(id) + '">' + inline(txt, ctx) + "</h" + lv + ">";
+          else { var k = (state.ids[id] = (state.ids[id] || 0) + 1); html += "<h" + lv + ' id="' + esc(k > 1 ? id + "-" + k : id) + '">' + inline(txt, ctx) + "</h" + lv + ">"; }
+        }
         i++; continue;
       }
-      if (HR.test(line)) { html += "<hr>"; i++; continue; }
+      if (HR.test(line)) { if (!scan) html += "<hr>"; i++; continue; }
       if (/^ {0,3}>/.test(line) && depth < MAX_DEPTH) {
-        var q = [];
-        while (i < lines.length && /^ {0,3}>/.test(lines[i])) q.push(lines[i++].replace(/^ {0,3}> ?/, ""));
-        html += "<blockquote>" + renderBlocks(q, ctx, depth + 1, state) + "</blockquote>";
+        var q = scan ? null : [];
+        while (i < lines.length && /^ {0,3}>/.test(lines[i])) { if (q) q.push(lines[i].replace(/^ {0,3}> ?/, "")); i++; }
+        if (!scan) html += "<blockquote>" + renderBlocks(q, ctx, depth + 1, state) + "</blockquote>";
         continue;
       }
       if (line.indexOf("|") !== -1 && i + 1 < lines.length && TABLE_SEP.test(lines[i + 1]) && lines[i + 1].indexOf("-") !== -1 && splitRow(line).length > 1) {
+        if (scan) {
+          i += 2;
+          while (i < lines.length && lines[i].indexOf("|") !== -1 && !/^\s*$/.test(lines[i])) i++;
+          continue;
+        }
         var head = splitRow(line), aligns = splitRow(lines[i + 1]).map(function (c) { return /^:-+:$/.test(c) ? "center" : /^-+:$/.test(c) ? "right" : /^:-+$/.test(c) ? "left" : ""; }), rows = [];
         i += 2;
         while (i < lines.length && lines[i].indexOf("|") !== -1 && !/^\s*$/.test(lines[i])) rows.push(splitRow(lines[i++]));
@@ -329,15 +361,15 @@
         continue;
       }
       if (ITEM.test(line) && depth < MAX_DEPTH) {
-        var items = [];
+        var items = scan ? null : [];
         while (i < lines.length) {
           var l2 = lines[i];
-          if (ITEM.test(l2)) { items.push(l2); i++; }
+          if (ITEM.test(l2)) { if (items) items.push(l2); i++; }
           else if (/^\s*$/.test(l2) && i + 1 < lines.length && (ITEM.test(lines[i + 1]) || /^ {2,}\S/.test(lines[i + 1]))) { i++; }
-          else if (/^ {2,}\S/.test(l2) && items.length) { items[items.length - 1] += "\n" + l2.trim(); i++; }
+          else if (/^ {2,}\S/.test(l2)) { if (items) items[items.length - 1] += "\n" + l2.trim(); i++; }      // luôn có ≥ 1 mục: dòng đầu vòng lặp là ITEM
           else break;
         }
-        html += renderList(items, ctx);
+        if (!scan) html += renderList(items, ctx);
         continue;
       }
       if (Q_LINE.test(line)) {
@@ -349,6 +381,7 @@
           else (ans || qs).push(lines[i]);
           i++;
         }
+        if (scan) continue;
         html += ans === null ? "<p>" + inline("Q: " + qs.join("\n"), ctx).replace(/\n/g, "<br>") + "</p>"
           : '<div class="fc"><div class="fc-q"><b>Hỏi</b>' + inline(qs.join("\n"), ctx).replace(/\n/g, "<br>") + '</div><div class="fc-a"><b>Đáp</b>' + inline(ans.join("\n"), ctx).replace(/\n/g, "<br>") + "</div></div>";
         continue;
@@ -356,7 +389,7 @@
       var para = [line];
       i++;
       while (i < lines.length && !/^\s*$/.test(lines[i]) && !(mb && mb[i]) && !startsBlock(lines[i], lines[i + 1])) para.push(lines[i++]);
-      html += "<p>" + inline(para.join("\n"), ctx).replace(/\n/g, "<br>") + "</p>";
+      if (!scan) html += "<p>" + inline(para.join("\n"), ctx).replace(/\n/g, "<br>") + "</p>";
     }
     return html;
   }
@@ -389,10 +422,50 @@
     return out(root.children);
   }
 
+  function normalize(md) {
+    var s = String(md == null ? "" : md);
+    if (s.length > MAX_INPUT) s = s.slice(0, MAX_INPUT);
+    return s.indexOf("\r") === -1 ? s : s.replace(/\r\n?/g, "\n");
+  }
+
+  /** opts.blockMode: dựng MỘT khối của M.blocks — tiêu đề mang `data-hid="h-slug"` thay cho `id` (id phụ thuộc cả tài liệu: M.dedupeIds đặt sau). */
   function render(md, opts) {
     opts = opts || {};
-    var src = String(md == null ? "" : md).slice(0, MAX_INPUT).replace(/\r\n?/g, "\n");
-    return renderBlocks(src.split("\n"), { resolve: opts.resolve, highlight: opts.highlight, noLinks: !!opts.noLinks }, 0, { ids: {} });
+    return renderBlocks(normalize(md).split("\n"), { resolve: opts.resolve, highlight: opts.highlight, noLinks: !!opts.noLinks }, 0, { ids: {}, block: !!opts.blockMode });
+  }
+
+  /** Chia tài liệu thành các KHỐI dựng độc lập → [{start, text}] (start = số dòng BẮT ĐẦU, đếm từ 0 như `headings().line`).
+      BẤT BIẾN (kiem.js so từng ca + hàng nghìn tài liệu ngẫu nhiên): với mọi md, nối `render(b.text, {blockMode: true})` của mọi khối rồi đặt id bằng
+      dedupeIds == `render(md)` từng chữ. Chỉ cắt TRƯỚC một khối mà dòng ngay trước nó là dòng trống, và chỉ ở chỗ renderBlocks cũng bắt đầu một khối
+      mới (nên không bao giờ cắt giữa rào code, giữa danh sách còn tiếp tục qua dòng trống, giữa khối toán — vùng toán dừng ở dòng trống). Ngoài ra
+      không cắt trong rào code theo mô hình của mathBlocks (thô hơn): khối sau đó cần mathBlocks bắt đầu "ngoài rào" thì dựng riêng mới ra đúng.
+      Khối bỏ dòng trống đầu/cuối (cuối: trừ khối chót khi có rào mở chưa đóng — dòng trống là NỘI DUNG của rào). Tuyến tính, không dựng HTML. */
+  function blocks(md) {
+    var lines = normalize(md).split("\n"), n = lines.length, st = { ids: {}, scan: true, starts: [], spans: [], unclosed: false };
+    renderBlocks(lines, NO_CTX, 0, st);
+    var starts = st.starts, spans = st.spans, cuts = [], j = 0, k, s, out = [];
+    for (k = 0; k < starts.length; k++) {
+      s = starts[k];
+      if (k > 0) {
+        while (j < spans.length && spans[j + 1] <= s) j += 2;
+        if (j < spans.length && spans[j] < s) continue;                                       // s nằm TRONG một rào theo mathBlocks
+      }
+      cuts.push(s);
+    }
+    for (k = 0; k < cuts.length; k++) {
+      var a = cuts[k], b = k + 1 < cuts.length ? cuts[k + 1] : n;
+      if (k + 1 < cuts.length || !st.unclosed) while (b > a + 1 && !notBlank(lines[b - 1])) b--;
+      out.push({ start: a, text: lines.slice(a, b).join("\n") });
+    }
+    return out;
+  }
+
+  /** Id tiêu đề đầy đủ từ dãy id GỐC (`h-slug`) theo thứ tự tài liệu: lần thứ k của cùng một gốc thành `gốc-k` (k ≥ 2) — đúng luật `state.ids` của
+      renderBlocks (kể cả va chạm `h-a-2` của tiêu đề "A 2" với lần thứ hai của "A": giữ nguyên như bản dựng cả tài liệu). */
+  function dedupeIds(bases) {
+    var seen = {}, out = new Array(bases.length);
+    for (var i = 0; i < bases.length; i++) { var id = bases[i], k = (seen[id] = (seen[id] || 0) + 1); out[i] = k > 1 ? id + "-" + k : id; }
+    return out;
   }
 
   /** Mục lục: [{level, text, id, line}] (bỏ qua # trong khối code). */
@@ -407,6 +480,6 @@
     return out;
   }
 
-  W.markdown = { render: render, headings: headings, headingOf: headingOf, safeUrl: safeUrl, safeImg: safeImg, mathBlocks: mathBlocks, inline: function (s, o) { return inline(s, o || {}); } };
+  W.markdown = { render: render, blocks: blocks, dedupeIds: dedupeIds, headings: headings, headingOf: headingOf, safeUrl: safeUrl, safeImg: safeImg, mathBlocks: mathBlocks, inline: function (s, o) { return inline(s, o || {}); } };
   if (typeof module !== "undefined" && module.exports) module.exports = W.markdown;
 })(typeof globalThis !== "undefined" ? globalThis : this);

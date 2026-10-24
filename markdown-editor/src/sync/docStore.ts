@@ -125,7 +125,12 @@ export class MemoryDocStore implements DocStore {
 
 const DB_NAME = 'markdown-editor'
 const DB_VERSION = 1
-const OPEN_TIMEOUT_MS = 5000
+/**
+ * How long a first `open` may take before the editor gives up on IndexedDB and works on the localStorage fallback. Generous on
+ * purpose: a slow open is not a missing database (measured: 22 s on a busy disk after heavy steps, quota 10 GB), and the fallback
+ * cannot hold a big workspace (about 5 M characters), so a premature downgrade loses the very thing IndexedDB was added for.
+ */
+export const OPEN_TIMEOUT_MS = 30_000
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -354,15 +359,25 @@ export class LocalStorageDocStore implements DocStore {
     if (failure) throw Object.assign(new Error('localStorage refused the write'), failure === 'quota' ? { name: 'QuotaExceededError' } : {})
   }
 
+  /**
+   * Atomic in the only sense this store can offer: the documents live in one key and the bookkeeping in another, so the
+   * bookkeeping (shadows, outbox, cursors) is written ONLY once the documents of the same commit are safe, and is put back in
+   * memory when its own write fails. A shadow or cursor that outlives its refused document would tell the next start "already
+   * synced" about text that is not here, and nothing would ever fetch it again.
+   */
   commitSync(change: DocCommit): StorageFailure | null {
-    let failure: StorageFailure | null = null
     if (change.docs) {
       for (const doc of change.docs.put ?? []) this.docs.set(doc.id, doc)
       for (const id of change.docs.delete ?? []) this.docs.delete(id)
       if (change.view) this.view = change.view
-      failure = saveFiles({ files: buildTree(this.docs.values()), currentFileId: this.view.currentFileId, expandedFolders: this.view.expandedFolders })
+      const failure = saveFiles({ files: buildTree(this.docs.values()), currentFileId: this.view.currentFileId, expandedFolders: this.view.expandedFolders })
+      if (failure) return failure
     }
     if (change.shadows || change.outbox || change.meta) {
+      const before = { shadows: this.sync.shadows, outbox: this.sync.outbox, meta: this.sync.meta }
+      this.sync.shadows = { ...before.shadows }
+      this.sync.outbox = { ...before.outbox }
+      this.sync.meta = { ...before.meta }
       for (const shadow of change.shadows?.put ?? []) {
         this.sync.shadows[shadow.id] = shadow.content !== null && shadow.content.length > FALLBACK_SHADOW_TEXT_MAX ? { ...shadow, content: null } : shadow
       }
@@ -370,9 +385,15 @@ export class LocalStorageDocStore implements DocStore {
       for (const entry of change.outbox?.put ?? []) this.sync.outbox[entry.id] = entry
       for (const id of change.outbox?.delete ?? []) delete this.sync.outbox[id]
       applyMeta(this.sync.meta, change.meta)
-      failure = this.writeSync() ?? failure
+      const failure = this.writeSync()
+      if (failure) {
+        this.sync.shadows = before.shadows
+        this.sync.outbox = before.outbox
+        this.sync.meta = before.meta
+        return failure
+      }
     }
-    return failure
+    return null
   }
 
   async wipeSync(): Promise<void> {

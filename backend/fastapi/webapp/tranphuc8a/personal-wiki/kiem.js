@@ -300,6 +300,132 @@ sec("markdown — toán");
   kiem("toán trên " + Object.keys(shapes).length + " hình dạng xấu (≤ 300 KB): mỗi hình < 500 ms (chậm nhất " + worst + " ms: " + worstName + ")" + (mslack > 1 ? ", PW_PERF_SLACK=" + mslack : ""), worst < 500 * mslack);
 })();
 
+/* ======================================================================== markdown — render theo khối (perf-md W2) */
+/* BẤT BIẾN: nối `M.render(b.text, {blockMode: true})` của mọi khối của M.blocks rồi đặt id tiêu đề bằng M.dedupeIds == `M.render(md)` từng chữ.
+   Xem trước của editor (ui/editor.js) dựa vào đó để chỉ dựng lại khối đổi. Kiểm: ca khó (gồm toán của W4), hàng nghìn tài liệu ngẫu nhiên, note 400k ký tự. */
+sec("markdown — theo khối");
+(function () {
+  var raw = String.raw, L = function () { return Array.prototype.join.call(arguments, "\n"); }, slackB = Math.max(1, Number(process.env.PW_PERF_SLACK) || 1);
+  var res = function (title) { return T.titleKey(title) === "hash function" ? { id: "11111111-1111-4111-8111-111111111111", status: "active" } : null; };
+  function viaBlocks(md) {
+    var bl = M.blocks(md), html = bl.map(function (b) { return M.render(b.text, { blockMode: true, resolve: res }); }).join(""), bases = [], k = 0, ids;
+    html.replace(/ data-hid="([^"]*)"/g, function (_, b) { bases.push(b); return _; });
+    ids = M.dedupeIds(bases);
+    return html.replace(/ data-hid="[^"]*"/g, function () { return ' id="' + ids[k++] + '"'; });
+  }
+  /** "" nếu đúng; ngược lại mô tả sai lệch (khối, dòng bắt đầu, độ phủ). */
+  function diff(md) {
+    var want = M.render(md, { resolve: res }), got = viaBlocks(md);
+    if (want !== got) { var i = 0; while (i < want.length && want.charAt(i) === got.charAt(i)) i++; return "HTML lệch ở " + i + ": …" + JSON.stringify(want.slice(Math.max(0, i - 30), i + 50)) + " ≠ " + JSON.stringify(got.slice(Math.max(0, i - 30), i + 50)); }
+    var lines = md.replace(/\r\n?/g, "\n").split("\n"), bl = M.blocks(md), prevEnd = 0;
+    for (var b = 0; b < bl.length; b++) {
+      var n = bl[b].text.split("\n").length;
+      if (lines.slice(bl[b].start, bl[b].start + n).join("\n") !== bl[b].text) return "start sai ở khối " + b;
+      if (bl[b].start < prevEnd) return "khối " + b + " chồng khối trước";
+      if (lines.slice(prevEnd, bl[b].start).some(function (x) { return x.trim() !== ""; })) return "bỏ sót chữ trước khối " + b;
+      if (!bl[b].text.trim()) return "khối rỗng " + b;
+      prevEnd = bl[b].start + n;
+    }
+    if (lines.slice(prevEnd).some(function (x) { return x.trim() !== ""; })) return "bỏ sót chữ cuối tài liệu";
+    return "";
+  }
+
+  var CASES = [
+    ["rỗng", ""], ["chỉ dòng trống", "\n\n  \n"], ["một đoạn", "xin chào"], ["hai đoạn", L("a", "", "b")], ["nhiều dòng trống giữa các đoạn", L("a", "", "", "", "b")],
+    ["tiêu đề trùng (h-a, h-a-2, h-a-3) ở các khối khác nhau", L("# A", "", "x", "", "## A", "", "y", "", "### A")],
+    ["va chạm id: 'A 2' và lần thứ hai của 'A'", L("# A", "", "# A 2", "", "# A")],
+    ["tiêu đề liền đoạn (không dòng trống)", L("# A", "đoạn", "## B", "đoạn")],
+    ["danh sách lỏng (dòng trống giữa các mục)", L("- a", "", "- b", "", "- c", "", "đoạn sau")],
+    ["danh sách số cách dòng + mục thụt", L("1. a", "", "2. b", "", "   thụt", "", "3. c")],
+    ["danh sách có dòng trống rồi mục thụt kiểu con", L("- a", "", "  - con", "", "- b")],
+    ["rào code có dòng trống bên trong", L("```js", "a", "", "", "b", "```", "", "sau")],
+    ["rào ~~~ chứa ```", L("~~~", "```", "", "x", "```", "~~~", "", "sau")],
+    ["rào code nằm trong mục danh sách (thụt)", L("- mục", "", "  ```", "  code", "", "  code2", "  ```", "", "- mục 2")],
+    ["rào chưa đóng nuốt tới hết (kể cả dòng trống cuối)", L("trước", "", "```", "a", "", "b", "", "")],
+    ["rào chưa đóng giữa tài liệu: toán và tiêu đề phía sau thành chữ", L("```", "# không", "", raw`$$`, "x", raw`$$`, "", "# không")],
+    ["rào dài hơn: ```` chứa ```", L("````", "```", "", "x", "```", "````", "", "đoạn")],
+    ["trích dẫn có dòng trống (hai trích dẫn)", L("> a", "", "> b", "", "c")],
+    ["trích dẫn lồng + danh sách trong trích dẫn", L("> - a", "> - b", ">", "> > c", "", "d")],
+    ["bảng rồi đoạn, bảng giữa hai đoạn", L("a", "", "| A | B |", "|---|---|", "| 1 | 2 |", "", "b")],
+    ["bảng liền đoạn", L("| A | B |", "|---|---|", "| 1 | 2 |", "chữ tiếp")],
+    ["đường kẻ ---, ***, ___", L("a", "", "---", "", "***", "", "___", "", "b")],
+    ["dòng thụt 4 (code kiểu cũ) & thụt 2", L("a", "", "    thụt bốn", "", "  thụt hai")],
+    ["thẻ ôn Q:/A: nhiều thẻ, thẻ có dòng trống ở giữa", L("Q: a?", "A: b", "", "Q: c?", "", "A: d", "", "Q: e?", "A: f", "tiếp")],
+    ["việc cần làm", L("- [ ] a", "- [x] b", "", "- [ ] c")],
+    ["liên kết wiki thật / mờ ở các khối khác nhau", L("[[Hash Function]]", "", "[[Chưa Có]] và [[Hash Function|hf]]")],
+    ["CRLF và CR", "a\r\n\r\n# B\r\n\r\n```\r\nx\r\n\r\ny\r\n```\r\n\rtrống kiểu CR"],
+    // toán (W4): vùng toán chưa đóng không được bị cắt đôi
+    ["$$ riêng dòng có dòng trống: vùng toán dừng ở dòng trống", L("$$", "x", "", "y", "$$", "", "sau")],
+    ["$$ khối nhiều dòng đóng", L("trước", "", "$$", raw`\begin{aligned}`, raw`a &= b \\`, "c &= d", raw`\end{aligned}`, "$$", "", "sau")],
+    ["$$ chưa đóng rồi đoạn", L("$$", "x^2 +", "", "đoạn")],
+    ["\\[ \\] nhiều dòng + \\[ chưa đóng", L(raw`\[`, "E = mc^2", raw`\]`, "", raw`\[ a`, "", "b")],
+    ["\\begin{align} trần, môi trường lồng, thiếu \\end", L(raw`\begin{align}`, "a &= b", raw`\end{align}`, "", raw`\begin{array}{c}`, raw`\begin{array}{c} a \end{array}`, raw`\end{array}`, "", raw`\begin{align}`, "a", "", "b")],
+    ["chữ sau \\end{ENV} trên cùng dòng", L(raw`\begin{pmatrix} 1 & 2 \end{pmatrix} theo sau`, "", "đoạn")],
+    ["```math và ```mermaid có dòng trống", L("```math", raw`\frac{a}{b}`, "", "x", "```", "", "```mermaid", "graph TD", "A-->B", "", "B-->C", "```", "", "sau")],
+    ["toán inline và giá $5 trộn đoạn", L("Giá $5 và $x$", "", "Pay $5 for $y$ items", "", raw`\(a\) và \[b\]`)],
+    ["rào code mà mathBlocks coi là rào nhưng renderBlocks thì không (rào thụt trong danh sách + $$)", L("- a", "", "  ```", "  x", "", "$$", "y", "$$", "  ```", "", "sau")],
+    ["$$ ngay trước rào code chưa đóng", L("$$", "x", "```", "y", "", "z")],
+    ["công thức dài hai dòng trong danh sách", L("- $$", "  x", "  $$", "", "- b")]
+  ];
+  var bad = CASES.filter(function (c) { return diff(c[1]); });
+  CASES.forEach(function (c) { var d = diff(c[1]); kiem("theo khối == cả note: " + c[0], !d, d); });
+  kiem(CASES.length + " ca khó đều giống hệt", bad.length === 0);
+  kiem("M.blocks('') và chỉ dòng trống → không có khối; render('') rỗng", M.blocks("").length === 0 && M.blocks("\n  \n\n").length === 0 && viaBlocks("") === "" && M.render("") === "");
+  kiem("M.blocks: start là số dòng (0-based) như headings().line", (function () {
+    var md = L("# A", "", "x", "", "## B", "", "y"), bl = M.blocks(md), hs = M.headings(md);
+    return bl.map(function (b) { return b.start; }).join() === "0,2,4,6" && hs[0].line === bl[0].start && hs[1].line === bl[2].start;
+  })());
+  kiem("M.dedupeIds: thuần, đúng luật h-a, h-a-2, h-a-3; không đụng đầu vào", (function () {
+    var a = ["h-a", "h-b", "h-a", "h-a-2", "h-a"], c = a.slice(), o = M.dedupeIds(a);
+    return bang(a, c) && bang(o, ["h-a", "h-b", "h-a-2", "h-a-2", "h-a-3"]) && bang(M.dedupeIds([]), []);
+  })());
+
+  // tài liệu ngẫu nhiên (tất định): ghép từ mảnh có đủ loại cấu trúc, đủ kiểu dòng trống / thụt / rào chưa đóng
+  var seed = 20261023, rnd = function () { seed = (seed * 48271) % 2147483647; return seed / 2147483647; }, pick = function (a) { return a[Math.floor(rnd() * a.length)]; };
+  var FR = ["# Tiêu đề", "## Tiêu đề", "## Mục hai", "### Mục ba", "đoạn văn thường", "đoạn **đậm** và *nghiêng* và `code`", "dòng 1\ndòng 2", "- a\n- b", "- a\n\n- b", "  - con\n  - con 2", "1. x\n2. y", "1. x\n\n   tiếp\n\n2. y",
+    "> trích dẫn", "> a\n> > b", "```\ncode\n```", "```js\na\n\nb\n```", "~~~\nx\n```\n~~~", "```\nchưa đóng", "```", "| A | B |\n|---|---|\n| 1 | 2 |", "---", "***", "    thụt bốn", "  thụt hai", "Q: hỏi?\nA: đáp", "Q: chỉ hỏi",
+    "- [ ] việc\n- [x] xong", "$$\nx^2\n$$", "$$\nx\n\ny\n$$", "$$ a", "$$", raw`\[`, raw`\]`, raw`\[ a \]`, raw`\begin{align}` + "\na\n" + raw`\end{align}`, raw`\begin{align}`, raw`\end{align}`, "```math\nx\n\ny\n```", "```mermaid\nA-->B\n```",
+    "Giá $5 và $x$", "$ lẻ", raw`\( b`, "[[Hash Function]] [[Chưa Có]]", "![a](https://e.com/a.png)", "https://e.com/x", "<b>html</b> & <i>", "", "", "  ", "\t- tab", "- a\n  ```\n  x\n\n  y\n  ```\n- b"];
+  var badR = 0, first = "", NDOC = 4000;
+  for (var d = 0; d < NDOC; d++) {
+    var n = 1 + Math.floor(rnd() * 24), parts = [];
+    for (var i = 0; i < n; i++) parts.push(pick(FR));
+    var md = parts.join(pick(["\n\n", "\n\n", "\n", "\n\n\n", "\n \n"]));
+    var df = diff(md);
+    if (df) { badR++; if (!first) first = JSON.stringify(md) + " — " + df; }
+  }
+  kiem(NDOC + " tài liệu ngẫu nhiên (đủ loại khối, rào chưa đóng, toán, danh sách lỏng): theo khối == cả note", badR === 0, badR + " lệch, vd " + first);
+
+  // note dài tất định ~400k ký tự (như wiki-12k trong thiết kế): kiểu mảnh lặp, tiêu đề trùng nhiều
+  var FILL = "Thêm chữ tiếng Việt cho dài hơn một chút: thuật toán, cấu trúc dữ liệu, đồ thị, cây nhị phân tìm kiếm và bảng băm đều cần được ghi chú lại cẩn thận. ".repeat(3).trim();
+  var big = "", sec = 0;
+  while (big.length < 400000) {
+    sec++;
+    big += "## Phần " + (sec % 40) + "\n\nĐoạn văn có **đậm**, `code`, [[Hash Function]] và $x_" + sec + "$ trong câu số " + sec + ". " + FILL + "\n\n";
+    if (sec % 3 === 0) big += "- mục một\n- mục hai\n  - con\n\n";
+    if (sec % 5 === 0) big += "```cpp\nint f(int x) {\n\n  return x + " + sec + ";\n}\n```\n\n";
+    if (sec % 7 === 0) big += "$$\n\\sum_{i=1}^{" + sec + "} i\n$$\n\n| A | B |\n|---|---|\n| " + sec + " | x |\n\n";
+    if (sec % 11 === 0) big += "Q: câu hỏi " + sec + "?\nA: đáp\n\n> trích dẫn " + sec + "\n\n";
+  }
+  var dBig = diff(big);
+  kiem("note sinh " + Math.round(big.length / 1000) + "k ký tự: theo khối == cả note (id tiêu đề trùng được đánh số lại đúng)", !dBig, dBig);
+
+  // thời gian (nhanh nhất trong 5 lần sau một lần làm nóng; nhân PW_PERF_SLACK)
+  function best(f) { f(); var b = Infinity; for (var r = 0; r < 5; r++) { var t0 = process.hrtime.bigint(); f(); b = Math.min(b, Number(process.hrtime.bigint() - t0) / 1e6); } return b; }
+  var nb = M.blocks(big).length, tBlocks = best(function () { M.blocks(big); }), tFull = best(function () { M.render(big, { resolve: res }); });
+  kiem("M.blocks(note " + Math.round(big.length / 1000) + "k, " + nb + " khối) ≤ " + 25 * slackB + " ms (đo " + tBlocks.toFixed(1) + " ms; render cả note " + tFull.toFixed(0) + " ms)" + (slackB > 1 ? ", PW_PERF_SLACK=" + slackB : ""), tBlocks <= 25 * slackB);
+  var mid = big.indexOf("Phần 20\n") + 40, typed = big.slice(0, mid) + "X" + big.slice(mid);
+  kiem("gõ một chữ giữa note: đúng MỘT khối đổi (còn lại giống hệt, cùng số khối)", (function () {
+    var a = M.blocks(big), b = M.blocks(typed), i = 0, s = 0;
+    if (a.length !== b.length) return false;
+    while (i < a.length && a[i].text === b[i].text) i++;
+    while (s < a.length - i && a[a.length - 1 - s].text === b[b.length - 1 - s].text) s++;
+    return a.length - i - s === 1;
+  })());
+  var tKey = best(function () { var bl = M.blocks(typed), k = 0; for (var i = 0; i < bl.length; i++) k += bl[i].text.length; var j = 0; while (j < bl.length && bl[j].start < mid / 45) j++; M.render(bl[Math.min(j, bl.length - 1)].text, { blockMode: true, resolve: res }); });
+  kiem("gõ 1 phím giữa note: tách lại + dựng 1 khối ≤ " + 30 * slackB + " ms (đo " + tKey.toFixed(1) + " ms)" + (slackB > 1 ? ", PW_PERF_SLACK=" + slackB : ""), tKey <= 30 * slackB);
+})();
+
 /* ======================================================================== search */
 sec("search");
 kiem("tokenize: bỏ dấu, bỏ từ dừng Anh+Việt, bỏ token quá ngắn/dài, giữ số", bang(S.tokenize("Cấu trúc dữ liệu của the Bloom Filter 2026 a x"), ["cau", "truc", "du", "lieu", "bloom", "filter", "2026"].filter(function (x) { return !S.STOP[x]; })) && S.tokenize("x".repeat(60)).length === 0);
