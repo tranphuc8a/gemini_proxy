@@ -71,6 +71,12 @@ export interface EnhanceOptions {
    * while the preview stays mounted underneath; a prefix keeps the ids unique.
    */
   idPrefix?: string
+  /**
+   * Render-by-block mode: the document is rendered one block at a time, so a heading cannot know its place among the
+   * repeats of its slug. It gets `data-slug` instead of `id`, and its anchor no `href`; `assignHeadingIds` (headingIds.ts)
+   * fills both in after the blocks are in the page. `data-line` stays relative to the block.
+   */
+  blockMode?: boolean
 }
 
 /**
@@ -84,6 +90,7 @@ export interface EnhanceOptions {
  */
 export function rehypeEnhance(options: EnhanceOptions = {}) {
   const prefix = options.idPrefix ?? ''
+  const blockMode = options.blockMode === true
   return (tree: HastNode) => {
     const seen = new Map<string, number>()
 
@@ -116,12 +123,14 @@ export function rehypeEnhance(options: EnhanceOptions = {}) {
           const count = seen.get(base) ?? 0
           seen.set(base, count + 1)
           const id = prefix + (count === 0 ? base : `${base}-${count}`)
-          node.properties = { ...node.properties, id }
+          node.properties = blockMode ? { ...node.properties, 'data-slug': base } : { ...node.properties, id }
           node.children = [
             {
               type: 'element',
               tagName: 'a',
-              properties: { href: `#${id}`, className: ['heading-anchor'], ariaHidden: 'true', tabIndex: -1 },
+              properties: blockMode
+                ? { className: ['heading-anchor'], ariaHidden: 'true', tabIndex: -1 }
+                : { href: `#${id}`, className: ['heading-anchor'], ariaHidden: 'true', tabIndex: -1 },
               children: [{ type: 'text', value: '#' }]
             },
             ...(node.children ?? [])
@@ -177,7 +186,7 @@ export const sanitizeSchema = {
   ],
   attributes: {
     ...defaultSchema.attributes,
-    '*': [...(defaultSchema.attributes?.['*'] ?? []), 'className', 'data-line', 'style', 'ariaHidden'],
+    '*': [...(defaultSchema.attributes?.['*'] ?? []), 'className', 'data-line', 'data-slug', 'style', 'ariaHidden'],
     // The default schema pins `a`'s className to the footnote class alone,
     // which would strip the heading anchors added above.
     a: [...(defaultSchema.attributes?.a ?? []).filter((entry) => !Array.isArray(entry) || entry[0] !== 'className'), ...ANY_CLASS],

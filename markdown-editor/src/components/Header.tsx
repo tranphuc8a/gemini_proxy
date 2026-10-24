@@ -32,6 +32,7 @@ import {
   IconUpload,
   IconWrap
 } from './Icons'
+import { printDocument, withFullRender } from '../lib/previewController'
 import './Header.css'
 
 /**
@@ -163,7 +164,8 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenSh
     }
     setBusy(label)
     try {
-      await action(preview)
+      // The preview builds itself in pieces: the export runs once every block and diagram is in the page.
+      await withFullRender(() => action(preview))
       pushToast(`Exported ${label}`, 'success')
     } catch (error) {
       pushToast(error instanceof Error ? error.message : `Could not export ${label}`, 'error')
@@ -335,7 +337,7 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenSh
         Export JPG
       </button>
       <div className="menu-separator" />
-      <button className="menu-item" onClick={() => window.print()}>
+      <button className="menu-item" onClick={() => void printDocument()}>
         <IconPrinter size={14} />
         Print… <kbd>Ctrl P</kbd>
       </button>

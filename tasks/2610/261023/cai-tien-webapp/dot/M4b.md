@@ -105,3 +105,35 @@ Xem `ke-hoach.md` §7.1, gạch "M5, M6, M7, M8 (từ dot/M4b.md)". Điểm chí
 ### Lệch thiết kế mới
 - Bộ gom lô dùng **cân nặng theo cách máy chủ đếm** (không phải "≤ 50 op / ≤ 3,5 MB chữ"): trần 3,5 MB tính byte UTF-8 + 200/op, tự co lại khi máy chủ từ chối (thiết kế md-sync §3.7.3 chỉ nêu "200 op / 4 MB" chung chung).
 - `Workspace.apply(change, ifVersion)`: `ifVersion` nay cũng chặn **put** (trước chỉ chặn delete). `commitRemote` giữ nguyên.
+
+## Sửa sau kiểm lần 2 (24/10, agent sửa — người kiểm độc lập: 1 blocking + góp ý nhỏ)
+
+### Blocking — `kiem-dong-bo.py` đỏ: IndexedDB mở chậm → âm thầm hạ xuống localStorage, và `commitSync` không nguyên tử
+- **Gốc (3 lớp)**: (1) `openIdbDocStore` bỏ cuộc sau 5 giây, mà trên máy bận IndexedDB mở mất tới ~22 giây → `store.ts` chạy `fallBack` dù trình duyệt có IndexedDB bình thường; kho dự phòng không chứa nổi 8,9 MB. (2) Ở chế độ dự phòng, `LocalStorageDocStore.commitSync` ghi tài liệu (bị từ chối vì quota) rồi VẪN ghi shadow/outbox/con trỏ sang khoá `markdown-editor:sync` → tải lại, thiết bị tin đã đồng bộ nhưng thiếu tài liệu, không bao giờ tải lại. (3) Chưa có test cho `commitSync` khi hết quota.
+- **Sửa**: `docStore.ts` — `OPEN_TIMEOUT_MS` 5 s → **30 s** (xuất ra để test; hết giờ vẫn từ chối và đóng kết nối mở muộn). `commitSync` nay **nguyên tử theo nghĩa kho này làm được**: tài liệu của commit không lưu được thì **không ghi gì** vào khoá bookkeeping (cả bộ nhớ lẫn khoá); khi chính lần ghi bookkeeping thất bại thì **trả lại** shadows/outbox/meta trong bộ nhớ.
+- **Rà cùng mẫu lỗi** (cùng gốc, tìm thấy khi chạy `kiem-pwa` nhiều lần): `store.ts` `settleWrite` (lệnh ghi IndexedDB xong sau `flushPersist`) xoá cờ `storageFailure` của **ảnh khởi động bị từ chối** vì chỉ nhớ lỗi cài đặt → biểu ngữ "Browser storage is full" chớp rồi mất, `kiem-pwa` phép "localStorage đầy" chập chờn (đỏ nhiều lần liền rồi xanh lại trên cùng mã khi chạy lặp). Nay nhớ `lastSnapshotFailure` và `settleWrite` tính cả nó.
+- **Phép kiểm**: `docStore.test.ts` +4 (không ghi bookkeeping khi tài liệu bị từ chối; trả lại bộ nhớ khi ghi bookkeeping bị từ chối; chờ mở chậm 22 s không bỏ cuộc; vẫn bỏ cuộc với DB không bao giờ đáp), `deviceStore.test.ts` +1 (biểu ngữ ảnh khởi động không bị lệnh ghi muộn xoá). `kiem-dong-bo.py` bước 4b +1 phép: chờ kho IndexedDB chép xong rồi mới đo (nói rõ nếu app đã hạ xuống dự phòng), nên phép đo cỡ lô không phụ thuộc tốc độ mở.
+- **Đỏ trên bản cũ**: đặt lại từng đoạn sửa → 5 test đỏ (2 `commitSync`, 1 mở chậm, 2 engine dưới đây) + 1 `deviceStore` (biểu ngữ). Đã khôi phục (`cmp`).
+
+### Góp ý nhỏ — đã sửa (kèm test)
+1. **`pullAll` đẩy con trỏ qua trang chưa áp được**: `applyRecords` nay trả `true/false`; hết 4 lần thử thì `pullAll` **không ghi con trỏ** (trang đọc lại ở chu kỳ sau, đúng như chú thích). Test engine "does not move the cursor past it" (commitRemote luôn từ chối: con trỏ giữ nguyên, tài liệu không liên quan không tới; sau đó tới đủ).
+2. **Shadow dự phòng chỉ có băm (> 32 KB) bị đổi thành nền rỗng**: `shadowFromRecord` giữ `content: null` thay vì `''` → push sau không dựng patch/merge trên nền giả. Test "stays without text when the server only renamed the node" (cả vòng: đổi tên từ B, A giữ shadow không chữ, rồi đẩy lên không xung đột).
+
+### Không làm (có lý do)
+- **Ảnh khởi động v3 dựng lại cây với chữ rỗng khi IndexedDB bị xoá** (khi bật đồng bộ sinh thêm bản "(this device)" rỗng): sửa gốc cần cờ "chưa rõ chữ" trên `LocalDoc` + luật mới trong `reconcile` — không rẻ, đụng hợp đồng bản ghi; để M5+. Không mất dữ liệu trên máy chủ.
+- **Ngưỡng thời gian của `npm test`** (mathDelimiters, responsive, documentStats): nhạy tải máy, không liên quan đồng bộ; khi chạy lại một mình đều xanh, lần chạy cuối này 52/52. Khi máy bận dùng `MD_PERF_SLACK` hoặc `--pool=forks --maxWorkers=1`.
+- `MARKDOWN_LEGACY_PUT` và các điểm đã ghi: không đổi.
+
+### Lệch thiết kế mới
+- Hết giờ mở IndexedDB là 30 s (không phải 5 s) — đổi lại, trong lúc chờ ô soạn chưa sẵn sàng (`docsReady=false`) nếu thực sự treo.
+
+### Lệnh kiểm sau sửa lần 2 (kết quả thật, 24/10)
+| Lệnh | Kết quả |
+|---|---|
+| `cd markdown-editor && npm test && npm run type-check && npm run lint` | exit 0 — **52 tệp / 1.082 test**, tsc sạch, eslint 0 cảnh báo (lần chạy đầu có 2 test ngưỡng thời gian `mathDelimiters` đỏ do máy bận; chạy riêng 137/137, lần cuối 52/52) |
+| `kiem-dong-bo.py` | exit 0 — **Đạt 47 · SAI 0** (46 + 1 phép chờ kho IndexedDB ở bước 4b) |
+| `pytest -q …test_markdown_docs_controller.py …test_markdown_storage_controller.py` (DB_URL SQLite tạm, `MONGO_URI=`, `RATE_LIMIT_BACKEND=memory`, các `*_STORAGE_BACKEND=json`) | 107 passed (backend không đổi) |
+| `node scripts/build-webapps.mjs --only markdown-editor` rồi `--check` | exit 0 / exit 0 |
+| `kiem-pwa.py` (chạy 3 lần liền sau sửa biểu ngữ) | exit 0 ×3 — **Đạt 59 · SAI 0** |
+
+An toàn DB thật: như trên (kiem-* qua `_kiem_chung.MayChuThat`, pytest đặt đủ biến); không đọc/in `.env`, không chạm DB thật. Bản sao script nháp (`pwa_debug.py`) ở thư mục scratchpad ngoài repo, chỉ dùng `_kiem_chung.py` của repo.

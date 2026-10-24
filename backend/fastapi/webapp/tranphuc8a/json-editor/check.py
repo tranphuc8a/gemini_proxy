@@ -8,12 +8,14 @@
                                # Tab / Esc+Tab, cổng JE_APP, localStorage bị chặn, XSS, metadata nhánh gấp ở tab Cây (J2),
                                # tab Schema (J3): lỗi bấm tới Cây / văn bản / schema, huy hiệu, tuỳ chọn, ví dụ, dữ liệu lớn,
                                # ReDoS báo hết giờ + Worker chạy khi phục vụ qua máy chủ, mở tệp trông như schema, 360 px
-    ... check.py --file        # mở index.html bằng file:// (Worker từ Blob, kiểm schema, ReDoS hết giờ)
-    ... check.py --tat-ca      # mọi tầng đang có (tĩnh + chức năng + file)
+    ... check.py --file        # mở index.html bằng file:// (Worker từ Blob, kiểm schema, ReDoS hết giờ, Xem ảo + IndexedDB)
+    ... check.py --hieu-nang [N]   # tài liệu lớn N M ký tự (mặc định 10): input 1 MB, gõ phím, mở Xem, cuộn, gập, Cây, sửa ô, schema, IndexedDB;
+                               # in số đo THẬT; JE_PERF_SLACK=<hệ số> nới ngưỡng cho máy chậm (mặc định 1 = đúng ngưỡng thiết kế)
+    ... check.py --tat-ca      # mọi tầng đang có (tĩnh + chức năng + file; KHÔNG gồm --hieu-nang, chạy riêng)
     ... check.py --chuc-nang --chi=meta_nhanh_gap,xss   # chỉ vài nhóm phép Edge (tên hàm trong tang_chuc_nang)
 
 Máy chủ: http.server phục vụ CHÍNH thư mục app trên cổng trống (app không gọi API nào). Exit code ≠ 0 khi có phép sai.
-Tầng --hieu-nang của thiết kế sẽ thêm ở đợt J5 (tài liệu lớn)."""
+Tài liệu lớn (J5): nhóm phép soan_ao_vua, soan_ngat_dong, xem_ao, xem_giu_vi_tri, nhap_lon, thao_tac_lon, cay_nhom, sua_o_lon."""
 
 from __future__ import annotations
 
@@ -37,7 +39,7 @@ THU_TU_SCRIPT = ["assets/je-chung.js", "assets/tom-tat.js", "assets/vi-tri.js", 
                  "assets/regex-sinh.js", "assets/schema-sinh.js", "assets/schema-suy.js", "assets/chay-nen.js", "assets/json-editor.js"]
 # Module THUẦN (khuôn je-chung.js, đẩy vào JE_NGUON để Worker ghép lại): không DOM / storage / đồng hồ.
 MODULE_THUAN = ("je-chung.js", "tom-tat.js", "vi-tri.js", "schema-format.js", "schema-kiem.js", "regex-sinh.js", "schema-sinh.js", "schema-suy.js")
-NGAN_SACH_ASSETS = 400 * 1024
+NGAN_SACH_ASSETS = 480 * 1024      # J5 (+Xem ảo, nhóm cây, nháp lớn) nâng từ 400 KB
 # kiem-hinh.py bấm nút THEO TÊN — đổi tên là bộ kiểm bố cục im lặng bỏ qua nút đó.
 TEN_NUT_KIEM_HINH = ["Định dạng", "Nén", "Sắp khoá", "Chạy", "So sánh"]
 
@@ -246,6 +248,7 @@ def tang_file():
     with sync_playwright() as pw:
         tb = pw.chromium.launch(channel="msedge")
         schema_file(tb)
+        xem_file(tb)
         tb.close()
     check(not LOI_TRANG, "không có lỗi console / pageerror (file://)", LOI_TRANG[:4])
 
@@ -263,7 +266,8 @@ def tang_chuc_nang(chi=None):
             tb = pw.chromium.launch(channel="msedge")
             for f in (nap_sach, hoan_tac, tab_va_esc, loi_dot_j1, cong_je_app, luu_tru_bi_chan, xss, meta_nhanh_gap,
                       cong_schema, schema_tab, schema_tuy_chon, schema_xss, schema_360, schema_lon_redos, schema_hien_them, schema_mo_tep, schema_luu_tru_chan,
-                      sinh_giao_dien, sinh_benh_ly, suy_giao_dien, sinh_360):
+                      sinh_giao_dien, sinh_benh_ly, suy_giao_dien, sinh_360,
+                      soan_ao_vua, soan_ngat_dong, xem_ao, xem_giu_vi_tri, nhap_lon, thao_tac_lon, cay_nhom, sua_o_lon):
                 if not chi or f.__name__ in chi:
                     f(tb, url)
             tb.close()
@@ -1651,6 +1655,811 @@ def cong_schema(tb, url):
     T.dong()
 
 
+# ============================================================================================ tài liệu lớn (J5)
+SLACK = float(os.environ.get("JE_PERF_SLACK", "1") or "1")     # hệ số máy chậm cho ngưỡng thời gian của --hieu-nang
+_CACHE_MAU: dict = {}
+
+
+def mau_json(muc_tieu):
+    """Tài liệu thử có seed cố định: {"items": [N object lồng 3 cấp, tiếng Việt], "meta": {...}} thụt 2, ≈ muc_tieu ký tự.
+    Trả (văn bản, danh sách items). Dòng 1 = '  "items": [' (khối gấp được lớn nhất)."""
+    if muc_tieu in _CACHE_MAU:
+        return _CACHE_MAU[muc_tieu]
+    import random
+    r = random.Random(42)
+    items, tong, i = [], 40, 0
+    while tong < muc_tieu:
+        o = {"id": i, "name": "Người dùng %d" % i, "email": "u%d@example.com" % i, "active": r.random() < .5,
+             "score": round(r.random() * 100, 3), "tags": [r.choice(["a", "b", "c", "d"]) for _ in range(3)],
+             "addr": {"city": r.choice(["Hà Nội", "Huế", "Đà Nẵng"]), "zip": r.randint(10000, 99999)}}
+        tong += len(json.dumps(o, ensure_ascii=False, indent=2)) + 6
+        items.append(o)
+        i += 1
+    vb = json.dumps({"items": items, "meta": {"n": len(items), "ten": "mẫu thử"}}, ensure_ascii=False, indent=2)
+    _CACHE_MAU[muc_tieu] = (vb, items)
+    return _CACHE_MAU[muc_tieu]
+
+
+def _dat_vb(p, vb, cho=True):
+    """Gán văn bản như người dán: .value + sự kiện input. Đang ở chế độ Xem (textarea ẩn, văn bản lớn nằm ngoài textarea)
+    thì không ai dán được vào đó: đi qua JE_APP.datVanBan như nút Mở tệp."""
+    p.evaluate("""t => { const n = document.querySelector('#nhap');
+        if (JE_APP.cheDoSoan() === 'xem') { JE_APP.datVanBan(t, { nhan: 'Dán thử' }); return; }
+        n.value = t; n.dispatchEvent(new Event('input', {bubbles: true})); }""", vb)
+    if cho:
+        p.wait_for_timeout(330)
+
+
+def _cho_khung(p, n=2):
+    """Chờ n khung hình (rAF) để lớp vẽ ảo kịp chạy."""
+    p.evaluate("n => new Promise(r => { const f = k => k ? requestAnimationFrame(() => f(k - 1)) : r(); f(n); })", n)
+
+
+def _hang_xem(p):
+    """Các hàng đang dựng của Xem: [[số dòng, nội dung văn bản]]."""
+    return p.evaluate("""() => Array.from(document.querySelectorAll('#xem-cua .xh')).map(h =>
+        [parseInt(h.querySelector('.xs').textContent, 10), h.querySelector('.xn').textContent])""")
+
+
+def _cheDo(p):
+    return p.evaluate("() => JE_APP.cheDoSoan()")
+
+
+def _idb_nhap(p):
+    """Bản ghi nháp trong IndexedDB: [n, độ dài s, s trùng #nhap] hoặc None."""
+    return p.evaluate("""() => new Promise(r => { const q = indexedDB.open('json-editor', 1); q.onerror = () => r('loi');
+        q.onsuccess = () => { const db = q.result; if (!db.objectStoreNames.contains('nhap')) { db.close(); r(null); return; }
+          const g = db.transaction('nhap').objectStore('nhap').get('nhap');
+          g.onsuccess = () => { db.close(); r(g.result ? [g.result.n, g.result.s.length, g.result.s === JE_APP.layVanBan()] : null); }; g.onerror = () => r('loi'); }; })""")
+
+
+def _cho_idb(p, dk, timeout=8000):
+    """Chờ (thăm dò mỗi 200 ms) tới khi dk(bản ghi) đúng; trả bản ghi cuối. wait_for_function KHÔNG chờ Promise, nên vòng lặp ở đây."""
+    t = 0
+    rec = _idb_nhap(p)
+    while not dk(rec) and t < timeout:
+        p.wait_for_timeout(200)
+        t += 200
+        rec = _idb_nhap(p)
+    return rec
+
+
+def _chu_thich_byte(vb):
+    return len(vb.encode("utf-8"))
+
+
+def soan_ao_vua(tb, url):
+    section(" · ô Soạn ảo: số dòng + lớp tô màu chỉ dựng vùng nhìn thấy, khớp textarea từng hàng (việc 4, 5)")
+    vb, items = mau_json(1000000)
+    n_dong = vb.count("\n") + 1
+    T = Trang(tb, url, "soan-ao")
+    p = T.p
+    ws = p.evaluate("() => getComputedStyle(document.querySelector('#nhap')).whiteSpace")
+    check(ws == "pre" and p.get_attribute("#soan-ngat-dong", "aria-pressed") == "false", "mặc định KHÔNG ngắt dòng (white-space: pre), nút “↩ Ngắt dòng” chưa bật", ws)
+    t = p.evaluate("""t => { const n = document.querySelector('#nhap'); n.value = t; const t0 = performance.now();
+        n.dispatchEvent(new Event('input', {bubbles: true})); return performance.now() - t0; }""", vb)
+    _cho_khung(p, 3)
+    p.wait_for_timeout(300)
+    so_the = p.evaluate("() => document.querySelectorAll('#so-dong *').length")
+    so_h = p.evaluate("() => document.querySelectorAll('#lop-mau .h').length")
+    check(_cheDo(p) == "sua" and len(vb) < 1572864, "văn bản %.2f M ký tự (< 1,5 M): ở lại ô Sửa" % (len(vb) / 1e6))
+    check(so_the < 200 and 20 < so_h < 200, "số dòng ảo %d thẻ DOM, lớp màu %d hàng (không phải %d dòng)" % (so_the, so_h, n_dong), [so_the, so_h])
+    check(t < 50 * SLACK + 100, "sự kiện input sau khi dán 1 MB: %.1f ms (đồng bộ; trước J5: ~2 000+ ms)" % t, t)
+    info("input 1 MB (đồng bộ): %.2f ms; %d thẻ số dòng, %d hàng lớp màu" % (t, so_the, so_h))
+
+    lh = p.evaluate("() => parseFloat(getComputedStyle(document.querySelector('#nhap')).lineHeight)")
+    dong_vb = vb.split("\n")
+    for ten, ty_le in [("đầu", 0.0), ("giữa", 0.5), ("cuối", 1.0)]:
+        p.evaluate("""r => { const n = document.querySelector('#nhap'); n.scrollTop = r * (n.scrollHeight - n.clientHeight); }""", ty_le)
+        _cho_khung(p, 3)
+        kq = p.evaluate("""() => {
+            const n = document.querySelector('#nhap'), nr = n.getBoundingClientRect(), pad = parseFloat(getComputedStyle(n).paddingTop), lh = parseFloat(getComputedStyle(n).lineHeight);
+            const hs = Array.from(document.querySelectorAll('#lop-mau .h')), so = Array.from(document.querySelectorAll('#so-dong .sd-cua > div'));
+            const k = Math.floor((n.scrollTop + n.clientHeight / 2 - pad) / lh);       // hàng ở giữa vùng nhìn thấy (0-based)
+            const mauDau = parseInt(document.querySelector('#lop-mau .mau-cua').getAttribute('data-tu'), 10);
+            const h = hs[k - mauDau], s = so.find(d => d.textContent === String(k + 1));
+            const y = pad + k * lh - n.scrollTop + nr.top;                             // toạ độ y mong đợi của hàng k
+            return { k, chu: h ? h.textContent : null, yMau: h ? h.getBoundingClientRect().top : null, soDong: s ? s.textContent : null,
+                     ySo: s ? s.getBoundingClientRect().top : null, yMong: y, tren: n.scrollTop };
+        }""")
+        check(kq["chu"] == dong_vb[kq["k"]] and abs(kq["yMau"] - kq["yMong"]) < 0.6 and kq["soDong"] == str(kq["k"] + 1) and abs(kq["ySo"] - kq["yMong"]) < 0.6,
+              "[%s] hàng %d: chữ lớp màu = dòng textarea, lệch dọc lớp màu %.2f px, số dòng %.2f px (lh=%s)" % (ten, kq["k"] + 1, abs((kq["yMau"] or 0) - kq["yMong"]), abs((kq["ySo"] or 0) - kq["yMong"]), lh), kq)
+    # toạ độ ngang: lớp màu bám scrollLeft của textarea khi có dòng dài
+    dai = vb.replace('"email": "u5@example.com"', '"email": "' + "x" * 3000 + '"', 1)
+    _dat_vb(p, dai)
+    p.evaluate("() => { const n = document.querySelector('#nhap'); n.scrollTop = 0; n.scrollLeft = 1200; }")
+    _cho_khung(p, 3)
+    sl = p.evaluate("() => [document.querySelector('#nhap').scrollLeft, document.querySelector('#lop-mau').scrollLeft]")
+    check(sl[0] > 500 and abs(sl[0] - sl[1]) <= 1, "dòng dài 3 000 ký tự: lớp màu bám scrollLeft của textarea (%s)" % sl, sl)
+
+    # gõ một ký tự giữa tài liệu: lớp màu cập nhật đúng hàng, con trỏ ở yên
+    p.evaluate("""() => { const n = document.querySelector('#nhap'); n.scrollTop = 0.5 * (n.scrollHeight - n.clientHeight); }""")
+    _cho_khung(p, 2)
+    gt = p.evaluate("""() => { const n = document.querySelector('#nhap'), lh = parseFloat(getComputedStyle(n).lineHeight), pad = parseFloat(getComputedStyle(n).paddingTop);
+        const k = Math.floor((n.scrollTop + 200 - pad) / lh); const s = n.value, st = []; let i = 0, d = 0; while (d < k) { i = s.indexOf('\\n', i) + 1; d++; }
+        n.focus(); n.setSelectionRange(i, i); return [k, i]; }""")
+    p.keyboard.type("§")
+    _cho_khung(p, 3)
+    co = p.evaluate("""k => { const h = Array.from(document.querySelectorAll('#lop-mau .h')).find(x => x.textContent.startsWith('§')); return !!h; }""", gt[0])
+    check(co, "gõ ‘§’ đầu dòng giữa tài liệu 1 MB → lớp màu cập nhật đúng hàng")
+
+    # dòng lỗi: số dòng đỏ + ký tự lỗi gạch đỏ, dù cuộn đi xa rồi quay lại
+    loi_vb = vb.replace('"id": 3000,', '"id": 3000 ,,', 1)
+    dong_loi = loi_vb[:loi_vb.index('3000 ,,')].count("\n") + 1
+    _dat_vb(p, loi_vb)
+    p.evaluate("() => JE_APP.denDong(%d)" % dong_loi)
+    _cho_khung(p, 3)
+    p.wait_for_timeout(200)
+    loi_ui = p.evaluate("""() => { const s = document.querySelector('#so-dong .sd-cua > div.loi'); return { so: s ? s.textContent : null, m: document.querySelectorAll('#lop-mau .m-loi').length, tt: document.querySelector('#trang-thai').textContent }; }""")
+    check(loi_ui["so"] == str(dong_loi) and loi_ui["m"] == 1 and "Lỗi ở dòng %d" % dong_loi in loi_ui["tt"],
+          "JSON lỗi ở dòng %d: số dòng đỏ đúng hàng sau khi cuộn tới, 1 ký tự gạch đỏ, chân trang báo đúng dòng" % dong_loi, loi_ui)
+    T.dong()
+
+
+def soan_ngat_dong(tb, url):
+    section(" · nút “↩ Ngắt dòng” (Alt+Z): nhớ lựa chọn; bật thì về đường cũ (tô màu tới 300 KB)")
+    nho = json.dumps({"mo_ta": "dài " * 80, "x": [1, 2, 3]}, ensure_ascii=False, indent=2)
+    T = Trang(tb, url, "ngat-dong")
+    p = T.p
+    _dat_vb(p, nho)
+    p.click("#soan-ngat-dong")
+    p.wait_for_timeout(120)
+    ws = p.evaluate("() => [getComputedStyle(document.querySelector('#nhap')).whiteSpace, document.querySelector('#vung-soan').classList.contains('ngat-dong'), document.querySelector('#nhap').wrap]")
+    check(ws == ["pre-wrap", True, "soft"] and p.get_attribute("#soan-ngat-dong", "aria-pressed") == "true",
+          "bấm “↩ Ngắt dòng” → pre-wrap, lớp .ngat-dong, aria-pressed=true", ws)
+    check(p.evaluate("() => document.querySelectorAll('#lop-mau .k .h').length") >= 4 and p.locator("#lop-mau .mau-khung").count() == 0
+          and p.evaluate("() => document.querySelector('#lop-mau .h').getBoundingClientRect().height") > 0,
+          "ngắt dòng: lớp màu dùng đường cũ (khối .k, không còn khung ảo .mau-khung)")
+    p.reload()
+    p.wait_for_function("() => !!window.JE_APP")
+    check(p.get_attribute("#soan-ngat-dong", "aria-pressed") == "true" and p.evaluate("() => document.querySelector('#vung-soan').classList.contains('ngat-dong')"),
+          "tải lại trang: lựa chọn ngắt dòng được nhớ (localStorage json-editor:ngat-dong)")
+    p.click("#nhap")
+    p.keyboard.press("Alt+z")
+    p.wait_for_timeout(120)
+    check(p.get_attribute("#soan-ngat-dong", "aria-pressed") == "false" and p.evaluate("() => getComputedStyle(document.querySelector('#nhap')).whiteSpace") == "pre",
+          "Alt+Z tắt ngắt dòng, nhớ lại")
+    # văn bản 400 KB: ngắt dòng bật → tô màu tắt (trần 300 KB); tắt → ảo, vẫn tô
+    vb4 = mau_json(400000)[0]
+    _dat_vb(p, vb4)
+    _cho_khung(p, 3)
+    check(p.evaluate("() => document.querySelector('#vung-soan').classList.contains('co-mau')") and not p.is_visible("#bao-mau"), "400 KB không ngắt dòng: có tô màu ảo, không báo “tô màu đã tắt”")
+    p.keyboard.press("Alt+z")
+    _cho_khung(p, 3)
+    check(not p.evaluate("() => document.querySelector('#vung-soan').classList.contains('co-mau')") and p.is_visible("#bao-mau") and "300 KB" in p.inner_text("#bao-mau"),
+          "400 KB có ngắt dòng: tô màu tắt (> 300 KB) và chân trang nói rõ lý do")
+    T.dong()
+
+
+def xem_ao(tb, url):
+    section(" · chế độ Xem: tự vào khi > 1,5 MB, gập khối + chú thích, sửa khối giữ nguyên byte, hoàn tác (việc 11, 12, 13)")
+    vb, items = mau_json(1700000)
+    T = Trang(tb, url, "xem-ao")
+    p = T.p
+    n_dong = vb.count("\n") + 1
+    _dat_vb(p, vb)
+    p.wait_for_function("() => JE_APP.cheDoSoan() === 'xem' && document.querySelectorAll('#xem-cua .xh').length > 0", timeout=8000)
+    p.wait_for_function("() => document.querySelector('#xem-tien-do').textContent.indexOf('khối') >= 0", timeout=8000)
+    hs = _hang_xem(p)
+    check(not p.is_visible("#nhap") and p.is_visible("#xem-khung") and p.evaluate("() => JE_APP.layVanBan().length") == len(vb),
+          "dán %.2f M ký tự (> 1,5 M): tự vào chế độ Xem, textarea ẩn nhưng vẫn giữ nguyên văn bản" % (len(vb) / 1e6))
+    check("Tài liệu lớn" in p.inner_text("#bang-lon-chu") and p.is_visible("#bang-lon-sua-tho"), "băng báo “Tài liệu lớn …” + nút “Vẫn sửa văn bản thô (chậm)”", p.inner_text("#bang-lon-chu"))
+    check(20 < len(hs) < 90 and hs[0][0] == 1 and hs[0][1] == "{" and hs[1] == [2, '  "items": [']
+          and [x[0] for x in hs] == list(range(1, len(hs) + 1)), "Xem dựng %d hàng (không phải %d dòng); số dòng 1…%d liên tục, nội dung đúng" % (len(hs), n_dong, len(hs)), hs[:3])
+    check(p.evaluate("() => document.querySelectorAll('#xem-cua .xh .m-k').length") >= 3 and p.evaluate("() => document.querySelectorAll('#xem-cua .xh .m-s').length") >= 3,
+          "tô màu từng hàng (khoá .m-k, chuỗi .m-s)")
+    ts = p.evaluate("() => document.querySelector('#xem-cao').style.height")
+    check(abs(float(ts[:-2]) - n_dong * 21) < 1, "khung cuộn ảo cao đúng = %d dòng × 21 px (%s)" % (n_dong, ts), ts)
+
+    # gấp khối items (khối lớn nhất): chú thích số phần tử + "≈ … ký tự" (quá lớn để đo byte), số dòng nhảy qua khối
+    p.click("#xem-cua .xh[data-l='1'] .xg")
+    _cho_khung(p, 2)
+    hs = _hang_xem(p)
+    ct = p.inner_text("#xem-cua .xh[data-l='1'] .xp")
+    sau = [x for x in hs if x[0] > 2][0]
+    n_it = len(items)
+    dong_dong = vb.split("\n").index("  ],")
+    from_lines = vb.split("\n")
+    check(ct.startswith("⟨ %s phần tử · ≈ " % ("{:,}".format(n_it).replace(",", "."))) and "ký tự" in ct, "gập items: chú thích “%s”" % ct, ct)
+    check(hs[1][1].startswith('  "items": [') and hs[1][1].rstrip().endswith("⟩ ,") or hs[1][1].rstrip().endswith("⟩,"), "hàng gập giữ phần đầu và phần đuôi “,” của dòng đóng khối", hs[1][1])
+    check(sau[0] == dong_dong + 2 and sau[1] == from_lines[dong_dong + 1], "dòng sau khối nhảy tới %d (= dòng sau '  ],'): %r" % (dong_dong + 2, sau), sau)
+    check(abs(float(p.evaluate("() => document.querySelector('#xem-cao').style.height")[:-2]) - (n_dong - dong_dong) * 21 - 0) < 21 * 3, "khung cuộn co lại theo số hàng còn hiện")
+    # mở lại bằng chú thích
+    p.click("#xem-cua .xh[data-l='1'] .xp")
+    _cho_khung(p, 2)
+    check(p.locator("#xem-cua .xh[data-l='2']").count() == 1 and p.locator("#xem-cua .xp").count() == 0, "bấm chú thích → mở lại khối, hàng 3 hiện ra")
+
+    # gập tới cấp N / mở hết
+    p.click("#xem-cong-cu [data-cap='2']")
+    _cho_khung(p, 2)
+    hs = _hang_xem(p)
+    check(p.locator("#xem-cua .xp").count() >= 5 and not any('"name"' in h[1] for h in hs) and all("⟨ 7 khoá" in h[1] for h in hs[2:5]),
+          "“Gập tới cấp 2”: mỗi object trong items gấp thành một dòng “{⟨ 7 khoá · … ⟩,” (không thấy name)", hs[:6])
+    p.click("#xem-mo-het")
+    _cho_khung(p, 2)
+    check(p.locator("#xem-cua .xp").count() == 0, "“Mở hết” → không còn chú thích gấp")
+
+    # chú thích đo được (khối nhỏ): đúng số khoá + byte nén + kiểu con
+    p.click("#xem-cong-cu [data-cap='2']")
+    _cho_khung(p, 2)
+    ct0 = p.inner_text("#xem-cua .xp")
+    it0 = items[0]
+    byte0 = len(json.dumps(it0, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    mong = p.evaluate("b => JE_THU.dinhDangByte(b)", byte0)
+    check(ct0 == "⟨ 7 khoá · %s ⟩" % mong, "chú thích khối nhỏ: “%s” (7 khoá, %d byte nén đúng bằng UTF-8 của JSON nén)" % (ct0, byte0), ct0)
+    # khối mảng nhỏ: tags
+    p.click("#xem-mo-het")
+    _cho_khung(p, 2)
+    tags = [h for h in _hang_xem(p) if '"tags": [' in h[1]][0]
+    p.click("#xem-cua .xh[data-l='%d'] .xg" % (tags[0] - 1))
+    _cho_khung(p, 2)
+    ct1 = p.inner_text("#xem-cua .xh[data-l='%d'] .xp" % (tags[0] - 1))
+    b1 = len(json.dumps(it0["tags"], separators=(",", ":")).encode())
+    mong1 = p.evaluate("b => JE_THU.dinhDangByte(b)", b1)
+    check(ct1 == "⟨ 3 phần tử · %s · string×3 ⟩" % mong1, "chú thích mảng: “%s”" % ct1, ct1)
+    p.click("#xem-mo-het")
+
+    # sửa khối: bấm đúp hàng mở object items[3] (> ngưỡng nên mở hộp Sửa khối)
+    goc_vb = vb
+    d_obj = [i for i, l in enumerate(vb.split("\n")) if l == "    {"][3]
+    p.evaluate("l => JE_APP.denDong(l + 1)", d_obj)
+    _cho_khung(p, 3)
+    p.wait_for_timeout(150)
+    p.dblclick("#xem-cua .xh[data-l='%d'] .xn" % d_obj)
+    p.wait_for_selector("#xem-sua-vb", state="visible", timeout=3000)
+    tv = p.input_value("#xem-sua-vb")
+    check(tv.startswith("{") and tv.rstrip().endswith("}") and '"id": 3' in tv and "Sửa khối" in p.inner_text("#xem-sua-tieu-de"),
+          "bấm đúp hàng mở object → hộp “Sửa khối” chứa đúng văn bản khối (%d ký tự)" % len(tv), tv[:60])
+    p.fill("#xem-sua-vb", "{ không phải json")
+    p.click("#xem-sua-luu")
+    check(p.is_visible("#xem-sua-vb") and "JSON hợp lệ" in p.inner_text("#xem-sua-loi") and p.evaluate("() => JE_APP.layVanBan().length") == len(goc_vb),
+          "lưu văn bản hỏng → báo lỗi tại chỗ, KHÔNG ghi gì")
+    moi_khoi = tv.replace('"name": "Người dùng 3"', '"name": "Đã sửa"')
+    p.fill("#xem-sua-vb", moi_khoi)
+    p.click("#xem-sua-luu")
+    p.wait_for_timeout(300)
+    vb_moi = p.evaluate("() => JE_APP.layVanBan()")
+    bd = goc_vb.index(tv)
+    mong_vb = goc_vb[:bd] + moi_khoi + goc_vb[bd + len(tv):]
+    check(vb_moi == mong_vb and not p.is_visible("#xem-sua-vb"), "Lưu khối: văn bản mới = phần trước + khối đã sửa + phần sau, KHÔNG đổi một byte ngoài khối (%d ký tự)" % len(vb_moi))
+    check(_cheDo(p) == "xem" and "Sửa khối" in p.get_attribute("#nut-hoan-tac", "title"), "vẫn ở Xem; nút ↶ ghi “Hoàn tác: Sửa khối”", p.get_attribute("#nut-hoan-tac", "title"))
+    p.click("#nut-hoan-tac")
+    p.wait_for_timeout(300)
+    check(p.evaluate("() => JE_APP.layVanBan()") == goc_vb and _cheDo(p) == "xem", "Ctrl+Z / ↶ → về đúng văn bản trước khi sửa (một bước)")
+    # khối quá lớn
+    p.evaluate("() => JE_APP.denDong(1)")
+    _cho_khung(p, 3)
+    p.click("#xem-cua .xh[data-l='1'] .xe", force=True)
+    p.wait_for_timeout(100)
+    check(not p.is_visible("#xem-sua-vb") and "quá lớn" in p.inner_text("#xem-tien-do"), "khối items lớn hơn ngưỡng: không mở hộp sửa, báo “Khối quá lớn”", p.inner_text("#xem-tien-do"))
+
+    # bàn phím: ↓ chọn hàng, ← gấp, → mở, Enter mở sửa khối
+    p.evaluate("() => JE_APP.denDong(1)")
+    _cho_khung(p, 3)
+    p.focus("#xem-cuon")
+    p.keyboard.press("ArrowDown")
+    p.keyboard.press("ArrowDown")
+    p.keyboard.press("ArrowLeft")
+    _cho_khung(p, 2)
+    check(p.locator("#xem-cua .xh.xh-chon .xp").count() == 1, "↓↓ rồi ← → hàng được chọn (dòng 2) gấp lại, hiện chú thích")
+    p.keyboard.press("ArrowRight")
+    _cho_khung(p, 2)
+    check(p.locator("#xem-cua .xh.xh-chon .xp").count() == 0, "→ mở lại khối ở hàng chọn")
+    # đi tới vị trí (từ lỗi schema / truy vấn): mở khối gấp chứa dòng đó, cuộn tới, nháy hàng
+    p.evaluate("() => document.querySelector('#xem-cong-cu [data-cap=\"1\"]').click()")
+    _cho_khung(p, 2)
+    bd2 = vb_moi.index('"Người dùng 1500"') if '"Người dùng 1500"' in vb_moi else goc_vb.index('"Người dùng 1500"')
+    p.evaluate("([a, b]) => JE_APP.denViTri(a, b)", [goc_vb.index('"Người dùng 1500"'), goc_vb.index('"Người dùng 1500"') + 17])
+    _cho_khung(p, 3)
+    p.wait_for_timeout(120)
+    hang = p.evaluate("""() => Array.from(document.querySelectorAll('#xem-cua .xh')).filter(h => h.textContent.indexOf('Người dùng 1500') >= 0).map(h => [h.className, h.querySelector('.xs').textContent])""")
+    check(len(hang) == 1 and "xh-nhay" in hang[0][0], "denViTri trong Xem: mở khối gấp chứa vị trí, cuộn tới và nháy đúng hàng", hang)
+    T.dong()
+
+    # Vẫn sửa văn bản thô / về Xem
+    T2 = Trang(tb, url, "xem-tho")
+    p = T2.p
+    _dat_vb(p, vb)
+    p.wait_for_function("() => JE_APP.cheDoSoan() === 'xem'", timeout=8000)
+    p.click("#bang-lon-sua-tho")
+    p.wait_for_timeout(800)
+    check(_cheDo(p) == "sua" and p.is_visible("#nhap") and not p.evaluate("() => document.querySelector('#vung-soan').classList.contains('co-mau')") and p.is_visible("#bao-mau"),
+          "“Vẫn sửa văn bản thô”: ô Sửa hiện, tô màu tắt (> 1,5 M), chân trang báo")
+    p.click("#soan-xem")
+    p.wait_for_timeout(300)
+    check(_cheDo(p) == "xem" and p.get_attribute("#soan-xem", "aria-pressed") == "true" and p.get_attribute("#soan-sua", "aria-pressed") == "false", "bấm “👁 Xem” → về Xem, aria-pressed đúng")
+    T2.dong()
+
+
+def xem_giu_vi_tri(tb, url):
+    section(" · chuyển Sửa ⇄ Xem giữ vị trí; JSON lỗi vẫn gấp được; một dòng 2 MB (việc 11, 12)")
+    vb, items = mau_json(300000)
+    T = Trang(tb, url, "xem-vi-tri")
+    p = T.p
+    _dat_vb(p, vb)
+    dong_n = 2200
+    p.evaluate("l => JE_APP.denDong(l)", dong_n)
+    _cho_khung(p, 3)
+    p.click("#soan-xem")
+    p.wait_for_timeout(400)
+    hs = _hang_xem(p)
+    check(any(abs(h[0] - dong_n) <= 3 for h in hs), "Sửa → Xem: Xem cuộn tới đúng vùng quanh dòng %d (thấy dòng %d…%d)" % (dong_n, hs[0][0], hs[-1][0]), [hs[0][0], hs[-1][0]])
+    check(not p.is_visible("#nhap") and p.is_visible("#xem-cong-cu") and p.is_visible("#soan-xem"), "ở Xem: thanh gấp hiện, textarea ẩn (300 KB: tự chọn Xem, không bị ép)")
+    p.focus("#xem-cuon")
+    p.keyboard.press("Enter")
+    p.wait_for_timeout(300)
+    # văn bản nhỏ: Enter trên hàng ở Xem → sang Sửa đúng dòng
+    p.evaluate("() => JE_APP.datCheDoSoan('xem')")
+    p.evaluate("l => JE_APP.denViTri(JE_APP.layVanBan().split('\\n').slice(0, l).join('\\n').length + 1, 0)", dong_n)
+    p.wait_for_timeout(200)
+    p.dblclick("#xem-cua .xh.xh-nhay .xn")
+    p.wait_for_timeout(400)
+    sel = p.evaluate("""() => { const n = document.querySelector('#nhap'); return [JE_APP.cheDoSoan(), n.value.slice(0, n.selectionStart).split('\\n').length, document.activeElement === n]; }""")
+    check(sel[0] == "sua" and abs(sel[1] - dong_n) <= 1 and sel[2], "bấm đúp hàng ở Xem (văn bản ≤ ngưỡng) → sang ô Sửa, con trỏ ở dòng %d (dòng %s)" % (dong_n, sel[1]), sel)
+    # Ctrl+Shift+[ từ ô Sửa: gập khối chứa con trỏ ⇒ Xem
+    p.evaluate("() => { const n = document.querySelector('#nhap'); const i = n.value.indexOf('\"tags\"'); n.focus(); n.setSelectionRange(i + 3, i + 3); }")
+    p.keyboard.press("Control+Shift+[")
+    p.wait_for_function("() => JE_APP.cheDoSoan() === 'xem' && document.querySelectorAll('#xem-cua .xp').length >= 1", timeout=4000)
+    check(p.locator("#xem-cua .xp").first.inner_text().startswith("⟨ 3 phần tử"), "Ctrl+Shift+[ ở ô Sửa → sang Xem, khối chứa con trỏ (tags) đã gấp", p.locator("#xem-cua .xp").first.inner_text())
+    p.keyboard.press("Control+Shift+]")
+    p.wait_for_timeout(300)
+    check(p.locator("#xem-cua .xp").count() == 0, "Ctrl+Shift+] mở khối đó lại")
+    # JSON hỏng vẫn gấp được
+    hong = vb[:-3]
+    _dat_vb(p, hong)
+    p.evaluate("() => JE_APP.datCheDoSoan('xem')")
+    p.wait_for_function("() => document.querySelector('#xem-tien-do').textContent.indexOf('khối') >= 0", timeout=4000)
+    p.click("#xem-cua .xh[data-l='1'] .xg")
+    _cho_khung(p, 2)
+    ct = p.inner_text("#xem-cua .xh[data-l='1'] .xp")
+    check(p.evaluate("() => JE_APP.hopLe()") is False and ct.startswith("⟨ %s phần tử · ≈ " % "{:,}".format(len(items)).replace(",", ".")), "JSON thiếu ngoặc: Xem vẫn gấp được; chú thích chỉ có số phần tử + ≈ ký tự (không có mô hình)", ct)
+    T.dong()
+    # một dòng khổng lồ (nén): Xem báo "bấm Định dạng", cắt dòng dài
+    T = Trang(tb, url, "xem-mot-dong")
+    p = T.p
+    nen = json.dumps(json.loads(mau_json(2600000)[0]), ensure_ascii=False, separators=(",", ":"))
+    _dat_vb(p, nen)
+    p.wait_for_function("() => JE_APP.cheDoSoan() === 'xem'", timeout=8000)
+    p.wait_for_timeout(300)
+    hs = _hang_xem(p)
+    check(len(hs) == 1 and "… (+" in p.inner_text("#xem-cua .xn") and len(hs[0][1]) < 5200 and "bấm Định dạng" in p.inner_text("#bang-lon-chu"),
+          "một dòng %.1f M ký tự: Xem cắt còn ≤ 5 000 ký tự + “… (+N ký tự)”, băng báo “bấm Định dạng để xem và gập”" % (len(nen) / 1e6), [len(hs), p.inner_text("#bang-lon-chu")])
+    p.click("#nut-dinh-dang")
+    p.wait_for_function("() => document.querySelectorAll('#xem-cua .xh').length > 20", timeout=20000)
+    check(_cheDo(p) == "xem" and "một dòng" not in p.inner_text("#bang-lon-chu").lower(), "bấm Định dạng → nhiều dòng, Xem cuộn và gập được")
+    T.dong()
+
+
+def nhap_lon(tb, url):
+    section(" · nháp lớn: IndexedDB, báo rõ khi không lưu được, không để bản cũ sống lại (việc 6)")
+    vb, _ = mau_json(2300000)
+    # --- 1. > 2 MB lưu IndexedDB; tải lại khôi phục đúng; ghi nhỏ lại thì dọn IndexedDB
+    T = Trang(tb, url, "nhap-idb")
+    p = T.p
+    _dat_vb(p, '{"cu": 1}')
+    p.wait_for_timeout(250)
+    check(p.evaluate("() => localStorage.getItem('json-editor:nhap')") == '{"cu": 1}', "nháp nhỏ: localStorage giữ bản mới nhất")
+    _dat_vb(p, vb, cho=False)
+    p.wait_for_function("() => localStorage.getItem('json-editor:nhap') === null", timeout=4000)
+    rec = _cho_idb(p, lambda r: r is not None and r != "loi")
+    ok = rec is not None
+    check(rec == [len(vb), len(vb), True] and p.evaluate("() => localStorage.getItem('json-editor:nhap')") is None and p.evaluate("() => localStorage.getItem('json-editor:nhap-qua-lon')") is None,
+          "dán %.2f M ký tự (> 2 M): ghi vào IndexedDB (đủ %d ký tự, trùng văn bản), localStorage KHÔNG còn bản cũ {\"cu\": 1}" % (len(vb) / 1e6, len(vb)), [ok, rec])
+    p.reload()
+    p.wait_for_function("() => !!window.JE_APP")
+    p.wait_for_function("() => JE_APP.layVanBan().length > 1000000", timeout=8000)
+    check(p.evaluate("() => JE_APP.layVanBan()") == vb and "khôi phục" in p.inner_text("#bang-nhap-chu") and _cheDo(p) == "xem",
+          "tải lại trang: khôi phục ĐÚNG bản nháp từ IndexedDB (khớp từng ký tự), vào Xem, băng báo “Đã khôi phục”")
+    # sửa nhỏ lại → localStorage nhận, IndexedDB được dọn
+    _dat_vb(p, '{"nho": true}')
+    p.wait_for_timeout(500)
+    rec = _cho_idb(p, lambda r: r is None)
+    check(p.evaluate("() => localStorage.getItem('json-editor:nhap')") == '{"nho": true}' and rec is None, "dán văn bản nhỏ lại: localStorage nhận, bản lớn trong IndexedDB bị xoá", rec)
+    check(not p.is_visible("#bang-nhap"), "băng báo nháp ẩn khi lưu thành công")
+    T.dong()
+
+    # --- 2. IndexedDB từ chối (quota): xoá bản cũ, báo rõ, nút Tải về; tải lại KHÔNG hồi sinh bản cũ
+    quota = """(() => { const put = IDBObjectStore.prototype.put;
+        IDBObjectStore.prototype.put = function () { throw new DOMException('đầy rồi', 'QuotaExceededError'); }; })();"""
+    T = Trang(tb, url, "nhap-quota", init=quota)
+    p = T.p
+    _dat_vb(p, '{"ban_cu": "KHÔNG ĐƯỢC HIỆN LẠI"}')
+    p.wait_for_timeout(250)
+    check(p.evaluate("() => localStorage.getItem('json-editor:nhap')") is not None, "nháp nhỏ vẫn vào localStorage (IndexedDB hỏng không ảnh hưởng)")
+    _dat_vb(p, vb, cho=False)
+    p.wait_for_function("() => !document.querySelector('#bang-nhap').hidden", timeout=6000)
+    th = p.evaluate("() => [document.querySelector('#bang-nhap-chu').textContent, !document.querySelector('#bang-nhap-tai').hidden, localStorage.getItem('json-editor:nhap'), localStorage.getItem('json-editor:nhap-qua-lon')]")
+    check("không tự lưu được" in th[0] and "hết dung lượng" in th[0] and th[1] and th[2] is None and th[3] is not None,
+          "ghi IndexedDB bị từ chối (Quota): băng báo “… không tự lưu được (hết dung lượng …)”, có nút Tải về, bản nháp cũ bị XOÁ, có cờ nhap-qua-lon", th)
+    with p.expect_download(timeout=8000) as dl:
+        p.click("#bang-nhap-tai")
+    check(dl.value.suggested_filename == "du-lieu.json", "nút “💾 Tải về” trong băng báo tải tệp du-lieu.json")
+    p.reload()
+    p.wait_for_function("() => !!window.JE_APP")
+    p.wait_for_timeout(400)
+    th = p.evaluate("() => [JE_APP.layVanBan(), document.querySelector('#bang-nhap-chu').textContent, !document.querySelector('#bang-nhap').hidden]")
+    check(th[0] == "" and th[2] and "đã mất" in th[1], "tải lại: KHÔNG hiện bản nháp cũ (không hồi sinh '{\"ban_cu\"…}'); báo “lần trước … đã mất khi đóng trang”", th)
+    p.click("#bang-nhap-dong")
+    check(not p.is_visible("#bang-nhap") and p.evaluate("() => localStorage.getItem('json-editor:nhap-qua-lon')") is None, "“Đã hiểu” tắt băng và xoá cờ")
+    T.dong()
+
+    # --- 3. cả localStorage lẫn IndexedDB bị chặn: app vẫn chạy, báo rõ cho nháp lớn
+    chan = """Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('bị chặn', 'SecurityError'); } });
+        Object.defineProperty(window, 'indexedDB', { configurable: true, get() { return undefined; } });"""
+    T = Trang(tb, url, "nhap-chan-het", init=chan)
+    p = T.p
+    _dat_vb(p, vb, cho=False)
+    p.wait_for_function("() => !document.querySelector('#bang-nhap').hidden", timeout=6000)
+    check(not T.loi and "không tự lưu được" in p.inner_text("#bang-nhap-chu") and _cheDo(p) == "xem" and p.is_visible("#xem-cua .xh"),
+          "localStorage + IndexedDB đều bị chặn: không lỗi console, Xem vẫn chạy, băng báo rõ không lưu được", T.loi[:2])
+    T.dong()
+
+
+def thao_tac_lon(tb, url):
+    section(" · tài liệu lớn: Định dạng / Mở tệp báo “Đang …”, hoàn tác; tab Cây không dựng cả triệu nút (việc 4, 7)")
+    vb, items = mau_json(2800000)
+    nen = json.dumps({"items": items, "meta": {"n": len(items), "ten": "mẫu thử"}}, ensure_ascii=False, separators=(",", ":"))
+    T = Trang(tb, url, "thao-tac-lon")
+    p = T.p
+    p.evaluate("() => { window.__tt = []; const e = document.querySelector('#trang-thai'); new MutationObserver(() => window.__tt.push(e.textContent)).observe(e, { childList: true, characterData: true, subtree: true }); }")
+    _dat_vb(p, nen)
+    p.wait_for_function("() => JE_APP.cheDoSoan() === 'xem'", timeout=8000)
+    p.evaluate("() => { window.__tt = []; window.__mong = JSON.stringify(JSON.parse(JE_APP.layVanBan()), null, 2); }")
+    p.click("#nut-dinh-dang")
+    p.wait_for_function("() => JE_APP.layVanBan().indexOf('\\n') > 0", timeout=20000)
+    tt = p.evaluate("() => window.__tt")
+    check(any(x.startswith("Đang định dạng") for x in tt), "Định dạng tài liệu %.1f M ký tự: chân trang hiện “Đang định dạng …” trước khi chạy" % (len(nen) / 1e6), tt[:3])
+    check(p.evaluate("() => JE_APP.layVanBan() === window.__mong"), "kết quả Định dạng đúng bằng JSON.stringify(JSON.parse(văn bản), null, 2) (%d ký tự)" % p.evaluate("() => window.__mong.length"))
+    check("Định dạng" in p.get_attribute("#nut-hoan-tac", "title") and _cheDo(p) == "xem", "một bước hoàn tác “Định dạng”, vẫn ở Xem")
+    p.click("#nut-hoan-tac")
+    p.wait_for_function("() => JE_APP.layVanBan().indexOf('\\n') < 0", timeout=20000)
+    check(p.evaluate("() => JE_APP.layVanBan().length") == len(nen), "↶ về bản nén một dòng (byte-cho-byte về độ dài)")
+
+    # tab Cây không treo, không dựng triệu nút
+    _dat_vb(p, vb)
+    t = p.evaluate("""() => { const t0 = performance.now(); document.querySelector('.tab-n[data-o="cay"]').click(); return performance.now() - t0; }""")
+    dom = p.evaluate("() => document.querySelectorAll('#cay *').length")
+    nut = p.evaluate("() => document.querySelector('#cay-tom').textContent")
+    check(dom < 2000 and t < 1500, "tab Cây %.1f M ký tự: %d phần tử DOM (không phải ~%d), mở %d ms; %s" % (len(vb) / 1e6, dom, 15 * len(items), t, nut), [dom, t])
+    T.dong()
+
+
+def cay_nhom(tb, url):
+    section(" · tab Cây chia nhóm [0 … 99]: treeitem, phím mũi tên, đi tới đường dẫn, xoá/thêm trong nhóm, “Mở hết” hỏi trước (việc 7)")
+    goc = {"a": list(range(250)), "o": {"k%03d" % i: i for i in range(130)}, "lon": list(range(25001)), "nho": [1, 2]}
+    T = Trang(tb, url, "cay-nhom")
+    p = T.p
+    _dat_vb(p, J(goc, 2))
+    T.tab("cay")
+    p.wait_for_timeout(100)
+    # mở mảng a: ra 3 nhóm
+    p.click(CHON_N % '["a"]' + " > .mo-dong")
+    p.wait_for_timeout(80)
+    nhan = p.evaluate("""() => Array.from(document.querySelectorAll(".n[data-p='[\\"a\\"]'] > .con > .n.nhom")).map(n => [n.querySelector('.nhom-nhan').textContent, n.getAttribute('aria-level'), n.getAttribute('aria-expanded'), n.getAttribute('role')])""")
+    check(nhan == [["[0 … 99]", "3", "false", "treeitem"], ["[100 … 199]", "3", "false", "treeitem"], ["[200 … 249]", "3", "false", "treeitem"]],
+          "mảng 250 phần tử: 3 nút nhóm gấp sẵn, role=treeitem, aria-level = cha + 1", nhan)
+    check(p.evaluate("() => document.querySelectorAll(\".n[data-p='[\\\"a\\\"]'] > .con > .n:not(.nhom)\").length") == 0, "chưa dựng phần tử nào (chỉ có nhóm)")
+    # đi tới a[150]: tự mở nhóm [100 … 199]
+    ok = p.evaluate("""() => JE_APP.denDuong(["a", 150])""")
+    p.wait_for_timeout(120)
+    act = p.evaluate("() => document.activeElement && document.activeElement.getAttribute('data-p')")
+    nl = p.evaluate("""() => document.querySelector(".n[data-p='[\\"a\\",150]']").getAttribute('aria-level')""")
+    check(ok and act == '["a",150]' and nl == "4", "denDuong([a, 150]) → mở nhóm [100 … 199], focus đúng nút (aria-level 4)", [ok, act, nl])
+    check(p.evaluate("() => document.querySelectorAll(\".n[data-p='[\\\"a\\\"]'] > .con > .n.nhom\")[1].querySelectorAll(':scope > .con > .n').length") == 100 and
+          p.evaluate("() => document.querySelectorAll(\".n[data-p='[\\\"a\\\"]'] > .con > .n.nhom\")[0].querySelectorAll(':scope > .con > .n').length") == 0,
+          "nhóm đã mở dựng đủ 100 con; nhóm khác vẫn trống (dựng lười)")
+    # phím: ← về nhóm, ← lần nữa gấp, → mở, ↓ vào phần tử đầu
+    p.keyboard.press("ArrowLeft")
+    cha = p.evaluate("() => document.activeElement.getAttribute('data-p')")
+    check(cha == '["a"]#100:200', "← từ phần tử → focus nút nhóm", cha)
+    p.keyboard.press("ArrowLeft")
+    check(p.evaluate("() => document.activeElement.getAttribute('aria-expanded')") == "false", "← trên nhóm đang mở → gấp nhóm")
+    p.keyboard.press("ArrowRight")
+    p.keyboard.press("ArrowDown")
+    check(p.evaluate("() => document.activeElement.getAttribute('data-p')") == '["a",100]', "→ mở nhóm, ↓ vào phần tử đầu a[100]")
+    p.keyboard.press("Home")
+    p.keyboard.press("End")
+    last = p.evaluate("() => document.activeElement.getAttribute('data-p')")
+    # nhóm không bị Delete / F2 / Alt+↑ tác động
+    p.evaluate("""() => { const n = document.querySelector(".n[data-p='[\\"a\\"]#0:100']"); n.focus(); }""")
+    sl0 = p.evaluate("() => JE_APP.layVanBan().length")
+    p.keyboard.press("Delete")
+    p.keyboard.press("F2")
+    p.keyboard.press("Alt+ArrowDown")
+    p.wait_for_timeout(100)
+    check(p.evaluate("() => JE_APP.layVanBan().length") == sl0 and not p.locator(".o-sua").count(), "Delete / F2 / Alt+↓ trên nút nhóm KHÔNG xoá / đổi tên / đổi chỗ nhánh cha")
+    # xoá phần tử a[150] (trong nhóm): focus sang phần tử kế, trạng thái nhóm giữ nguyên
+    p.evaluate("""() => JE_APP.denDuong(["a", 150])""")
+    p.keyboard.press("Delete")
+    p.wait_for_timeout(150)
+    act = p.evaluate("() => document.activeElement.getAttribute('data-p')")
+    n_a = p.evaluate("() => JE_APP.layDuLieu().a.length")
+    tt = p.evaluate("""() => document.querySelectorAll(".n[data-p='[\\"a\\"]'] > .con > .n.nhom")[1].getAttribute('aria-expanded')""")
+    check(n_a == 249 and act == '["a",150]' and tt == "true", "xoá a[150] trong nhóm: còn 249 phần tử, focus sang a[150] (phần tử kế), nhóm [100 … 199] vẫn mở", [n_a, act, tt])
+    nh = p.evaluate("""() => Array.from(document.querySelectorAll(".n[data-p='[\\"a\\"]'] > .con > .n.nhom .nhom-nhan")).map(x => x.textContent)""")
+    check(nh == ["[0 … 99]", "[100 … 199]", "[200 … 248]"], "nhóm cuối co lại [200 … 248]", nh)
+    p.keyboard.press("Control+z")
+    p.wait_for_timeout(150)
+    check(p.evaluate("() => JE_APP.layDuLieu().a.length") == 250 and p.evaluate("""() => document.querySelectorAll(".n[data-p='[\\"a\\"]'] > .con > .n.nhom")[1].getAttribute('aria-expanded')""") == "true",
+          "Ctrl+Z → 250 phần tử, nhóm vẫn mở")
+    # Insert trên nhóm = thêm vào mảng cha
+    p.evaluate("""() => { document.querySelector(".n[data-p='[\\"a\\"]#0:100']").focus(); }""")
+    p.keyboard.press("Insert")
+    p.wait_for_timeout(200)
+    check(p.evaluate("() => JE_APP.layDuLieu().a.length") == 251, "Insert trên nút nhóm → thêm phần tử vào mảng cha (251)")
+    p.keyboard.press("Escape")
+    p.keyboard.press("Control+z")
+    # object 130 khoá
+    p.click(CHON_N % '["o"]' + " > .mo-dong")
+    nh = p.evaluate("""() => Array.from(document.querySelectorAll(".n[data-p='[\\"o\\"]'] > .con > .n.nhom .nhom-nhan")).map(x => x.textContent)""")
+    check(nh == ["khoá 1–100", "khoá 101–130"], "object 130 khoá: nhóm “khoá 1–100”, “khoá 101–130”", nh)
+    ok = p.evaluate("""() => JE_APP.denDuong(["o", "k120"])""")
+    check(ok and p.evaluate("() => document.activeElement.getAttribute('data-p')") == '["o","k120"]', "denDuong([o, k120]) mở nhóm object chứa khoá")
+    # nhóm hai tầng: mảng 10 001 phần tử
+    p.click(CHON_N % '["lon"]' + " > .mo-dong")
+    nh = p.evaluate("""() => Array.from(document.querySelectorAll(".n[data-p='[\\"lon\\"]'] > .con > .n.nhom .nhom-nhan")).map(x => x.textContent)""")
+    check(nh == ["[0 … 9999]", "[10000 … 19999]", "[20000 … 25000]"], "mảng 25 001 phần tử: 3 nhóm tầng 1 (mỗi nhóm lại chia nhóm 100)", nh)
+    ok = p.evaluate("""() => JE_APP.denDuong(["lon", 9567])""")
+    chuoi = p.evaluate("""() => { const n = document.querySelector(".n[data-p='[\\"lon\\",9567]']"); const r = []; for (let x = n.parentNode; x && x.id !== 'cay'; x = x.parentNode) if (x.classList && x.classList.contains('nhom')) r.push(x.querySelector(':scope > .dong .nhom-nhan').textContent); return [r.reverse(), n.getAttribute('aria-level')]; }""")
+    check(ok and chuoi == [["[0 … 9999]", "[9500 … 9599]"], "5"], "denDuong([lon, 9567]) mở chuỗi nhóm [0 … 9999] → [9500 … 9599], aria-level 5", chuoi)
+    # "Mở hết" quá ngưỡng: hỏi
+    dom0 = p.evaluate("() => document.querySelectorAll('#cay *').length")
+    p.evaluate("() => { document.querySelector('#cay-mo').click(); }")
+    p.wait_for_timeout(100)
+    hoi = p.evaluate("() => [!document.querySelector('#cay-hoi').hidden, document.querySelector('#cay-hoi-chu').textContent]")
+    check(hoi[0] and "Dựng" in hoi[1] and "nút" in hoi[1] and p.evaluate("() => document.querySelectorAll('#cay *').length") == dom0, "“Mở hết” trên cây > 20 000 nút: HỎI trước (%s), chưa dựng thêm phần tử nào (%d)" % (hoi[1], dom0), hoi)
+    p.click("#cay-hoi-huy")
+    check(not p.is_visible("#cay-hoi") and p.evaluate("() => document.querySelectorAll('#cay *').length") == dom0, "Huỷ → ẩn câu hỏi, không dựng")
+    p.click("#cay-mo")
+    p.click("#cay-hoi-cap3")
+    p.wait_for_timeout(200)
+    check(not p.is_visible("#cay-hoi") and p.evaluate("() => document.querySelectorAll('#cay *').length") < 6000 and p.evaluate("() => !!document.querySelector(\".n[data-p='[\\\"o\\\"]']\")"),
+          "“Mở tới cấp 3” → mở gọn (< 6 000 phần tử), cây vẫn thấy nhánh o")
+    p.click("#cay-dong")
+    # nhỏ: không hỏi
+    T.dong()
+    T = Trang(tb, url, "cay-nho")
+    p = T.p
+    _dat_vb(p, J({"a": list(range(50)), "b": {"c": [1, 2, {"d": 1}]}}, 2))
+    T.tab("cay")
+    p.click("#cay-mo")
+    p.wait_for_timeout(100)
+    check(not p.is_visible("#cay-hoi") and p.locator(".n.nhom").count() == 0 and p.locator(".n").count() > 50, "cây nhỏ: “Mở hết” mở ngay, không nhóm, không hỏi")
+    T.dong()
+
+
+def sua_o_lon(tb, url):
+    section(" · sửa một ô trên tài liệu lớn: ghép chuỗi tại chỗ, giữ định dạng và hoàn tác (việc 7)")
+    vb, items = mau_json(900000)
+    T = Trang(tb, url, "sua-o-lon")
+    p = T.p
+    thut4 = json.dumps(json.loads(vb), ensure_ascii=False, indent=4) + "\n"
+    _dat_vb(p, thut4)
+    T.tab("cay")
+    ok = p.evaluate("""() => JE_APP.denDuong(["items", 777, "name"])""")
+    p.wait_for_timeout(150)
+    p.click(CHON_N % '["items",777,"name"]' + " .gt")
+    p.fill(".o-sua .o-nhap", "Đã sửa trên cây")
+    p.keyboard.press("Enter")
+    p.wait_for_timeout(300)
+    s = p.evaluate("() => JE_APP.layVanBan()")
+    mong = thut4.replace('"name": "Người dùng 777"', '"name": "Đã sửa trên cây"', 1)
+    check(ok and s == mong, "sửa name của items[777] trong tài liệu 0,9 M ký tự (thụt 4, xuống dòng cuối): văn bản = bản cũ chỉ đổi đúng một giá trị (%d ký tự)" % len(s), len(s) - len(mong))
+    check(p.evaluate("() => JE_APP.layDuLieu().items[777].name") == "Đã sửa trên cây" and "Sửa giá trị" in p.get_attribute("#nut-hoan-tac", "title"), "mô hình khớp văn bản; một bước “Sửa giá trị”")
+    # đổi tên khoá
+    p.click(CHON_N % '["items",777,"email"]' + " .khoa")
+    p.fill(".o-sua .o-nhap", "thu_dien_tu")
+    p.keyboard.press("Enter")
+    p.wait_for_timeout(300)
+    s2 = p.evaluate("() => JE_APP.layVanBan()")
+    check(s2 == mong.replace('"email": "u777@example.com"', '"thu_dien_tu": "u777@example.com"', 1), "đổi tên khoá email → chỉ đổi token khoá, giữ nguyên mọi byte khác")
+    p.keyboard.press("Control+z")
+    p.keyboard.press("Control+z")
+    p.wait_for_timeout(300)
+    check(p.evaluate("() => JE_APP.layVanBan()") == thut4, "Ctrl+Z hai lần → về đúng văn bản gốc")
+    T.dong()
+
+
+def xem_file(tb, url=None):
+    """Dùng cho --file: Xem + IndexedDB chạy khi mở bằng file://."""
+    section(" · file://: Xem ảo tự vào > 1,5 MB, nháp lớn vào IndexedDB, gấp khối")
+    vb, _ = mau_json(1700000)
+    T = Trang(tb, "file:///" + HERE.replace("\\", "/") + "/index.html", "xem-file")
+    p = T.p
+    _dat_vb(p, vb, cho=False)
+    p.wait_for_function("() => JE_APP.cheDoSoan() === 'xem' && document.querySelectorAll('#xem-cua .xh').length > 0", timeout=10000)
+    p.wait_for_function("() => document.querySelector('#xem-tien-do').textContent.indexOf('khối') >= 0", timeout=10000)
+    p.click("#xem-cua .xh[data-l='1'] .xg")
+    _cho_khung(p, 2)
+    check(p.locator("#xem-cua .xp").count() == 1, "file:// — tự vào Xem; gấp khối items ra chú thích")
+    p.wait_for_function("() => localStorage.getItem('json-editor:nhap') === null", timeout=4000)
+    rec = _cho_idb(p, lambda r: r is not None and r != "loi", 8000)
+    rec = rec[0] if isinstance(rec, list) else rec
+    check(rec == len(vb), "file:// — nháp %d ký tự nằm trong IndexedDB" % len(vb), rec)
+    T.dong()
+
+
+# ============================================================================================ hiệu năng (--hieu-nang)
+def _ms(p, js, arg=None):
+    return p.evaluate(js, arg)
+
+
+def tang_hieu_nang(mb=10.0):
+    section("HIỆU NĂNG — Edge thật, tài liệu %.1f M ký tự (hệ số máy chậm JE_PERF_SLACK = %g)" % (mb, SLACK))
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        check(False, "có playwright (backend/fastapi/.venv)")
+        return
+    sv, url = mo_may_chu()
+    try:
+        with sync_playwright() as pw:
+            tb = pw.chromium.launch(channel="msedge")
+            hn_nho(tb, url)
+            hn_lon(tb, url, mb)
+            tb.close()
+    finally:
+        sv.shutdown()
+        sv.server_close()
+    check(not LOI_TRANG, "không có lỗi console / pageerror trong phép đo", LOI_TRANG[:4])
+
+
+def hn_nho(tb, url):
+    section(" · 1 M ký tự: sự kiện input, gõ phím, mở Cây")
+    vb, items = mau_json(1000000)
+    T = Trang(tb, url, "hn-1mb")
+    p = T.p
+    t = p.evaluate("""t => { const n = document.querySelector('#nhap'); n.value = t; const t0 = performance.now();
+        n.dispatchEvent(new Event('input', {bubbles: true})); return performance.now() - t0; }""", vb)
+    _cho_khung(p, 3)
+    p.wait_for_timeout(300)
+    info("input sau khi dán %.2f M ký tự: %.2f ms (mục tiêu < 50; trước J5 ≈ 2 162 ms đo ở thiết kế, 5 125 ms đo lại đầu đợt)" % (len(vb) / 1e6, t))
+    check(t < 50 * SLACK, "[1 MB] sự kiện input < %d ms" % (50 * SLACK), "%.2f ms" % t)
+    # gõ phím giữa tài liệu: đúng phép đo của thiết kế (execCommand insertText → rAF kế tiếp), trung vị 15 phím liên tiếp
+    kq = p.evaluate("""async () => {
+        const n = document.querySelector('#nhap'); n.focus();
+        n.scrollTop = 0.5 * (n.scrollHeight - n.clientHeight);
+        const lh = parseFloat(getComputedStyle(n).lineHeight), s = n.value; let i = 0;
+        for (let d = 0; d < Math.floor(n.scrollTop / lh) + 10; d++) i = s.indexOf('\\n', i) + 1;
+        n.setSelectionRange(i, i);
+        await new Promise(r => setTimeout(r, 300));
+        const ds = [];
+        for (let k = 0; k < 15; k++) {
+            const t0 = performance.now();
+            document.execCommand('insertText', false, 'x');
+            await new Promise(r => requestAnimationFrame(() => r()));
+            ds.push(performance.now() - t0);
+        }
+        ds.sort((a, b) => a - b);
+        return { p50: ds[7], p90: ds[13], max: ds[14], min: ds[0] };
+    }""")
+    p50 = kq["p50"]
+    info("gõ 1 phím giữa tài liệu 1 M ký tự (insertText → rAF kế tiếp, 15 phím): trung vị %.0f ms, p90 %.0f, lớn nhất %.0f (trước J5: 87–272 theo thiết kế)" % (p50, kq["p90"], kq["max"]))
+    check(p50 < 150 * SLACK, "[1 MB] gõ một phím (insertText → khung hình kế), trung vị < %d ms" % (150 * SLACK), "%.0f ms" % p50)
+    p.wait_for_timeout(500)
+    p.evaluate("() => { JE_APP.datVanBan('', { nhan: 'Xoá' }); }")
+    _dat_vb(p, vb)
+    t = p.evaluate("""() => { const t0 = performance.now(); document.querySelector('.tab-n[data-o="cay"]').click(); return performance.now() - t0; }""")
+    dom = p.evaluate("() => document.querySelectorAll('#cay *').length")
+    info("mở tab Cây 1 M ký tự: %.0f ms, %d phần tử DOM (trước J5: 1 134 ms / 96 396)" % (t, dom))
+    check(t < 800 * SLACK and dom < 20000, "[1 MB] mở Cây < %d ms và < 20 000 phần tử DOM" % (800 * SLACK), [t, dom])
+    T.dong()
+
+
+def hn_lon(tb, url, mb):
+    section(" · %.1f M ký tự: mở Xem, cuộn, gập, Cây, sửa ô, schema, nháp IndexedDB" % mb)
+    vb, items = mau_json(int(mb * 1e6))
+    T = Trang(tb, url, "hn-lon")
+    p = T.p
+    p.evaluate("t => { window.__vb = t; }", vb)
+    # ---- mở tệp -> Xem
+    kq = p.evaluate("""async () => {
+        const inp = document.querySelector('#tep'), dt = new DataTransfer(); dt.items.add(new File([window.__vb], 'lon.json', { type: 'application/json' })); inp.files = dt.files;
+        const t0 = performance.now(); inp.dispatchEvent(new Event('change', { bubbles: true }));
+        const doi = (dk) => new Promise(r => { const f = () => dk() ? r(performance.now() - t0) : requestAnimationFrame(f); f(); });
+        const tXem = await doi(() => JE_APP.cheDoSoan() === 'xem' && document.querySelectorAll('#xem-cua .xh').length > 0 && JE_APP.layVanBan().length > 1e6);
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        return { tXem, tPaint: performance.now() - t0 };
+    }""")
+    info("mở tệp %.1f M ký tự → Xem có hàng đầu tiên: %.0f ms; vẽ xong khung hình sau đó: %.0f ms (mục tiêu < 1 500)" % (len(vb) / 1e6, kq["tXem"], kq["tPaint"]))
+    check(kq["tPaint"] < 1500 * SLACK, "[%.0f MB] mở tệp → Xem hiện hàng (vẽ xong) < %d ms" % (mb, 1500 * SLACK), "%.0f ms" % kq["tPaint"])
+    p.wait_for_function("() => document.querySelector('#xem-tien-do').textContent.indexOf('khối') >= 0", timeout=20000)
+    n_dong = vb.count("\n") + 1
+    check(p.evaluate("() => JE_APP.layVanBan().length") == len(vb) and not p.is_visible("#nhap"), "văn bản nạp đủ %d ký tự, textarea ẩn" % len(vb))
+
+    # ---- cuộn qua tài liệu: không có tác vụ dài (> 50 ms) trong mỗi khung hình
+    r = p.evaluate("""async () => {
+        const c = document.querySelector('#xem-cuon'), dai = [];
+        const po = new PerformanceObserver(l => l.getEntries().forEach(e => dai.push(e.duration))); po.observe({ entryTypes: ['longtask'] });
+        const max = c.scrollHeight - c.clientHeight, kt = [];
+        for (let i = 0; i <= 40; i++) { const t0 = performance.now(); c.scrollTop = Math.round(max * i / 40); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); kt.push(performance.now() - t0); }
+        await new Promise(r => setTimeout(r, 200)); po.disconnect();
+        kt.sort((a, b) => a - b);
+        const hs = Array.from(document.querySelectorAll('#xem-cua .xh')), cuoi = hs[hs.length - 1];
+        return { dai, p50: kt[20], max: kt[kt.length - 1], hang: hs.length, cuoi: cuoi ? parseInt(cuoi.querySelector('.xs').textContent, 10) : -1 };
+    }""")
+    info("cuộn 41 điểm qua %d dòng: mỗi bước (2 khung hình) trung vị %.0f ms, lớn nhất %.0f ms; tác vụ dài >50ms: %s" % (n_dong, r["p50"], r["max"], [round(x) for x in r["dai"]]))
+    check(r["cuoi"] == n_dong and r["max"] < 100 * SLACK + 50 and not [x for x in r["dai"] if x > 50 * SLACK + 30],
+          "[%.0f MB] cuộn tới cuối: thấy dòng cuối %d, mỗi khung < %d ms, không có tác vụ dài" % (mb, n_dong, 50 * SLACK + 30), [r["cuoi"], r["max"], r["dai"]])
+
+    # ---- gập items (khối ~toàn bộ tài liệu) và mở lại
+    p.evaluate("() => { document.querySelector('#xem-cuon').scrollTop = 0; }")
+    _cho_khung(p, 3)
+    g = p.evaluate("""() => { const b = document.querySelector("#xem-cua .xh[data-l='1'] .xg"); const t0 = performance.now(); b.click(); const t1 = performance.now() - t0;
+        return { t: t1, ct: document.querySelector("#xem-cua .xh[data-l='1'] .xp").textContent, cao: document.querySelector('#xem-cao').style.height }; }""")
+    info("gập khối items (%d dòng): %.1f ms (mục tiêu < 50); chú thích: %s" % (n_dong, g["t"], g["ct"]))
+    check(g["t"] < 50 * SLACK and "phần tử" in g["ct"], "[%.0f MB] gập items < %d ms, chú thích đúng" % (mb, 50 * SLACK), g)
+    g2 = p.evaluate("""() => { const b = document.querySelector("#xem-cua .xh[data-l='1'] .xp"); const t0 = performance.now(); b.click(); return performance.now() - t0; }""")
+    check(g2 < 50 * SLACK + 20, "[%.0f MB] mở lại khối < %d ms" % (mb, 50 * SLACK + 20), "%.1f ms" % g2)
+    g3 = p.evaluate("""() => { const b = document.querySelector("#xem-cong-cu [data-cap='2']"); const t0 = performance.now(); b.click(); return performance.now() - t0; }""")
+    info("“Gập tới cấp 2” trên %d khối: %.1f ms" % (p.evaluate("() => JE_APP.layVanBan().length") // 40, g3))
+    p.click("#xem-mo-het")
+
+    # ---- tab Cây
+    t = p.evaluate("""() => { const t0 = performance.now(); document.querySelector('.tab-n[data-o="cay"]').click(); return performance.now() - t0; }""")
+    dom = p.evaluate("() => document.querySelectorAll('#cay *').length")
+    info("mở tab Cây %.1f M ký tự: %.0f ms, %d phần tử DOM (trước J5: 8 484 ms / 955 451 theo thiết kế; 3 882 ms / 692 262 đo lại đầu đợt)" % (len(vb) / 1e6, t, dom))
+    check(t < 800 * SLACK and dom < 20000, "[%.0f MB] mở Cây < %d ms và < 20 000 phần tử DOM" % (mb, 800 * SLACK), [t, dom])
+    # sửa một ô
+    ok = p.evaluate("""() => JE_APP.denDuong(["items", 5, "name"])""")
+    p.wait_for_timeout(200)
+    p.click(CHON_N % '["items",5,"name"]' + " .gt")
+    p.fill(".o-sua .o-nhap", "Đã sửa 10 MB")
+    r = p.evaluate("""async () => { const t0 = performance.now(); document.querySelector('.o-sua .o-nhap').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); return { t: performance.now() - t0, tl: document.querySelector('#nut-hoan-tac').title, ok: JE_APP.layDuLieu().items[5].name }; }""")
+    info("sửa một ô trên cây %.1f M ký tự (Enter → vẽ xong): %.0f ms (mục tiêu < 1 500; trước J5: 13 403 ms)" % (len(vb) / 1e6, r["t"]))
+    check(ok and r["ok"] == "Đã sửa 10 MB" and "Sửa giá trị" in r["tl"] and r["t"] < 1500 * SLACK, "[%.0f MB] sửa một ô < %d ms" % (mb, 1500 * SLACK), r)
+    p.click("#nut-hoan-tac")
+    p.wait_for_timeout(600)
+    check(p.evaluate("() => JE_APP.layVanBan().length") == len(vb), "↶ → về đúng văn bản gốc (cùng độ dài)")
+    T.tab("soan")
+
+    # ---- kiểm schema 10 MB (Worker)
+    schema = {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "integer"}, "name": {"type": "string"}, "score": {"type": "number", "maximum": 99.9}}}}}}
+    n0 = _lan(p)
+    T.tab("schema")
+    p.fill("#sc-nhap", J(schema, 2))
+    T.cho("n0 => JE.uiSchema.soLan() > n0 && document.querySelector('#sc-tom').dataset.tt !== 'dang'", n0, 12000)
+    n0 = _lan(p)
+    t0 = p.evaluate("() => performance.now()")
+    p.click("#sc-kiem-ngay")
+    ok = T.cho("n0 => JE.uiSchema.soLan() > n0 && document.querySelector('#sc-tom').dataset.tt !== 'dang'", n0, 40000)
+    ms = p.evaluate("t0 => performance.now() - t0", t0)
+    so_loi = len([it for it in items if it["score"] > 99.9])
+    info("kiểm schema %.1f M ký tự (%d object) trong Worker: %.0f ms tổng (mục tiêu < 3 000), trạng thái %s" % (len(vb) / 1e6, len(items), ms, _tt(p)))
+    check(ok and ms < 3000 * SLACK and _tt(p) in ("ok", "loi") and (_tt(p) == "ok") == (so_loi == 0),
+          "[%.0f MB] “Kiểm ngay” schema < %d ms (đúng trạng thái: %d object vượt maximum)" % (mb, 3000 * SLACK, so_loi), [ms, _tt(p), so_loi])
+    T.tab("soan")
+
+    # ---- Định dạng ở mức tài liệu lớn: thông báo + không treo (do khoảng cách khung hình lớn nhất)
+    nen = json.dumps({"items": items, "meta": {"n": len(items), "ten": "mẫu thử"}}, ensure_ascii=False, separators=(",", ":"))
+    p.evaluate("t => { JE_APP.datVanBan(t, { nhan: 'Nạp nén' }); }", nen)
+    p.wait_for_timeout(500)
+    p.evaluate("() => { window.__mong = JSON.stringify(JSON.parse(JE_APP.layVanBan()), null, 2); }")
+    p.evaluate("""() => { window.__gap = 0; window.__tt = []; let last = performance.now(); const e = document.querySelector('#trang-thai');
+        new MutationObserver(() => window.__tt.push(e.textContent)).observe(e, { childList: true, characterData: true, subtree: true });
+        const f = () => { const n = performance.now(); window.__gap = Math.max(window.__gap, n - last); last = n; window.__raf = requestAnimationFrame(f); }; f(); }""")
+    t0 = p.evaluate("() => performance.now()")
+    p.click("#nut-dinh-dang")
+    p.wait_for_function("() => JE_APP.layVanBan().indexOf('\\n') > 0", timeout=30000)
+    ms = p.evaluate("t0 => performance.now() - t0", t0)
+    gap = p.evaluate("() => { cancelAnimationFrame(window.__raf); return window.__gap; }")
+    tt = p.evaluate("() => window.__tt")
+    info("Định dạng %.1f M ký tự: %.0f ms; khoảng cách khung hình lớn nhất %.0f ms; thông báo đầu: %s" % (len(nen) / 1e6, ms, gap, tt[:1]))
+    check(any(x.startswith("Đang định dạng") for x in tt) and p.evaluate("() => JE_APP.layVanBan() === window.__mong"), "[%.0f MB] Định dạng: hiện “Đang định dạng …”, kết quả đúng" % mb, tt[:2])
+
+    # ---- nháp lớn vào IndexedDB (đo thời gian ghi) + tải lại khôi phục
+    ok = T.cho("() => localStorage.getItem('json-editor:nhap') === null", None, 8000)
+    rec = _cho_idb(p, lambda r: r is not None and r != "loi", 20000)
+    rec = rec[0] if isinstance(rec, list) else rec
+    check(rec == len(vb), "[%.0f MB] nháp %d ký tự nằm trong IndexedDB sau khi sửa (đúng độ dài)" % (mb, len(vb)), rec)
+    p.reload()
+    p.wait_for_function("() => !!window.JE_APP")
+    ok = T.cho("() => JE_APP.layVanBan().length > 1000000 && JE_APP.cheDoSoan() === 'xem' && document.querySelectorAll('#xem-cua .xh').length > 0", None, 15000)
+    check(ok and p.evaluate("() => JE_APP.layVanBan().length") == len(vb), "[%.0f MB] tải lại: khôi phục đủ %d ký tự từ IndexedDB và mở Xem" % (mb, len(vb)))
+    T.dong()
+
+
 # ============================================================================================ main
 def main(argv):
     chi = None
@@ -1658,6 +2467,11 @@ def main(argv):
         if a.startswith("--chi="):                      # chạy riêng vài nhóm phép Edge: --chi=meta_nhanh_gap,xss
             chi = set(a[6:].split(","))
     co = set(a for a in argv if a.startswith("--") and not a.startswith("--chi="))
+    mb_hn = 10.0
+    if "--hieu-nang" in argv:                       # --hieu-nang [N]: N = số M ký tự của tài liệu lớn
+        i = argv.index("--hieu-nang")
+        if i + 1 < len(argv) and re.match(r"^\d+(\.\d+)?$", argv[i + 1]):
+            mb_hn = float(argv[i + 1])
     if not co or "--tat-ca" in co:
         co |= {"--tinh", "--chuc-nang"}
         if "--tat-ca" in co:
@@ -1669,6 +2483,8 @@ def main(argv):
         tang_chuc_nang(chi)
     if "--file" in co:
         tang_file()
+    if "--hieu-nang" in co:
+        tang_hieu_nang(mb_hn)
     print("\n%d đạt, %d sai" % (OK, FAIL))
     return 1 if FAIL else 0
 

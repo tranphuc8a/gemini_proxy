@@ -55,6 +55,7 @@
 
   /** "31 phút 12 giây" từ số giờ hữu tỉ; "≈" khi làm tròn tới giây. */
   function durText(T) {
+    if (T.n === 0n) return "0 phút";
     var num = T.n * 3600n, den = T.d, exact = num % den === 0n, sec = exact ? num / den : (2n * num + den) / (2n * den), s = Number(sec), mi = Math.floor(s / 60), ss = s % 60;
     return (exact ? "" : "≈ ") + (mi ? mi + " phút" + (ss ? " " + ss + " giây" : "") : ss + " giây");
   }
@@ -111,11 +112,13 @@
   function shuttleDen(d, g) { return d.mu + (2 * g - 1) * d.mv; }
   /** Mỗi xe một nhóm: A — người lái + g khách; B — g khách (tài xế ngoài). dens = các mẫu số cần có trên lưới. */
   function famShuttle(d, Gd) {
-    var A = d.interp !== "B", sizes = sizesOf(d.n, d.k), recs = [], off = 0, dens = [];
+    var A = d.interp !== "B", sizes = sizesOf(d.n, d.k), recs = [], off = 0, dens = [], gmax = 0;
+    sizes.forEach(function (s0) { gmax = Math.max(gmax, A ? s0 - 1 : s0); });
+    if (gmax >= 1) dens.push(shuttleDen(d, gmax));                                  // nhóm nhỏ hơn dùng chung điểm thả của nhóm lớn nhất (lưới chung nhỏ), khách cuối chở thẳng tới B
     sizes.forEach(function (s, b) {
       var g = A ? s - 1 : s, drv = A ? off : -1, first = A ? off + 1 : off;
       if (g < 1) { recs.push([b + 1, OP_TAKE, off + 1, 0]); if (Gd) recs.push([b + 1, OP_RIDE, Gd, 0]); off += s; return; }
-      var Y = shuttleDen(d, g); dens.push(Y);
+      var Y = shuttleDen(d, gmax);
       if (A) recs.push([b + 1, OP_TAKE, drv + 1, first + 1]); else recs.push([b + 1, OP_TAKE, first + 1, 0]);
       for (var j = 0; j < g; j++) {
         if (j > 0) recs.push([b + 1, OP_MEET, first + j + 1, 0]);
@@ -169,19 +172,22 @@
     }
     return [famShuttle, famRelay];
   }
-  /** Các lịch ứng viên với lưới G đã chọn (G chung cho cả đề). → {G, fams:[{id,name,recs}]}; G = 0 nếu không lưới nào đủ nhỏ. */
+  /** Các lịch ứng viên với lưới G chung. Đề đã biết `fam` mà chưa chắc tối ưu (d.exact = false): chỉ họ đã chọn, theo lưới d.G đã lưu. → {G, fams:[{id,name,recs}]}; G = 0 nếu không dựng được. */
   function famsOf(d) {
-    var bs = builders(d), dens = [];
-    bs.forEach(function (f) { dens = dens.concat(f(d, 0).dens); });
-    var Gd = gridOf(dens);
-    if (!Gd && dens.length) {                                                       // lưới chung quá lớn: bỏ bớt ứng viên (tiếp sức luôn có lưới nhỏ)
-      bs = bs.filter(function (f) { return gridOf(f(d, 0).dens) > 0; });
-      dens = []; bs.forEach(function (f) { dens = dens.concat(f(d, 0).dens); });
-      Gd = gridOf(dens);
+    var bs = builders(d), dens = [], i2;
+    if (d.exact === false && d.fam) {
+      for (i2 = 0; i2 < bs.length; i2++) {
+        var f0 = bs[i2](d, 0);
+        if (f0.id === d.fam && d.G >= 1 && f0.dens.every(function (q) { return d.G % q === 0; })) { var r0 = bs[i2](d, d.G); return { G: d.G, fams: [{ id: r0.id, name: r0.name, recs: r0.recs }] }; }
+      }
+      return { G: 0, fams: [] };
     }
-    if (!Gd && !dens.length) Gd = MIN_GRID;
-    if (!Gd) return { G: 0, fams: [] };
-    return { G: Gd, fams: bs.map(function (f) { var r = f(d, Gd); return { id: r.id, name: r.name, recs: r.recs }; }) };
+    var keep = [], accDens = [];
+    bs.forEach(function (f) { var dn = accDens.concat(f(d, 0).dens); if (!dn.length || gridOf(dn) > 0) { keep.push(f); accDens = dn; } });          // họ nào làm lưới chung quá mịn thì bỏ
+    dens = accDens;
+    var Gd = dens.length ? gridOf(dens) : MIN_GRID;
+    if (!Gd || !keep.length) return { G: 0, fams: [] };
+    return { G: Gd, fams: keep.map(function (f) { var r = f(d, Gd); return { id: r.id, name: r.name, recs: r.recs }; }) };
   }
 
   // ================================================================================================= MÔ PHỎNG HƯỚNG SỰ KIỆN
@@ -195,7 +201,7 @@
     function nm(p) { return "P" + (p + 1); }
     function seg(kind, id, t0, x0, t1, x1) { segs.push({ kind: kind, id: id, t0: t0, x0: x0, t1: t1, x1: x1 }); }
     function real(B) { return B.riders.filter(function (r) { return r >= 0; }); }
-    function ev(idx, bi, t, x, text) { events.push({ idx: idx, bike: bi, t: t, x: x, text: text }); }
+    function ev(idx, bi, t, x, text, imp) { events.push({ idx: idx, bike: bi, t: t, x: x, text: text, imp: !!imp }); }
     for (i = 0; i < recs.length; i++) {
       var r = recs[i];
       if (!Array.isArray(r) || r.length !== W || !r.every(function (v) { return typeof v === "number" && v === Math.floor(v); })) { fail(i, "Bản ghi " + (i + 1) + " sai hình dạng."); break; }
@@ -246,7 +252,7 @@
         if (qcmp(x, ONE) === 0) {
           real(B).forEach(function (q) { pers[q].mode = "done"; pers[q].done = t1; });
           B.riders = A ? [] : [-1];
-          ev(idx, bi, t1, x, "Xe " + (bi + 1) + (implicit ? " tự chạy tới B" : " tới B") + " lúc " + durText(t1) + ".");
+          ev(idx, bi, t1, x, "Xe " + (bi + 1) + (implicit ? " tự chạy tới B" : " tới B") + " lúc " + durText(t1) + ".", implicit);
         } else ev(idx, bi, t1, x, "Xe " + (bi + 1) + " tới " + posText(x) + " lúc " + durText(t1) + ".");
       } else if (cmd.op === OP_MEET) {
         p = cmd.a - 1;
@@ -291,7 +297,7 @@
   function viewOf(d, r) {
     if (!r.ok) return { ok: false, error: r.error.msg, at: r.error.at };
     return { ok: true, T: qs(r.T), Tf: qf(r.T), Ttext: durText(r.T), arrivals: r.arrivals.map(function (a) { return { q: qs(a), f: qf(a), text: durText(a) }; }),
-      segs: r.segs.map(numSeg), events: r.events.map(function (e) { return { idx: e.idx, bike: e.bike, t: qf(e.t), x: qf(e.x), text: e.text }; }),
+      segs: r.segs.map(numSeg), events: r.events.map(function (e) { return { idx: e.idx, bike: e.bike, t: qf(e.t), x: qf(e.x), text: e.text, imp: e.imp }; }),
       bikes: r.bikes.map(function (b) { return { x: qf(b.x), xq: qs(b.x), t: qf(b.t), tText: durText(b.t), riders: b.riders.slice(), parked: b.parked, used: b.used }; }),
       persons: r.persons.map(function (q) { return { mode: q.mode, x0: qf(q.x0), t0: qf(q.t0) }; }) };
   }
@@ -323,23 +329,28 @@
   function dataFor(interp, n, k, mu, mv) {
     var d = { interp: interp, n: n, k: k, mu: mu, mv: mv, G: 1, best: "1", known: "1", exact: false, regime: "", fam: "", cmds: 0, nFam: 1 };
     d.regime = regimeOf(d); d.exact = exactOf(d);
-    var lb = lbOf(d), fs = famsOf(d), bestFam = null, bestT = null;
-    if (!fs.G || !fs.fams.length) return { error: "Không dựng được lịch mẫu cho đề này (lưới quá mịn)." };
-    d.G = fs.G;
-    fs.fams.forEach(function (f) {
-      if (f.recs.length > CAP) return;
-      var r = simulate(d, f.recs);
+    var lb = lbOf(d), bestFam = null, bestT = null, bestG = 0, cand = [];
+    if (d.exact) {
+      var fs = famsOf(d);
+      if (!fs.G || !fs.fams.length) return { error: "Không dựng được lịch mẫu cho đề này (lưới quá mịn)." };
+      fs.fams.forEach(function (f) { cand.push({ f: f, G: fs.G }); });
+      d.nFam = fs.fams.filter(function (f) { return f.recs.length <= CAP; }).length;
+    } else {
+      builders(d).forEach(function (b) { var dn = b(d, 0).dens, Gb = dn.length ? gridOf(dn) : MIN_GRID; if (Gb) { var r = b(d, Gb); cand.push({ f: { id: r.id, name: r.name, recs: r.recs }, G: Gb }); } });
+    }
+    cand.forEach(function (c) {
+      if (c.f.recs.length > CAP) return;
+      var r = simulate(Object.assign({}, d, { G: c.G }), c.f.recs);
       if (!r.ok) return;
-      if (!bestFam || qcmp(r.T, bestT) < 0) { bestFam = f; bestT = r.T; }
+      if (!bestFam || qcmp(r.T, bestT) < 0) { bestFam = c.f; bestT = r.T; bestG = c.G; }
     });
     if (!bestFam) return { error: "Lịch mẫu vượt " + CAP + " lệnh hoặc không chạy được." };
-    d.fam = bestFam.id; d.known = qs(bestT); d.cmds = bestFam.recs.length; d.nFam = fs.fams.filter(function (f) { return f.recs.length <= CAP; }).length;
-    d.best = d.exact ? qs(lb) : qs(lb);
+    d.G = bestG; d.fam = bestFam.id; d.known = qs(bestT); d.cmds = bestFam.recs.length; d.best = qs(lb);
     if (d.exact && qcmp(bestT, lb) !== 0) return { error: "Nội bộ: lịch mẫu (" + qs(bestT) + ") không đạt cận LP (" + qs(lb) + ")." };
     if (!d.exact && qcmp(bestT, lb) < 0) return { error: "Nội bộ: lịch mẫu thấp hơn cận LP." };
     var v = plan.build(LAYOUT, bestFam.recs, 1, []);
     if (!v) return { error: "Lịch mẫu không vừa dung lượng." };
-    return { d: d, sol: { v: v }, fam: bestFam, fams: fs.fams };
+    return { d: d, sol: { v: v }, fam: bestFam };
   }
   function buildPuzzle(seed, sizeId, interp, n, k, mu, mv, tier) {
     var r = dataFor(interp, n, k, mu, mv);
@@ -351,19 +362,16 @@
   }
 
   var poolMemo = {};
-  /** Hồ chứa đề SINH được (chỉ đề biết tối ưu chính xác, n > 2k / n > k, m ∈ {2, 5/2, 3, 4, 5, 6, 8}) kèm điểm. */
+  /** Hồ chứa đề SINH được (chỉ đề biết tối ưu chính xác, n > 2k / n > k, m ∈ {2, 5/2, 3, 4, 5, 6, 8}) kèm điểm — điểm tính trên chính data mà dataFor dựng (khớp bậc tuyệt đối). */
   function pool(interp) {
     if (poolMemo[interp]) return poolMemo[interp];
     var out = [], ms = [[2, 1], [5, 2], [3, 1], [4, 1], [5, 1], [6, 1], [8, 1]], k, n, mi;
     for (k = 1; k <= 3; k++) for (n = (interp === "B" ? k + 1 : 2 * k + 1); n <= MAX_N; n++) for (mi = 0; mi < ms.length; mi++) {
-      var d = { interp: interp, n: n, k: k, mu: ms[mi][0], mv: ms[mi][1] };
-      if (!exactOf(d)) continue;
-      d.regime = regimeOf(d); d.exact = true;
-      var fs = famsOf(d); if (!fs.G || !fs.fams.length) continue;
-      var cmds = Math.min.apply(null, fs.fams.filter(function (f) { return f.recs.length <= CAP; }).map(function (f) { return f.recs.length; }));
-      if (!isFinite(cmds)) continue;
-      var d2 = { interp: interp, n: n, k: k, mu: d.mu, mv: d.mv, exact: true, cmds: cmds, nFam: fs.fams.length, fam: fs.fams[0].id };
-      out.push({ n: n, k: k, mu: d.mu, mv: d.mv, score: scoreOf(Object.assign(d2, { fam: fs.fams.length === 1 ? fs.fams[0].id : "" })) });
+      var d0 = { interp: interp, n: n, k: k, mu: ms[mi][0], mv: ms[mi][1] };
+      if (!exactOf(d0)) continue;
+      var r = dataFor(interp, n, k, ms[mi][0], ms[mi][1]);
+      if (r.error) continue;
+      out.push({ n: n, k: k, mu: ms[mi][0], mv: ms[mi][1], score: scoreOf(r.d) });
     }
     poolMemo[interp] = out;
     return out;
@@ -419,7 +427,7 @@
     if (all.length > CAP) return { ok: false, error: "Kế hoạch tối đa " + CAP + " lệnh." };
     var r = simulate(p.data, all);
     if (!r.ok) return { ok: false, error: r.error.msg };
-    var last = n0 + rs.recs.length - 1, evs = r.events.filter(function (e) { return e.idx >= n0 && e.idx <= last; });
+    var last = n0 + rs.recs.length - 1, evs = r.events.filter(function (e) { return e.idx >= n0 && e.idx <= last && !e.imp; });
     return { ok: true, error: null, recs: rs.recs, after: { T: qs(r.T), Ttext: durText(r.T), event: evs.map(function (e) { return e.text; }).join(" "), count: all.length } };
   }
   function check(p, s) {
@@ -591,7 +599,7 @@
       var dd = plan.appendDiff(s, LAYOUT, [r], "Lệnh " + (i + 1));
       if (!dd) return;
       P.game.applyDiff(s, dd.d, false);
-      var sim = simulate(d, recsOf(s)), ev = sim.ok ? sim.events.filter(function (e) { return e.idx === i && true; }).map(function (e) { return e.text; }).join(" ") : "";
+      var sim = simulate(d, recsOf(s)), ev = sim.ok ? sim.events.filter(function (e) { return e.idx === i && !e.imp; }).map(function (e) { return e.text; }).join(" ") : "";
       out.push({ text: "Lệnh " + (i + 1) + ": " + recText(d, r) + (ev ? " — " + ev : "."), why: explainRec(d, fam, sol, i), diff: { d: dd.d }, cells: [i], technique: REGIME_NAME[d.fam] ? d.fam === "tiep-suc" ? "Tiếp sức" : d.fam === "chi-can" ? "Chở thẳng" : d.interp === "B" ? "Xe ôm" : "Đưa-đón" : "Lịch mẫu" });
     });
     var sd = plan.submitDiff(s, LAYOUT, [], "Nộp kế hoạch"), fin = simulate(d, sol);
@@ -692,7 +700,7 @@
         { title: "Cận dưới LP", text: "Gọi r, s là số km đi xe chiều tới / lùi của mỗi người (trung bình), F, K là số km tới / lùi của mỗi xe: thời gian mỗi người, số ghế, người lái cho quãng lùi, quãng đường của xe đều là ràng buộc TUYẾN TÍNH, nên lấy trung bình mọi lịch cho một điểm thoả LP ⇒ T ≥ T_LP. Giải LP (liệt kê đỉnh) cho đúng hai công thức trên." },
         { title: "Xe ôm và đề không chia hết", text: "Cách hiểu B bỏ ràng buộc người lái: T* = T_dd(n/k), đạt được khi k | n. Khi không chia hết app chỉ biết cận dưới LP và lịch tốt nhất đã thử (chia nhóm cân bằng) — khoảng cách có thể là một khoảng hở thật." }
       ],
-      links: [{ id: "binary-search", label: "Tìm kiếm nhị phân" }, { id: "coin-change", label: "Đổi tiền (QHĐ)" }]
+      links: [{ id: "ternary-search", label: "Tìm kiếm tam phân (quãng đi xe x tối ưu)" }, { id: "gaussian-elimination", label: "Khử Gauss (giải đỉnh của LP)" }]
     },
     difficultyNote: "Điểm 0–10 = 0,6 + 0,3·(số lệnh của lịch tối ưu) + 1,4·(k−1) + 0,6·[tiếp sức] + 0,5·[m = 3 hai lịch] + 0,5·[m không nguyên] − 0,2·[xe ôm] (+1 nếu chưa biết tối ưu): Dễ 3–4 người một xe · Vừa 4–6 người hoặc 2 xe · Khó 7–8 người hoặc nhiều xe · Chuyên gia 9–12 người hoặc 3 xe.",
     kind: "optimize", objective: { sense: "min", label: "Thời điểm người cuối tới B", unit: "" },

@@ -21,3 +21,26 @@ export type PreparedMarkdown = PreparedMath
 export function prepareMarkdown(source: string): PreparedMarkdown {
   return normalizeMath(source)
 }
+
+const blockCache = new Map<string, PreparedMarkdown>()
+const BLOCK_CACHE_MAX = 4000
+
+/**
+ * `prepareMarkdown` for one block, remembered by the block's text (render-by-block, perf-md task 6). Offsets in the
+ * result (`display`, `generated`) are relative to the block; the plugins that read them parse the same block text, so
+ * they agree. The concatenation of the per-block `text`s joined by `\n` equals the whole document's (blocks.test.ts).
+ */
+export function prepareBlock(text: string): PreparedMarkdown {
+  const hit = blockCache.get(text)
+  if (hit) return hit
+  const prepared = prepareMarkdown(text)
+  blockCache.set(text, prepared)
+  if (blockCache.size > BLOCK_CACHE_MAX) {
+    let drop = BLOCK_CACHE_MAX / 4
+    for (const key of blockCache.keys()) {
+      blockCache.delete(key)
+      if (--drop <= 0) break
+    }
+  }
+  return prepared
+}

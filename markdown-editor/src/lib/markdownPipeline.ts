@@ -54,6 +54,8 @@ function rehypeKatexFresh() {
 export interface PipelineOptions {
   /** Prepended to heading ids, for a second rendering of the same document on the page (reading mode, Smart format). */
   idPrefix?: string
+  /** Render-by-block: headings carry `data-slug` and no id (see `rehypeEnhance`, `assignHeadingIds`). */
+  blockMode?: boolean
 }
 
 /** The remark plugins, in order, for a document prepared by `prepareMarkdown`. */
@@ -70,7 +72,7 @@ export function rehypePipeline(options: PipelineOptions = {}): NamedPlugin<Rehyp
   return [
     { name: 'raw', plugin: rehypeRaw },
     { name: 'styleGuard', plugin: rehypeStyleGuard },
-    { name: 'enhance', plugin: [rehypeEnhance, { idPrefix: options.idPrefix ?? '' }] },
+    { name: 'enhance', plugin: [rehypeEnhance, { idPrefix: options.idPrefix ?? '', blockMode: options.blockMode === true }] },
     { name: 'sanitize', plugin: [rehypeSanitize, sanitizeSchema] },
     { name: 'katex', plugin: rehypeKatexFresh }
   ]

@@ -46,6 +46,13 @@
 </nav>
 
 <!-- Goi y khi mo tep trong nhu mot JSON Schema (ui-schema.js). -->
+<!-- Ban nhap khong tu luu duoc / da khoi phuc tu IndexedDB (json-editor.js, muc 7). -->
+<div class="bang-goi-y bang-nhap" id="bang-nhap" role="status" hidden>
+  <span id="bang-nhap-chu"></span>
+  <button class="nut nho" id="bang-nhap-tai" type="button" hidden>💾 Tải về</button>
+  <button class="nut nho" id="bang-nhap-dong" type="button">Đã hiểu</button>
+</div>
+
 <div class="bang-goi-y" id="sc-goi-y" role="status" hidden>
   <span id="sc-goi-y-chu"></span>
   <button class="nut nho" id="sc-goi-y-dung" type="button">Dùng làm schema</button>
@@ -54,7 +61,29 @@
 
 <main>
   <!-- ======================= SOẠN ======================= -->
-  <section class="o dang" data-o="soan">
+  <section class="o dang" data-o="soan" id="o-soan">
+    <div class="thanh-phu soan-thanh">
+      <!-- Hai mat cua o soan: Sửa (textarea) | Xem (cuon ao, chi doc, gap khoi — tu vao khi van ban > 1,5 MB). -->
+      <span class="nhom-che-do" role="group" aria-label="Chế độ ô soạn">
+        <button class="nut nho dang-chon" id="soan-sua" type="button" aria-pressed="true" title="Sửa văn bản (textarea)">✎ Sửa</button>
+        <button class="nut nho" id="soan-xem" type="button" aria-pressed="false" title="Xem ảo: chỉ đọc, gập khối, mượt với tài liệu lớn">👁 Xem</button>
+      </span>
+      <button class="nut nho" id="soan-ngat-dong" type="button" aria-pressed="false" title="Ngắt dòng (Alt+Z)">↩ Ngắt dòng</button>
+      <span class="vach xem-chi" hidden></span>
+      <span class="xem-cong-cu xem-chi" id="xem-cong-cu" hidden>
+        <span class="phu">Gập tới cấp</span>
+        <button class="nut nho" type="button" data-cap="1" title="Gập mọi khối sâu từ cấp 1">1</button>
+        <button class="nut nho" type="button" data-cap="2" title="Gập mọi khối sâu từ cấp 2">2</button>
+        <button class="nut nho" type="button" data-cap="3" title="Gập mọi khối sâu từ cấp 3">3</button>
+        <button class="nut nho" type="button" data-cap="4" title="Gập mọi khối sâu từ cấp 4">4</button>
+        <button class="nut nho" type="button" id="xem-mo-het">Mở hết</button>
+        <span class="phu" id="xem-tien-do" role="status" aria-live="polite"></span>
+      </span>
+    </div>
+    <div class="bang-goi-y" id="bang-lon" role="status" hidden>
+      <span id="bang-lon-chu"></span>
+      <button class="nut nho" id="bang-lon-sua-tho" type="button" hidden>Vẫn sửa văn bản thô (chậm)</button>
+    </div>
     <div class="soan-khung">
       <div class="so-dong" id="so-dong" aria-hidden="true"></div>
       <div class="vung-soan" id="vung-soan">
@@ -72,6 +101,12 @@ Ví dụ:
 }'></textarea>
       </div>
     </div>
+    <!-- Mat Xem (ui-xem.js): khung cuon ao chi dung ~60 hang nhin thay. -->
+    <div class="xem-khung" id="xem-khung" hidden>
+      <div class="xem-cuon" id="xem-cuon" tabindex="0" role="document" aria-label="Xem JSON (chỉ đọc). Mũi tên lên xuống để cuộn, Enter trên dòng để sửa.">
+        <div class="xem-cao" id="xem-cao"><div class="xem-cua" id="xem-cua"></div></div>
+      </div>
+    </div>
   </section>
 
   <!-- ======================= CÂY ======================= -->
@@ -87,6 +122,13 @@ Ví dụ:
       <label class="o-chon" title="Hiện kích thước (byte khi nén) của nhánh đang gấp"><input type="checkbox" id="cay-kich-thuoc" checked> Kích thước</label>
       <span class="phu" id="cay-tom"></span>
       <span class="bao-cay" id="cay-bao" role="status" aria-live="polite"></span>
+      <!-- "Mở hết" tren cay qua lon: hoi truoc (JS dat chu, hien / an). -->
+      <span class="hoi-cay" id="cay-hoi" role="alert" hidden>
+        <span id="cay-hoi-chu"></span>
+        <button class="nut nho" id="cay-hoi-cap3" type="button">Mở tới cấp 3</button>
+        <button class="nut nho" id="cay-hoi-het" type="button">Vẫn mở hết</button>
+        <button class="nut nho" id="cay-hoi-huy" type="button">Huỷ</button>
+      </span>
     </div>
     <p class="mach mach-cay">
       Bấm giá trị để sửa, bấm tên khoá để đổi tên<span class="mach-phim"> ·
@@ -234,6 +276,7 @@ Ví dụ:
 <script src="assets/schema-suy.js"></script>
 <script src="assets/chay-nen.js"></script>
 <script src="assets/json-editor.js"></script>
+<script src="assets/ui-xem.js"></script>
 <script src="assets/ui-schema.js"></script>
 </body>
 </html>

@@ -182,3 +182,13 @@
     font-size: 13px;
   }
 }
+
+/* A diagram that has not started rendering (it is far from the screen) keeps its room so the layout does not jump. */
+.mermaid-loading {
+  min-height: 96px;
+}
+
+.pane-progress {
+  margin-right: 8px;
+  font-variant-numeric: tabular-nums;
+}

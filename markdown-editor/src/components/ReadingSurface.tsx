@@ -19,7 +19,8 @@ import {
 } from '../lib/reading'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useIdleValue } from '../hooks/useIdleValue'
-import MarkdownView from './MarkdownView'
+import BlockedMarkdownView from './BlockedMarkdownView'
+import { revealIn } from '../lib/previewController'
 import Drawer from './Drawer'
 import { IconClose, IconOutline } from './Icons'
 import './ReadingView.css'
@@ -113,6 +114,8 @@ function ReadingSurface({
   const frame = useRef(0)
   /** Set when the layout changed: the pending frame re-measures before it places the reader. */
   const needsMeasure = useRef(false)
+  /** Set when more of the article was built: the pending frame looks for the headings again first. */
+  const needsCollect = useRef(false)
   const pointerType = useRef('mouse')
   /** Each outline entry's rendered heading, collected once per render of the article. */
   const headingEls = useRef<(HTMLElement | null)[]>([])
@@ -194,10 +197,21 @@ function ReadingSurface({
     if (frame.current) return
     frame.current = requestAnimationFrame(() => {
       frame.current = 0
+      if (needsCollect.current) {
+        needsCollect.current = false
+        collectHeadings()
+        needsMeasure.current = true
+      }
       if (needsMeasure.current) measure()
       else updatePosition()
     })
-  }, [measure, updatePosition])
+  }, [collectHeadings, measure, updatePosition])
+
+  /** The article was built further (progressive rendering): headings exist that were placeholders, heights have moved. */
+  const onBuilt = useCallback(() => {
+    needsCollect.current = true
+    scheduleFrame()
+  }, [scheduleFrame])
 
   // After every render of the article; images, diagrams and maths then change
   // the height as they finish rendering.
@@ -305,7 +319,11 @@ function ReadingSurface({
   const goToHeading = (heading: Heading, index: number) => {
     setPanel(null)
     const cached = headingEls.current[index]
-    const element = cached?.isConnected ? cached : elementWithId(articleRef.current, READING_ID_PREFIX + heading.slug)
+    let element = cached?.isConnected ? cached : elementWithId(articleRef.current, READING_ID_PREFIX + heading.slug)
+    if (!element && articleRef.current && revealIn(articleRef.current, { line: heading.line })) {
+      // The heading sits in a block that was still a placeholder: it is built now.
+      element = elementWithId(articleRef.current, READING_ID_PREFIX + heading.slug)
+    }
     if (element) scrollToElement(element)
   }
 
@@ -320,7 +338,10 @@ function ReadingSurface({
       // Headings carry the reading prefix; ids written into the document's own
       // HTML do not.
       // Looked up inside the article: the preview underneath has its own copies.
-      const element = elementWithId(articleRef.current, READING_ID_PREFIX + id) ?? elementWithId(articleRef.current, id)
+      const find = () => elementWithId(articleRef.current, READING_ID_PREFIX + id) ?? elementWithId(articleRef.current, id)
+      let element = find()
+      // The target may sit in a block not built yet; the whole article is, rather than guessing which one.
+      if (!element && articleRef.current && revealIn(articleRef.current, { all: true })) element = find()
       if (element) scrollToElement(element)
       return
     }
@@ -419,8 +440,10 @@ function ReadingSurface({
           }}
           onClick={onArticleClick}
         >
-          <MarkdownView
+          <BlockedMarkdownView
             source={content}
+            progressive
+            onBuilt={onBuilt}
             theme={theme === 'dark' ? 'dark' : 'light'}
             codeBackground={CODE_BACKGROUND[theme]}
             idPrefix={READING_ID_PREFIX}

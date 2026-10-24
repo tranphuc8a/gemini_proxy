@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { printDocument } from '../lib/previewController'
 import type { StorageBackend } from '../types'
 import ReadingSurface from '../components/ReadingSurface'
 import { IconDownload, IconPrinter } from '../components/Icons'
@@ -116,7 +117,7 @@ function SharePage({ token, backend }: SharePageProps) {
             >
               <IconDownload size={18} />
             </button>
-            <button className="reading-btn" onClick={() => window.print()} aria-label="Print" title="Print">
+            <button className="reading-btn" onClick={() => void printDocument()} aria-label="Print" title="Print">
               <IconPrinter size={18} />
             </button>
           </>

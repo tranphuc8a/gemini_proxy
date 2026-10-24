@@ -61,7 +61,7 @@ K.utf8_console()
 # Ngưỡng — chỉnh ở đây khi mỗi đợt mở cổng của mình
 # ---------------------------------------------------------------------------------------------------------------------
 DOT = ["M0", "M1", "M2", "M2b", "M3", "M4a", "M4b", "M5", "M6", "M7", "M8", "M9", "M10"]
-DOT_HIEN_TAI = "M2"  # đợt đang thi công. Đợt nào đạt ngưỡng của mình thì nâng giá trị này (ke-hoach §2, luồng M).
+DOT_HIEN_TAI = "M5"  # đợt đang thi công. Đợt nào đạt ngưỡng của mình thì nâng giá trị này (ke-hoach §2, luồng M).
 MOC_PATH = os.path.join(K.HERE, "hieu-nang-moc.json")
 DUNG_SAI = 0.10
 
@@ -311,8 +311,8 @@ QUAN_SAT = r"""
 # Mốc thời gian mở trang: khung đầu có editor / preview / bài đọc CỦA TÀI LIỆU ĐO. Trước khi hydrate, app vẽ một khung
 # với tài liệu chào (welcome.md, có [data-line]) — đã thấy bằng Edge 23/10 — nên nhận diện theo tiêu đề đầu tiên của tài
 # liệu đo (`__mong.tieuDe`) và độ dài textarea (`__mong.dai`), không theo [data-line] như perf_me.py.
-# GHI CHÚ cho perf 8–11 (render theo khối): nếu preview dựng dần hay mermaid chờ IntersectionObserver thì xem lại điều
-# kiện "yên" trong cho_yen() (đang chờ hết .mermaid-loading và 1,5 s không long task/không đổi DOM con của preview).
+# GHI CHÚ M5 (render theo khối): preview dựng dần nên "yên" còn phải chờ hết khối đang là chỗ giữ (`.md-block.is-pending`);
+# sơ đồ mermaid chờ IntersectionObserver mang thêm lớp `is-waiting` (chưa tới lượt vẽ — không tính là "đang vẽ").
 SAN_SANG = r"""
 (() => {
   window.__t = {};
@@ -465,7 +465,7 @@ def cho_yen(page, mode, han_s, mang=None):
     while time.time() < deadline:
         s = page.evaluate("""() => { const now = performance.now(); const lt = window.__lt; const lastLt = lt.length ? lt[lt.length-1].s + lt[lt.length-1].d : 0;
           let lastRes = 0; for (const e of performance.getEntriesByType('resource')) lastRes = Math.max(lastRes, e.responseEnd);
-          return {now, lastLt, lastRes, t: window.__t, loading: document.querySelectorAll('.mermaid-loading').length,
+          return {now, lastLt, lastRes, t: window.__t, loading: document.querySelectorAll('.mermaid-loading:not(.is-waiting)').length + document.querySelectorAll('.md-block.is-pending').length,
                   admin: !!document.querySelector('.status-role.is-admin')}; }""")
         t = s["t"]
         ok = t.get("reading") if mode == "reading" else (t.get("editor") and (mode == "editor" or t.get("preview")))
@@ -610,7 +610,10 @@ def do_che_do(browser, nguon, md, mode, a):
                 tq = None
                 dl = time.time() + a.han
                 while time.time() < dl:
-                    v = page.evaluate("""([L, m]) => { const el = document.querySelector('.preview-scroll [data-line="' + L + '"]');
+                    # Render theo khối (M5): data-line tương đối trong khối; khối chứa dòng L = wrapper cuối có data-block-line <= L.
+                    v = page.evaluate("""([L, m]) => { let el = null;
+                        for (const w of document.querySelectorAll('.preview-scroll .md-block')) { if (Number(w.dataset.blockLine) <= L) el = w; else break; }
+                        if (!el) el = document.querySelector('.preview-scroll [data-line="' + L + '"]');
                         return el && el.textContent.includes(m) ? performance.now() : 0; }""", [dong, go])
                     if v:
                         tq = v

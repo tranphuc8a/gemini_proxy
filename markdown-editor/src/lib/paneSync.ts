@@ -123,6 +123,7 @@ export function lineForOffset(anchors: LineAnchor[], top: number): number {
  * position -- the two binary searches above rely on both.
  */
 export function collectPreviewAnchors(container: HTMLElement): LineAnchor[] {
+  if (container.querySelector('.md-block')) return collectBlockAnchors(container)
   const anchors: LineAnchor[] = []
   const elements = container.querySelectorAll<HTMLElement>('[data-line]')
   const containerTop = container.getBoundingClientRect().top - container.scrollTop
@@ -138,5 +139,35 @@ export function collectPreviewAnchors(container: HTMLElement): LineAnchor[] {
     anchors.push({ line, top })
   })
 
+  return anchors
+}
+
+/**
+ * The anchors of a document rendered block by block: each `.md-block` wrapper says where its block starts
+ * (`data-block-line`, an absolute source line), and the elements directly inside it carry `data-line` relative to that
+ * start. Only the wrapper and its direct children are measured -- the rest of a block can be `content-visibility`-skipped,
+ * and asking for the position of something inside a skipped element makes the browser lay it out.
+ */
+export function collectBlockAnchors(container: HTMLElement): LineAnchor[] {
+  const anchors: LineAnchor[] = []
+  const containerTop = container.getBoundingClientRect().top - container.scrollTop
+  const push = (line: number, element: Element) => {
+    if (!Number.isFinite(line)) return
+    const top = element.getBoundingClientRect().top - containerTop
+    const previous = anchors[anchors.length - 1]
+    if (previous && (line <= previous.line || top < previous.top)) return
+    anchors.push({ line, top })
+  }
+
+  container.querySelectorAll<HTMLElement>('.md-block').forEach((wrapper) => {
+    const start = Number(wrapper.dataset.blockLine)
+    if (!Number.isFinite(start)) return
+    push(start, wrapper)
+    if (wrapper.classList.contains('is-pending')) return
+    for (const child of Array.from(wrapper.children)) {
+      const relative = Number((child as HTMLElement).dataset.line)
+      if (Number.isFinite(relative)) push(start + relative - 1, child)
+    }
+  })
   return anchors
 }

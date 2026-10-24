@@ -12,7 +12,7 @@ import {
   onScrollSync,
   type LineAnchor
 } from '../lib/paneSync'
-import MarkdownView from './MarkdownView'
+import BlockedMarkdownView from './BlockedMarkdownView'
 import './Preview.css'
 
 /** Keeps typing responsive: re-parsing on every keystroke stutters on long files. */
@@ -38,6 +38,9 @@ function Preview() {
   const anchorFrame = useRef(0)
 
   // null until a long document's first render, which waits for the first paint.
+  const [built, setBuilt] = useState<{ done: number; total: number } | null>(null)
+  const onProgress = useCallback((done: number, total: number) => setBuilt(done < total ? { done, total } : null), [])
+
   const [debounced, setDebounced] = useState<string | null>(() => (content.length > DEFER_FIRST_RENDER_CHARS ? null : content))
   const pending = debounced === null
 
@@ -115,7 +118,10 @@ function Preview() {
   const onDoubleClick = useCallback((event: React.MouseEvent) => {
     const block = (event.target as HTMLElement).closest<HTMLElement>('[data-line]')
     if (!block) return
-    const line = Number(block.dataset.line)
+    // Rendered block by block, `data-line` counts from the block's first line.
+    const wrapper = block.closest<HTMLElement>('[data-block-line]')
+    const offset = wrapper ? Number(wrapper.dataset.blockLine) - 1 : 0
+    const line = Number(block.dataset.line) + offset
     if (Number.isFinite(line)) emitJump({ line, source: 'preview' })
   }, [])
 
@@ -139,7 +145,10 @@ function Preview() {
     <section className="preview-pane" aria-label="Rendered preview">
       <div className="pane-header">
         <span className="pane-title">Preview</span>
-        <span className="pane-meta">GitHub flavoured</span>
+        <span className="pane-meta">
+          {built ? <span className="pane-progress" role="status">Building {Math.round((built.done / built.total) * 100)}%</span> : null}
+          GitHub flavoured
+        </span>
       </div>
 
       <div ref={scrollRef} className="preview-scroll" onScroll={onScroll} onDoubleClick={onDoubleClick} onClick={onClick}>
@@ -148,7 +157,7 @@ function Preview() {
             <p className="preview-empty">Rendering preview…</p>
           ) : (
             <>
-              <MarkdownView source={debounced} theme={theme} />
+              <BlockedMarkdownView source={debounced} theme={theme} progressive onProgress={onProgress} onBuilt={scheduleAnchors} />
               {!debounced.trim() && <p className="preview-empty">Nothing to preview yet — start writing in the editor.</p>}
             </>
           )}

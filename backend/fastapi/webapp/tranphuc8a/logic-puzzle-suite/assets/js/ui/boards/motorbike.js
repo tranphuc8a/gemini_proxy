@@ -80,7 +80,7 @@
 
     // ---- vẽ biểu đồ
     function drawDiagram() {
-      var v = view(), W = Math.max(260, Math.round(diagHost.clientWidth || lastW || 320)), H = 270, pl = 38, pr = 12, pt = 20, pb = 30;
+      var v = view(), W = Math.max(200, Math.round(diagHost.clientWidth || lastW || 320)), H = 270, pl = 38, pr = 12, pt = 20, pb = 30;
       lastW = W;
       if (!v.ok) { diagHost.replaceChildren(h("p", { class: "pz-mb-bad", text: "Kế hoạch không hợp lệ: " + v.error })); return; }
       var tmax = Math.max(1, v.Tf) * 1.04, sx = function (x) { return pl + x * (W - pl - pr); }, sy = function (t) { return pt + t / tmax * (H - pt - pb); };
@@ -211,7 +211,7 @@
     function drawPlan() {
       var recs = plan.read(game.state, lib.LAYOUT), v = view(), kids = [], sub = submitted();
       recs.forEach(function (r, i) {
-        var txt = type.describeCell(puzzle, game.state, i), ev = v.ok ? v.events.filter(function (e) { return e.idx === i; }).map(function (e) { return e.text; }).join(" ") : "";
+        var txt = type.describeCell(puzzle, game.state, i), ev = v.ok ? v.events.filter(function (e) { return e.idx === i && !e.imp; }).map(function (e) { return e.text; }).join(" ") : "";
         var li = h("li", { class: "pz-mb-step" + (marks[i] === "hint" ? " hint" : marks[i] === "replay" ? " replay" : ""), "aria-label": txt + (ev ? ". " + ev : "") },
           h("span", { class: "pz-mb-stext", text: txt.replace(/^Lệnh \d+: /, "") }), ev ? h("span", { class: "pz-mb-safter", text: ev }) : null);
         if (!ro && i < recs.length - 1) li.append(h("button", { type: "button", class: "btn pz-mb-cut", "aria-label": "Quay kế hoạch về sau lệnh " + (i + 1) + " (bỏ " + (recs.length - 1 - i) + " lệnh sau)", title: "Giữ tới lệnh " + (i + 1) + ", bỏ các lệnh sau", dataset: { n: String(i + 1) }, text: "↩ Giữ tới đây", disabled: canAct() ? null : true, on: { click: function () { doTruncate(i + 1); } } }));

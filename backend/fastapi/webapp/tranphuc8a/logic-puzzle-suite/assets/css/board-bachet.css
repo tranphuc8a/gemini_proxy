@@ -1,0 +1,109 @@
+/* board-bachet.css — bàn QUẢ CÂN BACHET + trình soạn. Token + --pz-* của puzzle.css; màu riêng của bàn là --pz-bc-* (bản sáng/tối; check_board_bachet.py đo tương phản).
+   Dải phủ 1…N: ô "cân được" = nền đặc xanh + dấu ✓; ô "còn hở" = viền đứt + gạch chéo + dấu ✗ (hai kiểu hoa văn + chữ, không chỉ màu).
+   Bàn đặt quả cân: nút quả cân có CHỮ vị trí (để ngoài / đĩa phải ▶ / cùng vật ◀) và viền khác nhau theo vị trí. Cỡ co theo khung (.board-host là container). */
+:root {
+  --pz-bc-ok: #d6f1e0;
+  --pz-bc-ok-ink: #0b4a2a;
+  --pz-bc-gap-ink: #8a1c17;
+  --pz-bc-gap-line: #b4231f;
+  --pz-bc-pos1: #1a4ac0;
+  --pz-bc-pos2: #9a5a05;
+}
+:root[data-theme="dark"] {
+  --pz-bc-ok: #1f4a35;
+  --pz-bc-ok-ink: #c9f2dc;
+  --pz-bc-gap-ink: #ffb3ab;
+  --pz-bc-gap-line: #ff8f84;
+  --pz-bc-pos1: #8fb4ff;
+  --pz-bc-pos2: #ffc27a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) { --pz-bc-ok: #1f4a35; --pz-bc-ok-ink: #c9f2dc; --pz-bc-gap-ink: #ffb3ab; --pz-bc-gap-line: #ff8f84; --pz-bc-pos1: #8fb4ff; --pz-bc-pos2: #ffc27a; }
+}
+
+.pz-bc { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
+.pz-bc-h { margin: 0 0 6px; font-size: 15px; }
+.pz-bc-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pz-bc-stat { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--elev); color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pz-bc-stat b { font-size: 18px; line-height: 1.1; }
+.pz-bc-goal { border-color: var(--accent); }
+
+/* ---- ô quả cân */
+.pz-bc-slotbox, .pz-bc-cover, .pz-bc-try, .pz-bc-item { min-width: 0; padding: 10px 10px 12px; border: 2px solid var(--pz-line-strong); border-radius: 16px; background: var(--elev); }
+.pz-bc-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+.pz-bc-slot { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--pz-cell); }
+.pz-bc-slot.filled { border-color: var(--accent); }
+.pz-bc-slot.hint { background: var(--pz-hint); }
+.pz-bc-slot.replay { background: var(--pz-replay); }
+.pz-bc-slab { font-size: 13px; color: var(--text-2); }
+.pz-bc-sline { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.pz-bc-num { flex: 1 1 0; min-width: 0; width: 100%; min-height: 44px; padding: 0 6px; text-align: center; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); background: var(--elev); border: 1px solid var(--border-strong); border-radius: 10px; }
+.pz-bc-num:focus-visible, .pz-bc-text:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-bc-step { flex: 0 0 44px; min-width: 44px; min-height: 44px; padding: 0; font-size: 20px; font-weight: 700; }
+.pz-bc-note { margin: 6px 0 0; min-height: 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.pz-bc-note:empty { display: none; }
+.pz-bc-note.bad { color: var(--pz-conflict-text); }
+
+/* ---- dải phủ */
+.pz-bc-strip { display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; }
+.pz-bc-cell { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 32px; height: 36px; padding: 0 3px; border-radius: 6px; font-size: 12.5px; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pz-bc-cell.ok { background: var(--pz-bc-ok); color: var(--pz-bc-ok-ink); border: 1px solid var(--pz-bc-ok-ink); }
+.pz-bc-cell.gap { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--pz-bc-gap-line) 4px 5px); color: var(--pz-bc-gap-ink); border: 2px dashed var(--pz-bc-gap-line); }
+.pz-bc-mark { font-style: normal; font-size: 11px; }
+.pz-bc-cell.dense { min-width: 9px; width: 9px; height: 18px; padding: 0; border-radius: 2px; }
+.pz-bc-cell.dense.gap { border-width: 1px; }
+.pz-bc-legend { margin: 8px 0 4px; font-size: 13px; }
+.pz-bc-key { display: inline-block; min-width: 22px; text-align: center; border-radius: 4px; padding: 0 3px; font-weight: 700; }
+.pz-bc-key.ok { background: var(--pz-bc-ok); color: var(--pz-bc-ok-ink); border: 1px solid var(--pz-bc-ok-ink); }
+.pz-bc-key.gap { color: var(--pz-bc-gap-ink); border: 2px dashed var(--pz-bc-gap-line); }
+.pz-bc-summary { margin: 4px 0 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.pz-bc-gaps { margin: 4px 0 0; font-size: 13.5px; overflow-wrap: anywhere; }
+
+/* ---- cân thử, nút */
+.pz-bc-tryin { max-width: 120px; flex: 0 0 auto; }
+.pz-bc-tryout { margin: 6px 0 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.pz-bc-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-bc-act { min-height: 44px; }
+.pz-bc-how { margin: 0; font-size: 13.5px; text-align: center; }
+
+/* ---- đặt quả cân */
+.pz-bc-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; min-width: 0; }
+.pz-bc-item.bal { border-color: var(--pz-good); }
+.pz-bc-wts { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-bc-wt { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-width: 78px; min-height: 52px; padding: 2px 8px; border: 2px solid var(--border-strong); line-height: 1.2; }
+.pz-bc-wtn { font-size: 16px; font-variant-numeric: tabular-nums; }
+.pz-bc-wtp { font-size: 12.5px; color: var(--text-2); }
+.pz-bc-wt[data-pos="1"] { border-color: var(--pz-bc-pos1); border-style: solid; }
+.pz-bc-wt[data-pos="1"] .pz-bc-wtp { color: var(--pz-bc-pos1); font-weight: 700; }
+.pz-bc-wt[data-pos="2"] { border-color: var(--pz-bc-pos2); border-style: dashed; }
+.pz-bc-wt[data-pos="2"] .pz-bc-wtp { color: var(--pz-bc-pos2); font-weight: 700; }
+.pz-bc-wt.hint, .pz-bc-wt.ghost { background: var(--pz-hint); }
+.pz-bc-wt.replay { background: var(--pz-replay); }
+.pz-bc-wt:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-bc-scale { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 6px; margin-top: 8px; }
+.pz-bc-pan { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--pz-cell); }
+.pz-bc-pt { font-size: 12.5px; color: var(--text-2); }
+.pz-bc-pv { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); overflow-wrap: anywhere; }
+.pz-bc-mid { align-self: center; font-size: 22px; font-weight: 700; color: var(--text); }
+.pz-bc-res { margin: 6px 0 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.pz-bc-res.good { color: var(--pz-good); }
+.pz-bc-res.bad { color: var(--pz-conflict-text); }
+
+/* ---- trình soạn */
+.pz-bc-ed { gap: 14px; }
+.pz-bc-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pz-bc-field .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-bc-field .chip { min-height: 44px; padding: 0 14px; }
+.pz-bc-field .chip.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.pz-bc-field .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-bc-text { min-height: 44px; width: 100%; padding: 0 10px; font-size: 16px; color: var(--text); background: var(--elev); border: 1px solid var(--border-strong); border-radius: 10px; }
+.pz-bc-fhint { margin: 0; font-size: 13.5px; }
+.pz-bc-samples { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-bc-samples .btn { min-height: 44px; }
+.pz-bc-edinfo { margin: 0; font-weight: 600; text-align: center; overflow-wrap: anywhere; color: var(--text); }
+.pz-bc-edinfo.bad { color: var(--pz-conflict-text); }
+.pz-bc-edinfo.good { color: var(--pz-good); }
+.pz-bc-tip { font-size: 13.5px; }
+
+@media (forced-colors: active) { .pz-bc-cell.ok { background: Canvas; border-color: Highlight; } .pz-bc-cell.gap { background: Canvas; border-color: GrayText; } }
+@container (max-width: 420px) { .pz-bc-stat { font-size: 13px; padding: 4px 10px; } .pz-bc-slots { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } .pz-bc-scale { grid-template-columns: 1fr; } .pz-bc-mid { justify-self: center; } }

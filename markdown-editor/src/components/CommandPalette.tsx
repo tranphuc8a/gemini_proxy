@@ -7,6 +7,7 @@ import { emitJump } from '../lib/paneSync'
 import { exportMarkdown } from '../lib/exporters'
 import { rankBySearch } from '../lib/fuzzy'
 import { IconFile, IconHash, IconSearch } from './Icons'
+import { printDocument } from '../lib/previewController'
 import './CommandPalette.css'
 
 interface Command {
@@ -89,7 +90,7 @@ function CommandPalette({ open, onClose, onOpenHelp, onOpenShare, onOpenSync }: 
       ...(onOpenShare && currentFileId && flatten(files).some((node) => node.id === currentFileId && node.type === 'file')
         ? [{ id: 'share', label: 'Share read-only link…', group: 'Commands' as const, hint: 'anyone with the link can read a snapshot', run: onOpenShare }]
         : []),
-      { id: 'print', label: 'Print or save as PDF', group: 'Commands', shortcut: 'Ctrl+P', run: () => window.print() },
+      { id: 'print', label: 'Print or save as PDF', group: 'Commands', shortcut: 'Ctrl+P', run: () => void printDocument() },
       { id: 'help', label: 'Open help and shortcuts', group: 'Commands', shortcut: 'Ctrl+/', run: onOpenHelp }
     ]
 
