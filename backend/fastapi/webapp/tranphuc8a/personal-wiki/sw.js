@@ -14,7 +14,7 @@
    ========================================================================== */
 "use strict";
 
-var PHIEN_BAN = "8ee0c36c12d8";
+var PHIEN_BAN = "79aef1be88cb";
 var PHAM_VI = self.registration.scope;
 var DUONG_DAN = new URL(PHAM_VI).pathname;
 var TIEN_TO = "wiki:" + PHAM_VI + ":";                       /* ui/pwa.js (offlineStatus) đọc đúng tiền tố này */

@@ -1092,6 +1092,33 @@ def kiem_hydrate(br, url, tmp):
     except Exception:
         okf = 0
     check(okf >= 1, "ôn tập: công thức trong câu hỏi thẻ được KaTeX vẽ", okf)
+    # ---- G. công thức quá dài (8k/32k/64k): không hydrate (giữ TeX nguyên văn, "dai"), luồng chính không bị treo; công thức thường bên cạnh vẫn vẽ
+    gl = F.pg.evaluate("""async () => {
+        const mk = (n, cls) => { const d = document.createElement('div'); const e = document.createElement(cls ? 'div' : 'span'); e.className = cls ? 'math math-d' : 'math';
+          const t = 'a+'.repeat(n / 2); e.setAttribute('data-tex', t); e.textContent = t; d.appendChild(e); document.body.appendChild(d); return d; };
+        const box = [mk(8000, 1), mk(32000, 1), mk(64000, 1)];
+        const ok = document.createElement('span'); ok.className = 'math'; ok.setAttribute('data-tex', 'x^2'); ok.textContent = 'x^2'; document.body.appendChild(ok);
+        const bad = document.createElement('span'); bad.className = 'math'; document.body.appendChild(bad);
+        let gap = 0, last = performance.now(), stop = false;
+        const iv = setInterval(() => { const n = performance.now(); gap = Math.max(gap, n - last); last = n; }, 4);
+        await Wiki.ui.rich.hydrate(box.concat([ok, bad]));
+        clearInterval(iv);
+        const r = { gap: gap, long: box.map(d => d.firstChild.getAttribute('data-hydrated')), kept: box.map(d => d.firstChild.textContent.length === d.firstChild.getAttribute('data-tex').length),
+          ok: ok.getAttribute('data-hydrated'), bad: bad.getAttribute('data-hydrated') };
+        box.forEach(d => d.remove()); ok.remove(); bad.remove(); return r; }""")
+    check(gl["long"] == ["dai", "dai", "dai"] and all(gl["kept"]), "công thức 8k/32k/64k ký tự: không hydrate (data-hydrated=dai), giữ TeX nguyên văn", gl)
+    check(gl["gap"] < 400, "công thức quá dài không treo luồng chính (khoảng trống lớn nhất %d ms < 400)" % gl["gap"], gl["gap"])
+    check(gl["ok"] == "1" and gl["bad"] == "loi", "công thức thường vẫn vẽ; nút .math không có data-tex đánh loi (không thăm dò mãi)", gl)
+    # ---- G2. công thức NGẮN nhưng lồng sâu (\sqrt{ x200 = 1.4k ký tự từng làm sập tab Edge): chặn theo độ sâu, tab sống, công thức lồng vừa vẫn vẽ
+    gd = F.pg.evaluate(r"""async () => {
+        const mk = (t, cls) => { const e = document.createElement(cls ? 'div' : 'span'); e.className = cls ? 'math math-d' : 'math'; e.setAttribute('data-tex', t); e.textContent = t; document.body.appendChild(e); return e; };
+        const cases = { sqrt400: '\\sqrt{'.repeat(400) + 'x' + '}'.repeat(400), frac399: '\\frac{1}{'.repeat(399) + 'x' + '}'.repeat(399), left60: '\\left('.repeat(60) + 'x' + '\\right)'.repeat(60),
+          chain: '\\frac'.repeat(400) + 'xx', sqrt8: '\\sqrt{'.repeat(8) + 'x' + '}'.repeat(8), esc: '\\{'.repeat(100) + 'x' };
+        const els = {}; for (const k in cases) { els[k] = mk(cases[k], k === 'frac399'); }
+        await Wiki.ui.rich.hydrate(Object.values(els));
+        const r = {}; for (const k in els) { r[k] = els[k].getAttribute('data-hydrated'); els[k].remove(); } return r; }""")
+    check(all(gd[k] == "dai" for k in ("sqrt400", "frac399", "left60", "chain")), "công thức ngắn lồng sâu (\\sqrt{ x400, \\frac{1}{ x399, \\left( x60, \\frac x400): data-hydrated=dai, tab không sập", gd)
+    check(gd["sqrt8"] == "1" and gd["esc"] == "1", "công thức lồng vừa (8 tầng) và \\{ thoát vẫn được vẽ", gd)
     F.close()
 
 

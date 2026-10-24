@@ -64,13 +64,35 @@
   }
 
   // ----------------------------------------------------------------------------------------------- KaTeX
+  var MAX_TEX = 2000;                                          // ký tự TeX tối đa cho một công thức được hydrate (8k ký tự đã treo 1,35 s; 4k vẫn chặn ~1 s)
+  var MAX_DEPTH = 10;                                          // độ sâu lồng tối đa ({ }, \left/\right, \begin/\end): lồng sâu hơn làm sập tab (\sqrt{ x200 = 1.4k ký tự đã sập Edge; trong trang ôn tập \sqrt{ x17 đã sập, x12 vẫn vẽ)
+  var MAX_CMD = 40;                                            // số lệnh nhận đối số (\frac, \sqrt, \binom…) tối đa: chuỗi \frac\frac\frac… không cần ngoặc cũng lồng sâu
+  /** Công thức có an toàn để đưa cho KaTeX không? Một lượt quét tuyến tính, không regex. */
+  function texTooDeep(tex) {
+    var d = 0, cmds = 0, n = tex.length;
+    for (var i = 0; i < n; i++) {
+      var c = tex.charCodeAt(i);
+      if (c === 92) {                                          // "\"
+        var j = i + 1;
+        while (j < n) { var k = tex.charCodeAt(j); if ((k >= 65 && k <= 90) || (k >= 97 && k <= 122)) j++; else break; }
+        var w = tex.slice(i + 1, j);
+        if (w === "left" || w === "begin") { if (++d > MAX_DEPTH) return true; }
+        else if (w === "right" || w === "end") { if (d > 0) d--; }
+        else if (w === "frac" || w === "dfrac" || w === "tfrac" || w === "sqrt" || w === "binom" || w === "overset" || w === "underset" || w === "stackrel") { if (++cmds > MAX_CMD) return true; }
+        i = j > i + 1 ? j - 1 : i + 1;                         // bỏ qua tên lệnh, hoặc ký tự bị thoát (\{ \} không tính là ngoặc)
+      } else if (c === 123) { if (++d > MAX_DEPTH) return true; }
+      else if (c === 125) { if (d > 0) d--; }
+    }
+    return false;
+  }
   function macros() { return { "\\label": "\\mathrlap{\\phantom{\\text{#1}}}", "\\eqref": "\\text{(#1)}", "\\ref": "\\text{#1}" }; }   // bản mới mỗi lần: \gdef ghi vào đối tượng được đưa vào
   function mathOne(katex, el) {
     if (!el.isConnected || el.hasAttribute("data-hydrated")) return;
     var tex = el.getAttribute("data-tex");
-    if (tex == null) return;
+    if (tex == null) { el.setAttribute("data-hydrated", "loi"); return; }              // không có TeX để vẽ: đánh "loi" để vòng chờ không thăm dò mãi
+    if (tex.length > MAX_TEX || texTooDeep(tex)) { el.setAttribute("data-hydrated", "dai"); return; }    // KaTeX chạy đồng bộ, chia lát không cắt được một công thức: quá dài thì giữ TeX nguyên văn
     try {
-      katex.render(tex, el, { displayMode: el.classList.contains("math-d"), throwOnError: false, trust: false, strict: "ignore", macros: macros(), output: "htmlAndMathml" });
+      katex.render(tex, el, { displayMode: el.classList.contains("math-d"), throwOnError: false, trust: false, strict: "ignore", maxSize: 50, macros: macros(), output: "htmlAndMathml" });
     } catch (e) { el.setAttribute("data-hydrated", "loi"); return; }   // KaTeX ném (hiếm với throwOnError:false): giữ TeX nguyên văn, đánh "loi" để không lặp vô hạn
     el.setAttribute("role", "math");
     el.setAttribute("aria-label", tex.length > 600 ? tex.slice(0, 600) + "…" : tex);
