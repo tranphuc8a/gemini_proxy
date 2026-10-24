@@ -2,7 +2,7 @@
    nên thêm puzzle mới = viết một tệp trong assets/js/puzzles/ gọi Puz.types.register(...) và một tệp board trong assets/js/ui/boards/; không sửa lõi.
    `conformance(def)` trả danh sách lỗi giao diện (rỗng = đạt) — kiem.js chạy cho mọi loại đã đăng ký.
    Thuộc tính TUỲ CHỌN (HUONG-DAN-ENGINE.md mục 11, vắng = hành vi cũ): kind (static | interactive | optimize), objective {sense, label, unit}
-   (bắt buộc khi optimize), grade(puzzle, state, counters), options [{id, label, choices:[{id, label, note?}], default}], sizeLabel, moveLabel, mistakeLabel.
+   (bắt buộc khi optimize), grade(puzzle, state, counters), options [{id, label, choices:[{id, label, note?}], default}], sizeLabel, moveLabel, mistakeLabel, sizeText(puzzle) → chuỗi (nhãn cỡ của đề tự nhập trong Thư viện/tiêu đề; vắng = nối các khoá của puzzle.size).
    optionsOf/compactOptions/encodeOptions/decodeOptions: chuẩn hoá lựa chọn khi sinh đề và trong liên kết seed (o=mode:adv,rule:x). */
 (function (root) {
   "use strict";
@@ -49,6 +49,7 @@
     if (def.grade != null && typeof def.grade !== "function") errs.push("grade phải là hàm grade(puzzle, state, counters)");
     else if (def.kind === "optimize" && typeof def.grade !== "function") errs.push("kind \"optimize\" cần hàm grade(puzzle, state, counters)");
     LABELS.forEach(function (k) { if (def[k] != null && !nonEmpty(def[k])) errs.push(k + " phải là chuỗi khác rỗng"); });
+    if (def.sizeText != null && typeof def.sizeText !== "function") errs.push("sizeText phải là hàm sizeText(puzzle) trả chuỗi");
     if (def.options != null) errs = errs.concat(optionErrors(def.options));
     return errs;
   }

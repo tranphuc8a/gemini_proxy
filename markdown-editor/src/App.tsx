@@ -14,6 +14,8 @@ import HelpModal from './components/HelpModal'
 import InstallModal from './components/InstallModal'
 import SmartFormatModal from './components/SmartFormatModal'
 import ShareDialog from './components/ShareDialog'
+import SyncPanel from './components/SyncPanel'
+import ReconcileModal from './components/ReconcileModal'
 import CommandPalette from './components/CommandPalette'
 import Toasts from './components/Toasts'
 import StorageBanner from './components/StorageBanner'
@@ -63,6 +65,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [syncOpen, setSyncOpen] = useState(false)
   const dragRef = useRef<Drag>(null)
   /** Whether the split is stacked (tablets) while a divider drag is under way. */
   const stackedRef = useRef(false)
@@ -110,10 +113,12 @@ function App() {
   // Nothing is lost if the tab closes mid-debounce.
   useEffect(() => {
     const flush = () => flushPersist()
-    // With the quota full, the last save did not land and a reload brings back an older copy: ask first.
+    // With the quota full for the DOCUMENTS, the last save did not land and a reload brings back an older copy: ask first.
+    // (A full localStorage with the documents safe in IndexedDB loses only settings: nothing to ask about.)
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       flush()
-      if (useEditorStore.getState().storageFailure !== 'quota') return
+      const { storageFailure, storageFailureScope } = useEditorStore.getState()
+      if (storageFailure !== 'quota' || storageFailureScope !== 'documents') return
       event.preventDefault()
       event.returnValue = ''
     }
@@ -193,6 +198,7 @@ function App() {
             onOpenPalette={() => setPaletteOpen(true)}
             onOpenAuth={() => setAuthOpen(true)}
             onOpenShare={() => setShareOpen(true)}
+            onOpenSync={() => setSyncOpen(true)}
           />
         )}
 
@@ -235,7 +241,7 @@ function App() {
           </div>
         </div>
 
-        <StatusBar onOpenHelp={() => setHelpOpen(true)} />
+        <StatusBar onOpenHelp={() => setHelpOpen(true)} onOpenSync={() => setSyncOpen(true)} />
 
         {!docked && (
           <Drawer open={drawerOpen} onClose={closeDrawer} label="Files and outline" id="sidebar-drawer">
@@ -247,12 +253,15 @@ function App() {
         <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
         <InstallModal open={installOpen} onClose={() => setInstallOpen(false)} />
         <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} onOpenAuth={() => setAuthOpen(true)} />
+        <SyncPanel open={syncOpen} onClose={() => setSyncOpen(false)} />
+        <ReconcileModal />
         <SmartFormatModal />
         <CommandPalette
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
           onOpenHelp={() => setHelpOpen(true)}
           onOpenShare={() => setShareOpen(true)}
+          onOpenSync={() => setSyncOpen(true)}
         />
       </div>
 

@@ -413,7 +413,7 @@ def sync_client(tmp_path, monkeypatch):
     monkeypatch.setattr(controller.settings, "MARKDOWN_DOCS_JSON_FILE", str(tmp_path / "markdown-docs.json"))
     monkeypatch.setattr(controller.settings, "MARKDOWN_SHARES_JSON_FILE", str(tmp_path / "markdown-shares.json"))
     monkeypatch.delenv("MARKDOWN_LEGACY_PUT", raising=False)
-    monkeypatch.setattr(controller.settings, "MARKDOWN_LEGACY_PUT", "allow")
+    monkeypatch.setattr(controller.settings, "MARKDOWN_LEGACY_PUT", "reject")  # the shipped default
     markdown_docs_factory.reset_for_tests()
     markdown_share_factory.reset_for_tests()
     api = _app()
@@ -428,11 +428,22 @@ def _migrate(client):
     assert client.get("/markdown/sync/changes", headers=ADMIN).status_code == 200
 
 
-def test_the_default_keeps_the_old_endpoints_working_before_and_after_the_copy(sync_client):
+def test_the_default_refuses_an_old_editor_once_the_copy_exists(sync_client):
+    """M4b shipped the new editor: with nothing set, an old editor's whole-tree save is a 409 after the first sync."""
+    assert sync_client.put("/markdown/files", json=TREE, headers=ADMIN).status_code == 200, "before the copy the old save is the only store"
+    _migrate(sync_client)
+    later = {"files": [{"id": "only", "name": "only.md", "type": "file", "content": "saved by an old editor"}]}
+    refused = sync_client.put("/markdown/files", json=later, headers=ADMIN)
+    assert refused.status_code == 409 and refused.json()["data"]["code"] == "md_legacy_client"
+    assert "only" not in [i["id"] for i in sync_client.get("/markdown/sync/changes", headers=ADMIN).json()["items"]]
+
+
+def test_allow_keeps_the_old_endpoints_working_before_and_after_the_copy(sync_client, monkeypatch):
+    monkeypatch.setenv("MARKDOWN_LEGACY_PUT", "allow")
     assert sync_client.put("/markdown/files", json=TREE, headers=ADMIN).status_code == 200
     _migrate(sync_client)
     later = {"files": [{"id": "only", "name": "only.md", "type": "file", "content": "saved by an old editor"}]}
-    assert sync_client.put("/markdown/files", json=later, headers=ADMIN).status_code == 200, "MARKDOWN_LEGACY_PUT=allow until the new client ships"
+    assert sync_client.put("/markdown/files", json=later, headers=ADMIN).status_code == 200, "MARKDOWN_LEGACY_PUT=allow is the opt-out"
     assert sync_client.get("/markdown/files", headers=ADMIN).json() == _normalised(later), "GET keeps reading the old store"
     assert sorted(i["id"] for i in sync_client.get("/markdown/sync/changes", headers=ADMIN).json()["items"]) == ["a", "b", "c", "root"], \
         "the delta store holds the copy made at the first sync call"
@@ -482,11 +493,17 @@ def test_reject_rebuilds_the_old_tree_from_the_delta_store(sync_client, monkeypa
     assert sync_client.get("/markdown/files", headers={"X-Admin-Session": session}).status_code == 200
 
 
-def test_an_unrecognised_mode_is_the_default_allow(sync_client, monkeypatch):
+def test_an_unrecognised_mode_fails_closed(sync_client, monkeypatch):
     sync_client.put("/markdown/files", json=TREE, headers=ADMIN)
     _migrate(sync_client)
     monkeypatch.setenv("MARKDOWN_LEGACY_PUT", "block")
-    assert sync_client.put("/markdown/files", json=TREE, headers=ADMIN).status_code == 200
+    assert sync_client.put("/markdown/files", json=TREE, headers=ADMIN).status_code == 409, "only the literal 'allow' lets the old save through"
+
+
+def test_the_shipped_default_is_reject():
+    from src.application.config.config import Settings
+
+    assert Settings.model_fields["MARKDOWN_LEGACY_PUT"].default == "reject"
 
 
 def test_the_old_store_is_not_touched_by_the_copy(sync_client, tmp_path):

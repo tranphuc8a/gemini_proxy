@@ -13,7 +13,7 @@
    ========================================================================== */
 "use strict";
 
-var PHIEN_BAN = "0bdefd3a6032";
+var PHIEN_BAN = "da660c1f53cd";
 var PHAM_VI = self.registration.scope;
 var DUONG_DAN = new URL(PHAM_VI).pathname;
 var TIEN_TO = "puz:" + PHAM_VI + ":";                       /* ui/pwa.js (offlineStatus) đọc đúng tiền tố này */

@@ -84,10 +84,12 @@ class Settings(BaseSettings): # type: ignore
     MARKDOWN_PUSH_MAX_BYTES: int = 4_000_000
     MARKDOWN_MAX_DOCS: int = 20_000
     # What the OLD whole-tree PUT /markdown/files does once the store has been copied to the
-    # delta store: "allow" (default until the new client ships, M4b: the old editor keeps
-    # working on the old store, GET /files keeps reading it too) or "reject" (409
-    # md_legacy_client - the old editor must not overwrite the delta store).
-    MARKDOWN_LEGACY_PUT: str = "allow"
+    # delta store: "reject" (the default since the new editor shipped, M4b: 409 md_legacy_client,
+    # GET /files rebuilds the tree from the delta store - an old editor must not overwrite what
+    # other devices synced) or "allow" (the old editor keeps working on the old store, which the
+    # new editor no longer reads). Anything else counts as "reject". Until the first sync call has
+    # copied the old store nothing changes either way.
+    MARKDOWN_LEGACY_PUT: str = "reject"
     # Version history of each document: the newest MARKDOWN_HISTORY_KEEP_RECENT, the newest
     # of each local day (MARKDOWN_HISTORY_TZ) for MARKDOWN_HISTORY_DAILY_DAYS days, and named
     # ones; edits of one device within MARKDOWN_HISTORY_COALESCE_S seconds share one row.

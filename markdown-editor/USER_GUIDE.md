@@ -101,18 +101,26 @@ The **File** menu handles both:
 
 ## Backend storage
 
-Off by default; everything is kept in this browser's local storage and the status bar
-shows the last successful save. Enable **Sync → Backend sync** to use the FastAPI API
-instead:
+Your documents live in this browser (IndexedDB; a browser without it falls back to local storage) and the status bar
+shows the last successful save. Switch on **Sync → Backend sync** to keep them in step with a server:
 
-- **Load from backend** replaces the tree with the server's copy. Anyone can load.
-- **Save to backend** pushes the tree up. This needs admin, because the API requires the
-  `X-Admin-Key` header.
-- Choose **JSON file** or **MySQL** to match `MARKDOWN_STORAGE_BACKEND` on the server.
+- The first time, this device and the server meet: what is only here is sent, what is only there is brought here, and if
+  the same document differs on both you choose (keep both, prefer the server's, prefer this device's).
+- After that it is automatic: a few seconds after you stop typing, when the connection returns, when you come back to the
+  tab, and every 90 seconds. Only what changed is sent (a one-line edit of a 1 MB document is a few hundred bytes), and
+  changes from other devices are merged in line by line. Edits made while offline wait in this browser and go up later.
+- If two devices changed the **same lines**, the status bar shows *⚠ conflict*: open it and choose **Keep mine**,
+  **Use the server's** or **Keep both**. Nothing is sent for that document until you choose.
+- The status bar says what is going on: *Synced 2 min ago*, *Syncing…*, *Offline — 5 changes queued*, *⚠ 1 conflict*.
+- **Sync now** runs a round at once. **Replace this device's copy with the server's…** makes this browser hold exactly
+  the server's documents (it tells you what would be lost and asks first).
+- Sending changes needs admin; a viewer only receives. On the default private server, receiving needs admin too.
+- Choose **JSON file** or **MySQL** to match `MARKDOWN_STORAGE_BACKEND` on the server; each storage is a separate place
+  and starts with its own first meeting.
 - Failures are reported in plain language: unreachable API, rejected key, or timeout.
 
-Point the frontend elsewhere with `VITE_MARKDOWN_API_URL`, and change the admin key with
-`VITE_MARKDOWN_ADMIN_KEY` (it must match the server's `MARKDOWN_ADMIN_KEY`).
+Change the admin key with `VITE_MARKDOWN_ADMIN_KEY` (it must match the server's `MARKDOWN_ADMIN_KEY`). The API address
+comes from the page that serves the app (`window.__WEBAPP_CONFIG__`).
 
 ## Appearance
 
@@ -129,4 +137,4 @@ editor's header.
 | Status bar says *Not saved* | Browser storage is full or blocked (private windows block it). Export your work |
 | Nothing to preview | The file is empty, or the view mode is set to *Editor* |
 | Copy button says *Blocked* | The clipboard needs a secure context; the text is selected for manual copying |
-| Backend buttons greyed out | Enable **Sync → Backend sync** first; saving also needs admin |
+| Sync buttons greyed out | Enable **Sync → Backend sync** first; sending changes also needs admin |

@@ -50,6 +50,29 @@ lib.all().forEach(function (e) {
 });
 if (!partial) master.forEach(function (g) { g.items.forEach(function (it) { if (!lib.get(it[0])) errors.push(it[0] + ": thiếu mục (master-ids.json, tệp " + g.file + ")"); }); });
 
+/* Dấu `$` trong chữ thư viện: markdown.js (từ W4) hiểu `$…$`, `$$…$$`, `\(…\)`, `\[…\]` là CÔNG THỨC (luật pandoc). Hai dấu `$` trong cùng một đoạn
+   — vd `P + '$' + T … '$' không` (lib-string.js, thẻ Z-function) — ghép thành công thức giả, mất chữ. Thư viện hiện không có công thức nào cố ý, nên
+   MỌI chuỗi chữ của mục / kịch bản đều phải dựng ra không có `.math`: bọc `$` trong `code` hoặc viết `\$`. (Cần công thức thật sau này: đổi luật này
+   thành danh sách ngoại lệ có chủ ý, đừng bỏ phép kiểm.) Bỏ `code.src` (mã nguồn) và `example` (khối vào/ra) — chúng không đi qua markdown. */
+require(path.join(JS, "core", "markdown.js"));
+var MD = globalThis.Algo.markdown, mathErrors = [];
+function textLeaves(v, where, out) {
+  if (typeof v === "string") out.push([where, v]);
+  else if (Array.isArray(v)) v.forEach(function (x, i) { textLeaves(x, where + "[" + i + "]", out); });
+  else if (v && typeof v === "object") Object.keys(v).forEach(function (k) { if (k !== "src" && k !== "example") textLeaves(v[k], where ? where + "." + k : k, out); });
+  return out;
+}
+function noAccidentalMath(id, obj) {
+  textLeaves(obj, "", []).forEach(function (leaf) {
+    if (leaf[1].indexOf("$") === -1 && leaf[1].indexOf("\\") === -1) return;
+    var html = MD.render(leaf[1], {}), m = /class="math[^"]*" data-tex="([^"]*)"/.exec(html);
+    if (m) mathErrors.push(id + ": " + leaf[0] + ": chữ có `$`/`\\(` bị hiểu thành công thức ngoài ý muốn (\"" + m[1].slice(0, 40) + "\") — bọc trong `code` hoặc viết \\$");
+  });
+}
+lib.all().forEach(function (e) { noAccidentalMath(e.id, Object.assign({}, e, { code: null })); });
+lib.allScenarios().forEach(function (s) { noAccidentalMath(s.id, s); });
+errors = errors.concat(mathErrors);
+
 var per = {};
 lib.all().forEach(function (e) { per[e.category] = (per[e.category] || 0) + 1; });
 console.log("Mục: " + lib.size() + " · kịch bản: " + lib.allScenarios().length + " · " + Object.keys(per).map(function (k) { return k + "=" + per[k]; }).join(" "));

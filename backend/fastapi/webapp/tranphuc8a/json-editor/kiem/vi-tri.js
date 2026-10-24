@@ -113,6 +113,30 @@ module.exports = function (C) {
     kiem("timViTri · doan la chuoi so khop chi so mang; khong khop thi null", cat(["a", "0"]) === "10" && cat(["a", "2"]) === null && cat(["a", "x"]) === null && cat(["nope"]) === null);
     kiem("timViTri · duong dan di xuyen gia tri nguyen thuy → null; duong rong = ca van ban",
       cat(["a", 0, "x"]) === null && cat([]) === s.trim());
+    /* Chuoi / khoa KET THUC bang `\\` (vd duong Windows "C:\\"): dau nhay dong sau so CHAN dau `\` la dong that, sau so LE la bi thoat.
+       (Fuzz ngau nhien khong sinh duoc ca nay — dot bien cuoiChuoi "so backslash chan" -> "bang 0" tung song sot.) */
+    {
+      const obj = { p: "C:\\", q: 5, "r\\": [1, "x\\\\"], s: 7, t: '\\"', "u\\\"": 8, v: "a\\\\\"b\\", w: 9 };
+      const sj = JSON.stringify(obj), sj2 = JSON.stringify(obj, null, 2);
+      const sai = [];
+      [sj, sj2].forEach((txt) => {
+        Object.keys(obj).forEach((k) => {
+          const vt2 = V.timViTri(txt, [k]);
+          let ok = false;
+          try { ok = !!vt2 && JSON.stringify(JSON.parse(txt.slice(vt2.bd, vt2.kt))) === JSON.stringify(obj[k]); } catch (e) { ok = false; }
+          if (!ok) sai.push(JSON.stringify(k) + (txt === sj ? " (nen)" : " (thut)"));
+        });
+        const vm = V.timNhieuViTri(txt, Object.keys(obj).map((k) => [k]));
+        Object.keys(obj).forEach((k) => {
+          const e2 = vm.get(JSON.stringify([k])), vt2 = V.timViTri(txt, [k]);
+          if (!e2 || !vt2 || e2.bd !== vt2.bd || e2.kt !== vt2.kt) sai.push("nhieu " + JSON.stringify(k));
+        });
+      });
+      kiem("timViTri · chuoi / khoa ket thuc bang \\\\ hoac \\\\\\\" (so backslash chan / le): moi khoa (nen + thut, ca timNhieuViTri) tim dung", sai.length === 0, sai.slice(0, 4).join(" | "));
+      const sd = JSON.stringify({ k: "x\\" }) + "";
+      const dt = V.duongTaiViTri(sd, sd.indexOf("x") + 1);
+      kiem("duongTaiViTri · con tro trong chuoi ket thuc bang \\\\ van nhan ra dung khoa", !!dt && dt.duong.length === 1 && dt.duong[0] === "k", JSON.stringify(dt && dt.duong));
+    }
     const dup = '{"a": 1, "b": {"c": 1}, "a": {"c": 2}, "b": 3}';
     const cd = (d) => { const v = V.timViTri(dup, d); return v ? dup.slice(v.bd, v.kt) : null; };
     kiem("timViTri · khoa TRUNG: lay gia tri CUOI (khop JSON.parse)", cd(["a"]) === '{"c": 2}' && cd(["a", "c"]) === "2" && cd(["b"]) === "3" && cd(["b", "c"]) === null &&

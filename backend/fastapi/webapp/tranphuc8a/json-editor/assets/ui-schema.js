@@ -183,7 +183,7 @@
     if (!kq) return coSchema() ? "Đang chuẩn bị kiểm…" : NHAN_TT["chua-co"];
     var tt = kq.tt, c;
     if (tt === "het-gio") {
-      return "Kiểm quá lâu (> " + Math.round((kq.han || 8000) / 1000) + " s) — có thể do một “pattern” quay lui thảm hoạ (vd (a+)+$). Sửa mẫu rồi kiểm lại.";
+      return "Kiểm quá lâu (> " + Math.round((kq.han || 8000) / 1000) + " s) — thường do một “pattern” quay lui thảm hoạ (vd (a+)+$); cũng có thể do schema có quá nhiều nhánh anyOf / $ref lồng nhau hoặc dữ liệu quá lớn. Sửa mẫu hoặc đơn giản hoá schema rồi kiểm lại.";
     }
     if (tt === "he-thong") return "Không kiểm được — " + (kq.thongBao || "lỗi không rõ");
     if (tt === "ok") c = "✓ Hợp lệ theo schema";

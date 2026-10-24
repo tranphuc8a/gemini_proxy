@@ -1,5 +1,6 @@
 import type { Layout, Pane } from './lib/responsive'
 import type { StorageFailure } from './lib/persistence'
+import type { SyncState } from './sync/engine'
 
 export interface FileNode {
   id: string
@@ -66,4 +67,11 @@ export interface EditorState extends Settings {
   storageFailure: StorageFailure | null
   /** What that failed save was: the documents, or only the settings (the documents were written). */
   storageFailureScope: 'documents' | 'settings' | null
+  /**
+   * False from start-up until the documents have been read from the device store (IndexedDB): the open document is on
+   * screen already (from the boot snapshot), the rest is not, and nothing may be edited meanwhile.
+   */
+  docsReady: boolean
+  /** The sync engine's state (idle until Backend sync is switched on). */
+  sync: SyncState
 }

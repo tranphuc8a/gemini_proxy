@@ -1,21 +1,6 @@
-import type { FileNode, StorageBackend } from '../types'
-import { normalizeTree } from '../lib/tree'
+import type { StorageBackend } from '../types'
 import { resolveApiBase } from './runtimeConfig'
 import { startResponsiveTimeout } from '../lib/responsiveTimeout'
-
-/**
- * Endpoint of the shared document store.
- *
- * Built from the runtime API base rather than a whole URL frozen at build time:
- * this bundle is served from the FastAPI collection, where the prefix is decided
- * when the server starts. VITE_MARKDOWN_API_URL still wins when it names a full
- * URL, for a deployment that keeps the API on another origin.
- */
-function filesUrl(): string {
-  const configured = import.meta.env.VITE_MARKDOWN_API_URL
-  if (configured) return configured
-  return `${resolveApiBase()}/markdown/files`
-}
 
 const TIMEOUT_MS = 10_000
 
@@ -281,31 +266,4 @@ async function request(url: string, init?: RequestInit): Promise<Response> {
   } finally {
     stop()
   }
-}
-
-/**
- * The server's whole tree. The store is private by default (MARKDOWN_PUBLIC_READ=false), so the admin session goes
- * along when there is one; a guest is refused with `StorageError.code === 'markdown_private'`.
- */
-export async function loadMarkdownFiles(storageType: StorageBackend): Promise<FileNode[]> {
-  const response = await request(`${filesUrl()}?backend=${storageType}`, { headers: { ...adminHeaders() } })
-  if (!response.ok) throw await storageError(response)
-
-  const data = (await response.json()) as { files?: unknown }
-  if (!Array.isArray(data.files)) throw new Error('Backend returned an unexpected payload')
-  return normalizeTree(data.files as FileNode[])
-}
-
-export async function saveMarkdownFiles(files: FileNode[], storageType: StorageBackend): Promise<void> {
-  if (!hasAdminCredential()) throw new Error('Unlock editing with the admin key before saving')
-
-  const response = await request(`${filesUrl()}?backend=${storageType}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...adminHeaders()
-    },
-    body: JSON.stringify({ files })
-  })
-  if (!response.ok) throw await storageError(response)
 }

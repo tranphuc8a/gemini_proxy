@@ -109,7 +109,8 @@ def tang_1():
     check(not bad, "cú pháp JS (%d tệp)" % (len(files) + 3), bad)
     r = subprocess.run(["node", os.path.join(HERE, "kiem.js")], capture_output=True, text=True, encoding="utf-8")
     tail = (r.stdout.strip().splitlines() or [""])[-1]
-    check(r.returncode == 0, "kiem.js (lõi: tìm kiếm, so sánh, quiz, SRS, trực quan hoá, kho người dùng, thư viện, cây quyết định, lộ trình): " + tail, "\n".join([l for l in r.stdout.splitlines() if "[SAI]" in l][:4]))
+    # Đòi cả dòng tổng kết "Đạt — …": kiem.js có phần async, một Promise treo làm Node thoát mã 0 và bỏ qua im lặng phần sau.
+    check(r.returncode == 0 and tail.startswith("Đạt — "), "kiem.js (lõi: tìm kiếm, so sánh, quiz, SRS, trực quan hoá, kho người dùng, thư viện, cây quyết định, lộ trình): " + tail, "\n".join([l for l in r.stdout.splitlines() if "[SAI]" in l][:4]) or (r.stdout + r.stderr)[-300:])
     r = subprocess.run(["node", os.path.join(HERE, "kiem-lib.js")], capture_output=True, text=True, encoding="utf-8")
     check(r.returncode == 0, "thư viện dựng sẵn hợp lệ (kiem-lib.js): " + (r.stdout.strip().splitlines() or [""])[0], r.stdout[-500:])
     r = subprocess.run([sys.executable, os.path.join(HERE, "sync.py"), "--kiem"], capture_output=True, text=True, encoding="utf-8")

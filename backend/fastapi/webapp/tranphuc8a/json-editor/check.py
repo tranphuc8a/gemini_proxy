@@ -84,7 +84,7 @@ def tang_tinh():
     check(not loi, "ui-*.js nạp sau mọi module lõi (%d tệp ui)" % len(ui), loi)
 
     js = [os.path.join(HERE, *s.split("/")) for s in tren_dia]
-    kiem_js = [os.path.join(HERE, "kiem.js")] + [os.path.join(HERE, "kiem", n) for n in sorted(os.listdir(os.path.join(HERE, "kiem"))) if n.endswith(".js")]
+    kiem_js = [os.path.join(HERE, "kiem.js"), os.path.join(HERE, "..", "khung-kiem.js"), os.path.join(HERE, "..", "kiem-khung.js")] + [os.path.join(HERE, "kiem", n) for n in sorted(os.listdir(os.path.join(HERE, "kiem"))) if n.endswith(".js")]
     hong = []
     for f in js + kiem_js:
         r = subprocess.run(["node", "--check", f], capture_output=True, text=True, encoding="utf-8")
@@ -94,7 +94,16 @@ def tang_tinh():
 
     r = subprocess.run(["node", os.path.join(HERE, "kiem.js")], capture_output=True, text=True, encoding="utf-8", cwd=HERE)
     duoi = (r.stdout.strip().splitlines() or [""])[-1]
-    check(r.returncode == 0, "node kiem.js: " + duoi, "\n".join([l for l in r.stdout.splitlines() if "[SAI]" in l][:5]) or r.stderr[-400:])
+    # Đòi cả dòng tổng kết "Dat — …": kiem.js chạy nhóm bất đồng bộ; một Promise treo làm Node thoát mã 0 mà BỎ QUA im lặng mọi nhóm sau.
+    check(r.returncode == 0 and duoi.startswith("Dat — "), "node kiem.js: " + duoi,
+          "\n".join([l for l in r.stdout.splitlines() if "[SAI]" in l][:5])
+          or ("kiem.js thoát mã %d, dòng cuối không phải 'Dat — …' (thoát sớm / nhóm treo?) " % r.returncode) + r.stderr[-300:])
+
+    # Kiểm chính bộ kiểm: nhóm treo / thoát sớm phải ra ĐỎ (kiem-khung.js dựng bản sao + nhóm giả trong thư mục tạm, không đụng app).
+    r = subprocess.run(["node", os.path.join(HERE, "..", "kiem-khung.js")], capture_output=True, text=True, encoding="utf-8", cwd=os.path.join(HERE, ".."))
+    duoi = (r.stdout.strip().splitlines() or [""])[-1]
+    check(r.returncode == 0 and duoi.startswith("Dat — "), "node kiem-khung.js (kiem.js / kiem-tat.js không xanh giả khi nhóm treo, thoát sớm): " + duoi,
+          "\n".join([l for l in r.stdout.splitlines() if "[SAI]" in l][:5]) or r.stderr[-400:])
 
     tong = sum(os.path.getsize(os.path.join(HERE, "assets", n)) for n in os.listdir(os.path.join(HERE, "assets")))
     check(tong <= NGAN_SACH_ASSETS, "ngân sách assets %d KB ≤ %d KB" % (tong // 1024, NGAN_SACH_ASSETS // 1024))
@@ -253,7 +262,7 @@ def tang_chuc_nang(chi=None):
         with sync_playwright() as pw:
             tb = pw.chromium.launch(channel="msedge")
             for f in (nap_sach, hoan_tac, tab_va_esc, loi_dot_j1, cong_je_app, luu_tru_bi_chan, xss, meta_nhanh_gap,
-                      cong_schema, schema_tab, schema_tuy_chon, schema_xss, schema_360, schema_lon_redos, schema_mo_tep, schema_luu_tru_chan):
+                      cong_schema, schema_tab, schema_tuy_chon, schema_xss, schema_360, schema_lon_redos, schema_hien_them, schema_mo_tep, schema_luu_tru_chan):
                 if not chi or f.__name__ in chi:
                     f(tb, url)
             tb.close()
@@ -1186,6 +1195,23 @@ def schema_mo_tep(tb, url):
     T.dong()
 
 
+def schema_hien_them(tb, url):
+    section(" · tab Schema: danh sách > 300 hàng — nút “Hiện thêm” (300 → 600 → 700, hết thì mất nút)")
+    T = Trang(tb, url, "schema-hien-them")
+    p = T.p
+    T.dien('{"a": 1}')
+    ok = _dat_schema(T, {"khoa_la_%d" % i: 1 for i in range(700)})            # 700 cảnh báo schema (từ khoá lạ) trong MỘT nhóm
+    hang = lambda: p.locator("#sc-loi li.sc-hang").count()
+    nut = p.locator("#sc-loi li.sc-them button")
+    check(ok and hang() == 300 and nut.count() == 1 and "còn 400" in nut.inner_text(), "700 cảnh báo: chỉ vẽ 300 hàng, nút “Hiện thêm 300 (còn 400)”", [hang(), nut.count() and nut.inner_text()])
+    nut.click()
+    check(hang() == 600 and nut.count() == 1 and "Hiện thêm 100 (còn 100)" == nut.inner_text(), "bấm lần 1: 600 hàng, nút còn “Hiện thêm 100 (còn 100)”", [hang(), nut.count() and nut.inner_text()])
+    nut.click()
+    check(hang() == 700 and nut.count() == 0, "bấm lần 2: đủ 700 hàng, nút biến mất", [hang(), nut.count()])
+    check(p.locator("#sc-loi li.sc-nhom").count() == 1, "chỉ một dòng tiêu đề nhóm (không nhân đôi khi hiện thêm)", p.locator("#sc-loi li.sc-nhom").count())
+    T.dong()
+
+
 def schema_luu_tru_chan(tb, url):
     section(" · tab Schema khi localStorage bị chặn")
     chan = """Object.defineProperty(window, 'localStorage', { configurable: true,
@@ -1230,6 +1256,11 @@ def cong_schema(tb, url):
     thieu = p.evaluate("can => can.filter(k => typeof JE_APP[k] !== 'function')", can)
     check(not thieu and p.evaluate("() => JE_APP.hangSo.NGUONG_KIEM_TU_DONG === 1048576 && JE_APP.hangSo.CHAY_NEN.han === 8000 && typeof JE.viTri.timViTri === 'function' && typeof JE.schema.kiem === 'function'"),
           "JE_APP có datHuyHieuCay / tabDuLieuGan; hangSo.NGUONG_KIEM_TU_DONG = 1 MB, CHAY_NEN.han = 8000; JE.viTri + JE.schema có trong trang", thieu)
+    # Trang mới mở ở Soạn: rời Soạn sang tab khác (vd Schema) thì tab dữ liệu "dùng gần nhất" là Soạn, KHÔNG phải Cây mặc định
+    # (trước: chỉ ghi nhận tab VÀO → Soạn → Schema → bấm hàng lỗi nhảy sang Cây dù người dùng chỉ dùng Soạn).
+    p.evaluate("() => JE_APP.chuyenTab('loc')")
+    check(p.evaluate("() => JE_APP.tabDuLieuGan()") == "soan", "rời Soạn (tab mở sẵn) sang tab khác → tabDuLieuGan = Soạn, không phải Cây", p.evaluate("() => JE_APP.tabDuLieuGan()"))
+    p.evaluate("() => JE_APP.chuyenTab('soan')")
     T.dien('{\n  "x": [1, 2],\n  "ten": "Phúc"\n}')
     ok = p.evaluate("() => JE_APP.denDuong([\"x\", 1], { tab: \"soan\" })")
     check(ok and _chon(p) == "2" and p.evaluate("() => JE_APP.tabHien()") == "soan", "denDuong([x, 1], {tab:'soan'}) → chọn đúng đoạn giá trị \"2\" trong ô Soạn", _chon(p))

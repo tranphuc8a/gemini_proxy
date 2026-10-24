@@ -2,6 +2,9 @@
      node backend/fastapi/webapp/tranphuc8a/personal-wiki/kiem.js
    Phần chạm DOM / IndexedDB thật / hiệu năng 100.000 note kiểm bằng check.py (trình duyệt thật). */
 "use strict";
+/* Luoi an toan chong "xanh gia": mot Promise khong bao gio xong lam Node thoat ma 0 va bo qua im lang cac phan sau
+   (xem ../khung-kiem.js). Thoat som -> "[SAI] KHONG CHAY HET" + exit 1. */
+var gac = require("../khung-kiem.js").canhGac("personal-wiki/kiem.js");
 var path = require("path"), fs = require("fs"), os = require("os"), cp = require("child_process");
 var J = path.join(__dirname, "assets", "js");
 ["core/text", "core/notes", "core/markdown", "core/search", "core/flash", "core/graph", "data/store", "data/zip", "data/repo", "data/backup"].forEach(function (m) { require(path.join(J, m + ".js")); });
@@ -121,6 +124,167 @@ kiem("đầu vào cực dài / lồng sâu không treo (≤ 2 giây)", (function
   R("> ".repeat(500) + "x"); R("- a\n".repeat(20000)); R("*".repeat(50000)); R("[".repeat(20000)); R("a".repeat(600000));
   return Date.now() - t0 < 2000;
 })());
+
+/* ======================================================================== markdown — toán (W4) */
+/* markdown.js dựng công thức KHÔNG thư viện: nút `.math` giữ nguyên TeX trong data-tex + hiện TeX làm dự phòng; W6 mới vẽ KaTeX. Luật vùng = notes.js mathRanges
+   (cũng là luật của compose.js và của wiki_links.py). Notebook chép nguyên markdown.js/notes.js bằng sync.py. */
+sec("markdown — toán");
+(function () {
+  var raw = String.raw, L = function () { return Array.prototype.join.call(arguments, "\n"); }, mslack = Math.max(1, Number(process.env.PW_PERF_SLACK) || 1);
+  function dec(s) { return s.replace(/&#10;/g, "\n").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&"); }
+  /** Công thức trong HTML → ["i:TeX" (inline) | "d:TeX" (hiển thị trong dòng) | "D:TeX" (khối)]. Chữ dự phòng phải trùng data-tex; không được có data-tex nào ngoài mẫu. */
+  function maths(html) {
+    var out = [], re = /<(span|div) class="math( math-d)?" data-tex="([^"]*)">([^<]*)<\/\1>/g, m, bad = false;
+    while ((m = re.exec(html))) { if (m[3] !== m[4]) bad = true; out.push((m[1] === "div" ? "D" : m[2] ? "d" : "i") + ":" + dec(m[3])); }
+    if (bad) out.push("!dự-phòng-lệch");
+    if ((html.match(/data-tex=/g) || []).length !== out.filter(function (x) { return x.charAt(0) !== "!"; }).length) out.push("!data-tex-lạ");
+    return out;
+  }
+  var ENV3 = L(raw`\begin{array}{c}`, raw`\begin{array}{c} a \end{array}`, raw`\end{array}`);
+  var V = [
+    ["\\( \\) giữa câu: inline", raw`Energy \( E = mc^2 \) here`, ["i:E = mc^2"], function (h) { return has(h, "Energy ") && has(h, " here") && !has(h, "(") ; }],
+    ["\\[ \\] một dòng đứng riêng: khối", raw`\[ E = mc^2 \]`, ["D:E = mc^2"]],
+    ["\\[ \\] hai dòng riêng: khối, không thành '['", L(raw`\[`, "E = mc^2", raw`\]`), ["D:E = mc^2"], function (h) { return !has(h, "<p>") && !has(h, "["); }],
+    ["\\[ nội dung nhiều dòng \\]", L(raw`\[ x^2 +`, raw`y^2 = z^2 \]`), ["D:x^2 +\ny^2 = z^2"]],
+    ["\\[ \\] giữa câu, có TeX: hiển thị trong dòng", raw`So \[ a^2 \] is display`, ["d:a^2"]],
+    ["\\[Enter\\] giữa câu, không TeX: không phải toán (hiện [Enter])", raw`Press \[Enter\] now`, [], function (h) { return has(h, "Press [Enter] now"); }],
+    ["\\[x\\] đứng riêng là toán dù không có TeX", raw`\[x\]`, ["D:x"]],
+    ["$$x$$ đứng riêng: khối", raw`$$x = \frac{-b}{2a}$$`, [raw`D:x = \frac{-b}{2a}`]],
+    ["$$x$$ giữa câu: inline", raw`Area is $$A=\pi r^2$$ ok`, [raw`i:A=\pi r^2`]],
+    ["$$ chữ rồi xuống dòng, đóng ở dòng sau (bẫy rào của micromark)", L("$$ x^2 +", "y^2 $$"), ["D:x^2 +\ny^2"]],
+    ["$$ riêng một dòng, nhiều dòng, \\\\ giữ nguyên", L("$$", raw`\begin{aligned}`, raw`a &= b \\`, "c &= d", raw`\end{aligned}`, "$$"),
+      ["D:" + L(raw`\begin{aligned}`, raw`a &= b \\`, "c &= d", raw`\end{aligned}`)], function (h) { return has(h, raw`a &amp;= b \\`); }],
+    ["đoạn trước và sau khối vẫn là đoạn", L("trước", "$$", "x", "$$", "sau"), ["D:x"], function (h) { return has(h, "<p>trước</p>") && has(h, "<p>sau</p>"); }],
+    ["dòng - và > trong khối $$ không thành danh sách / trích dẫn", L("$$", "- a", "> b", "| c |", "$$"), ["D:- a\n> b\n| c |"], function (h) { return !has(h, "<li>") && !has(h, "<blockquote>"); }],
+    // luật pandoc cho $
+    ["giá: $5 và $10", raw`It costs $5 and $10 total`, [], function (h) { return has(h, "It costs $5 and $10 total"); }],
+    ["giá trước công thức thật", raw`Pay $5 for $x$ items`, ["i:x"], function (h) { return has(h, "Pay $5 for "); }],
+    ["giá $20/tháng và $200/tháng", raw`Plus costs $20/month and Pro $200/month.`, []],
+    ["khoảng giá $5-$10", raw`between $5-$10 each`, []],
+    ["$ x $ (khoảng trắng sát dấu) không phải toán", raw`$ x $`, []],
+    ["dấu đóng theo sau chữ số không đóng: $x$5", raw`$x$5`, []],
+    ["\\$ là đô la thường (bỏ dấu \\)", raw`Literal \$5 and $y$`, ["i:y"], function (h) { return has(h, "Literal $5 and "); }],
+    ["\\$5 và \\$10: không toán, không còn dấu \\", raw`\$5 and \$10`, [], function (h) { return has(h, "$5 and $10") && !has(h, "\\"); }],
+    ["\\$ bên trong $…$", raw`$\$5$ ok`, [raw`i:\$5`]],
+    ["$ lẻ không đóng", "a $ b $", [], function (h) { return has(h, "a $ b $"); }],
+    // nội dung công thức không bị markdown động vào
+    ["_ và * trong công thức không thành nghiêng", raw`Let \( x_1 * x_2 = a_i * b_j \) hold`, ["i:x_1 * x_2 = a_i * b_j"], function (h) { return !has(h, "<em>"); }],
+    ["nhấn mạnh ngoài công thức vẫn chạy, trong công thức giữ nguyên", raw`*a* và \(x*y*\)`, [raw`i:x*y*`], function (h) { return has(h, "<em>a</em>"); }],
+    ["\\\\ trong công thức giữ nguyên (không thành \\)", raw`\(\begin{matrix} a \\ b \end{matrix}\)`, [raw`i:\begin{matrix} a \\ b \end{matrix}`]],
+    ["[[0,1]] trong toán không phải liên kết; [[A]] ngoài toán vẫn là liên kết", raw`$[[0,1]]$ và [[A]]`, ["i:[[0,1]]"], function (h) { return (h.match(/<a /g) || []).length === 1 && has(h, ">A</a>"); }],
+    ["tiêu đề liên kết có $5: liên kết thắng", raw`[[Giá $5]] và $6`, [], function (h) { return has(h, ">Giá $5</a>") && has(h, "và $6"); }],
+    ["công thức trong chữ đậm", raw`**đậm \(x\) đậm**`, ["i:x"], function (h) { return has(h, "<strong>đậm "); }],
+    ["mhchem / macro không bị đụng", raw`\(\ce{H2O + CO2 -> H2CO3}\) và $\label{a}\eqref{a}$`, [raw`i:\ce{H2O + CO2 -> H2CO3}`, raw`i:\label{a}\eqref{a}`]],
+    // không phải toán
+    ["\\\\[ … \\\\] (gạch kép) không phải dấu", raw`\\[ not math \\]`, [], function (h) { return has(h, raw`\[ not math \]`); }],
+    ["\\( không đóng: giữ chữ", raw`a \( b`, [], function (h) { return has(h, "a ( b"); }],
+    ["\\( không đóng qua dòng trống", L(raw`a \( b`, "", raw`c \) d`), []],
+    ["công thức rỗng", raw`a\(\)b $$ $$ c`, []],
+    ["trong code span", "Dùng `\\(x\\)` và `$a$` ở đây", []],
+    ["trong rào code", L("```", raw`\[ x \]`, raw`$$ y $$`, "```"), []],
+    ["$$ chưa đóng (đang gõ dở): giữ chữ", L("$$", "x^2 +"), [], function (h) { return has(h, "$$"); }],
+    ["$$ không vượt dòng trống", L("$$", "x", "", "y$$"), []],
+    ["mở không đóng ở đoạn trước không nuốt đoạn sau", L("$$ x", "", raw`sau $y$`), ["i:y"]],
+    // môi trường trần
+    ["\\begin{align} trần: khối, \\\\ giữ nguyên", L(raw`\begin{align}`, raw`a &= b \\`, "c &= d", raw`\end{align}`), ["D:" + L(raw`\begin{align}`, raw`a &= b \\`, "c &= d", raw`\end{align}`)]],
+    ["\\begin{pmatrix} một dòng, chữ theo sau tiếp tục như đoạn", raw`\begin{pmatrix} 1 & 2 \end{pmatrix} theo sau`, [raw`D:\begin{pmatrix} 1 & 2 \end{pmatrix}`], function (h) { return has(h, "theo sau"); }],
+    ["môi trường lồng cùng tên: khớp đúng \\end", ENV3, ["D:" + ENV3]],
+    ["\\\\begin{align} (gạch kép, TeX: \\\\ rồi chữ) trong môi trường không được đếm là lồng", L(raw`\begin{align}`, raw`a &= b \\begin{align} c`, raw`\end{align}`),
+      ["D:" + L(raw`\begin{align}`, raw`a &= b \\begin{align} c`, raw`\end{align}`)]],
+    ["\\begin giữa câu: để nguyên chữ", raw`where \begin{pmatrix} a \end{pmatrix} is`, []],
+    ["môi trường lạ (tikzcd): để nguyên", L(raw`\begin{tikzcd}`, raw`A \arrow[r] & B`, raw`\end{tikzcd}`), []],
+    ["môi trường thiếu \\end: để nguyên", L(raw`\begin{align}`, "a"), []],
+    ["\\\\begin (gạch kép) không phải lệnh", L(raw`\\begin{align}`, "a", raw`\end{align}`), []],
+    ["môi trường nằm trong khối $$: một khối duy nhất", L("$$", raw`\begin{align}`, "a", raw`\end{align}`, "$$"), ["D:" + L(raw`\begin{align}`, "a", raw`\end{align}`)]],
+    // rào code, ngữ cảnh
+    ["rào ```math: khối hiển thị", L("```math", "E=mc^2", "```"), ["D:E=mc^2"]],
+    ["rào ```math rỗng: khối code thường", L("```math", "", "```"), [], function (h) { return has(h, 'data-lang="math"'); }],
+    ["```mermaid đánh dấu .mmd cho W6, không phải toán", L("```mermaid", "graph TD; A-->B", "```"), [], function (h) { return has(h, '<pre class="code mmd" data-lang="mermaid">'); }],
+    ["\\[ \\] trong trích dẫn", L("> \\[", "> a^2", "> \\]"), ["D:a^2"], function (h) { return has(h, "<blockquote>"); }],
+    ["công thức trong mục danh sách", L("- mục $x_1$ và \\(y\\)", "- hai"), ["i:x_1", "i:y"], function (h) { return has(h, "<li>hai</li>"); }],
+    ["công thức trong ô bảng", L("| a | b |", "|---|---|", raw`| \(x^2\) | $y$ |`), ["i:x^2", "i:y"], function (h) { return has(h, "<table>"); }],
+    ["công thức trong tiêu đề", "# Tiêu đề $x$ nữa", ["i:x"], function (h) { return has(h, "<h1 "); }]
+  ];
+  V.forEach(function (v) {
+    var h = R(v[1]), got = maths(h);
+    kiem("toán: " + v[0], bang(got, v[2]) && (!v[3] || v[3](h)), JSON.stringify(got) + " ← " + JSON.stringify(v[1]).slice(0, 90));
+  });
+
+  // XSS: TeX là chữ do người dùng/AI/dữ liệu viết, nằm trong thuộc tính data-tex. Phải thoát được cả dấu ngoặc kép lẫn <>.
+  var okTags = /^(p|br|h[1-6]|strong|em|del|code|pre|ul|ol|li|blockquote|hr|table|thead|tbody|tr|th|td|div|span|a|img|input|b)$/;
+  function sach(h) {
+    var re = /<\/?([a-z0-9]+)([^>]*)>/gi, m;
+    while ((m = re.exec(h))) {
+      if (!okTags.test(m[1])) return "thẻ lạ " + m[1];
+      if (/^(span|div)$/.test(m[1]) && /\bdata-tex\b/.test(m[2]) && !/^ class="math( math-d)?" data-tex="[^"<>]*"$/.test(m[2])) return "thuộc tính math lạ " + m[2];
+      if (/\son[a-z]+\s*=/i.test(m[2].replace(/"[^"]*"/g, '""'))) return "handler " + m[2];
+    }
+    return "";
+  }
+  var XT = ['$x" onmouseover="alert(1)$', "$<img src=x onerror=alert(1)>$", raw`\(</span><script>alert(1)</script>\)`, L(raw`\[`, '"><svg onload=alert(1)>', raw`\]`),
+    raw`$$&quot;&gt;<b>x</b>$$`, "$a'b$", raw`\(a"onfocus="x\)`, L("```math", "</div><script>x</script>", "```"), L(raw`\begin{align}`, "<script>alert(1)</script>", raw`\end{align}`),
+    raw`$\href{javascript:alert(1)}{x}$`, raw`$"><iframe src=//e.com>$`, "$a\u0000b\uE000\uE001c$", raw`\(x\)<script>`, "$$\n</pre><img src=x onerror=1>\n$$"];
+  var xbad = XT.map(function (s) { return [s, sach(R(s))]; }).filter(function (x) { return x[1]; });
+  kiem("XSS qua data-tex: " + XT.length + " mẫu độc → chỉ class + data-tex đã thoát, không thẻ/handler lạ", !xbad.length, JSON.stringify(xbad.slice(0, 3)));
+  kiem("XSS qua data-tex: TeX đi vòng (viết → data-tex → đọc lại) đúng từng chữ, kể cả \" ' < > &", (function () {
+    var cases = ['x" onmouseover="alert(1)', "<img src=x onerror=alert(1)>", "a'b & c < d > e", "&quot;&lt;"], ok = true;
+    cases.forEach(function (t) { if (bang(maths(R("$" + t + "$")), ["i:" + t]) === false) ok = false; if (bang(maths(R("\\(" + t + "\\)")), ["i:" + t]) === false) ok = false; if (bang(maths(R("\\[\n" + t + "\n\\]")), ["D:" + t]) === false) ok = false; });
+    return ok;
+  })());
+  kiem("XSS qua data-tex: quét 400 chuỗi ngẫu nhiên có dấu toán + HTML/markdown → đầu ra sạch, TeX còn nguyên chữ", (function () {
+    var seed = 11, rnd = function () { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    var bits = ["$", "$$", "\\(", "\\)", "\\[", "\\]", "\\begin{align}", "\\end{align}", "\\begin{pmatrix}", "\\end{pmatrix}", "\\\\", "\\", "\"", "'", "<", ">", "&", "x", "_", "*", "[[", "]]", "`", "```", "```math\n", "```mermaid\n", "\n", "\n\n", " ", "<script>", "onerror=", "> ", "- ", "| ", "a b", "1", "="];
+    for (var i = 0; i < 400; i++) {
+      var s = ""; for (var k = 0; k < 30; k++) s += bits[Math.floor(rnd() * bits.length)];
+      var h = R(s, { resolve: resolve }), why = sach(h);
+      if (why) { console.log("    mẫu: " + JSON.stringify(s) + " → " + why); return false; }
+      var ms = maths(h);
+      if (ms.some(function (x) { return x.charAt(0) === "!"; })) { console.log("    mẫu: " + JSON.stringify(s) + " → " + JSON.stringify(ms)); return false; }
+    }
+    return true;
+  })());
+
+  // notes.js: một luật vùng toán cho cả trang, đồ thị (parseLinks) và compose.js
+  var PL = N.parseLinks("$[[0,1]]$ và [[A]] và `[[c]]` và \\([[z]]\\) cuối [[B|b]]");
+  kiem("notes.parseLinks bỏ qua toán (đồ thị/liên kết ngược khớp với trang): chỉ A và B, chỉ số trỏ đúng trên nội dung gốc", bang(PL.map(function (l) { return l.title; }), ["A", "B"]) && PL.every(function (l) { return "$[[0,1]]$ và [[A]] và `[[c]]` và \\([[z]]\\) cuối [[B|b]]".substr(l.index, l.raw.length) === l.raw; }));
+  kiem("notes.rewriteLinks không đổi tên [[…]] nằm trong toán", N.rewriteLinks("$[[Cũ]]$ [[Cũ]]", "Cũ", "Mới") === "$[[Cũ]]$ [[Mới]]");
+  kiem("notes.mathRanges: ranh giới đúng (trên chữ đã che code)", bang(N.mathRanges(N.maskCode("a $x$ b \\(y\\) `$z$` $$w$$")), [[2, 5], [8, 13], [20, 25]]), JSON.stringify(N.mathRanges(N.maskCode("a $x$ b \\(y\\) `$z$` $$w$$"))));
+  kiem("mathBlocks (chuẩn bị W5: vùng chưa đóng): chỉ số dòng bắt đầu → kết thúc; rào code và đoạn không toán → null", (function () {
+    var b = M.mathBlocks(["a", "", "$$", "x", "$$", "", "\\begin{align}", "y", "\\end{align}", "z"]);
+    return !!b && bang(Object.keys(b), ["2", "6"]) && b[2].end === 4 && b[6].end === 8 && M.mathBlocks(["```", "$$", "x", "$$", "```"]) === null && M.mathBlocks(["chỉ chữ", "thường"]) === null && M.mathBlocks(["$$", "chưa đóng", "", "x"]) === null;
+  })());
+
+  // đầu vào xấu: tuyến tính (mỗi hình ~100–300 KB, < 500 ms)
+  var shapes = {
+    "$ lẻ ×50.000": function () { return "$".repeat(50000); },
+    "$a lặp (không đóng)": function () { return "$a ".repeat(30000); },
+    "$x$ lặp: 30.000 công thức": function () { return "$x$ ".repeat(30000); },
+    "\\( không đóng": function () { return "\\( a ".repeat(20000); },
+    "\\( đóng: 20.000 công thức": function () { return "\\(a\\) ".repeat(20000); },
+    "\\[ mỗi dòng không đóng": function () { return "\\[ a\n".repeat(20000); },
+    "$$ a $$ b mỗi dòng": function () { return "$$ a $$ b\n".repeat(20000); },
+    "$$ a mỗi dòng không đóng": function () { return "$$ a\n".repeat(20000); },
+    "\\begin{align} mỗi dòng không đóng": function () { return "\\begin{align}\n".repeat(20000); },
+    "\\begin{align} cùng một dòng ×20.000": function () { return "\\begin{align}".repeat(20000); },
+    "20.000 khối \\begin..\\end": function () { return "\\begin{align}x\\end{align}\n".repeat(20000); },
+    "\\begin lồng sâu không đóng": function () { return "\\begin{align}\n".repeat(20000) + "\\end{align}\n"; },
+    "\\ ×100.000": function () { return "\\".repeat(100000); },
+    "20.000 khối \\[ \\]": function () { return "\\[\nx\n\\]\n\n".repeat(20000); },
+    "20.000 khối $$": function () { return "$$\nx\n$$\n".repeat(20000); },
+    "giá 5$/a xuống dòng ×20.000": function () { return "giá 5$/a\n".repeat(20000); },
+    "20.000 rào ```math": function () { return "```math\nx\n```\n".repeat(20000); },
+    "$ + 100.000 khoảng trắng + $": function () { return "$" + " ".repeat(100000) + "$"; },
+    "\\[ a + 100.000 khoảng trắng + x": function () { return "\\[ a " + " ".repeat(100000) + "x"; },
+    "\\ lẻ xen $ ×15.000": function () { return "\\$a\\ ".repeat(15000); }
+  }, worst = 0, worstName = "";
+  Object.keys(shapes).forEach(function (k) {
+    var s = shapes[k](), t0 = Date.now();
+    R(s);
+    var d = Date.now() - t0;
+    if (d > worst) { worst = d; worstName = k; }
+  });
+  kiem("toán trên " + Object.keys(shapes).length + " hình dạng xấu (≤ 300 KB): mỗi hình < 500 ms (chậm nhất " + worst + " ms: " + worstName + ")" + (mslack > 1 ? ", PW_PERF_SLACK=" + mslack : ""), worst < 500 * mslack);
+})();
 
 /* ======================================================================== search */
 sec("search");
@@ -1138,6 +1302,7 @@ async function aiClientTests() {
     hostileTests();
     await aiClientTests();
   } catch (e) { sai++; console.log("  [SAI] ngoại lệ không bắt: " + (e && e.stack || e)); }
+  gac.xong();
   console.log("\n" + "=".repeat(58));
   if (sai) { console.log("SAI " + sai + " / " + (ok + sai) + " phép kiểm"); process.exit(1); }
   console.log("Đạt — " + ok + " phép kiểm.");

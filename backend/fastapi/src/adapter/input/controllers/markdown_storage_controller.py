@@ -92,9 +92,12 @@ _check_admin = check_markdown_admin
 
 
 def _legacy_put_mode() -> str:
-    """`MARKDOWN_LEGACY_PUT`: `allow` (default until the new client ships, M4b) or `reject`."""
-    value = os.getenv("MARKDOWN_LEGACY_PUT") or getattr(settings, "MARKDOWN_LEGACY_PUT", "allow")
-    return "reject" if str(value).strip().lower() == "reject" else "allow"
+    """`MARKDOWN_LEGACY_PUT`: `reject` (the default since the new client shipped, M4b) or `allow`.
+
+    Fails closed: only the literal `allow` lets an old editor's whole-tree save through, so a typo cannot reopen the
+    way to overwrite what other devices synced."""
+    value = os.getenv("MARKDOWN_LEGACY_PUT") or getattr(settings, "MARKDOWN_LEGACY_PUT", "reject")
+    return "allow" if str(value).strip().lower() == "allow" else "reject"
 
 
 def _json_path() -> Path:

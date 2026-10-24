@@ -365,9 +365,13 @@
       if (!TU_KHOA_BIET[kw]) {
         if (/^(x-|\$)/.test(kw) && kw.charAt(0) !== "$") continue;           /* x-… la mo rong rieng */
         var gan = null, kc = 3;
-        for (j = 0; j < DS_TU_KHOA_BIET.length; j++) {
-          var d = khoangCach(kw.toLowerCase(), DS_TU_KHOA_BIET[j].toLowerCase());
-          if (d < kc) { kc = d; gan = DS_TU_KHOA_BIET[j]; }
+        /* Goi y go sai (~60 phep Levenshtein / tu khoa) chi cho 200 tu khoa la DAU TIEN moi lan bienDich: schema co hang chuc
+           nghin tu khoa la khong duoc ton hang giay chi de goi y (do: 20 000 tu khoa = 1,9 s). Canh bao van co cho moi tu khoa. */
+        if ((bd.soGoiY = (bd.soGoiY || 0) + 1) <= 200) {
+          for (j = 0; j < DS_TU_KHOA_BIET.length; j++) {
+            var d = khoangCach(kw.toLowerCase(), DS_TU_KHOA_BIET[j].toLowerCase());
+            if (d < kc) { kc = d; gan = DS_TU_KHOA_BIET[j]; }
+          }
         }
         canhS(bd, cp, kw, "Từ khoá lạ “" + catNgan(kw, 40) + "” — bị bỏ qua" + (gan && kc <= 2 ? " (có phải “" + gan + "”?)" : ""), gan && kc <= 2 ? gan : null);
         continue;
@@ -497,6 +501,9 @@
     if (canh) {
       if (ng.demCb >= ng.toiDa) { ng.catCb = true; return false; }
       ng.demCb++;
+    } else if (ng.dem >= ng.toiDa) {                     /* loi thu toiDa+1: bo no va moi bao "cat bot" (dung toiDa loi thi KHONG cat) */
+      ng.cat = true;
+      return false;
     }
     var d = ng.d.slice();
     if (duongPhu !== undefined) d.push(duongPhu);
@@ -506,7 +513,7 @@
       thongBao: thongBao, muc: canh ? "canh-bao" : "loi", chiTiet: chiTiet || {}
     };
     sink.push(e);
-    if (!canh && ++ng.dem >= ng.toiDa) ng.cat = true;
+    if (!canh) ng.dem++;
     return false;
   }
 
@@ -534,9 +541,12 @@
   function danhGiaIm(nut, v, ng) {
     var l = ng.loi, c = ng.cb, ds = ng.dungSom, dem = ng.dem, demCb = ng.demCb, cat = ng.cat;
     ng.loi = null; ng.cb = null; ng.dungSom = true;
-    var r = danhGia(nut, v, ng);
-    ng.loi = l; ng.cb = c; ng.dungSom = ds; ng.dem = dem; ng.demCb = demCb; ng.cat = cat;
-    return r;
+    try {
+      return danhGia(nut, v, ng);
+    } finally {
+      /* Khoi phuc CA KHI nem loi (tran ngan xep): chayDanhGia ghi loi "long qua sau" vao ng.loi — neu con null thi TypeError. */
+      ng.loi = l; ng.cb = c; ng.dungSom = ds; ng.dem = dem; ng.demCb = demCb; ng.cat = cat;
+    }
   }
 
   /** Thu mot nhanh voi sink rieng; loi cua nhanh khong tinh vao tong cho den khi duoc chon. */
@@ -544,8 +554,12 @@
     var l = ng.loi, c = ng.cb, dem = ng.dem, demCb = ng.demCb, cat = ng.cat, catCb = ng.catCb;
     var nl = l ? [] : null, nc = c ? [] : null;
     ng.loi = nl; ng.cb = nc;
-    var r = danhGia(nut, v, ng);
-    ng.loi = l; ng.cb = c; ng.dem = dem; ng.demCb = demCb; ng.cat = cat; ng.catCb = catCb;
+    var r;
+    try {
+      r = danhGia(nut, v, ng);
+    } finally {
+      ng.loi = l; ng.cb = c; ng.dem = dem; ng.demCb = demCb; ng.cat = cat; ng.catCb = catCb;      /* ca khi nem loi (xem danhGiaIm) */
+    }
     return { ok: r, loi: nl, cb: nc };
   }
 
@@ -704,10 +718,10 @@
     return function (v, ng) {
       var dung = danhGiaIm(nIf, v, ng), nhanh = dung ? nThen : nElse;
       if (!nhanh) return true;
-      var l = ng.loi, tam = l ? [] : null;
+      var l = ng.loi, tam = l ? [] : null, r;
       ng.loi = tam;
-      var r = danhGia(nhanh, v, ng);
-      ng.loi = l;
+      try { r = danhGia(nhanh, v, ng); }
+      finally { ng.loi = l; }                                      /* ca khi nem loi (xem danhGiaIm) */
       if (tam) {
         for (var i = 0; i < tam.length; i++) {
           tam[i].thongBao = (dung ? "Vì khớp điều kiện “if”: " : "Vì không khớp điều kiện “if”: ") + tam[i].thongBao;

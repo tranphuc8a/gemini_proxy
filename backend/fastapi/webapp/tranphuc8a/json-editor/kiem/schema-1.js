@@ -223,6 +223,87 @@ module.exports = function (C) {
     tong++;
   }
 
+  /* Tran ngan xep BEN TRONG nhanh danh gia "im lang" (not / contains / if) hoac nhanh thu (anyOf / oneOf): trang thai ng.loi
+     (null / mang tam) phai duoc khoi phuc truoc khi chayDanhGia ghi loi "long qua sau" — truoc day ng.loi con null nen
+     catch nem TypeError "Cannot read properties of null (reading 'push')" (giao dien hien "Khong kiem duoc — Cannot read…"). */
+  {
+    const rec = { $defs: { t: { type: "array", items: { $ref: "#/$defs/t" } } } };
+    const ref = { $ref: "#/$defs/t" };
+    const sau = C.longSau(20000);
+    const CA = [
+      ["not", { not: ref }, sau],
+      ["contains", { contains: ref }, [sau]],
+      ["if", { if: ref, then: true }, sau],
+      ["if/else", { if: ref, else: false }, sau],
+      ["anyOf", { anyOf: [ref, { type: "string" }] }, sau],
+      ["oneOf", { oneOf: [ref, { type: "string" }] }, sau]
+    ];
+    CA.forEach(([ten, sc, du]) => {
+      let r = null, nem = "";
+      try { r = S.kiem(du, Object.assign({}, rec, sc)); } catch (e) { nem = String(e && e.message || e); }
+      kiem("do sau · tran ngan xep trong nhanh " + ten + ": loi he thong 'long qua sau' than thien, khong nem / khong TypeError",
+        !nem && !!r && r.hopLe === false && r.loi.some((e) => e.tuKhoa === "(he-thong)" && /lồng quá sâu/.test(e.thongBao)), nem || (r && JSON.stringify(r.loi.map((e) => e.thongBao.slice(0, 60)))));
+      tong++;
+    });
+    const xl = MT.JE.chayNen && MT.JE.chayNen.xuLy;
+    if (xl) {
+      const t = xl(MT.JE, { loai: "kiem", du: "[".repeat(20000) + "]".repeat(20000), schema: JSON.stringify(Object.assign({}, rec, { not: ref })) });
+      kiem("do sau · qua Worker (xuLy): nhanh not tran ngan xep -> ket qua co loi 'long qua sau', KHONG phai loi he thong 'Cannot read properties of null'",
+        !!t.kq && t.kq.loi.some((e) => /lồng quá sâu/.test(e.thongBao)) && !t.loi, JSON.stringify(t).slice(0, 160));
+      tong++;
+    }
+  }
+
+  /* catBot chi bat khi THUC SU co loi bi bo: dung 200 loi (toiDa) -> khong cat; 201 -> cat 1 */
+  {
+    const nhieu = { items: { type: "integer" } };
+    let r = S.kiem(new Array(200).fill("x"), nhieu);
+    kiem("toiDa · dung 200 loi (bang toiDa): khong bo loi nao -> catBot = false", r.loi.length === 200 && r.catBot === false);
+    r = S.kiem(new Array(201).fill("x"), nhieu);
+    kiem("toiDa · 201 loi: giu 200, bo 1 -> catBot = true", r.loi.length === 200 && r.catBot === true);
+    r = S.kiem(new Array(5).fill("x"), nhieu, { toiDa: 5 });
+    kiem("toiDa · toiDa: 5 va dung 5 loi -> catBot = false; 6 loi -> true",
+      r.loi.length === 5 && r.catBot === false && S.kiem(new Array(6).fill("x"), nhieu, { toiDa: 5 }).catBot === true);
+    r = S.kiem(new Array(200).fill("x"), { items: { type: "integer" }, minItems: 300 });
+    kiem("toiDa · 200 loi o items + 1 loi minItems: loi thu 201 bi bo -> catBot = true", r.loi.length === 200 && r.catBot === true);
+    tong += 4;
+  }
+
+  /* Goi y go sai (Levenshtein voi ~60 tu khoa) chi cho 200 tu khoa la DAU TIEN cua mot lan bienDich: schema co hang chuc nghin
+     tu khoa la khong duoc ton ~2 s chi de goi y (do truoc: 20 000 tu khoa la = 1,9 s). Van du canh bao cho TAT CA tu khoa la. */
+  {
+    const L = "abcdefghijklmnopqrstuvwxyz", sc = {};
+    for (let i = 0; i < 300; i++) sc["type" + L[i % 26] + L[Math.floor(i / 26)]] = 1;
+    const bd = S.bienDich(sc);
+    const coGoiY = bd.canhBao.filter((c) => c.goiY === "type").length;
+    kiem("lint · 300 tu khoa la gan 'type': du 300 canh bao, goi y chi cho 200 cai dau (tran chi phi)", bd.canhBao.length === 300 && coGoiY === 200, bd.canhBao.length + " canh bao, " + coGoiY + " co goi y");
+    const lon = {};
+    for (let i = 0; i < 20000; i++) lon["khoa_la_" + i] = i;
+    const SLACK2 = Number(process.env.JE_PERF_SLACK || 3);
+    const chuan = C.hieuChuan(() => JSON.parse(JSON.stringify(lon)));
+    const gh = Math.max(300 * SLACK2, 40 * chuan);
+    let b2 = null;
+    const ms = Math.round(C.hieuChuan(() => { b2 = S.bienDich(lon); }));
+    kiem("hieu nang · bienDich schema 20 000 tu khoa la: " + ms + " ms < " + Math.round(gh) + " ms (truoc cap goi y: ~1900 ms)", b2.canhBao.length === 20000 && ms < gh, "do chuan " + Math.round(chuan) + " ms");
+    tong += 2;
+  }
+
+  /* required / oneOf: cac ca tung la khoang trong phep kiem (dot bien song sot) */
+  tong += C.chaySchema(JE, [
+    ["required khoa trung ten nguyen mau", { required: ["toString", "constructor", "__proto__", "hasOwnProperty"] },
+      [["{}", false, { tuKhoa: "required", n: 4 }], ['{"toString":1,"constructor":2,"__proto__":3,"hasOwnProperty":4}', true],
+       ['{"toString":1,"constructor":2,"hasOwnProperty":4}', false, { tuKhoa: "required", n: 1, tb: "__proto__" }]], { json: true }],
+    ["required: [\"toString\"] voi {} va voi khoa that", { required: ["toString"] }, [["{}", false, { n: 1 }], ['{"toString":null}', true], ['{"valueOf":1}', false]], { json: true }],
+    ["oneOf IM LANG trong not: hai nhanh cung khop -> oneOf sai -> not dat", { not: { oneOf: [{ type: "integer" }, { type: "number", minimum: 0 }] } },
+      [[5, true], [-1, false, "not"], [5.5, false, "not"], ["x", true]]],
+    ["oneOf IM LANG trong if: hai nhanh khop -> if sai -> khong then", { if: { oneOf: [{ type: "integer" }, { type: "number", minimum: 0 }] }, then: { type: "string" } },
+      [[5, true], [-1, false, "type"], [5.5, false, "type"]]],
+    ["oneOf IM LANG trong contains: chi dem phan tu khop DUNG MOT nhanh", { contains: { oneOf: [{ type: "integer" }, { type: "number", minimum: 0 }] } },
+      [[[5, 5], false, "contains"], [[5, -1], true], [[], false, "contains"]]],
+    ["oneOf khong im lang: 0 / 1 / 2 nhanh khop", { oneOf: [{ type: "integer" }, { type: "number", minimum: 0 }] },
+      [[5, false, "oneOf"], [-1, true], [5.5, true], ["x", false, "oneOf"]]]
+  ]);
+
   /* kiemNut */
   {
     const bd = S.bienDich({ properties: { a: { type: "integer", minimum: 1 } } });

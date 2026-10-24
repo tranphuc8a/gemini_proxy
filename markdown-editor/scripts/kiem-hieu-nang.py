@@ -23,7 +23,7 @@
 
 Cách đo (giống `tasks/2610/261023/cai-tien-webapp/nhap/perf-md/perf_me.py` của pha thiết kế, để số còn so được với
 perf-md.md §2.1): tài liệu sinh tất định (`_tai_lieu_thu.py`, từng byte giống mkdoc.mjs) nạp sẵn vào
-localStorage["markdown-editor:files"]; viewport 1440×900, service worker chặn; API quản trị giả bằng `page.route`
+IndexedDB `markdown-editor` + ảnh khởi động v3 ở localStorage["markdown-editor:files"] (xem NAP); viewport 1440×900, service worker chặn; API quản trị giả bằng `page.route`
 (`/markdown/admin/session` → token) — hoặc máy chủ thật với `--may-chu that`; ảnh `img.example.test` trả PNG giả.
   · mở: khung hình đầu có editor / preview / bài đọc CỦA TÀI LIỆU ĐO (không phải welcome.md vẽ trước hydrate); "yên" =
     1,5 s không long task, không tài nguyên mạng, không đổi DOM con của preview, không còn sơ đồ đang vẽ
@@ -341,9 +341,33 @@ def mong_doi(md):
     tieu_de = next((ln.lstrip("#").strip() for ln in md.split("\n") if ln.startswith("#")), "")
     return {"dai": len(md), "tieuDe": tieu_de[:20]}
 
-NAP = """([md, view, token]) => {
-  localStorage.setItem('markdown-editor:files', JSON.stringify({version: 2, currentFileId: 'doc', expandedFolders: ['root'],
-    files: [{id: 'root', name: 'My Documents', type: 'folder', children: [{id: 'doc', name: 'long.md', type: 'file', parentId: 'root', content: md}]}]}));
+# Kho cục bộ của app (md-sync M4b): tài liệu nằm ở IndexedDB `markdown-editor` (kho docs/meta), localStorage chỉ giữ "ảnh khởi động"
+# v3 (cây không kèm chữ + chữ của tài liệu đang mở nếu <= 512 KB). NAP dựng đúng trạng thái đó — không đi qua bước chép từ khoá
+# v2 (lần chạy đầu của người dùng cũ), để số đo là của trạng thái ổn định. Tài liệu > 512 KB: khung đầu chưa có chữ, chữ đến
+# cùng IndexedDB (phép đo "khung đầu có editor" tính cả khoảng đó, đúng như người dùng thấy).
+NAP = """async ([md, view, token]) => {
+  const db = await new Promise((resolve, reject) => {
+    const open = indexedDB.open('markdown-editor', 1);
+    open.onupgradeneeded = () => {
+      for (const name of ['docs', 'shadows', 'outbox']) open.result.createObjectStore(name, {keyPath: 'id'});
+      open.result.createObjectStore('meta', {keyPath: 'k'});
+    };
+    open.onsuccess = () => resolve(open.result);
+    open.onerror = () => reject(open.error);
+  });
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(['docs', 'meta'], 'readwrite');
+    tx.objectStore('docs').clear();
+    tx.objectStore('docs').put({id: 'root', kind: 'folder', parentId: null, name: 'My Documents', content: null, updatedAt: 1});
+    tx.objectStore('docs').put({id: 'doc', kind: 'file', parentId: 'root', name: 'long.md', content: md, updatedAt: 1});
+    tx.objectStore('meta').put({k: 'seq', v: 1});
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+  localStorage.setItem('markdown-editor:files', JSON.stringify({version: 3, seq: 1, currentFileId: 'doc', expandedFolders: ['root'],
+    tree: [{id: 'root', name: 'My Documents', type: 'folder', children: [{id: 'doc', name: 'long.md', type: 'file'}]}],
+    current: {id: 'doc', content: md.length <= 524288 ? md : null}}));
   localStorage.setItem('markdown-editor:settings', JSON.stringify({theme: 'light', viewMode: view, scrollSync: true, showLineNumbers: true,
     wordWrap: true, sidebarTab: 'files', sidebarCollapsed: false}));
   localStorage.setItem('markdown-editor:admin-session', token);

@@ -3,14 +3,17 @@ import { useEditorStore } from '../store'
 import { getDocumentStats } from '../lib/markdown'
 import { findNode } from '../lib/tree'
 import { useIdleValue } from '../hooks/useIdleValue'
-import { IconCheck, IconCloud, IconCollapse, IconHelp, IconLock, IconEye } from './Icons'
+import { IconCheck, IconCollapse, IconHelp, IconLock, IconEye } from './Icons'
+import SyncStatus from './SyncStatus'
 import './StatusBar.css'
 
 interface StatusBarProps {
   onOpenHelp: () => void
+  /** The sync indicator's click: the sync panel. */
+  onOpenSync?: () => void
 }
 
-function StatusBar({ onOpenHelp }: StatusBarProps) {
+function StatusBar({ onOpenHelp, onOpenSync }: StatusBarProps) {
   const content = useEditorStore((state) => state.currentContent)
   // A name, not the tree: the tree is replaced on every keystroke.
   const fileName = useEditorStore((state) => findNode(state.files, state.currentFileId)?.name ?? 'No file open')
@@ -19,7 +22,6 @@ function StatusBar({ onOpenHelp }: StatusBarProps) {
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const fontSize = useEditorStore((state) => state.fontSize)
   const setFontSize = useEditorStore((state) => state.setFontSize)
-  const backendStorage = useEditorStore((state) => state.backendStorage)
   const fullscreen = useEditorStore((state) => state.fullscreen)
   const toggleFullscreen = useEditorStore((state) => state.toggleFullscreen)
 
@@ -36,12 +38,7 @@ function StatusBar({ onOpenHelp }: StatusBarProps) {
           {fileName}
         </span>
         <SaveIndicator state={saveState} lastSavedAt={lastSavedAt} />
-        {backendStorage && (
-          <span className="status-item" title="Backend sync is enabled">
-            <IconCloud size={12} />
-            Backend
-          </span>
-        )}
+        <SyncStatus onOpen={onOpenSync ?? (() => undefined)} />
       </div>
 
       <div className="status-group status-right">

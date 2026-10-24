@@ -2,6 +2,9 @@
      node backend/fastapi/webapp/tranphuc8a/algorithm-notebook/kiem.js
    Phần DOM / IndexedDB thật / hiệu năng 10.000 mục / offline kiểm bằng check.py; mẫu code C++ kiểm bằng kiem-code.py. */
 "use strict";
+/* Luoi an toan chong "xanh gia": mot Promise khong bao gio xong lam Node thoat ma 0 va bo qua im lang cac phan sau
+   (xem ../khung-kiem.js). Thoat som -> "[SAI] KHONG CHAY HET" + exit 1. */
+var gac = require("../khung-kiem.js").canhGac("algorithm-notebook/kiem.js");
 var fs = require("fs"), path = require("path");
 var J = path.join(__dirname, "assets", "js"), D = path.join(__dirname, "assets", "data");
 ["core/text", "core/notes", "core/markdown", "core/lib", "core/catalog", "core/find", "core/srs", "core/compare", "core/quiz", "core/decide", "core/viz", "data/schema", "data/store", "data/zip", "data/user"].forEach(function (m) { require(path.join(J, m + ".js")); });
@@ -202,6 +205,24 @@ kiem("nhập sai bị từ chối bằng lời tiếng Việt (rỗng, nguồn n
 kiem("mọi preset của mọi viz chạy được và ≤ " + V.MAX_STEPS + " bước", V.list.every(function (v) { return v.presets.every(function (p) { var pp = v.parse(p.text); if (pp.error) return false; var r = v.run(pp.params); return r.steps.length > 1 && r.steps.length <= V.MAX_STEPS && r.steps.every(function (s) { return !!s.msg; }); }); }));
 
 /* ======================================================================== dữ liệu người dùng (kho bộ nhớ) */
+/* ======================================================================== markdown (bản chép từ personal-wiki): toán + dấu $ trong chữ thư viện */
+sec("markdown — toán");
+(function () {
+  var MD = A.markdown, R = function (s) { return MD.render(s, {}); }, n = function (h) { return (h.match(/class="math/g) || []).length; };
+  kiem("toán: \\( \\), $…$, khối \\[ \\] thành nút .math giữ nguyên TeX trong data-tex", n(R("a \\(x_1\\) b $y*z$")) === 2 && /<div class="math math-d" data-tex="E=mc\^2">/.test(R("\\[\nE=mc^2\n\\]")) && /data-tex="x_1"/.test(R("\\(x_1\\)")) && R("\\(x_1 * x_2\\)").indexOf("<em>") === -1);
+  kiem("giá tiền không phải công thức: $5 và $10, $20/tháng và $200/tháng", n(R("Giá $5 và $10")) === 0 && n(R("$20/tháng và $200/tháng")) === 0 && R("Giá $5 và $10").indexOf("$5 và $10") !== -1);
+  // Lỗi cũ (lib-string.js, thẻ Z-function): hai dấu $ trong chữ thường dính nhau thành công thức giả. Luật pandoc KHÔNG tự cứu ca này, nên dữ liệu phải bọc `code`.
+  var cardOld = "Tính z của P + '$' + T. Vị trí i của T khớp. Ký tự '$' không được xuất hiện trong P, T.", cardNew = "Tính z của `P + '$' + T`. Vị trí i của T khớp. Ký tự `'$'` không được xuất hiện trong P, T.";
+  kiem("thẻ Z-function: chữ cũ sinh công thức giả, chữ đã sửa (code span) thì không", n(R(cardOld)) === 1 && n(R(cardNew)) === 0);
+  var zCard = lib.get("z-function"), zCards = zCard ? zCard.cards.filter(function (c) { return c.a.indexOf("'$'") !== -1; }) : [];
+  kiem("lib-string.js: thẻ Z-function còn '$' đều nằm trong code span (không sinh .math)", !!zCard && zCards.length >= 1 && zCards.every(function (c) { return n(R(c.a)) === 0 && n(R(c.q)) === 0; }));
+  kiem("XSS: TeX có \" ' < > không thoát khỏi data-tex", (function () {
+    var h = R("$x\" onmouseover=\"alert(1)$ và \\(<img src=x onerror=alert(1)>\\)");
+    var tags = h.match(/<[^>]*>/g) || [];                                      // chỉ nhìn BÊN TRONG thẻ: chữ "onmouseover=" nằm trong nội dung (đã thoát) là vô hại
+    return n(h) === 2 && h.indexOf("<img") === -1 && tags.every(function (t) { return !/\son[a-z]+\s*=/i.test(t.replace(/"[^"]*"/g, '""')); }) && h.indexOf("&lt;img") !== -1;
+  })());
+})();
+
 async function userTests() {
   sec("dữ liệu người dùng");
   var tick = now0, store = A.store.memory(), U = A.user.create(store, { now: function () { return (tick += 1000); } });
@@ -256,6 +277,7 @@ async function userTests() {
 
 (async function main() {
   try { await userTests(); } catch (e) { sai++; console.log("  [SAI] ngoại lệ không bắt: " + (e && e.stack || e)); }
+  gac.xong();
   console.log("\n" + "=".repeat(58));
   if (sai) { console.log("SAI " + sai + " / " + (ok + sai) + " phép kiểm"); process.exit(1); }
   console.log("Đạt — " + ok + " phép kiểm.");

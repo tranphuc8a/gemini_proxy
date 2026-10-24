@@ -115,6 +115,10 @@ Mọi hàm **thuần** (không sửa đối số, không dùng toàn cục), t�
   đầu tiên, pha 2 tra bảng hàng cuối T·t = r chọn chính tắc ít ô nhất rồi từ điển — 5×5 khớp bảng kinh điển; nhận ra "pha 2 đang dở" nên trùng thủ tục tay, ≤ 2N − w nước);
   bàn có công tắc (nhớ ở `localStorage["puz:lo-hint"]`); **par + grade** (mục 11.4): `objective {min, "lần bấm"}`, 3★ = K lần bấm, 2★ ≤ K + ⌈K/4⌉, 1★ còn lại, chưa xong 0★;
   `def.lib` = hàm thuần cho bàn/test (`obstruction`, `chaseStep`, `chaseTop`, `par`, `parStars`, `cross`, `hintStyle`).
+- **Cân đồng xu** (`coinbalance`, đợt P3 24/10/2026, loại `interactive` đầu tiên có bàn thật — xem mục 11.9): n xu, MỘT xu giả, cân đĩa, k lần cân cứng; phải CHỨNG MINH xu giả (và nặng/nhẹ nếu phiên bản đòi), đoán may không tính.
+  6 phiên bản (`sizes`, nhãn "Phiên bản": biết nặng 2/3 lần · nặng-hay-nhẹ 3/4 lần · +xu chuẩn · chỉ chỉ ra xu), tuỳ chọn `mode` = `fixed` (xu giả cố định theo seed) | `adv` (đối thủ thích nghi).
+  Lõi toán = DP minimax trên lớp xu U/H/L/G (cận thông tin 3^k KHÔNG đủ: 13 xu/3 lần có 26 ≤ 27 khả năng nhưng không giải được); kiểm bằng vét cạn tường minh (n ≤ 5, k ≤ 3), vét cạn mức tập giả thuyết (biên Dyson tới k = 3),
+  mô phỏng khối lượng và "mọi xu giả có thể đều bị chiến lược tối ưu tìm ra" (`kiem/coinbalance.js`, `check_board_coinbalance.py`).
 - **Nonogram** 5×5 / 10×10 / 15×15: `state.v` 0 = chưa biết, 1 = tô, 2 = gạch; đề sinh từ ảnh ngẫu nhiên tất định và phải có nghiệm duy nhất; bộ giải theo dòng (overlap, chốt, gạch…) rồi quay lui; hint nói theo dòng/cột.
 - **Logic Grid** `cats × items`: manh mối `=`, `≠`, "A hoặc B" và so sánh/liền kề cho nhóm **có thứ tự** (vị trí, tuổi); sinh manh mối rồi **tỉa** tới mức vừa đủ duy nhất; có Builder (nhập `Alice != Red`, `Bob = Blue`, `Alice left-of Bob`…) → bài toán ràng buộc (dùng `Puz.csp`); `constraintView` liệt kê biến/miền/ràng buộc; hint dựa trên lan truyền ràng buộc nên giải thích được.
 
@@ -182,8 +186,9 @@ Ví dụ chạy được: hai loại giả trong `kiem/mau/loai-gia.js` (`giatoi
 | `grade(puzzle, state, counters)` | xem 11.4 — **bắt buộc khi `kind:"optimize"`**, tuỳ chọn với loại khác (Lights Out par, CW1). |
 | `options` | xem 11.3. |
 | `sizeLabel` | nhãn thay cho "Cỡ bàn" ở Puzzle mới / Học ("Phiên bản"). |
-| `moveLabel` | `title` của chip "Số nước đi" trên HUD ("Lần cân", "Số món đã chọn"). |
-| `mistakeLabel` | `title` của chip "Số lần điền sai" ("Nước làm mất tối ưu"). |
+| `moveLabel` | `title` của chip "Số nước đi" trên HUD. Chip này LUÔN hiện `game.counters.moves` = số lần gọi `act` (mọi action, kể cả kết luận/mở lại; **hoàn tác không làm giảm**) — nên đặt tên đúng bộ đếm ("Số thao tác", "Số món đã chọn"), KHÔNG đặt tên một đại lượng riêng của loại ("Số lần cân"): đại lượng đó trong state (vd `plan.count`) sẽ khác con số trên chip và mâu thuẫn với bàn (đã gặp ở CW1, sửa sau kiểm P3). Muốn hiện số riêng của loại thì để bàn tự vẽ. |
+| `mistakeLabel` | `title` của chip "Số lần điền sai" = `counters.mistakes` = tổng `mistakes()` của mọi nước ("Sai sót", "Nước làm mất tối ưu"); nếu `mistakes()` cộng nhiều thứ (CW1: lần cân mất an toàn + kết luận chưa chứng minh) thì nhãn phải nêu cả hai. |
+| `sizeText(puzzle)` | tuỳ chọn, hàm → chuỗi: nhãn cỡ của đề TỰ NHẬP (không có `sizeId` khớp `sizes`) trong tiêu đề/Thư viện ("13 xu + chuẩn · 3 lần cân"); vắng = vỏ nối các khoá của `puzzle.size` ("13×3", không tự giải thích). Vỏ bắt lỗi và rơi về cách cũ; đề sinh ra vẫn dùng `sizes[].label`. |
 
 Dùng `goal` là lỗi conformance (tên cũ của thiết kế camel — đã gộp vào `kind`).
 
@@ -270,3 +275,19 @@ grade(puzzle, state, counters) → { value, best, quality, stars, valueText, bes
 (phiên bản đầu bắt đầu ngày số 0 nên trùng hệt công thức cũ). Thêm loại vào Daily = thêm phiên bản mới ở cuối với `tu` **trong tương lai** và `ids` = danh sách cũ + id mới ở cuối.
 `kiem/personal.js` kiểm: lịch từ 2020-01-01 tới trước phiên bản thứ hai trùng hệt bản cũ, hôm nay không đổi, hình dạng SCHEDULE đúng quy tắc, phiên bản giả định không đổi các ngày trước `tu`.
 `Puz.daily.ORDER` = ids của phiên bản mới nhất (thứ tự hiển thị các loại). Đợt P1 CHƯA thêm loại nào vào Daily.
+
+### 11.9 Ví dụ thật: `coinbalance` (đợt P3) — những quyết định đáng bắt chước
+
+- **Trạng thái** = `Puz.plan.layout(k, C+1, 2)` với `C = n + ref`: mỗi bản ghi `[đĩa của xu 0…C−1 (0 ngoài · 1 trái · 2 phải), kết quả (1 trái nặng hơn · 2 cân bằng · 3 phải nặng hơn)]`; kết luận = nộp kèm `[xu + 1, hướng]`. Action `weigh` / `conclude` / `truncate`.
+- **Oracle trong `moveFor`**: cố định = `data.secret {coin, heavy}`; đối thủ = hàm thuần của lịch sử (kết quả khó nhất theo DP: cần nhiều lần cân nhất, hoà → nhiều khả năng hơn, hoà → `Puz.rng` từ băm `(data, seed, lịch sử, đĩa)`).
+  Kết quả nằm TRONG diff ⇒ hoàn tác / làm lại / khôi phục / replay giữ nguyên. Chứng minh "đối thủ không để lọt": thế đã mất (`!solv`) ⇒ nhánh có `need > r−1` luôn tồn tại và được chọn ⇒ tới hết lượt còn ≥ 2 khả năng (test chơi ngẫu nhiên).
+- **`check.solved` = đã kết luận VÀ bị lịch sử ép buộc** (chỉ còn đúng một giả thuyết, khớp xu + hướng); kết luận chưa chứng minh ⇒ `mistakes` = 1, ván tiếp tục, gợi ý mức 3 = `{k:"truncate", n:len}` (mở lại). `conflicts` chỉ khi kết luận MÂU THUẪN với chính các lần cân.
+- **`mistakes`** = lần cân làm mất khả năng thắng chắc (một kết quả khả dĩ thành thế không giải được trong số lần còn lại) khi thế trước đó còn giải được; khi đã mất thì không tính lại. Hint khi đã mất: nói trước, nêu lần cân đầu tiên làm mất an toàn + vì sao, mức 3 = `truncate`.
+- **grade** (tự đặt sao, vẫn trả đủ trường): value = số lần cân trong state, best = k* (DP); 3★ = thắng chắc chắn không hoàn tác, không gợi ý mức 3, không lần cân mất an toàn; 2★ = có hoàn tác hoặc gợi ý mức 3; 1★ = thắng mà có sai sót (lần cân mất an toàn — có thể là thắng nhờ may — hoặc một lần kết luận chưa được chứng minh rồi phải mở lại; `counters.mistakes` gộp cả hai nên chữ của grade/nhãn HUD nêu cả hai) hoặc dùng nhiều hơn k*; 0★ = chưa xong.
+- **Độ khó** = `0,6 + 9·(0,55·sức ép + 0,45·độ hẹp phép cân đầu)` (+ 0,5 đối thủ) — sức ép = khả năng/3^k, độ hẹp = 1 − tỉ lệ phép cân đầu CÒN AN TOÀN (12 xu / 3 lần: 1/6; 39 xu / 4 lần: 1/19); `generate` chọn n trong các n có điểm nằm trong bậc ⇒ 100 % đạt bậc ở cả hai chế độ.
+- **Bàn**: xu đang đặt lên đĩa là trạng thái GIAO DIỆN; thông báo kết quả bằng chữ + ◀ ＝ ▶ (không chỉ hình/màu); nút Cân vô hiệu kèm lý do. Trình soạn nói giới hạn "tối đa N xu" bằng `type.lib.maxN` (hàm thuần, nhớ đệm).
+- **Chip HUD**: vỏ hiện `counters.moves` (số lần gọi act, hoàn tác không giảm) — CW1 gọi là "Số thao tác", còn "Còn r / k lần cân" là dòng riêng của bàn (đếm trong state). Đừng đặt `moveLabel` theo đại lượng của loại (xem 11.1).
+- **Đối thủ & seed**: phá hoà của đối thủ băm `(data, seed, lịch sử, đĩa)` ⇒ `validate(p)` dựng lại bằng `p.seed` để ra ĐÚNG `p.solution`; `fromText/fromFile` bỏ seed (đề nhập lại là đề tự nhập, seed 0) — đối thủ phá hoà khác nhưng vẫn hợp lệ (cả hai lời giải đều `solved`). Replay/Reveal luôn lấy `p.solution` của chính đề đang chơi. `advResult` trên state hỏng (không còn nhánh khả dĩ) trả 2 thay vì ném lỗi.
+- **Trợ năng bàn phím** (mẫu cho bàn có vùng vẽ lại bằng `replaceChildren`): vùng vẽ lại cả hàng bọc bằng `keepFocus(root, fn)` (nhớ vị trí phần tử đang focus, vẽ xong focus lại phần tử cùng vị trí / láng giềng bật gần nhất); lưới nút nhiều phần tử (khay xu, lưới Kết luận) dựng MỘT lần, roving tabindex + `navKey` (mũi tên/Home/End), đổi trạng thái tại chỗ. Mỗi bàn mount dùng id riêng (`aria-describedby` không trùng khi hai bàn cùng tồn tại).
+- **Còn mở (vỏ chung, không riêng CW1)**: "Xem lời giải từng bước" mở được giữa ván và không bị phạt ở mọi loại (kể cả Lights Out, CW1) — replay lộ lời giải/xu giả cố định; quyết định chung (chặn giữa ván, hay tính như gợi ý mức 3 / Reveal) để ở lượt kiểm tổng cuối làn.
+- `def.lib` (không thuộc hợp đồng chung): `solv/need/bestWeighing/safeWeighings/classesOf/countsOf/coinsFor/records/concluded/playOptimal/lostAt/maxN/strategyTree/whyUnsafe…` cho bàn và test.

@@ -66,7 +66,15 @@ module.exports = function (C) {
         dsWorker.push(this);
         if (chedo.loiNap) setImmediate(() => this.onerror && this.onerror({ message: "Uncaught SyntaxError (gia lap)" }));
       }
-      postMessage(d) { if (this.treo) return; setImmediate(() => { if (!this.dong) this.sb.onmessage({ data: JSON.parse(JSON.stringify(d)) }); }); }
+      postMessage(d) {
+        if (this.treo) return;
+        /* chedo.loiTu = N: tu lenh thu N+1 (tinh chung moi Worker) Worker bao loi LUC DANG CHAY (vd het bo nho), khong tra loi. */
+        if (chedo.loiTu !== undefined && (chedo.soLenh = (chedo.soLenh || 0) + 1) > chedo.loiTu) {
+          setImmediate(() => { if (!this.dong && this.onerror) this.onerror({ message: "het bo nho luc dang chay (gia lap)" }); });
+          return;
+        }
+        setImmediate(() => { if (!this.dong) this.sb.onmessage({ data: JSON.parse(JSON.stringify(d)) }); });
+      }
       terminate() { this.dong = true; }
     };
   }
@@ -155,6 +163,36 @@ module.exports = function (C) {
       r.loi && r.loi.phan === "he-thong" && r.workerHong === true && CN.coWorker() === false);
     r = await CN.chay("kiem", { du: DU_SAI, schema: SCHEMA }, { format: "loi" });
     kiem("chay-nen · sau khi Worker hong, lenh ke tiep chay luong chinh", r.luongChinh === true && r.kq && r.kq.hopLe === false);
+
+    /* Loi LUC DANG CHAY sau khi Worker da tra loi it nhat mot lan (het bo nho voi du lieu rat lon…): KHONG danh dau hong vinh vien —
+       chi bo Worker nay, lenh sau tao Worker moi. Chi sau nhieu loi LIEN TIEP (cauHinh.soLoiToiDa) moi roi ve luong chinh. */
+    moiTruong({ loiTu: 1 });
+    r = await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {});
+    kiem("chay-nen · loi luc chay: lenh dau van ra ket qua binh thuong", r.kq && r.kq.hopLe === true && !r.workerHong);
+    r = await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {}, 3000);
+    kiem("chay-nen · Worker bao loi SAU khi da tra loi duoc: lenh do nhan loi he thong, KHONG dat co hong (coWorker() van true), Worker bi bo",
+      r.loi && r.loi.phan === "he-thong" && r.workerHong === false && CN.coWorker() === true && !CN.thongKe.lyDoLuongChinh, JSON.stringify(r));
+    r = await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {}, 3000);
+    kiem("chay-nen · lenh ke tiep van tao Worker MOI (khong ve luong chinh), loi lan 2 van chua hong",
+      dsWorker.length === 2 && r.loi && r.workerHong === false && CN.coWorker() === true && !r.luongChinh, dsWorker.length + " Worker; " + JSON.stringify(r));
+    r = await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {}, 3000);
+    kiem("chay-nen · loi LIEN TIEP lan thu soLoiToiDa (3) -> danh dau hong, ghi ly do",
+      r.loi && r.workerHong === true && CN.coWorker() === false && /het bo nho/.test(CN.thongKe.lyDoLuongChinh), JSON.stringify(r));
+    r = await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {});
+    kiem("chay-nen · sau do chay luong chinh", r.luongChinh === true && r.kq && r.kq.hopLe === true);
+    moiTruong({});
+    await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {});                       /* da tra loi duoc -> daTraLoi */
+    const dungWorker = (cd) => { MT.ctx.Worker = taoWorkerGia(cd); CN.dung(); };
+    dungWorker({ loiTu: 0 });
+    await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {}, 3000);                  /* loi lien tiep 1 */
+    dungWorker({});
+    r = await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {});                    /* tra loi thanh cong -> dem ve 0 */
+    dungWorker({ loiTu: 0 });
+    await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {}, 3000);                  /* 1 */
+    CN.dung();
+    const r3 = await CN.chay("kiem", { du: DU_DUNG, schema: SCHEMA }, {}, 3000);       /* 2 (tong 3 neu khong dat lai) */
+    kiem("chay-nen · tra loi thanh cong dat lai bo dem loi lien tiep: loi roi rac (1 + 2) khong cong don thanh hong",
+      r.kq && r3.loi && r3.workerHong === false && CN.coWorker() === true, JSON.stringify(r3));
 
     CN.datLai();
     await doi(1);

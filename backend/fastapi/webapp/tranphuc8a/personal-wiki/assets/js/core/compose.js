@@ -125,78 +125,8 @@
   }
 
   // ============================================================================================ 2. vùng toán + liên kết (khớp wiki_links.py)
-  function isWS(c) { return c === " " || c === "\t" || c === "\n" || c === "\r" || c === "\f" || c === "\v"; }
-  function blankLineAfter(s, k) {
-    var n = s.length, m = k + 1;
-    while (m < n && (s[m] === " " || s[m] === "\t" || s[m] === "\r")) m++;
-    return m < n && s[m] === "\n";
-  }
-  /** Tìm dấu đóng `kind` (")", "]", "$$", "$") từ p, trong cùng đoạn. → [chỉ số sau dấu đóng (với "$": chỉ số CỦA nó), -1] hoặc [-1, chỗ dừng]. */
-  function scanClose(s, p, kind) {
-    var n = s.length, k = p;
-    while (k < n) {
-      var c = s[k];
-      if (c === "\n" && blankLineAfter(s, k)) return [-1, k];
-      if (c === "\\") {
-        var j = k;
-        while (j < n && s[j] === "\\") j++;
-        if ((j - k) % 2 === 1 && j < n) {
-          if ((kind === ")" || kind === "]") && s[j] === kind) return [j + 1, -1];
-          k = j + 1; continue;                                   // ký tự bị thoát, không bao giờ là dấu
-        }
-        k = j; continue;
-      }
-      if (c === "$") {
-        if (kind === "$$") { if (k + 1 < n && s[k + 1] === "$") return [k + 2, -1]; }
-        else if (kind === "$") return [k, -1];
-      }
-      k++;
-    }
-    return [-1, n];
-  }
-  /** [[đầu, cuối)] của mọi vùng toán trong văn bản ĐÃ che code (notes.js maskCode). */
-  function mathRanges(masked) {
-    var s = masked, n = s.length, i = 0, out = [], failed = {};
-    while (i < n) {
-      var c = s[i];
-      if (c === "\\") {
-        var j = i;
-        while (j < n && s[j] === "\\") j++;
-        if ((j - i) % 2 === 1 && j < n) {
-          var d = s[j];
-          if (d === "(" || d === "[") {
-            var close = d === "(" ? ")" : "]";
-            if (j + 1 > (close in failed ? failed[close] : -1)) {
-              var r = scanClose(s, j + 1, close);
-              if (r[0] !== -1) { out.push([j - 1, r[0]]); i = r[0]; continue; }
-              failed[close] = r[1];
-            }
-          }
-          i = j + 1; continue;
-        }
-        i = j; continue;
-      }
-      if (c === "$") {
-        if (i + 1 < n && s[i + 1] === "$") {
-          if (i + 2 > ("$$" in failed ? failed.$$ : -1)) {
-            var r2 = scanClose(s, i + 2, "$$");
-            if (r2[0] !== -1) { out.push([i, r2[0]]); i = r2[0]; continue; }
-            failed.$$ = r2[1];
-          }
-          i += 2; continue;
-        }
-        if (i + 1 < n && !isWS(s[i + 1])) {
-          var k = scanClose(s, i + 1, "$")[0];
-          if (k !== -1 && !(k + 1 < n && s[k + 1] === "$") && !isWS(s[k - 1]) && !(k + 1 < n && s[k + 1] >= "0" && s[k + 1] <= "9")) {
-            out.push([i, k + 1]); i = k + 1; continue;
-          }
-        }
-        i++; continue;
-      }
-      i++;
-    }
-    return out;
-  }
+  /** [[đầu, cuối)] của mọi vùng toán trong văn bản ĐÃ che code (notes.js maskCode). Luật nằm ở notes.js (NGUỒN DUY NHẤT trong JS; markdown.js dùng chung). */
+  var mathRanges = N.mathRanges;
   function mapMath(content, fn) {
     content = str(content);
     var rs = mathRanges(N.maskCode(content)), out = "", cur = 0;

@@ -27,6 +27,10 @@ Kiểm đột biến (chứng minh bộ kiểm bắt được lỗi cũ — ph�
     PW_HOAN_NGUYEN=ai-khong-kiem ... check.py --ai               # trang KHÔNG kiểm lại liên kết của câu trả lời AI trước khi lưu (W3 23/10)
     PW_HOAN_NGUYEN=ai-khong-chot ... check.py --ai               # plan bỏ bước chốt sealLinks: liên kết lồng sống tới tiêu đề lạ (sửa sau kiểm W3 24/10)
     PW_HOAN_NGUYEN=ai-regex-cu   ... check.py --ai               # maskCode lại dùng regex bậc hai cho code nội tuyến: câu trả lời AI xấu nhất treo trang (sửa sau kiểm W3 24/10)
+    PW_HOAN_NGUYEN=toan-khoi-png     ... check.py --toan          # xuất PNG bỏ qua khối công thức (W4 24/10)
+    PW_HOAN_NGUYEN=toan-khong-thoat  ... check.py --toan          # data-tex không thoát dấu ": TeX thoát khỏi thuộc tính (W4 24/10)
+
+    ... check.py --toan          # chỉ phần toán của tầng 2 (≈ 20 s; đã nằm trong --chuc-nang): \\( \\), $…$, \\[ \\], $$, \\begin trần, ```math, XSS qua data-tex, PNG, 320 px
 """
 
 from __future__ import annotations
@@ -155,6 +159,11 @@ def setup_hoan_nguyen(ctx):
     elif HOAN_NGUYEN == "ai-regex-cu":                       # sửa sau kiểm W3 bị gỡ: maskCode dùng lại regex bậc hai cho code nội tuyến (bản chép notes.js bị thay)
         thay("**/personal-wiki/assets/js/core/notes.js*", _ban_sao("assets/js/core/notes.js", "out.push(maskInlineCode(ln));",
                                                                    'out.push(ln.replace(/(`+)(?!`)([^\\n]*?[^`\\n])\\1(?!`)/g, function (s) { return " ".repeat(s.length); }));', HOAN_NGUYEN))
+    elif HOAN_NGUYEN == "toan-khoi-png":                     # W4 bị gỡ: xuất PNG bỏ qua khối công thức (div.math không có phần tử con → nhánh DIV chung không vẽ gì)
+        thay("**/personal-wiki/assets/js/ui/exporters.js*", _ban_sao("assets/js/ui/exporters.js", 'else if (t === "DIV" && el.classList.contains("math"))', "else if (false)", HOAN_NGUYEN))
+    elif HOAN_NGUYEN == "toan-khong-thoat":                  # W4 bị gỡ: data-tex không thoát esc() — TeX có dấu " thoát khỏi thuộc tính (XSS)
+        thay("**/personal-wiki/assets/js/core/markdown.js*", _ban_sao("assets/js/core/markdown.js", 'var t = esc(String(tex).trim()).replace(/\\n/g, "&#10;");',
+                                                                      'var t = String(tex).trim().replace(/\\n/g, "&#10;");', HOAN_NGUYEN))
     if HOAN_NGUYEN == "may-khach":
         src = sync_js_hoan_nguyen()
         ctx.route("**/personal-wiki/assets/js/data/sync.js*", lambda route: route.fulfill(status=200, content_type="text/javascript; charset=utf-8", body=src))
@@ -235,7 +244,8 @@ def tang_1():
 
     r = subprocess.run(["node", os.path.join(HERE, "kiem.js")], capture_output=True, text=True, encoding="utf-8")
     tail = (r.stdout.strip().splitlines() or [""])[-1]
-    check(r.returncode == 0, "kiem.js (logic thuần: văn bản, markdown+XSS, tìm kiếm, thẻ, đồ thị, zip, kho, sao lưu): " + tail, (r.stdout + r.stderr)[-600:])
+    # Đòi cả dòng tổng kết "Đạt — …": kiem.js có phần async, một Promise treo làm Node thoát mã 0 và bỏ qua im lặng phần sau.
+    check(r.returncode == 0 and tail.startswith("Đạt — "), "kiem.js (logic thuần: văn bản, markdown+XSS, tìm kiếm, thẻ, đồ thị, zip, kho, sao lưu): " + tail, (r.stdout + r.stderr)[-600:])
 
     html = io.open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
     refs = re.findall(r'(?:src|href)="(\./[^"#?]+)"', html)
@@ -809,6 +819,119 @@ def tang_2_dong_bo(br, P, url, may):
 
 
 # ============================================================================================ tầng 2 — chức năng
+# Ghi chú toán cho tầng 2 (W4). Chuỗi THÔ (r''') — đừng viết bằng heredoc: dấu \ sẽ mất. Thứ tự công thức trong xem trước = thứ tự dưới đây (10 cái, cái cuối là dải dài không dấu cách).
+_T_DAU = r'''# Công thức
+
+Năng lượng \( E = mc^2 \) và $x_1 * x_2$ ở đây.
+
+'''
+_T_KHOI = r'''\[
+\int_0^1 x\,dx = \frac12
+\]
+
+$$
+\begin{aligned}
+a &= b \\
+c &= d
+\end{aligned}
+$$
+
+\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
+
+'''
+_T_GIUA = r'''Giá $5 and $10 không phải công thức; Pay $5 for $y$ items.
+
+XSS: $x" onmouseover="window.__xssm=1$ và \(<img src=x onerror=window.__xssm=2>\)
+
+```mermaid
+graph TD; A-->B
+```
+
+'''
+_T_FENCE = r'''```math
+E=mc^2
+```
+
+'''
+_T_CUOI = "Dài: $" + "a_{i}+" * 80 + "z$\n"
+TOAN_NOTE = _T_DAU + _T_KHOI + _T_GIUA + _T_FENCE + _T_CUOI
+TOAN_NOTE_KHONG_KHOI = _T_DAU + _T_GIUA + _T_CUOI          # cùng ghi chú, bỏ 3 khối + rào ```math: dùng so chiều cao ảnh PNG
+MATH_JS = """() => {
+  const prev = document.querySelector('.ed-prev');
+  const els = [...prev.querySelectorAll('.math')];
+  return {
+    n: els.length,
+    items: els.map(e => ({ tag: e.tagName, cls: e.className, tex: e.getAttribute('data-tex'), txt: e.textContent })),
+    em: prev.querySelectorAll('.math em, .math strong, .math a, .math code').length,
+    price: prev.textContent.includes('$5 and $10'),
+    xss: window.__xssm === undefined ? null : window.__xssm,
+    xssOk: !prev.querySelector('.math img, .math script, [onmouseover], [onerror]'),
+    mmd: prev.querySelectorAll('pre.code.mmd[data-lang="mermaid"]').length
+  };
+}"""
+
+
+def kiem_toan(br, url, tmp):
+    """Phần toán (W4) của tầng 2, một ngữ cảnh trình duyệt riêng (IndexedDB riêng). Chạy trong tang_2 và riêng bằng --toan (≈ 20 s; dùng cho kiểm đột biến)."""
+    # Toán không thư viện (W4): markdown.js dựng nút .math (TeX nguyên văn trong data-tex + chữ dự phòng); W6 mới vẽ KaTeX. Ngữ cảnh riêng (IndexedDB riêng).
+    section(" · toán (W4): \\( \\), $…$, \\[ \\], $$ nhiều dòng, \\begin trần, ```math; giá tiền không phải công thức; XSS qua data-tex; 320 px không tràn")
+    T3 = Page(br, url, "desk-toan", viewport={"width": 1366, "height": 820})
+    check(new_note(T3, "Toán thử", TOAN_NOTE, ["toan"]), "tạo + lưu ghi chú có công thức")
+    try:
+        T3.pg.wait_for_function("document.querySelectorAll('.ed-prev .math').length >= 10", timeout=5000)
+    except Exception:
+        pass
+    mt = T3.pg.evaluate(MATH_JS)
+    want = [("SPAN", "math", r"E = mc^2"), ("SPAN", "math", r"x_1 * x_2"), ("DIV", "math math-d", r"\int_0^1 x\,dx = \frac12"),
+            ("DIV", "math math-d", "\\begin{aligned}\na &= b \\\\\nc &= d\n\\end{aligned}"), ("DIV", "math math-d", r"\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}"),
+            ("SPAN", "math", "y"), ("SPAN", "math", 'x" onmouseover="window.__xssm=1'), ("SPAN", "math", "<img src=x onerror=window.__xssm=2>"),
+            ("DIV", "math math-d", "E=mc^2")]
+    got = [(i["tag"], i["cls"], i["tex"]) for i in mt["items"][:len(want)]]
+    check(got == want and mt["n"] == len(want) + 1, "xem trước: 10 công thức đúng loại (inline / khối) và TeX nguyên văn trong data-tex", {"có": got, "n": mt["n"]})
+    check(all(i["txt"] == i["tex"] for i in mt["items"]), "chữ dự phòng của mỗi công thức = đúng TeX (data-tex)", [i for i in mt["items"] if i["txt"] != i["tex"]][:2])
+    check(mt["em"] == 0 and mt["price"], "_ và * trong công thức không thành nghiêng/đậm; giá '$5 and $10' vẫn là chữ thường", mt)
+    check(mt["xssOk"] and mt["xss"] is None, "XSS qua data-tex: không onmouseover/img/script, window.__xssm không bị gán", mt)
+    check(mt["mmd"] == 1, "```mermaid đánh dấu pre.code.mmd[data-lang=mermaid] (chờ W6 dựng sơ đồ)", mt)
+    T3.pg.set_viewport_size({"width": 320, "height": 700})
+    T3.pg.wait_for_timeout(300)
+    if T3.pg.locator(".modes button[data-mode=preview]").count():
+        T3.pg.click(".modes button[data-mode=preview]")
+        T3.pg.wait_for_timeout(300)
+    bad = T3.pg.evaluate(OVERFLOW_JS)
+    check(not bad, "320 px: công thức dài (không dấu cách) tự xuống dòng, không tràn ngang", bad[:3] if bad else "")
+    T3.pg.set_viewport_size({"width": 1366, "height": 820})
+    T3.pg.wait_for_timeout(300)
+    # Xuất ảnh PNG vẽ lại HTML bằng canvas: khối .math (div không có phần tử con) không được rơi mất. So với cùng ghi chú đã bỏ 3 khối + rào ```math:
+    # có nhánh vẽ khối công thức thì ảnh cao hơn hẳn; không có nhánh đó thì hai ảnh cao bằng nhau (khối bị bỏ qua im lặng).
+    from PIL import Image
+    with T3.pg.expect_download() as dl:
+        menu_click(T3, "Tải ảnh PNG")
+    ip3 = os.path.join(tmp, "toan.png")
+    dl.value.save_as(ip3)
+    im3 = Image.open(ip3)
+    check(new_note(T3, "Toán thử không khối", TOAN_NOTE_KHONG_KHOI, ["toan"]), "tạo + lưu ghi chú đối chứng (không khối công thức)")
+    with T3.pg.expect_download() as dl:
+        menu_click(T3, "Tải ảnh PNG")
+    ip4 = os.path.join(tmp, "toan-khong-khoi.png")
+    dl.value.save_as(ip4)
+    im4 = Image.open(ip4)
+    check(im3.format == "PNG" and im3.size[1] - im4.size[1] >= 120, "xuất ảnh PNG: 4 khối công thức có mặt trong ảnh (cao %d px so với %d px khi bỏ khối)" % (im3.size[1], im4.size[1]), (im3.size, im4.size))
+    T3.close()
+
+
+def tang_toan(may):
+    section("TẦNG 2b — toán (chạy riêng, như phần toán của tầng 2)")
+    from playwright.sync_api import sync_playwright
+    tmp = tempfile.mkdtemp(prefix="wiki-check-toan-")
+    with sync_playwright() as pw:
+        br = pw.chromium.launch()
+        kiem_toan(br, may.goc + PATH, tmp)
+        br.close()
+    if ERRORS:
+        section("LỖI CONSOLE / PAGEERROR")
+    check(not ERRORS, "không có lỗi console hay pageerror", ERRORS[:6])
+
+
 def tang_2(may):
     section("TẦNG 2 — chức năng (trình duyệt thật)")
     from playwright.sync_api import sync_playwright
@@ -1163,6 +1286,8 @@ def tang_2(may):
         P2.pg.wait_for_timeout(600)
         check("Capital of France" in (P2.pg.locator(".fcard").inner_text() if P2.pg.locator(".fcard").count() else "") or P2.pg.locator(".done").count() == 1, "thẻ ôn được khôi phục theo")
         P2.close()
+
+        kiem_toan(br, url, tmp)
         P.close()
 
         # ---------------------------------------------------------------- điện thoại (Chromium Pixel 5 + WebKit iPhone 13)
@@ -2324,12 +2449,14 @@ def main():
         tang_1()
     if HOAN_NGUYEN:
         print("!! PW_HOAN_NGUYEN=%s — kiểm đột biến: một bản sửa bị gỡ tạm, phép kiểm mới PHẢI đỏ" % HOAN_NGUYEN)
-        if HOAN_NGUYEN not in ("may-chu", "may-khach", "tieu-de", "dem-moi-phim", "bieu-ngu-chet", "noi-cung-the", "ai-khong-kiem", "ai-khong-chot", "ai-regex-cu"):
-            raise SystemExit("PW_HOAN_NGUYEN chỉ nhận may-chu, may-khach, tieu-de, dem-moi-phim, bieu-ngu-chet, noi-cung-the, ai-khong-kiem, ai-khong-chot hoặc ai-regex-cu")
-    needs_server = tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang"}
+        if HOAN_NGUYEN not in ("may-chu", "may-khach", "tieu-de", "dem-moi-phim", "bieu-ngu-chet", "noi-cung-the", "ai-khong-kiem", "ai-khong-chot", "ai-regex-cu", "toan-khoi-png", "toan-khong-thoat"):
+            raise SystemExit("PW_HOAN_NGUYEN chỉ nhận may-chu, may-khach, tieu-de, dem-moi-phim, bieu-ngu-chet, noi-cung-the, ai-khong-kiem, ai-khong-chot, ai-regex-cu, toan-khoi-png hoặc toan-khong-thoat")
+    needs_server = tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang", "--toan"}
     if needs_server:
         may = K.MayChuThu([], env=env_may_chu()).__enter__()
         try:
+            if "--toan" in todo and not (tat_ca or default or "--chuc-nang" in todo):
+                chay("tầng 2b", tang_toan, may)                     # chỉ phần toán của tầng 2 (đã nằm trong --chuc-nang)
             if tat_ca or default or "--chuc-nang" in todo:
                 chay("tầng 2", tang_2, may)
             if "--song-sot" in todo or tat_ca:

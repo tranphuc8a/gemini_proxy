@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import type { EditorState, FileNode, Settings, SidebarTab, StorageBackend, ThemePreference, ViewMode } from './types'
 import {
+  adminSessionHeaders,
   clearAdminCredentials,
-  loadMarkdownFiles,
   recheckAdminSession,
   restoreAdminSession as restoreStoredSession,
-  saveMarkdownFiles,
   verifyAdminKey
 } from './services/markdownStorage'
+import { createHttpSyncApi } from './services/markdownSync'
 import { createId } from './lib/id'
 import {
   addNode,
@@ -23,7 +23,19 @@ import {
   setNodeContent,
   uniqueName
 } from './lib/tree'
-import { DEFAULT_SETTINGS, clearLegacyStorage, loadFiles, loadSettings, saveFiles, saveSettings } from './lib/persistence'
+import {
+  DEFAULT_SETTINGS,
+  clearLegacyStorage,
+  loadFiles,
+  loadSettings,
+  saveSettings,
+  saveSnapshot,
+  type StorageFailure
+} from './lib/persistence'
+import { LocalStorageDocStore, openIdbDocStore, type DocStore } from './sync/docStore'
+import { SyncEngine, type ConflictInfo, type ReconcileChoice, type SyncState } from './sync/engine'
+import { buildTree, treeToDocs, type LocalDoc, type OutboxEntry } from './sync/records'
+import { Workspace, reconcileBoot, type WorkspaceHost } from './sync/workspace'
 import type { InboxDocument } from './lib/inbox'
 import type { Layout, Pane } from './lib/responsive'
 import { readEditorSelection } from './lib/editorSelection'
@@ -84,9 +96,15 @@ interface StoreState extends EditorState {
   toggleBackendStorage: () => void
   setBackendStorageType: (storageType: StorageBackend) => void
 
-  /** Replaces the local tree with the server's; `prefetched` = an answer already fetched (a guest asks first). */
-  loadBackendStorage: (prefetched?: FileNode[]) => Promise<void>
-  saveBackendStorage: () => Promise<void>
+  /** Backend sync (md-sync): starts or stops the engine to match the Backend sync setting, and the actions of its menu. */
+  startSync: () => Promise<void>
+  stopSync: () => void
+  syncNow: () => Promise<void>
+  resolveConflict: (id: string, choice: 'mine' | 'server' | 'both') => Promise<void>
+  resolveReconcile: (choice: ReconcileChoice) => void
+  retryBlocked: (id?: string) => Promise<void>
+  /** "Replace this device's copy with the server's": the server's documents become the workspace (unsent edits are lost). */
+  replaceFromServer: (confirm?: (info: { documents: number; unsent: number }) => boolean | Promise<boolean>) => Promise<boolean>
 
   /** Settles once the stored admin session has been re-checked. */
   hydrate: () => Promise<void>
@@ -124,7 +142,9 @@ const initialState: EditorState = {
   phonePane: null,
   smartFormat: null,
   storageFailure: null,
-  storageFailureScope: null
+  storageFailureScope: null,
+  docsReady: true,
+  sync: { phase: 'off', pending: 0, lastSync: null, error: null, conflicts: [], blocked: [], reconcile: null, readOnly: false }
 }
 
 /** Timers live outside the store so they never end up serialised. */
@@ -151,6 +171,66 @@ function watchConnection() {
     })
   })
 }
+
+/** How the documents are kept on this device: IndexedDB, the localStorage fallback, still opening, or unusable (blocked). */
+type DocsMode = 'none' | 'pending' | 'idb' | 'local' | 'blocked'
+
+let workspace: Workspace | null = null
+let docsMode: DocsMode = 'none'
+let engine: SyncEngine | null = null
+/** Inside `flushPersist`'s synchronous section: a write's outcome is read there, not announced. */
+let flushing = false
+/** Outcome of the last document write seen by the host: undefined = none yet, null = stored, else why not. */
+let docsFailure: StorageFailure | null | undefined
+let lastSettingsFailure: StorageFailure | null = null
+/** A file picked before the documents had loaded: opened as soon as they have. */
+let pendingOpen: string | null = null
+
+/** Tests: the way the device store is opened (IndexedDB when null and the browser has it). */
+let storeOpener: (() => Promise<DocStore>) | null = null
+
+/** Test hook: replaces how the device store is opened, so the IndexedDB path can run without IndexedDB. */
+export function setDocStoreOpener(open: (() => Promise<DocStore>) | null): void {
+  storeOpener = open
+}
+
+const DEVICE_KEY = 'markdown-editor:device'
+let sessionDevice: string | null = null
+
+function randomToken(length: number): string {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  const bytes = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function' ? crypto.getRandomValues(new Uint8Array(length)) : null
+  let out = ''
+  for (let index = 0; index < length; index += 1) out += alphabet[(bytes ? bytes[index] : Math.floor(Math.random() * 256)) % alphabet.length]
+  return out
+}
+
+/** This browser's name for the server (`md-` + 10 characters), kept in localStorage; a blocked storage gives one per page load. */
+function getDeviceId(): string {
+  try {
+    const stored = localStorage.getItem(DEVICE_KEY)
+    if (stored && /^md-[a-z0-9]{6,32}$/.test(stored)) return stored
+    const id = `md-${randomToken(10)}`
+    localStorage.setItem(DEVICE_KEY, id)
+    return id
+  } catch {
+    sessionDevice ??= `md-${randomToken(10)}`
+    return sessionDevice
+  }
+}
+
+function sameDocs(a: LocalDoc[], b: LocalDoc[]): boolean {
+  if (a.length !== b.length) return false
+  const byId = new Map(b.map((doc) => [doc.id, doc]))
+  return a.every((doc) => {
+    const other = byId.get(doc.id)
+    return !!other && other.kind === doc.kind && other.parentId === doc.parentId && other.name === doc.name && other.content === doc.content
+  })
+}
+
+const SYNC_OFF: SyncState = { phase: 'off', pending: 0, lastSync: null, error: null, conflicts: [], blocked: [], reconcile: null, readOnly: false }
+
+export type { ConflictInfo }
 
 function settingsOf(state: EditorState): Settings {
   return {
@@ -183,12 +263,224 @@ export const useEditorStore = create<StoreState>((set, get) => {
     historyTimer = setTimeout(() => get().commitHistory(), HISTORY_DEBOUNCE_MS)
   }
 
+  // ---- the documents on this device (md-sync F4) ---------------------------------------------------------------------
+
+  /** The editor side of the workspace bridge: what the tree is, and what to do when a write finishes or a remote change lands. */
+  const host: WorkspaceHost = {
+    files: () => get().files,
+    view: () => ({ currentFileId: get().currentFileId, expandedFolders: get().expandedFolders }),
+    applyRemote: (docs, changed) => applyRemoteDocs(docs, changed),
+    onWrite: (failure) => {
+      docsFailure = failure
+      if (!flushing) settleWrite(failure)
+    },
+    now: () => Date.now()
+  }
+
+  /** A write finished outside `flushPersist` (an IndexedDB commit, or one the sync engine made): settle the save indicator. */
+  const settleWrite = (failure: StorageFailure | null) => {
+    if (!get().docsReady || persistTimer) return
+    if (failure) {
+      set({ saveState: 'error', storageFailure: failure, storageFailureScope: 'documents' })
+      return
+    }
+    const rest = lastSettingsFailure
+    set({ saveState: rest ? 'error' : 'saved', lastSavedAt: Date.now(), storageFailure: rest, storageFailureScope: rest ? 'settings' : null })
+  }
+
+  /** Shows what the sync engine just wrote: the tree from the records, and the open document if another device changed it. */
+  const applyRemoteDocs = (docs: ReadonlyMap<string, LocalDoc>, changed: ReadonlySet<string>) => {
+    const state = get()
+    const files = buildTree(docs.values())
+    const patch: Partial<StoreState> = { files }
+    const id = state.currentFileId
+    if (id) {
+      const node = findNode(files, id)
+      if (!node || node.type !== 'file') {
+        patch.currentFileId = null
+        patch.currentContent = ''
+        patch.history = ['']
+        patch.historyIndex = 0
+        get().pushToast('The open document was deleted on another device', 'info')
+      } else if (changed.has(id) && (node.content ?? '') !== state.currentContent) {
+        const content = node.content ?? ''
+        patch.currentContent = content
+        patch.history = [content]
+        patch.historyIndex = 0
+        get().pushToast('Updated from another device', 'info')
+      }
+    }
+    if (state.selectedFolderId && !findNode(files, state.selectedFolderId)) patch.selectedFolderId = null
+    set(patch)
+    schedulePersist()
+  }
+
+  /** The documents are in hand (from IndexedDB, or the fallback): bring the editor up to date and start syncing if it was on. */
+  const adopt = (store: DocStore, mode: 'idb' | 'local', docs: LocalDoc[], outbox: OutboxEntry[], seq: number, keepLiveTree: boolean) => {
+    workspace = new Workspace(store, host, docs, outbox, seq)
+    docsMode = mode
+    if (!keepLiveTree) {
+      const state = get()
+      const files = buildTree(docs)
+      const id = state.currentFileId
+      const node = id ? findNode(files, id) : null
+      const patch: Partial<StoreState> = { files, docsReady: true }
+      if (id && node?.type === 'file') {
+        patch.currentContent = node.content ?? ''
+        patch.history = [node.content ?? '']
+        patch.historyIndex = 0
+      } else if (id) {
+        patch.currentFileId = null
+        patch.currentContent = ''
+        patch.history = ['']
+        patch.historyIndex = 0
+      }
+      if (state.selectedFolderId && !findNode(files, state.selectedFolderId)) patch.selectedFolderId = files[0]?.type === 'folder' ? files[0].id : null
+      set(patch)
+    } else {
+      set({ docsReady: true })
+    }
+    // Replaces the v2 payload by the boot snapshot (only now that the documents are known to be safe in the store).
+    get().flushPersist()
+    if (pendingOpen !== null) {
+      const open = pendingOpen
+      pendingOpen = null
+      get().setCurrentFile(open)
+    }
+    if (get().backendStorage) void get().startSync()
+  }
+
+  const startLocal = (stored: ReturnType<typeof loadFiles>) => {
+    const store = new LocalStorageDocStore(stored && !stored.partial ? stored : null)
+    const loaded = store.loadSync()
+    adopt(store, 'local', loaded.docs, loaded.outbox, Number(loaded.meta.seq ?? 0), true)
+  }
+
+  /** IndexedDB would not open (or gave back something else): keep working on the older storage -- unless the snapshot says the documents are in IndexedDB. */
+  const fallBack = (stored: ReturnType<typeof loadFiles>) => {
+    if (stored?.partial) {
+      docsMode = 'blocked'
+      set({ docsReady: false, saveState: 'error', storageFailure: 'unavailable', storageFailureScope: 'documents' })
+      get().pushToast("Your documents are kept in this browser's database, which cannot be opened right now (a private window?). Reload to try again.", 'error')
+      return
+    }
+    startLocal(stored)
+  }
+
+  const bootFromIdb = async (store: DocStore, stored: ReturnType<typeof loadFiles>) => {
+    const loaded = await store.load()
+    const storedSeq = Number(loaded.meta.seq ?? 0)
+    let docs = loaded.docs
+    let seq = storedSeq
+    if (!docs.length && loaded.meta.seq === undefined && stored && !stored.partial && stored.files.length) {
+      // First run on IndexedDB: copy the v2 workspace over and read it back before anything is replaced.
+      const fromLocal = treeToDocs(stored.files, Date.now())
+      await store.commit({ docs: { put: fromLocal }, meta: { seq: 1, migratedFromLocalStorage: { at: Date.now(), count: fromLocal.length } } })
+      const back = await store.load()
+      if (!sameDocs(fromLocal, back.docs)) throw new Error('IndexedDB did not give back what was written')
+      docs = back.docs
+      seq = 1
+    } else if (stored?.partial) {
+      const result = reconcileBoot(docs, storedSeq, { files: stored.files, seq: stored.seq ?? 0, current: stored.snapshotCurrent ?? null }, Date.now())
+      if (result.rewrite) {
+        const keep = new Set(result.docs.map((doc) => doc.id))
+        await store.commit({ docs: { put: result.docs, delete: docs.filter((doc) => !keep.has(doc.id)).map((doc) => doc.id) }, meta: { seq: stored.seq ?? 0 } })
+        docs = result.docs
+        seq = stored.seq ?? 0
+      }
+    }
+    adopt(store, 'idb', docs, loaded.outbox, seq, docs.length === 0)
+  }
+
+  const openWorkspace = (stored: ReturnType<typeof loadFiles>) => {
+    engine?.stop()
+    engine = null
+    workspace = null
+    const open = storeOpener ?? (typeof indexedDB === 'undefined' ? null : openIdbDocStore)
+    if (!open) {
+      // No IndexedDB here: the older storage -- unless the snapshot says the documents were kept in IndexedDB before.
+      fallBack(stored)
+      return
+    }
+    docsMode = 'pending'
+    set({ docsReady: false })
+    open()
+      .then(async (store) => {
+        try {
+          await bootFromIdb(store, stored)
+        } catch (error) {
+          store.close()
+          throw error
+        }
+      })
+      .catch(() => fallBack(stored))
+  }
+
+  /** A workspace for a store that was never hydrated (a flush before `hydrate`): the localStorage fallback, starting empty. */
+  const ensureWorkspace = (): Workspace | null => {
+    if (workspace) return workspace
+    if (docsMode === 'pending' || docsMode === 'blocked') return null
+    const store = new LocalStorageDocStore(null)
+    const loaded = store.loadSync()
+    workspace = new Workspace(store, host, loaded.docs, loaded.outbox, Number(loaded.meta.seq ?? 0))
+    docsMode = 'local'
+    return workspace
+  }
+
+  const startSync = async () => {
+    if (engine || (docsMode !== 'idb' && docsMode !== 'local') || !workspace) return
+    const type = get().backendStorageType
+    const created: SyncEngine = new SyncEngine({
+      api: createHttpSyncApi({ backend: type, headers: () => adminSessionHeaders() }),
+      ws: workspace,
+      backend: type,
+      deviceId: getDeviceId(),
+      canWrite: () => get().isAdmin,
+      onState: (sync) => {
+        if (engine === created) set({ sync })
+      },
+      notify: (message, tone) => get().pushToast(message, tone),
+      onCancel: () => {
+        engine = null
+        set({ backendStorage: false, sync: SYNC_OFF })
+        schedulePersist()
+      },
+      onAuthProblem: () => {
+        void recheckAdminSession().then((result) => {
+          if (result !== 'rejected') return
+          set({ isAdmin: false })
+          get().pushToast('Admin session expired — switched to view-only mode', 'info')
+        })
+      }
+    })
+    engine = created
+    created.start()
+  }
+
+  const stopSync = () => {
+    engine?.stop()
+    engine = null
+    set({ sync: SYNC_OFF })
+  }
+
+  /** The cursor and the shadows belong to one storage: a different one starts again from the first meeting. */
+  const switchBackend = async (type: StorageBackend) => {
+    const running = engine !== null
+    stopSync()
+    set({ backendStorageType: type })
+    schedulePersist()
+    if (workspace) await workspace.wipeSync()
+    if (running) await startSync()
+  }
+
   return {
     ...initialState,
 
     setContent: (content: string) => {
       const state = get()
       if (content === state.currentContent) return
+      // Until the documents have loaded the tree is a skeleton: an edit now would be written over the real text.
+      if (!state.docsReady) return
 
       set({
         currentContent: content,
@@ -258,6 +550,10 @@ export const useEditorStore = create<StoreState>((set, get) => {
     canRedo: () => get().historyIndex < get().history.length - 1,
 
     setCurrentFile: (fileId: string | null) => {
+      if (!get().docsReady) {
+        pendingOpen = fileId
+        return
+      }
       get().commitHistory()
       // Picking a file from the drawer is the end of the errand: show the file.
       if (get().drawerOpen) set({ drawerOpen: false })
@@ -299,7 +595,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
     },
 
     createFile: (parentId, name) => {
-      if (!get().isAdmin) return null
+      if (!get().isAdmin || !get().docsReady) return null
       const trimmed = name.trim()
       if (!trimmed) return null
 
@@ -321,7 +617,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
     },
 
     createFolder: (parentId, name) => {
-      if (!get().isAdmin) return null
+      if (!get().isAdmin || !get().docsReady) return null
       const trimmed = name.trim()
       if (!trimmed) return null
 
@@ -342,7 +638,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
 
     deleteNode: (nodeId) => {
       const state = get()
-      if (!state.isAdmin) return
+      if (!state.isAdmin || !state.docsReady) return
       const node = findNode(state.files, nodeId)
       if (!node) return
 
@@ -362,7 +658,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
 
     renameNode: (nodeId, newName) => {
       const state = get()
-      if (!state.isAdmin) return
+      if (!state.isAdmin || !state.docsReady) return
       const trimmed = newName.trim()
       const node = findNode(state.files, nodeId)
       if (!trimmed || !node || trimmed === node.name) return
@@ -374,7 +670,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
 
     moveNode: (nodeId, parentId) => {
       const state = get()
-      if (!state.isAdmin) return
+      if (!state.isAdmin || !state.docsReady) return
       if (!canMove(state.files, nodeId, parentId)) return
       set({ files: moveNodeInTree(state.files, nodeId, parentId) })
       if (parentId) get().setFolderExpanded(parentId, true)
@@ -383,7 +679,7 @@ export const useEditorStore = create<StoreState>((set, get) => {
 
     copyNode: (nodeId, parentId) => {
       const state = get()
-      if (!state.isAdmin) return
+      if (!state.isAdmin || !state.docsReady) return
       const files = copyNodeInTree(state.files, nodeId, parentId)
       if (files === state.files) {
         get().pushToast('Cannot copy a folder into itself', 'error')
@@ -432,19 +728,24 @@ export const useEditorStore = create<StoreState>((set, get) => {
       if (!accepted) return false
       set({ isAdmin: true })
       get().pushToast('Admin mode enabled', 'success')
+      engine?.refresh()
       return true
     },
 
     restoreAdminSession: async () => {
       // Silent on failure: arriving without a valid session is the normal case,
       // not something to interrupt the user about.
-      if (await restoreStoredSession()) set({ isAdmin: true })
+      if (await restoreStoredSession()) {
+        set({ isAdmin: true })
+        engine?.refresh()
+      }
     },
 
     logout: () => {
       clearAdminCredentials()
       set({ isAdmin: false })
       get().pushToast('Switched to view-only mode', 'info')
+      engine?.refresh()
     },
 
     setTheme: (theme) => {
@@ -527,35 +828,45 @@ export const useEditorStore = create<StoreState>((set, get) => {
     },
 
     toggleBackendStorage: () => {
-      set((state) => ({ backendStorage: !state.backendStorage }))
+      const next = !get().backendStorage
+      set({ backendStorage: next })
       schedulePersist()
+      if (next) void startSync()
+      else stopSync()
     },
 
     setBackendStorageType: (backendStorageType) => {
-      set({ backendStorageType })
-      schedulePersist()
+      if (backendStorageType === get().backendStorageType) return
+      void switchBackend(backendStorageType)
     },
 
-    /**
-     * Replaces the whole local tree with the server's copy. The menu asks for
-     * confirmation first (see Header): nothing is merged, so local edits that
-     * were never saved to the backend are gone afterwards.
-     */
-    loadBackendStorage: async (prefetched?: FileNode[]) => {
-      // A guest's load asks the server before confirming (see Header) and hands the answer in.
-      const files = prefetched ?? (await loadMarkdownFiles(get().backendStorageType))
-      if (!files.length) {
-        get().pushToast('Backend returned no files', 'info')
-        return
-      }
-      set({ files, currentFileId: null, currentContent: '', history: [''], historyIndex: 0 })
-      get().pushToast('Loaded files from backend', 'success')
-      schedulePersist()
+    startSync,
+    stopSync,
+
+    syncNow: async () => {
+      if (!engine) return
+      // What was typed a moment ago is part of this sync.
+      get().flushPersist()
+      await engine.syncNow()
     },
 
-    saveBackendStorage: async () => {
-      await saveMarkdownFiles(get().files, get().backendStorageType)
-      get().pushToast('Saved files to backend', 'success')
+    resolveConflict: async (id, choice) => {
+      if (!engine) return
+      await engine.resolveConflict(id, choice)
+    },
+
+    resolveReconcile: (choice) => engine?.resolveReconcile(choice),
+
+    retryBlocked: async (id) => {
+      if (!engine) return
+      await engine.retryBlocked(id)
+    },
+
+    replaceFromServer: async (confirm) => {
+      if (!engine) throw new Error('Switch Backend sync on first')
+      const replaced = await engine.replaceFromServer(confirm)
+      if (replaced) get().pushToast("This device now holds the server's documents", 'success')
+      return replaced
     },
 
     hydrate: () => {
@@ -582,6 +893,8 @@ export const useEditorStore = create<StoreState>((set, get) => {
         })
       }
       clearLegacyStorage()
+      // The documents live in IndexedDB when the browser has one: the first frame is the boot snapshot, the rest follows.
+      openWorkspace(stored)
       return sessionChecked
     },
 
@@ -593,21 +906,48 @@ export const useEditorStore = create<StoreState>((set, get) => {
         persistTimer = null
       }
       const state = get()
-      const filesFailure = saveFiles({
-        files: state.files,
-        currentFileId: state.currentFileId,
-        expandedFolders: state.expandedFolders
-      })
       const settingsFailure = saveSettings(settingsOf(state))
-      const failure = filesFailure ?? settingsFailure
+      lastSettingsFailure = settingsFailure
+      let filesFailure: StorageFailure | null = null
+      let snapshotFailure: StorageFailure | null = null
+      let pending = false
+      let changed = false
+      if (state.docsReady) {
+        const ws = ensureWorkspace()
+        if (ws) {
+          flushing = true
+          docsFailure = undefined
+          try {
+            changed = ws.persistNow(true)
+          } finally {
+            flushing = false
+          }
+          filesFailure = docsFailure === undefined ? null : docsFailure
+          pending = docsFailure === undefined && ws.dirty
+          if (docsMode === 'idb') {
+            // The documents are in IndexedDB; what localStorage holds is the small snapshot the first frame is drawn from.
+            snapshotFailure = saveSnapshot({
+              files: state.files,
+              currentFileId: state.currentFileId,
+              expandedFolders: state.expandedFolders,
+              seq: ws.seq,
+              currentContent: state.currentFileId ? state.currentContent : null
+            })
+          }
+        }
+      }
       // A full quota is worse than "not saved": the copy on disk is the one from before the limit was
       // hit, and a reload brings that one back. The banner (StorageBanner) says so until a save succeeds.
+      const rest = settingsFailure ?? snapshotFailure
+      const failure = filesFailure ?? rest
       set({
-        saveState: failure ? 'error' : 'saved',
+        saveState: failure ? 'error' : pending ? 'saving' : 'saved',
         lastSavedAt: Date.now(),
         storageFailure: failure,
-        storageFailureScope: filesFailure ? 'documents' : settingsFailure ? 'settings' : null
+        storageFailureScope: filesFailure ? 'documents' : rest ? 'settings' : null
       })
+      // Typing has settled and was written: let the other devices know soon.
+      if (changed) engine?.poke()
     },
 
     pushToast: (message, tone = 'info') => {

@@ -7,6 +7,14 @@
    > trích dẫn, bảng (GFM), --- đường kẻ, [chữ](url), ![ảnh](url), tự nhận http://…, [[liên kết wiki]], thẻ ôn "Q: … / A: …".
    Xuống dòng đơn được GIỮ (<br>) — thói quen ghi chú, không phải quy tắc CommonMark.
 
+   TOÁN (không thư viện): `\(…\)`, `\[…\]`, `$$…$$`, `$…$` (luật pandoc — `$5 và $10` không phải công thức), `\begin{align}…\end{align}` trần ở đầu dòng và
+   rào ```math. Công thức được GIỮ NGUYÊN CHỮ trong `data-tex` rồi hiện TeX nguyên văn (kiểu code) làm dự phòng — W6 mới vẽ KaTeX lên các nút
+   `.math` (đọc `getAttribute("data-tex")`, KHÔNG đọc innerHTML). Nội dung công thức không bao giờ qua nhấn mạnh/liên kết/escape của markdown
+   (`x_1 * x_2`, `\\`, `[[0,1]]` giữ nguyên). Vùng toán theo ĐÚNG luật `notes.js mathRanges` (cũng là luật của compose.js / wiki_links.py).
+     <span class="math" data-tex="TeX">TeX</span>        inline                 <span class="math math-d" …>   công thức hiển thị nằm trong dòng
+     <div class="math math-d" data-tex="TeX">TeX</div>   khối hiển thị (đứng riêng một dòng / nhiều dòng)
+   ```mermaid → <pre class="code mmd" data-lang="mermaid"> (W6 dựng sơ đồ).
+
    opts: {resolve(title) → {id, status}|null,   // giải [[Tiêu đề]]; null = chưa có note (hiện mờ, bấm để tạo)
           highlight(code, lang) → html|null,    // tô màu code, phải tự thoát HTML
           noLinks: bool}                         // bỏ <a> (khi dựng ảnh/ PDF)  */
@@ -24,6 +32,10 @@
   var ITEM = /^(\s*)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/;
   var TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
   var Q_LINE = /^\s*Q:\s*(.+)$/i, A_LINE = /^\s*A:\s*(.*)$/i;
+  var TEX_LIKE = /[\\^_{}=]/;                                                   // `\[Enter\]` giữa câu không phải toán; `\[ a^2 \]` thì có
+  var ENVS = "equation|align|gather|multline|flalign|alignat|eqnarray|split|cases|pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|smallmatrix|array|CD|aligned|gathered";
+  var ENV_OPEN = new RegExp("^ {0,3}\\\\begin\\{((?:" + ENVS + ")\\*?)\\}");  // \begin{ENV} trần ở đầu dòng
+  var NO_SPANS = [];
 
   /** Địa chỉ liên kết an toàn hoặc "" (bị từ chối). */
   function safeUrl(u) {
@@ -43,21 +55,146 @@
   }
   function attrUrl(u) { return esc(u); }
 
+  // ----------------------------------------------------------------------------------------------- to\u00E1n
+  /** C\u00F4ng th\u1EE9c \u2192 HTML. TeX gi\u1EEF nguy\u00EAn ch\u1EEF (ch\u1EC9 c\u1EAFt kho\u1EA3ng tr\u1EAFng hai \u0111\u1EA7u); esc() cho C\u1EA2 thu\u1ED9c t\u00EDnh data-tex l\u1EABn ch\u1EEF d\u1EF1 ph\u00F2ng (ch\u1EB7n tho\u00E1t kh\u1ECFi d\u1EA5u ngo\u1EB7c k\u00E9p).
+      Xu\u1ED1ng d\u00F2ng \u2192 `&#10;`: \u0111o\u1EA1n v\u0103n/m\u1EE5c danh s\u00E1ch \u0111\u1ED5i "\n" th\u00E0nh <br> tr\u00EAn HTML \u0111\u00E3 d\u1EF1ng (k\u1EC3 c\u1EA3 b\u00EAn trong thu\u1ED9c t\u00EDnh!), c\u00F2n getAttribute gi\u1EA3i m\u00E3 `&#10;` v\u1EC1 "\n". */
+  function mathHtml(tex, display, block) {
+    var t = esc(String(tex).trim()).replace(/\n/g, "&#10;");
+    return block ? '<div class="math math-d" data-tex="' + t + '">' + t + "</div>"
+      : '<span class="math' + (display ? " math-d" : "") + '" data-tex="' + t + '">' + t + "</span>";
+  }
+  function notBlank(s) { return /\S/.test(s); }
+
+  /** C\u00E1c v\u00F9ng to\u00E1n INLINE c\u1EE7a m\u1ED9t \u0111o\u1EA1n \u2192 [{a, b, html}] theo th\u1EE9 t\u1EF1, kh\u00F4ng ch\u1ED3ng l\u1EA5n. V\u00F9ng = notes.js mathRanges (code \u0111\u00E3 che); r\u1ED3i l\u1ECDc theo lu\u1EADt hi\u1EC3n th\u1ECB:
+      c\u00F4ng th\u1EE9c r\u1ED7ng th\u00EC \u0111\u1EC3 nguy\u00EAn ch\u1EEF; `\[\u2026\]` GI\u1EEEA C\u00C2U ch\u1EC9 l\u00E0 to\u00E1n khi n\u1ED9i dung gi\u1ED1ng TeX (`B\u1EA5m \[Enter\]` kh\u00F4ng ph\u1EA3i); `\[\u2026\]` v\u00E0 `$$\u2026$$` \u0111\u1EE9ng m\u1ED9t m\u00ECnh
+      trong \u0111o\u1EA1n th\u00EC hi\u1EC3n th\u1ECB (math-d), c\u00F2n `$$\u2026$$` gi\u1EEFa c\u00E2u v\u1EABn l\u00E0 inline. M\u1ECDi b\u01B0\u1EDBc tuy\u1EBFn t\u00EDnh (kh\u00F4ng c\u1EAFt \u0111u\u00F4i chu\u1ED7i, kh\u00F4ng trim c\u1EA3 chu\u1ED7i m\u1ED7i v\u00F9ng). */
+  function inlineMath(src) {
+    if (src.indexOf("$") === -1 && src.indexOf("\\") === -1) return NO_SPANS;
+    var rs = N.mathRanges(N.maskCode(src)), out = [];
+    if (!rs.length) return NO_SPANS;
+    var lo = src.search(/\S/), hi = src.length;
+    while (hi > 0 && /\s/.test(src.charAt(hi - 1))) hi--;
+    for (var k = 0; k < rs.length; k++) {
+      var a = rs[k][0], b = rs[k][1], kind, body;
+      if (src.charAt(a) === "\\") { kind = src.charAt(a + 1); body = src.slice(a + 2, b - 2); }          // "(" ho\u1EB7c "["
+      else if (src.charAt(a + 1) === "$") { kind = "$$"; body = src.slice(a + 2, b - 2); }
+      else { kind = "$"; body = src.slice(a + 1, b - 1); }
+      if (!notBlank(body)) continue;
+      var alone = a === lo && b === hi;
+      if (kind === "[" && !alone && !TEX_LIKE.test(body)) continue;
+      out.push({ a: a, b: b, html: mathHtml(body, kind === "[" || (kind === "$$" && alone), false) });
+    }
+    return out;
+  }
+
+  /** D\u00F2ng c\u1EE7a t\u00E0i li\u1EC7u sau r\u00E0o code m\u1EDF \u1EDF d\u00F2ng i (r\u00E0o ch\u01B0a \u0111\u00F3ng th\u00EC t\u1EDBi h\u1EBFt). */
+  function fenceEnd(lines, i, fence) {
+    var close = new RegExp("^ {0,3}" + fence.charAt(0) + "{" + fence.length + ",}[ \\t]*$"), n = lines.length;
+    i++;
+    while (i < n && !close.test(lines[i])) i++;
+    return i + 1;
+  }
+  /** V\u1ECB tr\u00ED c\u1EE7a l\u1EC7nh `token` (b\u1EAFt \u0111\u1EA7u b\u1EB1ng \) t\u1EEB `from`, b\u1ECF qua `\\begin` (d\u1EA5u \ \u0111\u1EE9ng tr\u01B0\u1EDBc ch\u1EB5n m\u1EDBi l\u00E0 l\u1EC7nh). */
+  function findCmd(line, token, from) {
+    var p = line.indexOf(token, from);
+    while (p !== -1) {
+      var q = p;
+      while (q > 0 && line.charAt(q - 1) === "\\") q--;
+      if ((p - q) % 2 === 0) return p;
+      p = line.indexOf(token, p + 1);
+    }
+    return -1;
+  }
+  /** `\end{name}` kh\u1EDBp (\u0111\u1EBFm l\u1ED3ng) v\u1EDBi `\begin{name}` \u1EDF d\u00F2ng k, t\u00ECm t\u1EEB c\u1ED9t `from` c\u1EE7a d\u00F2ng k; kh\u00F4ng v\u01B0\u1EE3t kh\u1ECFi `parts` (m\u1ED9t \u0111o\u1EA1n, kh\u00F4ng c\u00F3 d\u00F2ng tr\u1ED1ng).
+      \u2192 {line, col (sau \end{name})} | null. M\u1ED7i d\u00F2ng ch\u1EC9 t\u00ECm l\u1EA1i c\u00E1i \u0111\u00E3 d\u00F9ng (o, e nh\u1EDB v\u1ECB tr\u00ED k\u1EBF ti\u1EBFp) n\u00EAn tuy\u1EBFn t\u00EDnh. */
+  function envEnd(parts, k, name, from) {
+    var open = "\\begin{" + name + "}", close = "\\end{" + name + "}", depth = 1;
+    for (var j = k; j < parts.length; j++) {
+      var ln = parts[j], c = j === k ? from : 0, o = findCmd(ln, open, c), e = findCmd(ln, close, c);
+      while (o !== -1 || e !== -1) {
+        if (e !== -1 && (o === -1 || e < o)) {
+          if (--depth === 0) return { line: j, col: e + close.length };
+          c = e + close.length; e = findCmd(ln, close, c);
+        } else { depth++; c = o + open.length; o = findCmd(ln, open, c); }
+      }
+    }
+    return null;
+  }
+  /** Kh\u1ED1i to\u00E1n hi\u1EC3n th\u1ECB trong m\u1ED9t \u0110O\u1EA0N lines[s, e): {ch\u1EC9 s\u1ED1 d\u00F2ng b\u1EAFt \u0111\u1EA7u \u2192 {end, tex, rest}} c\u1ED9ng v\u00E0o `out`. Kh\u1ED1i b\u1EAFt \u0111\u1EA7u \u1EDF \u0111\u1EA7u d\u00F2ng (th\u1EE5t \u2264 3):
+      `$$\u2026$$` / `\[\u2026\]` (nhi\u1EC1u d\u00F2ng \u0111\u01B0\u1EE3c, \u0111\u00F3ng \u1EDF cu\u1ED1i m\u1ED9t d\u00F2ng, kh\u00F4ng v\u01B0\u1EE3t d\u00F2ng tr\u1ED1ng), ho\u1EB7c `\begin{ENV}\u2026\end{ENV}` tr\u1EA7n. */
+  function paragraphMath(lines, s, e, out) {
+    var parts = lines.slice(s, e), text = parts.join("\n"), offs = new Array(parts.length), o = 0, k;
+    for (k = 0; k < parts.length; k++) { offs[k] = o; o += parts[k].length + 1; }
+    var rs = N.mathRanges(N.maskCode(text)), r = 0, failEnv = {};
+    k = 0;
+    while (k < parts.length) {
+      var ln = parts[k], ind = 0, m, j;
+      while (ind < 4 && ln.charAt(ind) === " ") ind++;
+      if (ind > 3) { k++; continue; }
+      var p = offs[k] + ind;
+      while (r < rs.length && rs[r][1] <= p) r++;
+      if (r < rs.length && rs[r][0] < p) { k++; continue; }                   // d\u00F2ng n\u1EB1m gi\u1EEFa m\u1ED9t v\u00F9ng to\u00E1n \u0111\u00E3 m\u1EDF t\u1EEB d\u00F2ng tr\u01B0\u1EDBc
+      if (r < rs.length && rs[r][0] === p) {
+        var a = rs[r][0], b = rs[r][1], two = text.substr(a, 2);
+        if (two === "$$" || two === "\\[") {
+          var eol = text.indexOf("\n", b), body = text.slice(a + 2, b - 2);
+          if (eol === -1) eol = text.length;
+          if (notBlank(body) && !notBlank(text.slice(b, eol))) {              // sau d\u1EA5u \u0111\u00F3ng kh\u00F4ng c\u00F2n ch\u1EEF \u21D2 c\u1EA3 \u0111o\u1EA1n l\u00E0 m\u1ED9t c\u00F4ng th\u1EE9c hi\u1EC3n th\u1ECB
+            j = k;
+            while (j + 1 < parts.length && offs[j + 1] <= b - 1) j++;
+            (out = out || {})[s + k] = { end: s + j, tex: body, rest: "" };
+            k = j + 1; continue;
+          }
+        }
+        k++; continue;
+      }
+      if (ln.charAt(ind) === "\\" && (m = ENV_OPEN.exec(ln)) && !failEnv[m[1]]) {
+        var en = envEnd(parts, k, m[1], m[0].length);
+        if (!en) { failEnv[m[1]] = true; k++; continue; }                     // kh\u00F4ng c\u00F3 \end: c\u00F9ng t\u00EAn trong \u0111o\u1EA1n n\u00E0y c\u0169ng b\u1ECF (gi\u1EEF tuy\u1EBFn t\u00EDnh)
+        (out = out || {})[s + k] = { end: s + en.line, tex: text.slice(offs[k] + ind, offs[en.line] + en.col), rest: parts[en.line].slice(en.col) };
+        k = en.line + 1; continue;
+      }
+      k++;
+    }
+    return out;
+  }
+  /** M\u1ECDi kh\u1ED1i to\u00E1n hi\u1EC3n th\u1ECB trong `lines` \u2192 {ch\u1EC9 s\u1ED1 d\u00F2ng b\u1EAFt \u0111\u1EA7u \u2192 {end, tex, rest}} ho\u1EB7c null. B\u1ECF qua r\u00E0o code; chia theo d\u00F2ng tr\u1ED1ng. Tuy\u1EBFn t\u00EDnh. */
+  function mathBlocks(lines) {
+    var n = lines.length, out = null, i = 0;
+    while (i < n) {
+      var line = lines[i], fm;
+      if (!notBlank(line)) { i++; continue; }
+      if ((fm = FENCE.exec(line))) { i = fenceEnd(lines, i, fm[1]); continue; }
+      var e = i + 1, hot = line.indexOf("$") !== -1 || line.indexOf("\\") !== -1;
+      while (e < n && notBlank(lines[e]) && !FENCE.test(lines[e])) {
+        if (!hot && (lines[e].indexOf("$") !== -1 || lines[e].indexOf("\\") !== -1)) hot = true;
+        e++;
+      }
+      if (hot) out = paragraphMath(lines, i, e, out);
+      i = e;
+    }
+    return out;
+  }
+
   // ----------------------------------------------------------------------------------------------- inline
   var PH_OPEN = "\uE000", PH_CLOSE = "\uE001";
 
   function inline(src, ctx) {
     src = String(src).replace(/[\uE000\uE001]/g, "");
-    var out = "", i = 0, n = src.length, ph = [];
+    var out = "", i = 0, n = src.length, ph = [], spans = inlineMath(src), si = 0, ns = spans.length;
     function hold(html) { ph.push(html); return PH_OPEN + (ph.length - 1) + PH_CLOSE; }
     function textUntilSpecial() {
       var j = i;
-      while (j < n && "`\\[!h".indexOf(src.charAt(j)) === -1) j++;
+      while (j < n && "`\\[!h$".indexOf(src.charAt(j)) === -1) j++;
       return j === i ? i + 1 : j;
     }
     while (i < n) {
+      if (ns) {                                                                              // c\u00F4ng th\u1EE9c TR\u01AF\u1EDAC m\u1ECDi lu\u1EADt kh\u00E1c: b\u00EAn trong kh\u00F4ng c\u00F3 nh\u1EA5n m\u1EA1nh, li\u00EAn k\u1EBFt, escape
+        while (si < ns && spans[si].a < i) si++;
+        if (si < ns && spans[si].a === i) { out += hold(spans[si].html); i = spans[si].b; si++; continue; }
+      }
       var c = src.charAt(i), m, rest;
-      if (c === "\\" && i + 1 < n && /[\\`*_{}\[\]()#+\-.!|~>]/.test(src.charAt(i + 1))) { out += hold(esc(src.charAt(i + 1))); i += 2; continue; }
+      if (c === "\\" && i + 1 < n && /[\\`*_{}\[\]()#+\-.!|~>$]/.test(src.charAt(i + 1))) { out += hold(esc(src.charAt(i + 1))); i += 2; continue; }
       if (c === "`") {
         m = /^(`+)/.exec(src.slice(i));
         var run = m[1], close = src.indexOf(run, i + run.length);
@@ -67,8 +204,9 @@
       }
       rest = src.slice(i);
       if (c === "[" && rest.charAt(1) === "[" && (m = /^\[\[([^\[\]\n]{1,300})\]\]/.exec(rest))) {
-        var l = N.parseLinks(m[0])[0];
-        if (l) { out += hold(wikiLink(l, ctx)); i += m[0].length; continue; }
+        var l = N.parseLinks(m[0])[0], lend = i + m[0].length;
+        for (var sk = si; l && sk < ns && spans[sk].a < lend; sk++) if (spans[sk].b > lend) l = null;      // công thức bắt đầu trong liên kết nhưng KẾT THÚC sau nó (`[[Giá $5]] và 6$`): toán thắng, như parseLinks (đồ thị) — trang và đồ thị phải thấy cùng một tập liên kết
+        if (l) { out += hold(wikiLink(l, ctx)); i = lend; continue; }
       }
       if (c === "!" && rest.charAt(1) === "[" && (m = /^!\[([^\]\n]*)\]\(\s*([^\s)]+)(?:\s+"[^"\n]*")?\s*\)/.exec(rest))) {
         var img = safeImg(m[2]);
@@ -147,7 +285,7 @@
   }
 
   function renderBlocks(lines, ctx, depth, state) {
-    var html = "", i = 0, m;
+    var html = "", i = 0, m, mb = mathBlocks(lines);
     while (i < lines.length) {
       var line = lines[i];
       if (/^\s*$/.test(line)) { i++; continue; }
@@ -156,8 +294,17 @@
         i++;
         while (i < lines.length && !(new RegExp("^ {0,3}" + fence.charAt(0) + "{" + fence.length + ",}[ \\t]*$").test(lines[i]))) body.push(lines[i++]);
         i++;                                                                                  // dòng đóng (nếu chưa đóng thì i vượt qua cuối, vòng lặp kết thúc)
-        var code = body.join("\n"), hl = ctx.highlight && lang ? ctx.highlight(code, lang) : null;
-        html += '<pre class="code"' + (lang ? ' data-lang="' + esc(lang) + '"' : "") + "><code>" + (hl != null ? hl : esc(code)) + "</code></pre>";
+        var code = body.join("\n");
+        if (lang === "math" && notBlank(code)) { html += mathHtml(code, true, true); continue; }   // ```math: TeX thuần, hiển thị
+        var hl = ctx.highlight && lang ? ctx.highlight(code, lang) : null;
+        html += '<pre class="code' + (lang === "mermaid" ? " mmd" : "") + '"' + (lang ? ' data-lang="' + esc(lang) + '"' : "") + "><code>" + (hl != null ? hl : esc(code)) + "</code></pre>";
+        continue;
+      }
+      if (mb && mb[i]) {                                                                      // khối toán hiển thị: $$…$$, \[…\], \begin{ENV}…\end{ENV} (tìm sẵn bằng mathBlocks)
+        var mbk = mb[i];
+        mb[i] = null;
+        html += mathHtml(mbk.tex, true, true);
+        if (mbk.rest && notBlank(mbk.rest)) { lines[mbk.end] = mbk.rest; i = mbk.end; } else i = mbk.end + 1;     // chữ còn lại sau \end{ENV} trên cùng dòng tiếp tục như đoạn văn
         continue;
       }
       if ((m = headingOf(line))) {
@@ -208,7 +355,7 @@
       }
       var para = [line];
       i++;
-      while (i < lines.length && !/^\s*$/.test(lines[i]) && !startsBlock(lines[i], lines[i + 1])) para.push(lines[i++]);
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !(mb && mb[i]) && !startsBlock(lines[i], lines[i + 1])) para.push(lines[i++]);
       html += "<p>" + inline(para.join("\n"), ctx).replace(/\n/g, "<br>") + "</p>";
     }
     return html;
@@ -260,6 +407,6 @@
     return out;
   }
 
-  W.markdown = { render: render, headings: headings, headingOf: headingOf, safeUrl: safeUrl, safeImg: safeImg, inline: function (s, o) { return inline(s, o || {}); } };
+  W.markdown = { render: render, headings: headings, headingOf: headingOf, safeUrl: safeUrl, safeImg: safeImg, mathBlocks: mathBlocks, inline: function (s, o) { return inline(s, o || {}); } };
   if (typeof module !== "undefined" && module.exports) module.exports = W.markdown;
 })(typeof globalThis !== "undefined" ? globalThis : this);

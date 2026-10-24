@@ -5,7 +5,7 @@ Dùng bởi `kiem-hieu-nang.py` (và các script kiem-* sau này: kiem-hien-thi,
 
 - `MayChuTinh(thu_muc)`  — phục vụ một thư mục tĩnh (bản build) ở cổng trống, tiến trình riêng, kiểu MIME tường minh
   (Windows có máy đọc `.js` là `text/plain` từ registry ⇒ ES module không chạy).
-- `MayChuThat()`         — uvicorn THẬT của backend/fastapi với SQLite tạm, `MONGO_URI=""`, khoá quản trị giả, cổng trống;
+- `MayChuThat()`         — uvicorn THẬT của backend/fastapi với SQLite tạm, `MONGO_URI=""`, `RATE_LIMIT_BACKEND=memory`, mọi kho json tạm, khoá quản trị giả, cổng trống;
   dừng/chạy lại trên CÙNG cổng (cùng origin) được. Không bao giờ chạm database thật: `DB_URL` trỏ SQLite tạm và các
   trường `DB_*` trỏ vào cổng 9 để nếu `DB_URL` bị bỏ qua thì cũng không nối được MySQL trong `.env`.
 - `mo_trinh_duyet(pw)`   — Edge thật (`channel="msedge"`), dự phòng Chrome/Chromium khi được phép.
@@ -142,6 +142,11 @@ class MayChuThat:
             "DB_URL": "sqlite+aiosqlite:///" + os.path.join(self.tmp, "dev.sqlite3").replace("\\", "/"),
             "DATA_DIR": self.tmp, "MONGO_URI": "", "API_PREFIX": self.api_prefix, "PYTHONUTF8": "1", "AI_ENABLED": "false",
             "MARKDOWN_ADMIN_KEY": khoa, "PYTHONPATH": BE,
+            # .env của backend trỏ tới MySQL/Mongo THẬT và mã backend tự nạp nó: mọi kho phải bị ép về tệp tạm, bộ giới hạn tốc độ
+            # về bộ nhớ (build_rate_limiter chế độ auto từng thử nối Aiven), kho markdown/wiki/... về json trong DATA_DIR.
+            "RATE_LIMIT_BACKEND": "memory", "MARKDOWN_STORAGE_BACKEND": "json", "WIKI_STORAGE_BACKEND": "json",
+            "CODESTORE_STORAGE_BACKEND": "json", "GRAPHUC_STORAGE_BACKEND": "json", "POSTMAN_STORAGE_BACKEND": "json",
+            "SPENDING_STORAGE_BACKEND": "json",
             # dây an toàn thứ hai: nếu DB_URL bị bỏ qua, các trường DB_* trỏ vào hư vô thay vì MySQL thật trong .env
             "DB_HOST": "127.0.0.1", "DB_PORT": "9", "DB_USERNAME": "kiem", "DB_PASSWORD": "kiem", "DB_DATABASE": "kiem",
         })

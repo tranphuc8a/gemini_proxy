@@ -15,6 +15,13 @@
 const fs = require("fs");
 const path = require("path");
 const C = require("./kiem/chung.js");
+const KH = require("../khung-kiem.js");
+
+/* Luoi an toan chong "xanh gia": kiem.js chay cac nhom bat dong bo; mot Promise khong bao gio xong lam Node thoat
+   ma 0 ma bo qua im lang moi nhom sau no. canhGac -> thoat som = "[SAI] KHONG CHAY HET" + exit 1; han moi nhom
+   (JE_NHOM_HAN_MS, mac dinh 180 s, 0 = khong han) -> nhom treo bi bao SAI va cac nhom sau van chay. */
+const gac = KH.canhGac("json-editor/kiem.js");
+const HAN_NHOM = KH.hanTuMoiTruong("JE_NHOM_HAN_MS", 180000);
 
 const LOC = process.argv.slice(2).filter((a) => !a.startsWith("-"));
 const chayNhom = (ten) => !LOC.length || LOC.some((l) => ten.indexOf(l) >= 0);
@@ -643,14 +650,18 @@ const tep = fs.existsSync(thuMuc)
     const ten = f.slice(0, -3);
     if (!chayNhom(ten)) continue;
     console.log("\n[" + ten + "]");
-    try {
-      await require(path.join(thuMuc, f))(C);
-    } catch (e) {
+    const kq = await KH.chayCoHan(() => require(path.join(thuMuc, f))(C), HAN_NHOM);
+    if (kq.hetGio) {
+      C.kiem("kiem/" + f + " xong trong han " + (HAN_NHOM / 1000) + " s", false,
+        "nhom TREO (mot Promise khong bao gio xong — Worker / hen gio khong tra loi?); cac nhom sau van duoc chay");
+    } else if (kq.loi) {
+      const e = kq.loi;
       C.kiem("kiem/" + f + " chay het khong nem loi", false, e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : String(e));
     }
   }
 
   /* ---------------------------------------------------------------- */
+  gac.xong();                                       /* toi duoc day = khong nhom nao lam tien trinh thoat som */
   console.log("-".repeat(58));
   if (!C.soDat() && !C.soSai()) {
     console.log("Khong co nhom nao khop bo loc: " + LOC.join(", ") + "\n");
@@ -661,4 +672,8 @@ const tep = fs.existsSync(thuMuc)
     process.exit(1);
   }
   console.log("Dat — " + C.soDat() + " phep, moi ham thuan cua json-editor hoat dong dung.\n");
-})();
+})().catch((e) => {
+  gac.xong();
+  console.log("  [SAI] kiem.js nem loi ngoai nhom: " + (e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : e));
+  process.exit(1);
+});

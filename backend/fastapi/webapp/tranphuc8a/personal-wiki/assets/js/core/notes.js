@@ -92,10 +92,96 @@
     return out.join("\n");
   }
 
+  // ----------------------------------------------------------------------------------------------- vùng toán
+  // NGUỒN DUY NHẤT của luật vùng toán trong JS (markdown.js dựng công thức, compose.js che toán khi quét [[liên kết]], parseLinks bên dưới).
+  // PHẢI khớp bản Python `application/utils/wiki_links.py math_ranges`; hai bản chạy chung `kiem-lien-ket.json`. Đổi luật ⇒ sửa cả hai + thêm ca.
+  // Luật: `\(…\)`, `\[…\]`, `$$…$$` và `$…$` (luật pandoc: sau `$` mở không được là khoảng trắng; `$` đóng không đứng sau khoảng trắng và không
+  // được theo sau bởi chữ số hay `$` khác), tất cả trong CÙNG đoạn (không vượt dòng trống); `\$` và `\\(` không phải dấu; dấu mở không có dấu đóng thì
+  // KHÔNG mở gì (một `$` lạc không nuốt phần còn lại). Tuyến tính: mỗi loại dấu đóng nhớ chỗ tìm hỏng.
+  function isWS(c) { return c === " " || c === "\t" || c === "\n" || c === "\r" || c === "\f" || c === "\v"; }
+  function blankLineAfter(s, k) {
+    var n = s.length, m = k + 1;
+    while (m < n && (s[m] === " " || s[m] === "\t" || s[m] === "\r")) m++;
+    return m < n && s[m] === "\n";
+  }
+  /** Tìm dấu đóng `kind` (")", "]", "$$", "$") từ p, trong cùng đoạn. → [chỉ số sau dấu đóng (với "$": chỉ số CỦA nó), -1] hoặc [-1, chỗ dừng]. */
+  function scanClose(s, p, kind) {
+    var n = s.length, k = p;
+    while (k < n) {
+      var c = s[k];
+      if (c === "\n" && blankLineAfter(s, k)) return [-1, k];
+      if (c === "\\") {
+        var j = k;
+        while (j < n && s[j] === "\\") j++;
+        if ((j - k) % 2 === 1 && j < n) {
+          if ((kind === ")" || kind === "]") && s[j] === kind) return [j + 1, -1];
+          k = j + 1; continue;                                   // ký tự bị thoát, không bao giờ là dấu
+        }
+        k = j; continue;
+      }
+      if (c === "$") {
+        if (kind === "$$") { if (k + 1 < n && s[k + 1] === "$") return [k + 2, -1]; }
+        else if (kind === "$") return [k, -1];
+      }
+      k++;
+    }
+    return [-1, n];
+  }
+  /** [[đầu, cuối)] của mọi vùng toán trong văn bản ĐÃ che code (maskCode). Không chồng lấn, theo thứ tự. */
+  function mathRanges(masked) {
+    var s = masked, n = s.length, i = 0, out = [], failed = {};
+    if (s.indexOf("$") === -1 && s.indexOf("\\") === -1) return out;
+    while (i < n) {
+      var c = s[i];
+      if (c === "\\") {
+        var j = i;
+        while (j < n && s[j] === "\\") j++;
+        if ((j - i) % 2 === 1 && j < n) {
+          var d = s[j];
+          if (d === "(" || d === "[") {
+            var close = d === "(" ? ")" : "]";
+            if (j + 1 > (close in failed ? failed[close] : -1)) {
+              var r = scanClose(s, j + 1, close);
+              if (r[0] !== -1) { out.push([j - 1, r[0]]); i = r[0]; continue; }
+              failed[close] = r[1];
+            }
+          }
+          i = j + 1; continue;
+        }
+        i = j; continue;
+      }
+      if (c === "$") {
+        if (i + 1 < n && s[i + 1] === "$") {
+          if (i + 2 > ("$$" in failed ? failed.$$ : -1)) {
+            var r2 = scanClose(s, i + 2, "$$");
+            if (r2[0] !== -1) { out.push([i, r2[0]]); i = r2[0]; continue; }
+            failed.$$ = r2[1];
+          }
+          i += 2; continue;
+        }
+        if (i + 1 < n && !isWS(s[i + 1])) {
+          var k = scanClose(s, i + 1, "$")[0];
+          if (k !== -1 && !(k + 1 < n && s[k + 1] === "$") && !isWS(s[k - 1]) && !(k + 1 < n && s[k + 1] >= "0" && s[k + 1] <= "9")) {
+            out.push([i, k + 1]); i = k + 1; continue;
+          }
+        }
+        i++; continue;
+      }
+      i++;
+    }
+    return out;
+  }
+
   var LINK_RE = /\[\[([^\[\]\n]{1,300})\]\]/g;
-  /** Mọi [[…]] ngoài code → [{type, title, alias, raw, index}]. Tiền tố `kiểu::` chỉ được nhận khi kiểu hợp lệ. */
+  /** Mọi [[…]] ngoài code VÀ ngoài vùng toán → [{type, title, alias, raw, index}]. Tiền tố `kiểu::` chỉ được nhận khi kiểu hợp lệ.
+      (Trước W4 toán chưa được che: `$[[0,1]]$` thành liên kết "0,1" trong đồ thị trong khi trang hiện công thức.) */
   function parseLinks(content) {
-    var masked = maskCode(content), out = [], m;
+    var masked = maskCode(content), out = [], m, rs = mathRanges(masked);
+    if (rs.length) {                                                         // vùng toán thành khoảng trắng cùng độ dài: chỉ số `index` vẫn đúng trên nội dung gốc
+      var blanked = "", cur = 0;
+      rs.forEach(function (r) { blanked += masked.slice(cur, r[0]) + " ".repeat(r[1] - r[0]); cur = r[1]; });
+      masked = blanked + masked.slice(cur);
+    }
     LINK_RE.lastIndex = 0;
     while ((m = LINK_RE.exec(masked))) {
       var inner = String(content).slice(m.index + 2, m.index + m[0].length - 2), type = LINK, mt = /^\s*([a-z_]+)\s*::\s*([\s\S]*)$/i.exec(inner);
@@ -211,7 +297,7 @@
 
   W.notes = {
     STATUSES: STATUSES, KINDS: KINDS, REL_TYPES: REL_TYPES, LINK: LINK, REL_LABEL: REL_LABEL, SYMMETRIC: SYMMETRIC, LIM: LIM, DAILY_TEMPLATE: DAILY_TEMPLATE,
-    normTag: normTag, normTags: normTags, maskCode: maskCode, maskInlineCode: maskInlineCode, parseLinks: parseLinks, rewriteLinks: rewriteLinks, plainSnippet: plainSnippet, titleFromContent: titleFromContent,
+    normTag: normTag, normTags: normTags, maskCode: maskCode, maskInlineCode: maskInlineCode, mathRanges: mathRanges, parseLinks: parseLinks, rewriteLinks: rewriteLinks, plainSnippet: plainSnippet, titleFromContent: titleFromContent,
     normalizeNote: normalizeNote, newNote: newNote, headOf: headOf, dailyTitle: dailyTitle, dailyId: dailyId, isBlank: isBlank, relationView: relationView
   };
   if (typeof module !== "undefined" && module.exports) module.exports = W.notes;

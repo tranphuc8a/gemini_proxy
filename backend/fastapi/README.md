@@ -179,7 +179,7 @@ header) unless `MARKDOWN_ALLOW_DEFAULT_KEY=true` — elsewhere `403 markdown_def
 |---|---|---|
 | `POST /markdown/admin/verify` · `/admin/session` | key · session | `{session, expiresAt}` (`MARKDOWN_SESSION_HOURS`) |
 | `GET /markdown/files` | **admin** while `MARKDOWN_PUBLIC_READ=false` (default), else public | the whole tree; a guest gets `403 markdown_private` |
-| `PUT /markdown/files` | admin | replaces the whole tree. With `MARKDOWN_LEGACY_PUT=reject`, once the delta store holds a copy: `409 md_legacy_client` (default `allow`: unchanged) |
+| `PUT /markdown/files` | admin | replaces the whole tree (the OLD editor's save; the new editor never calls it). By default (`MARKDOWN_LEGACY_PUT=reject`), once the delta store holds a copy: `409 md_legacy_client`; `allow` restores the old behaviour |
 | `GET /markdown/sync/changes?since=&limit=&device=` | **reader** (admin unless `MARKDOWN_PUBLIC_READ=true`) | delta pull: `{items: [record], cursor, more, horizon, reset}`; records newer than the cursor, a page ≤ 200 records / ~3 MB; the device's own writes come without text. The first call copies the old tree into the delta store (lazy, once, read-only on the old data) |
 | `POST /markdown/sync/push` | admin | `{device, ops[≤ 200]}`, each op `{id, kind, baseRev, set?, content \| patch + baseHash, hash, deleted?, updatedAt}` → `{results: [ok \| conflict \| rejected], serverTime}`; compare-and-set on `rev`, line patches verified by hash, history written from the first push |
 | `GET /markdown/docs/{id}` | **reader** | the latest text of one document (what md-share's live mode will read); `404 md_doc_not_found` |

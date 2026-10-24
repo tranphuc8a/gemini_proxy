@@ -1,6 +1,6 @@
 # Markdown Editor Pro — delta sync, version history and the old whole-tree store
 
-Since 10/2026 (batch M4a, backend only; the browser side is M4b). Backend:
+Since 10/2026 (batch M4a, the backend; batch M4b, the browser: `markdown-editor/src/sync/`, `src/services/markdownSync.ts`). Backend:
 `backend/fastapi/src/adapter/input/controllers/markdown_docs_controller.py` (+ `markdown_admin.py`), use case
 `application/usecases/markdown_docs_usecase.py`, pure helpers `application/utils/{line_patch,history_retention,sync_paging,hashing}.py`,
 stores `adapter/output/markdown_docs/{json,mysql,mongo}_repository.py` + `legacy_reader.py`, wiring `adapter/factory/markdown_docs_factory.py`.
@@ -104,7 +104,7 @@ holds the database host and the pushed text, so it is neither logged nor returne
 | `MARKDOWN_MAX_DOCS` | 20 000 | nodes per store, tombstones included; old tombstones are dropped first, then new nodes are `rejected md_space_full` |
 | `MARKDOWN_DOCS_JSON_FILE` | `data/markdown-docs.json` | JSON store (history beside it in `markdown-history/<space>/<sha1(id)[:16]>.json`); in a temporary directory on a serverless platform it is a scratchpad |
 | `MARKDOWN_HISTORY_*`, `MARKDOWN_TOMBSTONE_DAYS` | 50 / 90 / 600 s / `+07:00` / 90 | see Model |
-| `MARKDOWN_LEGACY_PUT` | `allow` | see below |
+| `MARKDOWN_LEGACY_PUT` | `reject` | see below |
 
 Page size (200 records / 3 MB), the 2-second cursor lag and the 1-day clock window are constants of `domain/vo/markdown_docs_vo.py`.
 
@@ -126,19 +126,23 @@ what the old editor saves afterwards is **not** pulled in. Each migrated node ha
 
 **`MARKDOWN_LEGACY_PUT`** (the whole-tree `PUT`/`GET /markdown/files` of the old editor):
 
-- `allow` (default, until the new editor ships — M4b): both routes keep their old behaviour on the old store.
-- `reject`: once the copy exists, `PUT /files` is `409 md_legacy_client` (a whole-tree save would overwrite other devices' work without a
-  version check; the old editor keeps its local copy) and `GET /files` rebuilds the tree from the delta store. Before the copy exists
-  nothing changes. A guest still gets 403, not the 409.
+- `reject` (default since the new editor shipped, M4b; anything that is not the literal `allow` counts as `reject`): once the copy
+  exists, `PUT /files` is `409 md_legacy_client` (a whole-tree save would overwrite other devices' work without a version check; the old
+  editor keeps its local copy) and `GET /files` rebuilds the tree from the delta store. Before the copy exists nothing changes. A guest
+  still gets 403, not the 409. The new editor never calls `PUT /files`.
+- `allow` (opt-out): both routes keep their old behaviour on the OLD store, which the new editor no longer reads - what an old editor saves
+  there does not reach the synced documents, and the other way round.
 
 ## Deploying
 
-1. Deploy with `MARKDOWN_LEGACY_PUT=allow` (the default) and a private `MARKDOWN_ADMIN_KEY`; nothing is written to the database until a
-   request reaches `/markdown/sync/*`, and no client calls it yet (M4b).
+1. Deploy with a private `MARKDOWN_ADMIN_KEY`; nothing is written to the database until a request reaches `/markdown/sync/*` (the new
+   editor does that the first time Backend sync is switched on).
+   `MARKDOWN_LEGACY_PUT` is `reject` by default: an old editor still open somewhere gets `409 md_legacy_client` on its next
+   whole-tree save, once the old tree has been copied.
 2. Set `MARKDOWN_STORAGE_BACKEND=mysql` on Vercel (a JSON file there lives in `/tmp` of one instance: history, links and the migration
    flag would vanish).
-3. When M4b ships: the first `/markdown/sync/*` call creates the tables and copies the old tree (a few seconds for ~200 documents; the
-   caller is retried after `md_migrating`). After every device has the new editor: `MARKDOWN_LEGACY_PUT=reject`.
+3. The first `/markdown/sync/*` call creates the tables and copies the old tree (a few seconds for ~200 documents; the editor retries
+   after `md_migrating`). Set `MARKDOWN_LEGACY_PUT=allow` only to keep an old editor working on the old store.
 4. Each op of a push costs a few round trips on MySQL (read, compare-and-set, history): a client should push at most a few dozen
    nodes per request when the database is far away.
 

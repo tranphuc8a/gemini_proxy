@@ -100,6 +100,20 @@ export class Workspace {
     return true
   }
 
+  /**
+   * The synchronous half of `flush`: capture, and rewrite what an earlier refused write left over. With `forceView` a store that
+   * keeps the whole tree in one key (the localStorage fallback) is rewritten even when no document changed, because the
+   * open document or the expanded folders did -- those live in the same payload.
+   */
+  persistNow(forceView = false): boolean {
+    const changed = this.capture()
+    if (changed) return true
+    if (this.failed.size || (forceView && this.store.commitSync)) {
+      void this.enqueue({ docs: { put: [], delete: [] }, meta: { seq: this.seq }, view: this.host.view() }).catch(noop)
+    }
+    return false
+  }
+
   /** Writes whatever the person typed, then waits until the store has it. */
   async flush(): Promise<void> {
     this.capture()
@@ -160,9 +174,17 @@ export class Workspace {
     for (const id of outbox?.delete ?? []) this.outbox.delete(id)
     this.seq += 1
     const written = this.enqueue({ ...change, ...(outbox ? { outbox } : {}), meta: { ...change.meta, seq: this.seq }, view: this.host.view() })
-    this.host.applyRemote(this.baseline, changed)
+    if (changed.size) this.host.applyRemote(this.baseline, changed)
     await written
     return true
+  }
+
+  /** Forgets shadows, outbox and cursors (a store or a server change): the next sync reconciles from scratch. */
+  async wipeSync(): Promise<void> {
+    this.capture()
+    await this.drain()
+    await this.store.wipeSync()
+    this.outbox.clear()
   }
 
   private idsOf(change: DocCommit): string[] {

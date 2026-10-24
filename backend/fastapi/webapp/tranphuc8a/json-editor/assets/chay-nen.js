@@ -17,7 +17,7 @@
          kq?, loi?:{phan:"du"|"schema"|"he-thong", thongBao}, hetGio?, hanMs?, huy?, luongChinh? }>
         loai: "kiem" (bienDich + kiem) | "lint" (chi bienDich)
         Lenh moi toi khi lenh cu dang chay: lenh cu bi huy ({huy:true}) va Worker bi terminate.
-     cauHinh {han, nganLuongChinh}, thongKe {soWorker, soLuongChinh, soHetGio, soHuy}
+     cauHinh {han, nganLuongChinh, soLoiToiDa}, thongKe {soWorker, soLuongChinh, soHetGio, soHuy}
      coWorker(), dung(), taoMa(), xuLy(JE, tin)   (cho kiem thu)
    Khong co Worker (hoac tao that bai): chay tren luong chinh khi van ban <= nganLuongChinh,
    kem co `luongChinh: true` — giao dien nho nguoi dung ve rui ro treo.
@@ -28,9 +28,9 @@
   var JE = g.JE;
   if (!JE || !JE.schema) throw new Error("chay-nen.js cần schema-kiem.js nạp trước");
 
-  var cauHinh = { han: 8000, nganLuongChinh: 1024 * 1024 };
+  var cauHinh = { han: 8000, nganLuongChinh: 1024 * 1024, soLoiToiDa: 3 };
   var thongKe = { soWorker: 0, soLuongChinh: 0, soHetGio: 0, soHuy: 0, lyDoLuongChinh: "" };
-  var tt = { worker: null, url: null, seq: 0, cho: null, hong: false };
+  var tt = { worker: null, url: null, seq: 0, cho: null, hong: false, daTraLoi: false, loiLienTiep: 0 };
 
   /** Xu ly mot lenh — TU CHUA (khong dung bien ngoai): duoc nhung vao Worker bang toString(). */
   function xuLy(JEg, tin) {
@@ -79,6 +79,7 @@
 
   function khiNhan(e) {
     var r = e && e.data, c = tt.cho;
+    if (r && typeof r.id === "number") { tt.daTraLoi = true; tt.loiLienTiep = 0; }     /* Worker song va tra loi duoc */
     if (!c || !r || r.id !== c.id) return;               /* ket qua cu (lenh da bi thay) */
     clearTimeout(c.hen);
     tt.cho = null;
@@ -86,12 +87,20 @@
   }
 
   function khiLoiWorker(e) {
-    /* Worker khong nap duoc (vd mot module nem loi / bi chan): chuyen sang luong chinh tu lan sau. */
+    /* Hai loai loi:
+       - Worker KHONG BAO GIO tra loi duoc (mot module nem loi khi nap / bi chan): hong han -> luong chinh tu lan sau.
+       - Loi LUC DANG CHAY sau khi Worker da tra loi it nhat mot lan (het bo nho voi du lieu rat lon…): chi bo Worker nay,
+         lan sau tao Worker MOI. Chi sau cauHinh.soLoiToiDa loi LIEN TIEP (khong lan nao thanh cong xen giua) moi coi la hong han
+         — truoc day mot loi luc chay lam moi lan kiem sau chay tren luong chinh (khong chong duoc ReDoS) cho toi khi tai lai trang. */
     var c = tt.cho, chu = String(e && e.message || "Worker báo lỗi");
-    thongKe.lyDoLuongChinh = chu;
-    tt.hong = true;
+    tt.loiLienTiep++;
+    var hanHong = !tt.daTraLoi || tt.loiLienTiep >= cauHinh.soLoiToiDa;
+    if (hanHong) { thongKe.lyDoLuongChinh = chu; tt.hong = true; }
     dung();
-    if (c) { clearTimeout(c.hen); tt.cho = null; c.xong({ loi: { phan: "he-thong", thongBao: "Không chạy được trong Worker: " + chu }, luongChinh: false, workerHong: true }); }
+    if (c) {
+      clearTimeout(c.hen); tt.cho = null;
+      c.xong({ loi: { phan: "he-thong", thongBao: "Không chạy được trong Worker: " + chu + (hanHong ? "" : " — thử lại sẽ dùng Worker mới") }, luongChinh: false, workerHong: hanHong });
+    }
   }
 
   function khoiTao() {
@@ -161,6 +170,6 @@
     chay: chay, cauHinh: cauHinh, thongKe: thongKe, coWorker: coWorker, dung: dung,
     taoMa: taoMa, xuLy: xuLy,
     /** Cho kiem thu: phuc hoi trang thai ban dau (Worker, co hong, thong ke). */
-    datLai: function () { dung(); tt.cho = null; tt.hong = false; thongKe.soWorker = thongKe.soLuongChinh = thongKe.soHetGio = thongKe.soHuy = 0; thongKe.lyDoLuongChinh = ""; }
+    datLai: function () { dung(); tt.cho = null; tt.hong = false; tt.daTraLoi = false; tt.loiLienTiep = 0; thongKe.soWorker = thongKe.soLuongChinh = thongKe.soHetGio = thongKe.soHuy = 0; thongKe.lyDoLuongChinh = ""; }
   };
 })();

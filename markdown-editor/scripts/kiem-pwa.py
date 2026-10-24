@@ -6,6 +6,8 @@
 
 Cần bản đã xuất bản (`node scripts/build-webapps.mjs --only markdown-editor`) và playwright.
 
+Máy chủ + trình duyệt dùng chung `_kiem_chung.py` (M4b). Kho cục bộ của app là IndexedDB (ảnh khởi động v3 ở localStorage).
+
 Kịch bản (một trình duyệt, một origin, để service worker và localStorage sống xuyên suốt):
   1. mở trang → service worker cài xong và LƯU ĐỦ mọi tệp (kể cả chunk mermaid/PDF, không chỉ tệp index.html nhắc tới)
   2. manifest + biểu tượng tải được; hộp thoại "Use offline" từ menu File báo "Ready offline"
@@ -19,9 +21,9 @@ Kịch bản (một trình duyệt, một origin, để service worker và local
      bằng class (không style màu inline) và "Export HTML" giữ luật màu; màu từng token (cả token lồng nhau của HTML/JSX/bash/
      C++/CSS/PHP) ở preview VÀ trong tệp Export HTML trùng y hệt màu chế độ inline cũ gán cho đúng danh sách lớp đó
      (đáp án: scripts/mau-token-inline.cjs, dùng createStyleObject của thư viện);
-     menu Sync có dòng cảnh báo "ghi đè cả kho";
-     "Load from backend" hỏi xác nhận (huỷ thì giữ nguyên, đồng ý thì nạp); localStorage đầy → banner đỏ + hỏi trước khi
-     rời trang, dọn chỗ rồi lưu lại thì banner tắt; chế độ đọc tài liệu dài: cuộn cập nhật tiến độ + mục đang đọc, bấm
+     (M4b) menu Sync: bật Backend sync gặp máy chủ lần đầu → "Synced"; không còn "Save to backend"/"Load from backend";
+     "Replace this device's copy…" hỏi xác nhận (huỷ thì giữ nguyên, đồng ý thì nhận bản của máy chủ); localStorage đầy → tài liệu
+     vẫn ở IndexedDB, banner nói chỉ cài đặt không lưu được, dọn chỗ rồi lưu lại thì banner tắt; chế độ đọc tài liệu dài: cuộn cập nhật tiến độ + mục đang đọc, bấm
      mục lục nhảy đúng tiêu đề; luồng chính bận 9,9 s khi đang kiểm phiên, trả lời về sau 10,5 s → vẫn là quản trị
  10. (đợt M2, toán kiểu LLM + chặn style) tài liệu có \\( \\), \\[ \\], \\begin{align} trần, $$x$$ một dòng, "$$ chữ"
      hai dòng, mhchem, \\eqref, giá $5/$10: preview đủ số công thức hiển thị/nội dòng, 0 katex-error, giá tiền là chữ;
@@ -55,12 +57,9 @@ except Exception:
     pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(os.path.dirname(HERE))
-BE = os.path.join(REPO, "backend", "fastapi")
-APP_PATH = "/webapp/tranphuc8a/markdown-editor-pro/"
-PY = os.path.join(BE, ".venv", "Scripts", "python.exe")
-if not os.path.exists(PY):
-    PY = sys.executable
+sys.path.insert(0, HERE)
+
+from _kiem_chung import APP_PATH, MayChuThat, mo_trinh_duyet  # noqa: E402
 
 KEY_A = "kiem-pwa-khoa-gia-A"
 KEY_B = "kiem-pwa-khoa-gia-B"
@@ -76,69 +75,17 @@ def check(name: str, ok: bool, detail: str = "") -> bool:
     return ok
 
 
-class Server:
-    """uvicorn thật + SQLite tạm; dừng/chạy lại được trên CÙNG cổng (cùng origin) với khoá quản trị tuỳ chọn."""
-
-    def __init__(self):
-        self.tmp = tempfile.mkdtemp(prefix="mdpro-pwa-")
-        with socket.socket() as s:
-            s.bind(("127.0.0.1", 0))
-            self.port = s.getsockname()[1]
-        self.base = f"http://127.0.0.1:{self.port}"
-        self.proc = None
-        self.log = None
-
-    def start(self, admin_key: str):
-        env = dict(os.environ)
-        env.update({
-            "DB_URL": "sqlite+aiosqlite:///" + os.path.join(self.tmp, "dev.sqlite3").replace("\\", "/"),
-            "DATA_DIR": self.tmp, "MONGO_URI": "", "API_PREFIX": "/api/v1", "PYTHONUTF8": "1", "AI_ENABLED": "false",
-            "MARKDOWN_ADMIN_KEY": admin_key, "PYTHONPATH": BE,
-            # dây an toàn thứ hai: nếu DB_URL bị bỏ qua, các trường DB_* trỏ vào hư vô thay vì MySQL thật trong .env
-            "DB_HOST": "127.0.0.1", "DB_PORT": "9", "DB_USERNAME": "kiem", "DB_PASSWORD": "kiem", "DB_DATABASE": "kiem",
-        })
-        self.log = open(os.path.join(self.tmp, "server.log"), "a", encoding="utf-8")
-        self.proc = subprocess.Popen([PY, "-m", "uvicorn", "src.main:app", "--host", "127.0.0.1", "--port", str(self.port), "--log-level", "warning"],
-                                     cwd=BE, env=env, stdout=self.log, stderr=subprocess.STDOUT)
-        for _ in range(120):
-            try:
-                urllib.request.urlopen(self.base + "/webapp/_api/list", timeout=1).read()
-                return self
-            except Exception:
-                if self.proc.poll() is not None:
-                    break
-                time.sleep(0.5)
-        self.stop()
-        raise RuntimeError("Máy chủ không khởi động được:\n" + open(os.path.join(self.tmp, "server.log"), encoding="utf-8", errors="replace").read()[-1500:])
-
-    def stop(self):
-        if self.proc and self.proc.poll() is None:
-            self.proc.terminate()
-            try:
-                self.proc.wait(timeout=8)
-            except Exception:
-                self.proc.kill()
-        self.proc = None
-        if self.log:
-            self.log.close()
-            self.log = None
-
-    def cleanup(self):
-        self.stop()
-        shutil.rmtree(self.tmp, ignore_errors=True)
+# Máy chủ thật + trình duyệt dùng chung với các script kiem-* khác (`_kiem_chung.py`): SQLite tạm, MONGO_URI="", bộ giới hạn
+# tốc độ ở bộ nhớ, mọi kho json tạm — không bao giờ chạm database thật trong .env.
+Server = MayChuThat
 
 
 def launch(pw):
-    for kw in ({"channel": "msedge"}, {"channel": "chrome"}, {}):
-        try:
-            return pw.chromium.launch(**kw), kw.get("channel", "chromium")
-        except Exception:
-            continue
-    return None, None
+    return mo_trinh_duyet(pw)
 
 
 # lỗi mạng là điều CHỦ Ý khi tắt máy chủ; chỉ lỗi khác mới đáng báo
-EXPECTED_NOISE = ("net::ERR_", "Failed to load resource", "Cannot reach the backend", "Failed to fetch")
+EXPECTED_NOISE = ("net::ERR_", "Failed to load resource", "Cannot reach the backend", "Failed to fetch", "Cannot reach the server")
 
 OFFLINE_MARKER_JS = """async () => {
   const scope = new URL('./', document.baseURI).href;
@@ -238,6 +185,8 @@ def run(browser, srv: Server, shots: str | None) -> None:
     page.get_by_role("button", name="File", exact=False).first.click()
     page.get_by_role("button", name="Install app / use offline").click()
     page.wait_for_selector('[role="dialog"][aria-labelledby="install-title"]')
+    # Hộp thoại đọc trạng thái bộ nhớ đệm một cách bất đồng bộ: chờ nó nói xong "Saving a copy…" rồi mới đọc.
+    page.wait_for_function("() => !/Saving a copy/.test(document.querySelector('.install-status')?.innerText || 'Saving a copy')", timeout=20000)
     status = page.inner_text(".install-status")
     check("menu File → 'Install app / use offline…' mở hộp thoại, báo 'Ready offline' kèm số tệp", "Ready offline" in status and str(n_files) in status, status)
     snap("01-hop-thoai-offline")
@@ -254,9 +203,14 @@ def run(browser, srv: Server, shots: str | None) -> None:
     check("mở khoá quản trị bằng khoá thật → chip 'Admin'", True)
     page.fill(".editor-input", "# Bản nháp trên máy bay\n\nmột")
     page.keyboard.press("Control+s")
-    page.wait_for_timeout(300)
-    saved = page.evaluate("() => localStorage.getItem('markdown-editor:files') || ''")
-    check("tài liệu đã lưu vào localStorage của trình duyệt", "Bản nháp trên máy bay" in saved)
+    try:
+        page.wait_for_function(IDB_HAS_JS, arg="Bản nháp trên máy bay", timeout=10000)
+        saved = True
+    except Exception:  # noqa: BLE001
+        saved = False
+    check("tài liệu đã lưu vào IndexedDB của trình duyệt (kho cục bộ, không còn là khoá v2 của localStorage)", saved)
+    snapshot = page.evaluate("() => localStorage.getItem('markdown-editor:files') || ''")
+    check("localStorage chỉ giữ ảnh khởi động v3 (cây không kèm chữ + tài liệu đang mở)", '"version":3' in snapshot and '"tree"' in snapshot, snapshot[:120])
 
     # --- 4. tắt máy chủ + mất mạng
     print("  · TẮT máy chủ và mất mạng, tải lại")
@@ -424,6 +378,25 @@ BUSY_JS = """() => {
   };
 }"""
 
+# Một tài liệu của app (kho `docs` của IndexedDB `markdown-editor`) có chứa chữ này không? (async: waitForFunction chờ promise)
+IDB_HAS_JS = """async (needle) => {
+  const db = await new Promise((resolve, reject) => {
+    const r = indexedDB.open('markdown-editor');
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+  const docs = await new Promise((resolve, reject) => {
+    const q = db.transaction('docs').objectStore('docs').getAll();
+    q.onsuccess = () => resolve(q.result);
+    q.onerror = () => reject(q.error);
+  });
+  db.close();
+  return docs.some((d) => (d.content || '').includes(needle));
+}"""
+
+# Phím beforeunload của app có chặn việc rời trang không? (chỉ khi bản sửa của TÀI LIỆU có nguy cơ mất)
+UNLOAD_PREVENTED_JS = """() => { const e = new Event('beforeunload', {cancelable: true}); window.dispatchEvent(e); return e.defaultPrevented; }"""
+
 FILL_STORAGE_JS = """() => {
   let i = 0;
   const big = 'x'.repeat(512 * 1024);
@@ -532,57 +505,65 @@ def run_m1(browser, srv: Server, shots: str | None) -> None:
     page.fill(".editor-input", STORED_DOC)
     page.wait_for_timeout(300)
 
-    # --- menu Sync: cảnh báo + Save to backend (máy chủ thật, kho json tạm)
+    # --- menu Sync (md-sync F8): bật Backend sync, gặp máy chủ lần đầu; không còn Save/Load to backend
     page.get_by_role("button", name=re.compile(r"^Sync")).click()
     page.get_by_role("button", name=re.compile(r"Backend sync")).click()   # bật đồng bộ (lệnh đóng menu)
+    page.wait_for_selector('button.status-sync:text-matches("^Synced")', timeout=30000)
+    check("bật Backend sync với máy chủ thật: lần gặp đầu xong, thanh trạng thái báo 'Synced …'", True)
     page.get_by_role("button", name=re.compile(r"^Sync")).click()
-    note = page.get_by_role("note").inner_text()
-    check("menu Sync có dòng cảnh báo 'Save to backend overwrites the whole server copy…'", "overwrites the whole server copy" in note, note)
-    page.get_by_role("button", name=re.compile(r"Save to backend")).click()
-    page.wait_for_selector("text=Saved files to backend", timeout=15000)
-    check("Save to backend (máy chủ thật) chạy được", True)
+    check("menu Sync: không còn 'Save to backend' / 'Load from backend' / cảnh báo ghi đè cả kho; có 'Sync now' và 'Replace this device's copy…'",
+          page.get_by_role("button", name=re.compile(r"Save to backend")).count() == 0
+          and page.get_by_role("button", name=re.compile(r"Load from backend")).count() == 0
+          and page.get_by_text("overwrites the whole server copy").count() == 0
+          and page.get_by_role("button", name=re.compile(r"^Sync now")).count() == 1
+          and page.get_by_role("button", name=re.compile(r"Replace this device")).count() == 1)
+    page.keyboard.press("Escape")
 
-    # --- Load from backend hỏi trước
-    page.fill(".editor-input", STORED_DOC + "\nSửa cục bộ chưa lưu lên máy chủ.\n")
+    # --- Replace this device's copy hỏi trước (sửa chưa gửi được giữ lại bằng cách chặn lượt push)
+    page.route("**/markdown/sync/push**", lambda route: route.abort())
+    page.fill(".editor-input", STORED_DOC + "\nSửa cục bộ chưa lên máy chủ.\n")
     page.keyboard.press("Control+s")
     answer["accept"] = False
     dialogs.clear()
     page.get_by_role("button", name=re.compile(r"^Sync")).click()
-    page.get_by_role("button", name=re.compile(r"Load from backend")).click()
-    page.wait_for_timeout(500)
+    page.get_by_role("button", name=re.compile(r"Replace this device")).click()
+    page.wait_for_timeout(1500)
     asked = [m for t, m in dialogs if t == "confirm"]
-    check("Load from backend hỏi xác nhận trước (nói rõ thay mọi tài liệu cục bộ, sửa chưa lưu sẽ mất)",
-          len(asked) == 1 and "replaces" in asked[0] and "will be lost" in asked[0], repr(dialogs))
-    check("bấm Huỷ: tài liệu cục bộ giữ nguyên", "Sửa cục bộ chưa lưu" in page.input_value(".editor-input"))
+    check("Replace this device's copy hỏi xác nhận trước (nói rõ thay bằng bản của máy chủ, sửa chưa đồng bộ sẽ mất, không hoàn tác)",
+          len(asked) == 1 and "Replace this device's copy" in asked[0] and "not synced yet will be lost" in asked[0] and "cannot be undone" in asked[0], repr(dialogs))
+    check("bấm Huỷ: tài liệu cục bộ giữ nguyên", "Sửa cục bộ chưa lên máy chủ" in page.input_value(".editor-input"))
     answer["accept"] = True
     page.get_by_role("button", name=re.compile(r"^Sync")).click()
-    page.get_by_role("button", name=re.compile(r"Load from backend")).click()
-    page.wait_for_selector("text=Loaded files from backend", timeout=15000)
-    check("bấm Đồng ý: nạp bản trên máy chủ", True)
+    page.get_by_role("button", name=re.compile(r"Replace this device")).click()
+    page.wait_for_selector("text=This device now holds the server's documents", timeout=15000)
+    check("bấm Đồng ý: máy này giữ đúng bản của máy chủ", True)
     answer["accept"] = False
+    page.unroute("**/markdown/sync/push**")
 
-    # --- localStorage đầy → banner đỏ (vá tạm §1.3)
+    # --- localStorage đầy: tài liệu vẫn an toàn (ở IndexedDB), chỉ cài đặt/ảnh khởi động không lưu được
     page.get_by_text("mine.md").first.click()
     page.wait_for_function("() => document.querySelector('.editor-input').value.includes('Tài liệu đã lưu')", timeout=10000)
     filled = page.evaluate(FILL_STORAGE_JS)
     page.fill(".editor-input", STORED_DOC + "\n" + ("Thêm nhiều chữ để vượt hạn mức. " * 300))
     page.wait_for_selector('[role="alert"].storage-banner', timeout=10000)
     banner = page.inner_text('[role="alert"].storage-banner')
-    check(f"localStorage đầy ({filled} khoá rác): banner đỏ 'Browser storage is full — … not saved' hiện ra",
-          "Browser storage is full" in banner and "not saved" in banner, banner)
+    check(f"localStorage đầy ({filled} khoá rác): banner đỏ nói đúng việc — cài đặt không lưu được, TÀI LIỆU thì có",
+          "Browser storage is full" in banner and "your settings are not saved" in banner and "Your documents are" in banner, banner)
     bg = page.evaluate("() => getComputedStyle(document.querySelector('.storage-banner')).backgroundColor")
     check("banner có nền đỏ (token --danger)", bg.replace(" ", "") in ("rgb(207,34,46)", "rgb(248,81,73)"), bg)
     snap("05-banner-quota")
-    dialogs.clear()
-    page.close(run_before_unload=True)
-    page.wait_for_timeout(800)
-    check("đang lỗi quota: rời trang thì trình duyệt hỏi trước (beforeunload), huỷ thì ở lại",
-          any(t == "beforeunload" for t, _ in dialogs) and not page.is_closed(), repr(dialogs))
+    try:
+        page.wait_for_function(IDB_HAS_JS, arg="vượt hạn mức", timeout=10000)
+        in_idb = True
+    except Exception:  # noqa: BLE001
+        in_idb = False
+    check("localStorage đầy mà bản sửa vẫn nằm trong IndexedDB (trước đây là mất ngầm)", in_idb)
+    check("tài liệu không có nguy cơ mất nên rời trang KHÔNG bị chặn (beforeunload không preventDefault)", page.evaluate(UNLOAD_PREVENTED_JS) is False)
     page.evaluate(CLEAR_JUNK_JS)
     page.get_by_role("button", name="Try saving again").click()
     page.wait_for_selector('[role="alert"].storage-banner', state="detached", timeout=5000)
     saved = page.evaluate("() => localStorage.getItem('markdown-editor:files') || ''")
-    check("dọn chỗ rồi 'Try saving again': banner tắt, bản mới đã nằm trong localStorage", "vượt hạn mức" in saved)
+    check("dọn chỗ rồi 'Try saving again': banner tắt, ảnh khởi động mới đã nằm trong localStorage", "vượt hạn mức" in saved and '"version":3' in saved)
 
     # --- chế độ đọc tài liệu dài (perf-md việc 4)
     md = T.sinh("doc-2k")

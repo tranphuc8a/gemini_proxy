@@ -8,11 +8,10 @@ import StorageBanner from '../components/StorageBanner'
 import CommandPalette from '../components/CommandPalette'
 import FindReplace from '../components/FindReplace'
 import Preview from '../components/Preview'
-import { loadMarkdownFiles } from '../services/markdownStorage'
 
 /**
- * M1: the safety patches for data loss (confirm before "Load from backend", the warning under "Save to
- * backend", the red banner when the storage quota is full) and the components taken off the keystroke path.
+ * M1: the red banner when the storage quota is full and the components taken off the keystroke path; the Sync menu
+ * (M1's confirm-before-load and overwrite warning were replaced by md-sync F8: no whole-tree save, a confirmed replace).
  */
 vi.mock('../services/markdownStorage', () => ({
   listBackends: vi.fn(async () => [{ id: 'json', available: true }]),
@@ -20,9 +19,7 @@ vi.mock('../services/markdownStorage', () => ({
   restoreAdminSession: vi.fn(async () => false),
   recheckAdminSession: vi.fn(async () => 'valid'),
   clearAdminCredentials: vi.fn(),
-  loadMarkdownFiles: vi.fn(async () => [
-    { id: 'srv', name: 'Server', type: 'folder', children: [{ id: 'remote', name: 'remote.md', type: 'file', parentId: 'srv', content: 'from server' }] }
-  ]),
+  loadMarkdownFiles: vi.fn(),
   saveMarkdownFiles: vi.fn()
 }))
 
@@ -54,7 +51,6 @@ beforeEach(() => {
     backendStorage: true,
     backendStorageType: 'json'
   })
-  vi.mocked(loadMarkdownFiles).mockClear()
 })
 
 afterEach(() => {
@@ -65,34 +61,63 @@ afterEach(() => {
 const renderHeader = () =>
   render(<Header onOpenHelp={() => {}} onOpenInstall={() => {}} onOpenPalette={() => {}} onOpenAuth={() => {}} />)
 
-describe('Sync menu safety', () => {
-  it('asks before "Load from backend" replaces the local documents, and a cancel changes nothing', async () => {
+describe('Sync menu (md-sync F8: no whole-tree save, no unasked replace)', () => {
+  const openSync = async () => {
+    renderHeader()
+    await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
+  }
+
+  it('has no "Save to backend" and no "Load from backend" any more (the old whole-tree calls are gone)', async () => {
+    await openSync()
+    expect(screen.queryByRole('button', { name: /Save to backend/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Load from backend/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/overwrites the whole server copy/)).not.toBeInTheDocument()
+  })
+
+  it('"Replace this device\'s copy…" says what would be lost and a cancel changes nothing', async () => {
+    const replaceFromServer = vi.fn(async (confirm?: (info: { documents: number; unsent: number }) => boolean | Promise<boolean>) => (await confirm?.({ documents: 5, unsent: 2 })) ?? true)
+    useEditorStore.setState({ replaceFromServer })
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    renderHeader()
-    await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Load from backend/ }))
+    await openSync()
+    await userEvent.click(screen.getByRole('button', { name: /Replace this device/ }))
 
-    expect(confirm).toHaveBeenCalledTimes(1)
-    expect(confirm.mock.calls[0][0]).toMatch(/replaces all 2 documents/)
-    expect(confirm.mock.calls[0][0]).toMatch(/will be lost/)
-    expect(loadMarkdownFiles).not.toHaveBeenCalled()
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    expect(confirm.mock.calls[0][0]).toMatch(/exactly the 5 documents on the server/)
+    expect(confirm.mock.calls[0][0]).toMatch(/2 changes made here and not synced yet will be lost/)
+    expect(confirm.mock.calls[0][0]).toMatch(/cannot be undone/)
     expect(useEditorStore.getState().currentContent).toBe(DOC)
+    expect(useEditorStore.getState().toasts).toEqual([])
   })
 
-  it('loads once confirmed', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    renderHeader()
-    await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Load from backend/ }))
-    await waitFor(() => expect(loadMarkdownFiles).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(useEditorStore.getState().files[0].id).toBe('srv'))
+  it('"Sync now" runs a cycle of the engine', async () => {
+    const syncNow = vi.fn(async () => undefined)
+    useEditorStore.setState({ syncNow })
+    await openSync()
+    await userEvent.click(screen.getByRole('button', { name: /^Sync now/ }))
+    expect(syncNow).toHaveBeenCalledTimes(1)
   })
 
-  it('warns under "Save to backend" that it overwrites the whole server copy', async () => {
-    renderHeader()
+  it('offers the conflicts and the refused documents when there are some, and opens the panel from them', async () => {
+    const onOpenSync = vi.fn()
+    useEditorStore.setState({
+      sync: {
+        phase: 'idle', pending: 0, lastSync: Date.now(), error: null, reconcile: null, readOnly: false,
+        conflicts: [{ id: 'a', name: 'alpha.md' }], blocked: [{ id: 'b', name: 'beta.md', code: 'md_bad_name', message: 'no' }]
+      }
+    })
+    render(<Header onOpenHelp={() => {}} onOpenInstall={() => {}} onOpenPalette={() => {}} onOpenAuth={() => {}} onOpenSync={onOpenSync} />)
     await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
-    const note = screen.getByRole('note')
-    expect(note).toHaveTextContent(/Save to backend overwrites the whole server copy/)
+    await userEvent.click(screen.getByRole('button', { name: /Conflicts \(1\)/ }))
+    expect(onOpenSync).toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
+    expect(screen.getByRole('button', { name: /Refused by the server \(1\)/ })).toBeInTheDocument()
+  })
+
+  it('a refused replace reports the reason', async () => {
+    useEditorStore.setState({ replaceFromServer: vi.fn().mockRejectedValue(new Error('Cannot reach the server.')) })
+    await openSync()
+    await userEvent.click(screen.getByRole('button', { name: /Replace this device/ }))
+    await waitFor(() => expect(useEditorStore.getState().toasts.map((toast) => toast.message)).toContain('Cannot reach the server.'))
   })
 })
 

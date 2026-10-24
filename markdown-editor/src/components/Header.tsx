@@ -3,9 +3,10 @@ import type { ChangeEvent, ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { resolveTheme, useEditorStore } from '../store'
 import { useReadingStore } from '../readingStore'
-import { countNodes, findNode, getPath } from '../lib/tree'
+import { findNode, getPath } from '../lib/tree'
 import { exportHtml, exportImage, exportMarkdown, exportPdf } from '../lib/exporters'
-import { StorageError, listBackends, loadMarkdownFiles, type BackendInfo } from '../services/markdownStorage'
+import { listBackends, type BackendInfo } from '../services/markdownStorage'
+import { SyncError } from '../services/markdownSync'
 import { TOUCH_TEXT_QUERY, showsInline, type HeaderTier } from '../lib/responsive'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import type { StorageBackend, ViewMode } from '../types'
@@ -84,11 +85,13 @@ interface HeaderProps {
   onOpenAuth: () => void
   /** "Share read-only link…" in the File menu. */
   onOpenShare?: () => void
+  /** The sync panel (conflicts, refused documents, status). */
+  onOpenSync?: () => void
   /** How much of the header fits inline; desktop (`full`) shows everything. */
   tier?: HeaderTier
 }
 
-function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenShare, tier = 'full' }: HeaderProps) {
+function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenShare, onOpenSync, tier = 'full' }: HeaderProps) {
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const theme = useEditorStore((state) => state.theme)
   const scrollSync = useEditorStore((state) => state.scrollSync)
@@ -123,8 +126,10 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenSh
   const pushToast = useEditorStore((state) => state.pushToast)
   const setBackendStorageType = useEditorStore((state) => state.setBackendStorageType)
   const toggleBackendStorage = useEditorStore((state) => state.toggleBackendStorage)
-  const loadBackendStorage = useEditorStore((state) => state.loadBackendStorage)
-  const saveBackendStorage = useEditorStore((state) => state.saveBackendStorage)
+  const syncNow = useEditorStore((state) => state.syncNow)
+  const replaceFromServer = useEditorStore((state) => state.replaceFromServer)
+  const conflictCount = useEditorStore((state) => state.sync.conflicts.length)
+  const blockedCount = useEditorStore((state) => state.sync.blocked.length)
   const openReading = useReadingStore((state) => state.openReading)
   const openSmartFormat = useEditorStore((state) => state.openSmartFormat)
 
@@ -178,49 +183,41 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenSh
     reader.readAsText(file)
   }
 
-  const confirmReplace = (): boolean => {
-    const count = countNodes(useEditorStore.getState().files).files
-    const local = count === 1 ? 'the 1 document' : `all ${count} documents`
-    return window.confirm(
-      `Load from backend replaces ${local} in this browser with the copy on the server.\n\n` +
-        'Local changes that were never saved to the backend will be lost. Continue?'
-    )
-  }
-
-  /**
-   * A guest loads in the other order: ask the server first, confirm after. The store is private by default
-   * (MARKDOWN_PUBLIC_READ=false), and asking "replace all your documents?" only to be refused is the wrong question:
-   * the answer to a guest is "unlock admin mode", so that dialog opens.
-   */
-  const guestLoad = async () => {
-    setBusy('load')
+  /** "Sync now": a cycle, then its outcome in the status bar; only a refusal is worth a toast. */
+  const runSyncNow = async () => {
+    setBusy('sync')
     try {
-      const files = await loadMarkdownFiles(useEditorStore.getState().backendStorageType)
-      if (files.length && !confirmReplace()) return
-      await loadBackendStorage(files)
+      await syncNow()
     } catch (error) {
-      if (error instanceof StorageError && error.code === 'markdown_private') {
-        pushToast("This server's documents are private. Unlock admin mode to load them.", 'error')
-        onOpenAuth()
-      } else {
-        pushToast(error instanceof Error ? error.message : 'Backend unavailable', 'error')
-      }
+      pushToast(error instanceof Error ? error.message : 'Sync failed', 'error')
     } finally {
       setBusy(null)
     }
   }
 
-  const syncBackend = async (action: 'load' | 'save') => {
-    if (action === 'load' && !isAdmin) return guestLoad()
-    // Loading replaces the whole local workspace -- nothing is merged -- so it
-    // is never a single click away from losing unsaved local edits.
-    if (action === 'load' && !confirmReplace()) return
-    setBusy(action)
+  /**
+   * "Replace this device's copy with the server's…". The server is asked first and the person sees what would be lost before
+   * anything changes -- and a guest on a private server is told to unlock, not asked to confirm a replacement that cannot happen.
+   */
+  const replaceDevice = async () => {
+    setBusy('replace')
     try {
-      if (action === 'load') await loadBackendStorage()
-      else await saveBackendStorage()
+      await replaceFromServer(({ documents, unsent }) =>
+        window.confirm(
+          `Replace this device's copy with the server's?\n\nThis browser will hold exactly the ${documents === 1 ? '1 document' : `${documents} documents`} on the server. ` +
+            (unsent > 0
+              ? `${unsent === 1 ? '1 change' : `${unsent} changes`} made here and not synced yet will be lost.`
+              : 'Nothing waiting to sync here is lost.') +
+            ' This cannot be undone.'
+        )
+      )
     } catch (error) {
-      pushToast(error instanceof Error ? error.message : 'Backend unavailable', 'error')
+      if (error instanceof SyncError && error.code === 'markdown_private') {
+        pushToast("This server's documents are private. Unlock admin mode to load them.", 'error')
+        onOpenAuth()
+      } else {
+        pushToast(error instanceof Error ? error.message : 'Backend unavailable', 'error')
+      }
     } finally {
       setBusy(null)
     }
@@ -375,18 +372,28 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenSh
           )
         })}
       </div>
-      <button className="menu-item" disabled={!backendStorage || busy !== null} onClick={() => void syncBackend('load')}>
-        Load from backend {busy === 'load' && <span className="menu-hint">working…</span>}
+      <button className="menu-item" disabled={!backendStorage || busy !== null} onClick={() => void runSyncNow()}>
+        Sync now {busy === 'sync' && <span className="menu-hint">working…</span>}
       </button>
-      <button className="menu-item" disabled={!backendStorage || !isAdmin || busy !== null} onClick={() => void syncBackend('save')}>
-        Save to backend {busy === 'save' && <span className="menu-hint">working…</span>}
+      {conflictCount > 0 && (
+        <button className="menu-item is-attention" onClick={onOpenSync}>
+          Conflicts ({conflictCount})…
+        </button>
+      )}
+      {blockedCount > 0 && (
+        <button className="menu-item is-attention" onClick={onOpenSync}>
+          Refused by the server ({blockedCount})…
+        </button>
+      )}
+      <button className="menu-item" disabled={!backendStorage || busy !== null} onClick={() => void replaceDevice()}>
+        Replace this device&apos;s copy with the server&apos;s… {busy === 'replace' && <span className="menu-hint">working…</span>}
       </button>
-      <p className="menu-note is-warning" role="note">
-        Save to backend overwrites the whole server copy with this browser&apos;s documents, including changes made
-        from other devices.
+      <p className="menu-note" role="note">
+        With Backend sync on, only what you change is sent, and what other devices change is merged in. Version history keeps
+        earlier texts on the server.
       </p>
       {!isAdmin && (
-        <p className="menu-note">Saving needs admin access. On a private server (the default), loading needs it too.</p>
+        <p className="menu-note">Sending changes needs admin access. On a private server (the default), receiving them needs it too.</p>
       )}
     </>
   )

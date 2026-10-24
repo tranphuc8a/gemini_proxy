@@ -36,6 +36,7 @@ module.exports = function (t) {
       ["sizeLabel rỗng", { sizeLabel: "  " }, /sizeLabel/],
       ["moveLabel không phải chuỗi", { moveLabel: 5 }, /moveLabel/],
       ["mistakeLabel rỗng", { mistakeLabel: "" }, /mistakeLabel/],
+      ["sizeText không phải hàm", { sizeText: "12 xu" }, /sizeText/],
       ["options không phải mảng", { options: {} }, /options/],
       ["options rỗng", { options: [] }, /options/],
       ["option thiếu default", { options: [{ id: "so", label: "Số", choices: two }] }, /default/],

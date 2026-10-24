@@ -301,8 +301,8 @@ export class LocalStorageDocStore implements DocStore {
   private view: ViewState = { currentFileId: null, expandedFolders: [] }
   private sync: SyncPayload
 
-  constructor() {
-    const stored = loadFiles()
+  constructor(preloaded?: ReturnType<typeof loadFiles>) {
+    const stored = preloaded === undefined ? loadFiles() : preloaded
     if (stored && !stored.partial) {
       for (const doc of treeToDocs(stored.files, 0)) this.docs.set(doc.id, doc)
       this.view = { currentFileId: stored.currentFileId, expandedFolders: stored.expandedFolders }
@@ -311,6 +311,11 @@ export class LocalStorageDocStore implements DocStore {
   }
 
   async load(): Promise<LoadedStore> {
+    return this.loadSync()
+  }
+
+  /** `load` without the promise: the fallback is synchronous end to end, which keeps the editor's start-up synchronous too. */
+  loadSync(): LoadedStore {
     return { docs: [...this.docs.values()], outbox: Object.values(this.sync.outbox), meta: { ...this.sync.meta } }
   }
 

@@ -37,8 +37,8 @@ a file tree, and optional sync with the FastAPI backend in this repository.
 ### Access and storage
 - **Admin key unlocks editing**; anonymous visitors can read, search and export
 - The admin flag lives in memory only — it is never written to storage
-- **Auto-save** to localStorage, debounced, with the last successful save shown
-- **Optional FastAPI backend sync** (JSON file or MySQL), with errors reported in plain language
+- **Auto-save** to this browser (IndexedDB; localStorage when the browser has none), debounced, with the last successful save shown
+- **Optional FastAPI backend sync** (JSON file, MySQL or MongoDB): only what changed is sent, other devices' changes are merged line by line, offline edits queue and go up later, a clash on the same lines asks you; errors are reported in plain language
 
 ## 📋 Project Structure
 
@@ -69,7 +69,7 @@ markdown-editor/
 │   │   ├── markdown.ts            # Headings, statistics, search, line mapping
 │   │   ├── paneSync.ts            # Line-based scroll sync
 │   │   ├── rehypeEnhance.ts       # data-line stamps, anchors, sanitize schema
-│   │   ├── persistence.ts         # Versioned localStorage with migration
+│   │   ├── persistence.ts         # Settings, the v2 workspace key and the v3 boot snapshot (localStorage)
 │   │   ├── exporters.ts           # Markdown/HTML/PDF/image export, clipboard
 │   │   ├── fuzzy.ts               # Command palette matching
 │   │   └── id.ts                  # Collision-free ids
@@ -182,7 +182,6 @@ Set it at build time so it does not have to be edited in source:
 ```bash
 # .env.local
 VITE_MARKDOWN_ADMIN_KEY=your-custom-admin-key
-VITE_MARKDOWN_API_URL=http://localhost:6789/api/v1/markdown/files
 ```
 It must match the backend's `MARKDOWN_ADMIN_KEY`. The default `markdown-editor-admin-2024` is public: the backend
 accepts it only from the machine it runs on (see `docs/markdown-share-api.md`).
@@ -197,10 +196,9 @@ only the colours, so a token added once works in both themes. Markdown styles ar
 to `.markdown-body`, so they never leak into the application chrome.
 
 ### Customize Storage
-By default, files are stored in browser's localStorage. To use server storage:
-1. Modify `src/store.ts` - Replace localStorage calls with API calls
-2. Create a backend API to handle file persistence
-3. Update `loadFromStorage` and `saveToStorage` functions
+Documents are stored in the browser's IndexedDB (`src/sync/docStore.ts`; the localStorage fallback keeps the old v2 key).
+Every write goes through `src/sync/workspace.ts`. Server sync is `src/sync/engine.ts` over `src/services/markdownSync.ts`
+(API: `docs/markdown-sync-api.md`).
 
 ## 📦 Dependencies
 
@@ -330,7 +328,7 @@ MARKDOWN_JSON_FILE=data/markdown-files.json
 MARKDOWN_ADMIN_KEY=markdown-editor-admin-2024
 ```
 
-For MySQL, set `MARKDOWN_STORAGE_BACKEND=mysql` and configure the existing `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` values. The backend creates `markdown_files` on first save. The store is **private** by default (`MARKDOWN_PUBLIC_READ=false`): loading and saving both need the admin session; a guest who clicks "Load from backend" is told the documents are private and offered the unlock dialog. Set `MARKDOWN_PUBLIC_READ=true` to let anyone read them again.
+For MySQL, set `MARKDOWN_STORAGE_BACKEND=mysql` and configure the existing `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` values. The backend creates its tables (`markdown_docs`, `markdown_doc_revisions`, `markdown_meta`) on the first sync call and copies the old `markdown_files` tree once (the old table is never touched). The store is **private** by default (`MARKDOWN_PUBLIC_READ=false`): syncing needs the admin session; a guest who tries is told the documents are private and offered the unlock dialog. Set `MARKDOWN_PUBLIC_READ=true` to let anyone read them again.
 
 ## Sharing a read-only link
 
@@ -350,7 +348,7 @@ expired link is dead for good: the dialog says so and **Create new link** gives 
 
 API and settings: `docs/markdown-share-api.md`. Browser check: `markdown-editor/scripts/kiem-chia-se.py`.
 
-The frontend defaults to `http://localhost:6789/api/v1/markdown/files`; override it with `VITE_MARKDOWN_API_URL`.
+The frontend reads the API address at run time from the page that serves it (`window.__WEBAPP_CONFIG__`); `VITE_MARKDOWN_API_URL` is no longer used.
 
 ## Import and Export
 
@@ -364,9 +362,9 @@ Use `Import` to load a `.md` or `.markdown` file into the active editor. Use `Ex
 npm run dev -- --port 3000
 ```
 
-### localStorage Full
-- Clear browser cache and storage
-- Or implement server-side persistence
+### Browser storage full
+- Documents are in IndexedDB, which is far roomier than localStorage; a full localStorage only loses settings (the red banner says which)
+- Export what you need, or switch on Backend sync
 
 ### Markdown Not Rendering
 - Check browser console for errors

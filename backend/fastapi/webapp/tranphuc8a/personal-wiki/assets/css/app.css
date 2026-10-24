@@ -396,6 +396,10 @@ button.chip:hover { background: var(--s2); }
 .md pre.code { padding: 12px 14px; border-radius: 12px; background: var(--sunk); border: 1px solid var(--border); overflow-x: auto; font: 0.88em/1.55 var(--mono); tab-size: 2; }
 .md pre.code code { padding: 0; background: none; font: inherit; }
 .md pre.code[data-lang]::before { content: attr(data-lang); display: block; margin-bottom: 6px; color: var(--text-3); font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+/* toán (W4): nút .math giữ TeX trong data-tex; đây là dạng DỰ PHÒNG (TeX nguyên văn, kiểu code) khi chưa/không có KaTeX — W6 thay nội dung bằng công thức vẽ sẵn */
+.md .math { font: 0.92em var(--mono); padding: 1px 5px; border-radius: 6px; background: var(--sunk); white-space: pre-wrap; overflow-wrap: anywhere; }
+.md div.math-d, .md span.math-d { display: block; padding: 8px 12px; margin: 0 0 0.9em; text-align: center; overflow-x: auto; }
+.md span.math-d { margin: 0.4em 0; }
 .md .tbl { overflow-x: auto; }
 .md table { border-collapse: collapse; min-width: 50%; }
 .md th, .md td { padding: 6px 12px; border: 1px solid var(--border); text-align: left; }

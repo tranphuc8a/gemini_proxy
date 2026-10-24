@@ -1,16 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   SESSION_KEY,
-  StorageError,
   adminSessionHeaders,
   clearAdminCredentials,
   hasAdminCredential,
-  loadMarkdownFiles,
   recheckAdminSession,
   restoreAdminSession,
   setAdminSession,
   verifyAdminKey
 } from './markdownStorage'
+import { SyncError, createHttpSyncApi } from './markdownSync'
 
 /**
  * Admin mode across reloads, and across a lost connection.
@@ -136,19 +135,23 @@ describe('the private store and the hardened admin key (M3: Q1, B0)', () => {
     expect(localStorage.getItem(SESSION_KEY)).toBe(TOKEN)
   })
 
-  it('loading the tree sends the admin session (the store is private by default)', async () => {
+  it('the sync client sends the admin session (the store is private by default)', async () => {
     setAdminSession('admin.token')
-    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ files: [] }), { status: 200 }))
-    vi.stubGlobal('fetch', fetchMock)
-    await loadMarkdownFiles('json')
+    const fetchMock = vi.fn(
+      async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ items: [], cursor: 0, more: false, horizon: 0, reset: false }), { status: 200 })
+    )
+    await createHttpSyncApi({ backend: 'json', headers: adminSessionHeaders, fetchImpl: fetchMock as unknown as typeof fetch }).changes({ since: 0, device: 'md-test' })
     expect((fetchMock.mock.calls[0][1]?.headers as Record<string, string>)['X-Admin-Session']).toBe('admin.token')
     expect(adminSessionHeaders()).toEqual({ 'X-Admin-Session': 'admin.token' })
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/markdown\/sync\/changes\?backend=json&since=0&device=md-test$/)
   })
 
-  it('a guest refused by a private store gets a StorageError with the code and a clear message', async () => {
-    vi.stubGlobal('fetch', answer(403, { message: 'riêng tư', data: { code: 'markdown_private' } }))
-    const error = await loadMarkdownFiles('json').catch((e) => e)
-    expect(error).toBeInstanceOf(StorageError)
+  it('a guest refused by a private store gets a SyncError with the code and a clear message', async () => {
+    const refused = answer(403, { message: 'riêng tư', data: { code: 'markdown_private' } })
+    const error = await createHttpSyncApi({ backend: 'json', headers: () => ({}), fetchImpl: refused as unknown as typeof fetch })
+      .changes({ since: 0, device: 'md-test' })
+      .catch((e) => e)
+    expect(error).toBeInstanceOf(SyncError)
     expect(error.code).toBe('markdown_private')
     expect(error.message).toMatch(/private\. Unlock admin mode/)
   })

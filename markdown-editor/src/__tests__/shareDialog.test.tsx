@@ -7,7 +7,7 @@ import Header from '../components/Header'
 import CommandPalette from '../components/CommandPalette'
 import { useEditorStore } from '../store'
 import { createShare, listShares, revokeShare, type ShareListing, type ShareSummary } from '../services/shareClient'
-import { StorageError, loadMarkdownFiles } from '../services/markdownStorage'
+import { SyncError } from '../services/markdownSync'
 
 vi.mock('../services/shareClient', async () => {
   const actual = await vi.importActual<typeof import('../services/shareClient')>('../services/shareClient')
@@ -18,7 +18,6 @@ vi.mock('../services/markdownStorage', async () => {
   return {
     ...actual,
     listBackends: vi.fn(async () => [{ id: 'json', available: true }]),
-    loadMarkdownFiles: vi.fn(),
     restoreAdminSession: vi.fn(async () => false),
     recheckAdminSession: vi.fn(async () => 'valid')
   }
@@ -295,13 +294,13 @@ describe('wiring', () => {
     expect(onOpenShare).toHaveBeenCalled()
   })
 
-  it('a guest loading from a private server is told to unlock, and nothing is replaced', async () => {
-    useEditorStore.setState({ isAdmin: false })
-    vi.mocked(loadMarkdownFiles).mockRejectedValue(new StorageError("This server's documents are private.", 403, 'markdown_private'))
+  it('a guest replacing from a private server is told to unlock, and nothing is replaced', async () => {
+    const replaceFromServer = vi.fn().mockRejectedValue(new SyncError("This server's documents are private.", { status: 403, code: 'markdown_private' }))
+    useEditorStore.setState({ isAdmin: false, replaceFromServer })
     const confirm = vi.spyOn(window, 'confirm')
     header()
     await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Load from backend/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Replace this device/ }))
     await waitFor(() => expect(onOpenAuth).toHaveBeenCalled())
     expect(confirm).not.toHaveBeenCalled()
     expect(useEditorStore.getState().toasts.map((toast) => toast.message)).toContain(
@@ -310,13 +309,18 @@ describe('wiring', () => {
     expect(useEditorStore.getState().currentFileId).toBe('file-plan')
   })
 
-  it('a guest loading from a public server confirms after the answer', async () => {
-    useEditorStore.setState({ isAdmin: false })
-    vi.mocked(loadMarkdownFiles).mockResolvedValue([{ id: 'srv', name: 'srv.md', type: 'file', content: 's' }])
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('a guest replacing from a public server confirms after the server answered', async () => {
+    const replaceFromServer = vi.fn(async (confirm?: (info: { documents: number; unsent: number }) => boolean | Promise<boolean>) => {
+      // The store asks the server first, then hands what it found to the person.
+      return (await confirm?.({ documents: 3, unsent: 0 })) ?? true
+    })
+    useEditorStore.setState({ isAdmin: false, replaceFromServer })
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     header()
     await userEvent.click(screen.getByRole('button', { name: /^Sync/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Load from backend/ }))
-    await waitFor(() => expect(useEditorStore.getState().files[0].id).toBe('srv'))
+    await userEvent.click(screen.getByRole('button', { name: /Replace this device/ }))
+    await waitFor(() => expect(replaceFromServer).toHaveBeenCalledTimes(1))
+    expect(confirm.mock.calls[0][0]).toMatch(/exactly the 3 documents on the server/)
+    expect(confirm.mock.calls[0][0]).toMatch(/Nothing waiting to sync here is lost/)
   })
 })

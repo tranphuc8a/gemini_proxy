@@ -31,9 +31,11 @@ interface CommandPaletteProps {
   onOpenHelp: () => void
   /** "Share read-only link…" (offered while a document is open). */
   onOpenShare?: () => void
+  /** "Sync status…" (offered while Backend sync is on). */
+  onOpenSync?: () => void
 }
 
-function CommandPalette({ open, onClose, onOpenHelp, onOpenShare }: CommandPaletteProps) {
+function CommandPalette({ open, onClose, onOpenHelp, onOpenShare, onOpenSync }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
@@ -77,6 +79,12 @@ function CommandPalette({ open, onClose, onOpenHelp, onOpenShare }: CommandPalet
         ? [{ id: 'smart-format', label: 'Smart format with AI…', group: 'Commands' as const, hint: 'Raw text → readable Markdown', run: state.openSmartFormat }]
         : []),
       { id: 'save', label: 'Save now', group: 'Commands', shortcut: 'Ctrl+S', run: state.flushPersist },
+      ...(state.backendStorage
+        ? [
+            { id: 'sync-now', label: 'Sync now', group: 'Commands' as const, hint: 'send and receive changes', run: () => void state.syncNow().catch(() => undefined) },
+            ...(onOpenSync ? [{ id: 'sync-status', label: 'Sync status…', group: 'Commands' as const, hint: 'conflicts, refused documents', run: onOpenSync }] : [])
+          ]
+        : []),
       { id: 'export-md', label: 'Export as Markdown', group: 'Commands', run: () => exportMarkdown(fileName, useEditorStore.getState().currentContent) },
       ...(onOpenShare && currentFileId && flatten(files).some((node) => node.id === currentFileId && node.type === 'file')
         ? [{ id: 'share', label: 'Share read-only link…', group: 'Commands' as const, hint: 'anyone with the link can read a snapshot', run: onOpenShare }]
@@ -118,7 +126,7 @@ function CommandPalette({ open, onClose, onOpenHelp, onOpenShare }: CommandPalet
     }))
 
     return [...actions, ...fileCommands, ...headingCommands]
-  }, [open, content, currentFileId, files, onOpenHelp, onOpenShare])
+  }, [open, content, currentFileId, files, onOpenHelp, onOpenShare, onOpenSync])
 
   const results = useMemo(() => rankBySearch(commands, query), [commands, query])
 

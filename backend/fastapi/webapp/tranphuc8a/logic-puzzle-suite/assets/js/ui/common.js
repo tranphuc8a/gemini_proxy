@@ -23,6 +23,7 @@
   function sizeText(puzzle) {
     var d = typeDef(puzzle.type), s = d && d.sizes.filter(function (x) { return x.id === puzzle.sizeId; })[0];
     if (s) return s.label;
+    if (d && typeof d.sizeText === "function") { try { var tx = d.sizeText(puzzle); if (typeof tx === "string" && tx.trim()) return tx; } catch (e) { /* rơi về cách nối khoá */ } }       // loại tự mô tả cỡ (đề tự nhập không có sizeId khớp)
     var z = puzzle.size; return z && typeof z === "object" ? Object.keys(z).map(function (k) { return z[k]; }).join("×") : z != null ? String(z) : "";
   }
   function puzzleTitle(puzzle, rec) {

@@ -41,6 +41,7 @@
       if (t === "BR") { out.push({ br: true }); return; }
       if (t === "STRONG" || t === "B") f.bold = true; else if (t === "EM" || t === "I") f.italic = true; else if (t === "CODE") f.code = true; else if (t === "DEL") f.strike = true;
       else if (t === "A" || (t === "SPAN" && c.classList.contains("wl"))) f.link = true;
+      else if (t === "SPAN" && c.classList.contains("math")) f.code = true;                    // công thức (W4): vẽ TeX nguyên văn như đoạn code; W6 vẽ KaTeX
       else if (t === "IMG") { out.push(Object.assign({ text: "[ảnh: " + (c.getAttribute("alt") || "") + "]" }, fmt, { italic: true })); return; }
       else if (t === "INPUT") { out.push(Object.assign({ text: c.checked ? "☑ " : "☐ " }, fmt)); return; }
       else if (t === "UL" || t === "OL") return;
@@ -101,6 +102,7 @@
       }
       else if (t === "HR") { if (draw) { c.fillStyle = COL.line; c.fillRect(x0, y + 8, width, 2); } y += 22; }
       else if (t === "DIV" && el.classList.contains("tbl")) table(el.querySelector("table"), x0, width);
+      else if (t === "DIV" && el.classList.contains("math")) { text(runsOf(el, { code: true }), 16, x0, width, COL.text); y += 12; }     // khối công thức (W4): không có phần tử con nên nhánh DIV chung sẽ bỏ mất chữ
       else if (t === "DIV" && el.classList.contains("fc")) {
         var q = el.querySelector(".fc-q"), a = el.querySelector(".fc-a"), qr = runsOf(q, {}).filter(function (r) { return r.text !== "Hỏi"; }), ar = runsOf(a, {}).filter(function (r) { return r.text !== "Đáp"; }), top = y;
         y += 12; if (draw) { c.fillStyle = COL.card; c.fillRect(x0, top, width, 0); }

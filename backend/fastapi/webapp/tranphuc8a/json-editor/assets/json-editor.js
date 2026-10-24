@@ -2502,6 +2502,8 @@
     });
     if (!b) return false;
     els(".o").forEach(function (x) { x.classList.toggle("dang", x.dataset.o === o); });
+    /* Ghi nhan tab du lieu vua ROI, khong chi tab VAO: Soan (tab mo san) -> Schema roi bam hang loi phai ve Soan, khong nhay sang Cay. */
+    if (oHien === "cay" || oHien === "soan") tabDuLieuGan = oHien;
     oHien = o;
     if (o === "cay" || o === "soan") tabDuLieuGan = o;
     if (oHien === "cay") {

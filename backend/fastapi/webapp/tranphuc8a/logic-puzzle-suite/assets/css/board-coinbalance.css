@@ -1,0 +1,142 @@
+/* board-coinbalance.css — bàn CÂN ĐỒNG XU + trình soạn. Token + --pz-* của puzzle.css; màu riêng của bàn là --pz-cb-* (bản sáng/tối; check_board_coinbalance.py đo tương phản).
+   Xu = đĩa vàng có số; đĩa đặt trái/phải khác nhau bằng KÝ HIỆU ◀ ▶ + kiểu viền (liền/đứt), không chỉ màu. Kết quả cân luôn có chữ. Cỡ co theo khung (.board-host là container). */
+:root {
+  --pz-cb-coin: #f0c75e;
+  --pz-cb-coin-edge: #7d5c0a;
+  --pz-cb-coin-ink: #2e2000;
+  --pz-cb-ref: #cfd8e6;
+  --pz-cb-ref-ink: #0e1a2b;
+  --pz-cb-pan: #e6edf8;
+  --pz-cb-pan-ink: #0e1a2b;
+  --pz-cb-beam: #44546a;
+  --pz-cb-heavy: #7a1c14;
+  --pz-cb-ring-l: #1a4ac0;
+  --pz-cb-ring-r: #9a4a05;
+  --pz-cb-hint: var(--star);
+  --pz-cb-replay: var(--pz-good);
+}
+:root[data-theme="dark"] {
+  --pz-cb-coin: #d6aa2c;
+  --pz-cb-coin-edge: #f2d06a;
+  --pz-cb-coin-ink: #1c1400;
+  --pz-cb-ref: #4a5d78;
+  --pz-cb-ref-ink: #f2f6fc;
+  --pz-cb-pan: #16202e;
+  --pz-cb-pan-ink: #e7edf6;
+  --pz-cb-beam: #a8b6c9;
+  --pz-cb-heavy: #ffb4a8;
+  --pz-cb-ring-l: #8fb4ff;
+  --pz-cb-ring-r: #ffc27a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --pz-cb-coin: #d6aa2c; --pz-cb-coin-edge: #f2d06a; --pz-cb-coin-ink: #1c1400; --pz-cb-ref: #4a5d78; --pz-cb-ref-ink: #f2f6fc; --pz-cb-pan: #16202e; --pz-cb-pan-ink: #e7edf6;
+    --pz-cb-beam: #a8b6c9; --pz-cb-heavy: #ffb4a8; --pz-cb-ring-l: #8fb4ff; --pz-cb-ring-r: #ffc27a;
+  }
+}
+
+.pz-cb { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
+
+/* ---- thông số */
+.pz-cb-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pz-cb-stat { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--elev); color: var(--text); font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pz-cb-stat b { font-size: 18px; line-height: 1.1; }
+
+/* ---- cân đòn */
+.pz-cb-scalebox { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 8px 8px; border: 2px solid var(--pz-line-strong); border-radius: 18px; background: var(--elev); }
+.pz-cb-scale { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; overflow: visible; }
+.pz-cb-stand, .pz-cb-bar, .pz-cb-hang { fill: none; stroke: var(--pz-cb-beam); stroke-linecap: round; }
+.pz-cb-stand { stroke-width: 5; }
+.pz-cb-bar { stroke-width: 6; }
+.pz-cb-hang { stroke-width: 2; }
+.pz-cb-pivot { fill: var(--pz-cb-beam); }
+.pz-cb-dish { fill: var(--pz-cb-pan); stroke: var(--pz-cb-beam); stroke-width: 3; }
+.pz-cb-beam, .pz-cb-svgpan { transition: transform 450ms cubic-bezier(.3, 1.4, .5, 1); }
+.pz-cb-pans { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.pz-cb-pan { display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 84px; padding: 8px; border: 2px solid var(--pz-line-strong); border-radius: 12px; background: var(--pz-cb-pan); color: var(--pz-cb-pan-ink); transform: translateY(calc(var(--drop, 0px) * 0.4)); transition: transform 450ms cubic-bezier(.3, 1.4, .5, 1); }
+.pz-cb-pan-l { border-style: solid; }
+.pz-cb-pan-r { border-style: dashed; }
+.pz-cb-pan.is-heavy { box-shadow: inset 0 -4px 0 var(--pz-cb-heavy); }
+.pz-cb-panhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px; font-size: 14px; }
+.pz-cb-pantitle { font-weight: 700; }
+.pz-cb-pancount b { font-size: 16px; }
+.pz-cb-pancoins { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; min-width: 0; }
+.pz-cb-tok { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; border: 2px solid var(--pz-cb-coin-edge); border-radius: 999px; background: var(--pz-cb-coin); color: var(--pz-cb-coin-ink); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pz-cb-tok.past { opacity: 0.8; border-style: dashed; }
+.pz-cb-caption { margin: 0; text-align: center; font-weight: 600; font-size: 15px; min-height: 22px; overflow-wrap: anywhere; }
+
+/* ---- đặt vào */
+.pz-cb-target { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.pz-cb-lab, .pz-cb-flab { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.pz-cb-target .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pz-cb-target .chip { min-height: 44px; padding: 0 16px; font-size: 15px; }
+.pz-cb-target .chip.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.pz-cb-target .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---- khay xu */
+.pz-cb-tray { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 6px; padding: 8px; border: 3px solid var(--pz-line-strong); border-radius: 16px; background: var(--pz-cb-pan); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.pz-cb-coin { position: relative; display: grid; place-items: center; min-width: 0; min-height: 48px; aspect-ratio: 1; padding: 0; border: 3px solid var(--pz-cb-coin-edge); border-radius: 50%; background: var(--pz-cb-coin); color: var(--pz-cb-coin-ink); font: inherit; font-weight: 700; cursor: pointer; outline: none; }
+.pz-cb-coin.is-ref { background: var(--pz-cb-ref); color: var(--pz-cb-ref-ink); border-style: double; border-width: 5px; }
+.pz-cb-coinnum { font-size: 17px; line-height: 1; font-variant-numeric: tabular-nums; }
+.pz-cb-coinpan { position: absolute; right: -4px; top: -6px; min-width: 18px; height: 18px; padding: 0 2px; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: var(--elev); color: var(--text); pointer-events: none; }
+.pz-cb-coinpan:empty { display: none; }
+.pz-cb-coinref { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); padding: 0 5px; border-radius: 8px; font-size: 10.5px; line-height: 15px; background: var(--elev); color: var(--text); white-space: nowrap; pointer-events: none; }
+.pz-cb-coin.on-l { outline: 4px solid var(--pz-cb-ring-l); outline-offset: 1px; }
+.pz-cb-coin.on-r { outline: 4px dashed var(--pz-cb-ring-r); outline-offset: 1px; }
+.pz-cb-coin.on-l .pz-cb-coinpan { color: var(--pz-cb-ring-l); border: 2px solid var(--pz-cb-ring-l); }
+.pz-cb-coin.on-r .pz-cb-coinpan { color: var(--pz-cb-ring-r); border: 2px solid var(--pz-cb-ring-r); }
+.pz-cb-coin:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; z-index: 3; }
+.pz-cb-coin.hint { box-shadow: 0 0 0 4px var(--pz-cb-hint); background-image: linear-gradient(var(--pz-hint), var(--pz-hint)); }
+.pz-cb-coin.replay { box-shadow: 0 0 0 4px var(--pz-cb-replay); background-image: linear-gradient(var(--pz-replay), var(--pz-replay)); }
+.pz-cb-tray.is-locked .pz-cb-coin { cursor: default; }
+
+/* ---- nút + lý do */
+.pz-cb-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-cb-act { flex: 1 1 120px; min-height: 48px; }
+.pz-cb-act:focus-visible, .pz-cb-cbtn:focus-visible, .pz-cb-step:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cb-reason { margin: 0; min-height: 22px; text-align: center; font-size: 14.5px; color: var(--text-2); overflow-wrap: anywhere; }
+.pz-cb-reopen { padding: 10px 12px; border: 2px solid var(--pz-cb-heavy); border-radius: 12px; background: var(--elev); }
+.pz-cb-reopen p { margin: 0 0 8px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+
+/* ---- kết luận */
+.pz-cb-concl { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 2px solid var(--accent); border-radius: 14px; background: var(--elev); }
+.pz-cb-concl[hidden] { display: none; }
+.pz-cb-concl h3 { margin: 0; font-size: 16px; }
+.pz-cb-cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
+.pz-cb-cbtn { min-height: 44px; padding: 0; border: 2px solid var(--border-strong); border-radius: 12px; background: var(--s2); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pz-cb-cbtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.pz-cb-cdir .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-cb-cdir .chip { min-height: 44px; padding: 0 16px; }
+.pz-cb-cok, .pz-cb-cx { min-height: 44px; }
+.pz-cb-note { margin: 0; font-size: 13.5px; }
+
+/* ---- nhật ký */
+.pz-cb-logbox { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pz-cb-loghead { margin: 0; font-size: 15px; }
+.pz-cb-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pz-cb-logrow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; min-width: 0; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--elev); font-size: 14.5px; }
+.pz-cb-logset { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
+.pz-cb-logres { font-weight: 700; white-space: nowrap; }
+.pz-cb-logend.is-ok { border-color: var(--pz-good); }
+.pz-cb-logend.is-ok .pz-cb-logres { color: var(--pz-good); }
+.pz-cb-logend.is-bad { border-color: var(--pz-conflict-text); }
+.pz-cb-logend.is-bad .pz-cb-logres { color: var(--pz-conflict-text); }
+.pz-cb-logempty { padding: 6px 2px; }
+
+/* ---- trình soạn */
+.pz-cb-ed { gap: 14px; }
+.pz-cb-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pz-cb-field .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-cb-field .chip { min-height: 44px; padding: 0 14px; }
+.pz-cb-field .chip.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.pz-cb-field .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cb-fhint { margin: 0; font-size: 13.5px; }
+.pz-cb-dimrow { display: flex; align-items: stretch; gap: 6px; }
+.pz-cb-dimrow select { flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 28px 0 12px; background-position: right 8px center; }
+.pz-cb-step { flex: none; width: 44px; min-height: 44px; padding: 0; }
+.pz-cb-edinfo { margin: 0; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.pz-cb-tip { font-size: 13.5px; }
+
+@media (prefers-reduced-motion: reduce) { .pz-cb-beam, .pz-cb-svgpan, .pz-cb-pan { transition: none; } }
+@media (forced-colors: active) { .pz-cb-coin, .pz-cb-tok { border-color: ButtonText; } .pz-cb-coin.on-l, .pz-cb-coin.on-r { outline-color: Highlight; } }
+@container (max-width: 400px) { .pz-cb-stat { font-size: 13px; padding: 4px 10px; } .pz-cb-panhead { font-size: 13px; } .pz-cb-tray { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); } .pz-cb-coin { min-height: 44px; } }

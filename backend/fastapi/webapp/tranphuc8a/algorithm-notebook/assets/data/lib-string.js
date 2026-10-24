@@ -182,7 +182,7 @@ int smallestPeriod(const string& s) {
       compare: { "Bài toán giải": "Tìm một mẫu; LCP với tiền tố", "Xây dựng": "O(n)", "Truy vấn": "O(N + M) trên xâu ghép", "Bộ nhớ": "O(N + M)" },
       cards: [
         { q: "z[i] nghĩa là gì?", a: "Độ dài tiền tố chung dài nhất của s và hậu tố s[i..] (quy ước z[0] = n)." },
-        { q: "Dùng Z-function tìm mẫu P trong T thế nào?", a: "Tính z của P + '$' + T. Vị trí i của T khớp khi z[|P| + 1 + i] ≥ |P|. Ký tự '$' không được xuất hiện trong P, T." },
+        { q: "Dùng Z-function tìm mẫu P trong T thế nào?", a: "Tính z của `P + '$' + T`. Vị trí i của T khớp khi z[|P| + 1 + i] ≥ |P|. Ký tự `'$'` không được xuất hiện trong P, T." },
         { q: "Chu kỳ nhỏ nhất của xâu theo Z?", a: "p nhỏ nhất (p ≥ 1) thoả p + z[p] = n. Lặp trọn vẹn khối p khi thêm điều kiện n chia hết cho p." },
         { q: "Tại sao Z-function là O(n)?", a: "r chỉ tăng; mỗi lần so ký tự thành công đẩy r sang phải, còn phần nằm trong hộp [l, r) được lấy từ z[i − l] mà không so lại." },
         { q: "Quan hệ giữa mảng Z và hàm tiền tố?", a: "Cùng thông tin, đổi qua lại được trong O(n); Z cho khớp tiền tố tại mỗi vị trí, hàm tiền tố cho border dài nhất của mỗi tiền tố." }

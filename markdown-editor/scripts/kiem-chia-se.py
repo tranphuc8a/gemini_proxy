@@ -5,7 +5,7 @@ Máy chủ uvicorn THẬT (SQLite tạm, `DATA_DIR` tạm, `MONGO_URI=""`, khoá
 phục vụ BẢN ĐÃ XUẤT BẢN `backend/fastapi/webapp/tranphuc8a/markdown-editor-pro/` (chạy `node scripts/build-webapps.mjs --only
 markdown-editor` trước). Kho markdown để mặc định ĐÓNG (`MARKDOWN_PUBLIC_READ` mặc định false, Q1).
 
-1. Ngữ cảnh A (chủ): mở app, mở khoá quản trị, lưu 2 tài liệu lên máy chủ, mở hộp thoại "Share read-only link…", tạo liên kết.
+1. Ngữ cảnh A (chủ): mở app, mở khoá quản trị, bật Backend sync (2 tài liệu lên máy chủ), mở hộp thoại "Share read-only link…", tạo liên kết.
 2. Ngữ cảnh B (ẩn danh, trình duyệt khác, cho phép service worker): mở liên kết. Tiêu đề, KaTeX, Mermaid, tô màu code, bảng,
    ảnh data đều hiện; XSS không chạy; liên kết nội bộ thành chữ; liên kết ngoài noopener/noreferrer; meta robots + CSP; CSP
    chặn script chèn vào (inline và từ origin lạ) và không chặn tài nguyên nào của app; không đăng ký service worker; không ghi
@@ -18,7 +18,7 @@ markdown-editor` trước). Kho markdown để mặc định ĐÓNG (`MARKDOWN_P
    (service worker không bao giờ cache API chia sẻ).
 6. A thu hồi → B tải lại thấy "doesn't exist, has expired, or was revoked".
 7. Token sai 20 lần → lần 21 bị 429 (Retry-After) và trang báo phải chờ.
-8. Khách bấm "Load from backend" trên kho riêng tư → báo rõ, mở hộp thoại mở khoá, không nạp gì.
+8. Khách bấm "Replace this device's copy…" trên kho riêng tư → báo rõ, mở hộp thoại mở khoá, không nạp gì.
 9. (M3V) Neo `#share` / `#share=` trong trình soạn (tiêu đề "Share", `[x](#share)`) KHÔNG phải liên kết chia sẻ: không tải lại,
    không sang trang "Link not available".
 
@@ -145,12 +145,15 @@ def chay(browser, srv: MayChuThat, so: SoKiem, shots: str | None) -> None:
     a.click('button:has-text("Unlock")')
     a.wait_for_selector("button.role-chip.is-admin", timeout=15000)
 
-    # Lưu cả hai tài liệu lên máy chủ: người ẩn danh KHÔNG được thấy tài liệu thứ hai qua bất cứ đường nào.
+    # Đưa cả hai tài liệu lên máy chủ (bật Backend sync: lần gặp đầu tiên gửi những gì chỉ có ở máy này): người ẩn danh
+    # KHÔNG được thấy tài liệu thứ hai qua bất cứ đường nào.
     a.get_by_role("button", name=re.compile(r"^Sync")).click()
     a.get_by_role("button", name=re.compile(r"Backend sync")).click()
-    a.get_by_role("button", name=re.compile(r"^Sync")).click()
-    a.get_by_role("button", name=re.compile(r"Save to backend")).click()
-    a.wait_for_selector("text=Saved files to backend", timeout=15000)
+    a.wait_for_selector('button.status-sync:has-text("Synced")', timeout=30000)
+    req = urllib.request.Request(srv.api + "/markdown/sync/changes?since=0&backend=json&device=md-kiem", headers={"X-Admin-Key": srv.khoa})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        on_server = sorted(item["id"] for item in json.loads(r.read().decode("utf-8"))["items"])
+    so.kiem("bật Backend sync: cả hai tài liệu đã lên máy chủ (đồng bộ delta, không PUT cả kho)", "file-chia-se-1" in on_server and "file-rieng-2" in on_server, str(on_server))
 
     def open_dialog():
         a.get_by_role("button", name="File", exact=False).first.click()
@@ -367,8 +370,8 @@ def chay(browser, srv: MayChuThat, so: SoKiem, shots: str | None) -> None:
     with urllib.request.urlopen(req, timeout=10) as r:
         so.kiem("bộ đếm token sai không khoá quản trị (GET /markdown/shares vẫn 200)", r.status == 200)
 
-    # ------------------------------------------------------------------ 8. khách bấm "Load from backend"
-    print("· 8. khách (trình soạn, chưa mở khoá) bấm Load from backend trên kho riêng tư")
+    # ------------------------------------------------------------------ 8. khách bấm "Replace this device's copy…"
+    print("· 8. khách (trình soạn, chưa mở khoá) bấm Replace this device's copy trên kho riêng tư")
     guest = ctx_b.new_page()
     asked: list[str] = []
     guest.on("dialog", lambda d: (asked.append(d.message), d.accept()))
@@ -377,10 +380,10 @@ def chay(browser, srv: MayChuThat, so: SoKiem, shots: str | None) -> None:
     guest.get_by_role("button", name=re.compile(r"^Sync")).click()
     guest.get_by_role("button", name=re.compile(r"Backend sync")).click()
     guest.get_by_role("button", name=re.compile(r"^Sync")).click()
-    guest.get_by_role("button", name=re.compile(r"Load from backend")).click()
+    guest.get_by_role("button", name=re.compile(r"Replace this device")).click()
     guest.wait_for_selector("text=This server's documents are private", timeout=15000)
     auth_open = guest.locator("#admin-key").count() == 1
-    so.kiem("khách bấm Load from backend: báo rõ kho riêng tư + mở hộp thoại mở khoá, không hỏi 'thay tài liệu', không nạp gì",
+    so.kiem("khách bấm Replace this device's copy: báo rõ kho riêng tư + mở hộp thoại mở khoá, không hỏi 'thay tài liệu', không nạp gì",
             auth_open and not asked and SECRET not in guest.inner_text("body"), f"auth={auth_open} dialogs={asked}")
     snap(guest, "khach-load-rieng-tu")
     guest.close()
