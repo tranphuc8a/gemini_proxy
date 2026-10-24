@@ -81,7 +81,7 @@ function implPrompt(b) {
     'Thiết kế chi tiết: ' + files(b) + '.',
     DECISIONS,
     '',
-    'NHIỆM VỤ: ' + b.viec,
+    'NHIỆM VỤ: ' + b.viec + (b.ma === 'J4' ? '' : ' LƯU Ý: lượt chạy trước bị ngắt giữa chừng bởi lỗi 502 của dịch vụ; nếu cây làm việc đã có thay đổi dở cho đợt này (xem git status/git diff HEAD, đối chiếu danh sách tệp trong thiết kế) thì ĐỪNG làm lại từ đầu và đừng xoá: đọc kỹ, giữ cái đúng, sửa cái sai, làm nốt cái thiếu, ghi rõ trong dot/<mã>.md phần nào kế thừa.'),
     '',
     'LỆNH KIỂM PHẢI XANH (exit 0) trước khi kết thúc: ' + b.kiem,
     '',

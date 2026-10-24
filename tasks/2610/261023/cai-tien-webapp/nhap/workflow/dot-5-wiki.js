@@ -58,7 +58,7 @@ const TASK = 'W6 — md-render việc 18 + 19. (18) Wiki: tạo ui/rich.js (hydr
 const KIEM = 'node ' + PW + '/kiem.js ; ' + PY + ' ' + PW + '/check.py --tinh --chuc-nang --co-gian --song-sot (MỘT lần cuối; PW_PERF_SLACK=2 nếu máy bận) ; node ' + AN + '/kiem.js ; node ' + AN + '/kiem-lib.js ; ' + PY + ' ' + AN + '/check.py --tinh --toan ; ' + PY + ' ' + AN + '/sync.py --kiem ; tao-pwa.py của cả hai app'
 
 function implPrompt() {
-  return ['Bạn là agent THI CÔNG đợt con W6 trong monorepo C:/Users/tranphuc8a/Desktop/gemini_proxy (Windows, Git Bash). Kế hoạch đã được chủ dự án DUYỆT; bạn được phép sửa mã trong ' + PW + ' và ' + AN + '.', CONTEXT, 'NHIỆM VỤ: ' + TASK, 'LỆNH KIỂM PHẢI XANH trước khi kết thúc: ' + KIEM, RULES,
+  return ['Bạn là agent THI CÔNG đợt con W6 trong monorepo C:/Users/tranphuc8a/Desktop/gemini_proxy (Windows, Git Bash). Kế hoạch đã được chủ dự án DUYỆT; bạn được phép sửa mã trong ' + PW + ' và ' + AN + '.', CONTEXT, 'NHIỆM VỤ: ' + TASK + ' LƯU Ý: lượt chạy trước bị ngắt giữa chừng bởi lỗi 502 của dịch vụ sau hơn một giờ làm việc; rất có thể cây đã có phần lớn W6 (personal-wiki/assets/js/ui/rich.js, assets/vendor/katex/, algorithm-notebook...) nhưng chưa có dot/W6.md và chưa qua kiểm: ĐỌC KỸ git status/git diff HEAD trước, ĐỪNG làm lại từ đầu và đừng xoá; giữ cái đúng, sửa cái sai, làm nốt cái thiếu.', 'LỆNH KIỂM PHẢI XANH trước khi kết thúc: ' + KIEM, RULES,
     'Kết thúc: ghi bàn giao tiếng Việt ngắn gọn vào ' + ROOT + '/dot/W6.md (đã làm gì, tệp đổi, lệnh kiểm + kết quả thật, số đo, lệch thiết kế, còn tồn). Trả về đối tượng có cấu trúc.'].join('\n')
 }
 function verifyPrompt(impl) {
