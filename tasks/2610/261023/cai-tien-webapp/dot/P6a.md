@@ -13,7 +13,12 @@ Làn puzzle độc lập. Thiết kế: `thiet-ke/puzzle-lo-coin.md` §2.2 + §7
 Mới: `assets/js/puzzles/bachet.js` (589 dòng), `assets/js/ui/boards/bachet.js` (318), `assets/css/board-bachet.css` (109), `kiem/bachet.js` (415, 246 phép), `check_board_bachet.py` (525, 58 phép). Sửa: `index.html` (3 dòng), `HUONG-DAN-ENGINE.md`, `sw.js` (dấu do `tao-pwa.py`). Không sửa lõi, 5 loại cũ, Lights Out, coinbalance, camel, motorbike.
 
 ## Lệnh kiểm (chạy thật 24/10; máy đang chạy song song nhiều việc nên chậm)
-KET_QUA_KIEM
+- `node kiem.js bachet` -> Đạt, 246 phép, exit 0.
+- `node kiem.js` (toàn bộ, gồm mẫu vàng) -> Đạt, 1505 phép, exit 0.
+- `check.py --tinh` -> 16 đạt, 0 sai, exit 0 (vỏ 1310 KB).
+- `check.py --chuc-nang --co-gian` (một lần, gồm check_board_bachet.py) -> 1337 đạt, 0 sai, exit 0.
+- `tao-pwa.py` -> đóng dấu sw.js b7bdebe5102d; `tao-pwa.py --kiem` khớp.
+(Lượt này tái chạy xác nhận; mã đã có sẵn trong cây từ lượt trước, không viết lại.)
 
 ## Công thức / giá trị đã kiểm bằng gì (nguồn độc lập viết riêng trong test)
 - **Số quả tối thiểu** m*: VÉT CẠN mọi đa tập quả cân tăng dần (giá trị ≤ N) bằng đệ quy + Set các tổng có dấu — hai đĩa N = 1…40, một đĩa N = 1…31 — khớp `minCount` (vòng lặp số nguyên, không dùng log); công thức ⌈log3(2N+1)⌉ / ⌈log2(N+1)⌉ chỉ là bảng đối chiếu. Ví dụ đã in: hai đĩa N=13 → 1 bộ {1,3,9}, N=30 → 88 bộ, N=40 → 1 bộ {1,3,9,27}; một đĩa N=7 → 1 bộ, N=10 → 13 bộ, N=15 → 1 bộ.

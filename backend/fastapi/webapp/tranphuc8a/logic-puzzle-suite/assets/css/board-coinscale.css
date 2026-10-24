@@ -1,0 +1,134 @@
+/* board-coinscale.css — bàn CÂN ĐIỆN TỬ + trình soạn. Token + --pz-* của puzzle.css; màu riêng của bàn là --pz-cs-* (bản sáng/tối; check_board_coinscale.py đo tương phản).
+   Màn hình số = nền xanh đậm + chữ xanh lá sáng (LCD); xu = đĩa vàng có số; xu "trên cân" khác xu ngoài bằng KÝ HIỆU ⚖ + viền đậm, không chỉ màu. Kết quả luôn có chữ số gam. Cỡ co theo khung. */
+:root {
+  --pz-cs-lcd: #0d2b20;
+  --pz-cs-lcd-ink: #8bffbd;
+  --pz-cs-lcd-dim: #b6d9c6;
+  --pz-cs-coin: #f0c75e;
+  --pz-cs-coin-edge: #7d5c0a;
+  --pz-cs-coin-ink: #2e2000;
+  --pz-cs-pan: #e6edf8;
+  --pz-cs-pan-ink: #0e1a2b;
+  --pz-cs-on: #1a4ac0;
+  --pz-cs-on2: #9a4a05;
+  --pz-cs-dot: #d9b85a;
+  --pz-cs-hint: var(--star);
+  --pz-cs-replay: var(--pz-good);
+}
+:root[data-theme="dark"] {
+  --pz-cs-lcd: #07170f;
+  --pz-cs-lcd-ink: #8bffbd;
+  --pz-cs-lcd-dim: #a3c9b3;
+  --pz-cs-coin: #d6aa2c;
+  --pz-cs-coin-edge: #f2d06a;
+  --pz-cs-coin-ink: #1c1400;
+  --pz-cs-pan: #16202e;
+  --pz-cs-pan-ink: #e7edf6;
+  --pz-cs-on: #8fb4ff;
+  --pz-cs-on2: #ffc27a;
+  --pz-cs-dot: #f2d06a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --pz-cs-lcd: #07170f; --pz-cs-lcd-dim: #a3c9b3; --pz-cs-coin: #d6aa2c; --pz-cs-coin-edge: #f2d06a; --pz-cs-coin-ink: #1c1400; --pz-cs-pan: #16202e; --pz-cs-pan-ink: #e7edf6;
+    --pz-cs-on: #8fb4ff; --pz-cs-on2: #ffc27a; --pz-cs-dot: #f2d06a;
+  }
+}
+
+.pz-cs { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
+
+/* ---- thông số */
+.pz-cs-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pz-cs-stat { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--elev); color: var(--text); font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pz-cs-stat b { font-size: 18px; line-height: 1.1; }
+
+/* ---- màn hình cân */
+.pz-cs-scalebox { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 10px 8px 8px; border: 2px solid var(--pz-line-strong); border-radius: 18px; background: var(--elev); }
+.pz-cs-lcd { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 360px; width: 100%; margin: 0 auto; padding: 8px 16px 10px; border: 3px solid var(--pz-line-strong); border-radius: 12px; background: var(--pz-cs-lcd); color: var(--pz-cs-lcd-ink); }
+.pz-cs-lcdlab { align-self: flex-start; font-size: 11px; letter-spacing: 0.12em; color: var(--pz-cs-lcd-dim); }
+.pz-cs-lcdnum { font: 700 clamp(28px, 9cqw, 44px)/1.1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pz-cs-caption { margin: 0; text-align: center; font-weight: 600; font-size: 15px; min-height: 22px; overflow-wrap: anywhere; }
+
+/* ---- khay: chồng xu */
+.pz-cs-tray { padding: 8px; border: 3px solid var(--pz-line-strong); border-radius: 16px; background: var(--pz-cs-pan); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.pz-cs-stacks { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.pz-cs-stk { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 8px 6px; border: 2px solid var(--pz-cs-coin-edge); border-radius: 12px; background: var(--elev); color: var(--text); outline: none; }
+.pz-cs-stk.has { border-width: 4px; padding: 6px 4px; }
+.pz-cs-stk:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; z-index: 3; }
+.pz-cs-stkname { font-size: 13px; font-weight: 700; color: var(--text); }
+.pz-cs-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; min-height: 12px; }
+.pz-cs-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--pz-cs-coin-edge); background: transparent; }
+.pz-cs-dot.on { background: var(--pz-cs-dot); }
+.pz-cs-ctl { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.pz-cs-stkval { min-width: 22px; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; }
+.pz-cs-pm { width: 44px; height: 44px; padding: 0; border: 2px solid var(--border-strong); border-radius: 12px; background: var(--s2); color: var(--text); font: inherit; font-size: 22px; font-weight: 700; line-height: 1; cursor: pointer; }
+.pz-cs-pm:disabled { opacity: 0.45; cursor: default; }
+.pz-cs-pm:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cs-stk.hint { box-shadow: 0 0 0 4px var(--pz-cs-hint); background-image: linear-gradient(var(--pz-hint), var(--pz-hint)); }
+.pz-cs-stk.replay { box-shadow: 0 0 0 4px var(--pz-cs-replay); background-image: linear-gradient(var(--pz-replay), var(--pz-replay)); }
+
+/* ---- khay: xu hai loại */
+.pz-cs-coins { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.pz-cs-coin { position: relative; display: grid; place-items: center; min-width: 0; min-height: 56px; aspect-ratio: 1; padding: 0; border: 3px solid var(--pz-cs-coin-edge); border-radius: 50%; background: var(--pz-cs-coin); color: var(--pz-cs-coin-ink); font: inherit; font-weight: 700; cursor: pointer; outline: none; }
+.pz-cs-coinnum { font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
+.pz-cs-coinon { position: absolute; right: -4px; top: -6px; min-width: 20px; height: 20px; padding: 0 2px; border-radius: 10px; font-size: 13px; line-height: 20px; text-align: center; background: var(--elev); color: var(--text); pointer-events: none; }
+.pz-cs-coinon:empty { display: none; }
+.pz-cs-coin.on { outline: 4px solid var(--pz-cs-on); outline-offset: 1px; }
+.pz-cs-coin.on .pz-cs-coinon { color: var(--pz-cs-on); border: 2px solid var(--pz-cs-on); }
+.pz-cs-coin:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; z-index: 3; }
+.pz-cs-coin.hint { box-shadow: 0 0 0 4px var(--pz-cs-hint); background-image: linear-gradient(var(--pz-hint), var(--pz-hint)); }
+.pz-cs-coin.replay { box-shadow: 0 0 0 4px var(--pz-cs-replay); background-image: linear-gradient(var(--pz-replay), var(--pz-replay)); }
+.pz-cs-tray.is-locked .pz-cs-coin { cursor: default; }
+
+/* ---- nút + lý do */
+.pz-cs-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-cs-act { flex: 1 1 120px; min-height: 48px; }
+.pz-cs-act:focus-visible, .pz-cs-cbtn:focus-visible, .pz-cs-step:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cs-reason { margin: 0; min-height: 22px; text-align: center; font-size: 14.5px; color: var(--text-2); overflow-wrap: anywhere; }
+.pz-cs-reopen { padding: 10px 12px; border: 2px solid var(--pz-conflict-text); border-radius: 12px; background: var(--elev); }
+.pz-cs-reopen p { margin: 0 0 8px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+
+/* ---- kết luận */
+.pz-cs-concl { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 2px solid var(--accent); border-radius: 14px; background: var(--elev); }
+.pz-cs-concl[hidden] { display: none; }
+.pz-cs-concl h3 { margin: 0; font-size: 16px; }
+.pz-cs-cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 6px; }
+.pz-cs-cbtn { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; padding: 2px; border: 2px solid var(--border-strong); border-radius: 12px; background: var(--s2); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pz-cs-cnum { font-size: 16px; line-height: 1.1; }
+.pz-cs-cstate { font-size: 12px; font-weight: 600; }
+.pz-cs-cbtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.pz-cs-cbtn.on2 { border-style: dashed; border-width: 3px; }
+.pz-cs-cok, .pz-cs-cx { min-height: 44px; }
+.pz-cs-note { margin: 0; font-size: 13.5px; }
+
+/* ---- nhật ký */
+.pz-cs-logbox { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pz-cs-loghead { margin: 0; font-size: 15px; }
+.pz-cs-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pz-cs-logrow { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; min-width: 0; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--elev); font-size: 14.5px; }
+.pz-cs-logset { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; flex: 1 1 160px; }
+.pz-cs-logres { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pz-cs-logbase { flex-basis: 100%; font-size: 13px; }
+.pz-cs-logend.is-ok { border-color: var(--pz-good); }
+.pz-cs-logend.is-ok .pz-cs-logres { color: var(--pz-good); }
+.pz-cs-logend.is-bad { border-color: var(--pz-conflict-text); }
+.pz-cs-logend.is-bad .pz-cs-logres { color: var(--pz-conflict-text); }
+.pz-cs-logempty { padding: 6px 2px; }
+
+/* ---- trình soạn */
+.pz-cs-ed { gap: 14px; }
+.pz-cs-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pz-cs-flab { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.pz-cs-field .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-cs-field .chip { min-height: 44px; padding: 0 14px; }
+.pz-cs-field .chip.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.pz-cs-field .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pz-cs-fhint { margin: 0; font-size: 13.5px; }
+.pz-cs-dimrow { display: flex; align-items: stretch; gap: 6px; }
+.pz-cs-dimrow select { flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 28px 0 12px; background-position: right 8px center; }
+.pz-cs-step { flex: none; width: 44px; min-height: 44px; padding: 0; }
+.pz-cs-edinfo { margin: 0; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.pz-cs-tip { font-size: 13.5px; }
+
+@media (forced-colors: active) { .pz-cs-coin, .pz-cs-stk, .pz-cs-lcd { border-color: ButtonText; } .pz-cs-coin.on { outline-color: Highlight; } }
+@container (max-width: 400px) { .pz-cs-stat { font-size: 13px; padding: 4px 10px; } .pz-cs-stacks { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } .pz-cs-coins { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); } }
