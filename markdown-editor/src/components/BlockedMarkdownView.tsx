@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react'
+import { memo, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import { blockIndexAtLine, blockSource, splitBlocks, type MdBlock, type SplitResult } from '../lib/blocks'
@@ -44,6 +44,8 @@ export interface BlockedMarkdownViewProps {
   links?: LinkPolicy
   /** Build the document in slices, nearest the reader first; off, every block is built at once. */
   progressive?: boolean
+  /** Hold the background slices (a view hidden under another one); blocks being written still build at once. */
+  paused?: boolean
   /** After a commit that built more of the document: the blocks built so far and the total. */
   onProgress?: (built: number, total: number) => void
   /** After blocks were added to the page (headings and heights have moved); while building, at most every 600 ms. */
@@ -95,7 +97,7 @@ interface BlocksProps extends Omit<BlockedMarkdownViewProps, 'source'> {
   split: SplitResult
 }
 
-function Blocks({ split, theme, codeBackground, idPrefix = '', links = 'app', progressive = false, onProgress, onBuilt, onBlockRender }: BlocksProps) {
+function Blocks({ split, theme, codeBackground, idPrefix = '', links = 'app', progressive = false, paused = false, onProgress, onBuilt, onBlockRender }: BlocksProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   /** Keys of the blocks that are in the page; the rest are placeholders. */
   const built = useRef(new Set<string>())
@@ -239,7 +241,7 @@ function Blocks({ split, theme, codeBackground, idPrefix = '', links = 'app', pr
 
   // Background slices until every block is built.
   useEffect(() => {
-    if (!progressive || pending === 0) return
+    if (!progressive || paused || pending === 0) return
     const timer = setTimeout(() => {
       const current = latest.current.split
       const all = current.blocks
@@ -252,7 +254,8 @@ function Blocks({ split, theme, codeBackground, idPrefix = '', links = 'app', pr
       for (const index of batch) built.current.add(all[index].key)
       lastBatch.current = { at: performance.now(), count: batch.length }
       changed.current = true
-      rerender()
+      // A transition: a key press can interrupt the render of a slice.
+      startTransition(rerender)
     }, SLICE_PAUSE_MS)
     return () => clearTimeout(timer)
   })

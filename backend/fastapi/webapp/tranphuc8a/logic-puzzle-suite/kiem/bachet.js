@@ -105,6 +105,26 @@ module.exports = function (t) {
     t.ok("canonical phủ 1..N (Set độc lập), đúng m* theo cận đếm — hai đĩa N=1..400, một đĩa N=1..255 (" + (cnt + 255) + " bộ)", big.length === 0, big.slice(0, 5));
   })();
 
+  t.group("bachet — coverInfo (phủ liền R, khối lượng hở đầu tiên, số tổng) so với tập tổng có dấu độc lập");
+  (function () {
+    var rng = R.create(31337), bad = [], n = 0;
+    for (var k = 0; k < 400; k++) {
+      var two = rng.chance(0.5), N = 1 + rng.int(60), size = rng.int(6), W = [];
+      for (var i = 0; i < size; i++) W.push(1 + rng.int(rng.chance(0.5) ? 10 : N));
+      var s = sums(W, two), run = 0, gap = 0;
+      while (run < N && s.has(run + 1)) run++;
+      if (run < N) gap = run + 1;
+      var e = L.coverInfo(W, N, two), cnt = 0;
+      s.forEach(function () { cnt++; });
+      n++;
+      if (e.R !== run || e.gap !== gap || e.covered !== (gap === 0) || e.count !== cnt) bad.push((two ? "hai" : "mot") + " N=" + N + " W=" + J(W) + " engine " + J([e.R, e.gap, e.count]) + " vét " + J([run, gap, cnt]));
+    }
+    t.ok("coverInfo (R, gap, covered, count) = tập tổng có dấu Set độc lập trên " + n + " bộ ngẫu nhiên (cả hai đĩa / một đĩa, bộ thừa, bộ trùng)", bad.length === 0, bad.slice(0, 3));
+    var p = T.fromInput({ mode: "hai", N: 40 }).puzzle, st = T.newState(p);
+    apply(p, st, { k: "set", i: 0, val: 1 }); apply(p, st, { k: "set", i: 1, val: 3 });
+    t.ok("hint mức 2 nêu đúng phủ liền 1…4 và giới hạn 2R + 1 = 9 cho bộ {1,3} (N=40)", /phủ liền 1…4 g/.test(T.hint(p, st, 2).text) && /2R \+ 1 = 9/.test(T.hint(p, st, 2).text), T.hint(p, st, 2).text);
+  })();
+
   // ====================================================================== 2. mở rộng được (feasible) so với bảng bộ tối ưu vét cạn
   t.group("bachet — feasible (gợi ý có chứng minh) so với bảng mọi bộ tối ưu vét cạn");
   (function () {
@@ -159,6 +179,7 @@ module.exports = function (t) {
       if (a) { var s0 = 0; a.coef.forEach(function (c, i2) { s0 += c * Wm[i2]; }); if (s0 !== tt) bad2.push("arrange sai tổng"); }
     }
     t.ok("arrange (cân thử một khối lượng với bộ đang có) = vét cạn độc lập, 200 ca", bad2.length === 0, bad2.slice(0, 3));
+    t.eq("closestRow: khoảng cách Hamming nhỏ nhất, hoà → hàng đứng đầu theo thứ tự từ điển (tất định)", [L.closestRow([[0, 1], [1, 0], [1, 1]], [0, 0]), L.closestRow([[2, 2], [1, 0]], [2, 0]), L.closestRow([[1, 2], [1, 0]], [1, 1])], [[0, 1], [2, 2], [1, 2]]);
     t.ok("(vật không cân được) min = 99; input báo lỗi", L.datRows([2, 4], 3).min === 99 && !T.fromInput({ mode: "dat", W: [2, 4], X: [3] }).ok);
   })();
 
@@ -197,6 +218,18 @@ module.exports = function (t) {
     t.info("hồ chứa N theo bậc: hai " + J(pools[0]) + " · một " + J(pools[1]));
     var d1 = T.generate(20261017, { sizeId: "hai", tier: "easy" }), d2 = T.generate(20261018, { sizeId: "hai", tier: "easy" });
     t.ok("seed 20261017 và 20261018 (check.py) cho hai đề hai đĩa dễ khác nhau", J(d1.data) !== J(d2.data), [d1.data, d2.data]);
+  })();
+
+  t.group("bachet — mẫu vàng (chụp 24/10/2026): cùng seed → cùng đề, điểm khó đúng bảng");
+  (function () {
+    var GOLD = {"1|hai|easy":[2,4],"1|hai|medium":[4.7,14],"1|hai|hard":[6.7,41],"1|hai|expert":[8.7,124],"1|mot|easy":[2.8,5],"1|mot|medium":[4.7,18],"1|mot|hard":[6.7,36],"1|mot|expert":[8.7,93],"1|dat|easy":[2.6,"1,3,9","5,11"],"1|dat|medium":[4.6,"1,3,9,27","11,32,39"],"1|dat|hard":[6.5,"1,3,9,27,81","33,59,69,86"],"1|dat|expert":[8.5,"1,3,9,27,81,243","345,238,39,56,123"],"42|hai|easy":[3.4,12],"42|hai|medium":[4.7,37],"42|hai|hard":[6.7,110],"42|hai|expert":[8.7,360],"42|mot|easy":[3.4,9],"42|mot|medium":[4.7,23],"42|mot|hard":[6.7,46],"42|mot|expert":[9.7,153],"42|dat|easy":[2.6,"1,3,9","12,7"],"42|dat|medium":[4.6,"1,3,9,27","15,7,19"],"42|dat|hard":[6.5,"1,3,9,27,81","109,33,91,113"],"42|dat|expert":[8.5,"1,3,9,27,81,243","277,176,308,38,333"],"20261017|hai|easy":[2,4],"20261017|hai|medium":[4.7,15],"20261017|hai|hard":[6.7,44],"20261017|hai|expert":[8.7,133],"20261017|mot|easy":[3.4,8],"20261017|mot|medium":[4.7,22],"20261017|mot|hard":[6.7,44],"20261017|mot|expert":[9.7,141],"20261017|dat|easy":[2.6,"1,3,9","13,10"],"20261017|dat|medium":[4.6,"1,3,9,27","5,40,22"],"20261017|dat|hard":[6.5,"1,3,9,27,81","63,91,74,5"],"20261017|dat|expert":[8.5,"1,3,9,27,81,243","222,228,77,33,83"]}, got = {}, bad = [];
+    [1, 42, 20261017].forEach(function (seed) { SIZES.forEach(function (sz) { TIERS.forEach(function (tier) {
+      var p = T.generate(seed, { sizeId: sz, tier: tier });
+      got[seed + "|" + sz + "|" + tier] = sz === "dat" ? [p.score, p.data.W.join(","), p.data.X.join(",")] : [p.score, p.data.N];
+    }); }); });
+    Object.keys(GOLD).forEach(function (k) { if (J(GOLD[k]) !== J(got[k])) bad.push(k + " vàng " + J(GOLD[k]) + " nay " + J(got[k])); });
+    t.ok("36 đề (3 seed × 3 cỡ × 4 bậc) khớp mẫu vàng — đổi sinh đề/độ khó mà lệch bảng này là làm hỏng liên kết seed, yêu thích, thư viện", bad.length === 0, bad.slice(0, 3));
+    t.eq("điểm khó: hai đĩa N=13 → 3, 12 → 3,4, 40 → 4,3, 41 → 6,7; một đĩa 15 → 3, 14 → 3,4; dat {1,3,9}+2 vật → 2,6; {1,2,5,10}+3 vật → 5", [3,3.4,4.3,6.7,3,3.4,2.6,5], [3, 3.4, 4.3, 6.7, 3, 3.4, 2.6, 5].length === 8 ? [L.scoreOf({ mode: "hai", N: 13 }), L.scoreOf({ mode: "hai", N: 12 }), L.scoreOf({ mode: "hai", N: 40 }), L.scoreOf({ mode: "hai", N: 41 }), L.scoreOf({ mode: "mot", N: 15 }), L.scoreOf({ mode: "mot", N: 14 }), L.scoreOf({ mode: "dat", W: [1, 3, 9], X: [4, 5] }), L.scoreOf({ mode: "dat", W: [1, 2, 5, 10], X: [4, 5, 7] })] : []);
   })();
 
   t.group("bachet — luật, nước đi, hoàn tác, nộp");

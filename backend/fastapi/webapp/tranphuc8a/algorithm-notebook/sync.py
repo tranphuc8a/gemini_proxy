@@ -31,7 +31,10 @@ FILES = [
     ("assets/js/data/zip.js", []),
     ("assets/js/ui/dom.js", [('"pw:prefs"', '"an:prefs"')]),
     ("assets/js/ui/pwa.js", [('prefix = "wiki:"', 'prefix = "algo:"')]),
+    ("assets/js/ui/rich.js", []),               # hydrate KaTeX/mermaid (W6); đường vendor tính theo vị trí tệp nên không cần đổi
 ]
+# Thư viện nạp lười chép NGUYÊN BYTE (không biến đổi): KaTeX cục bộ (xem assets/vendor/katex/README)
+VENDOR_DIR = "assets/vendor/katex"
 BANNER = "/* BẢN CHÉP từ personal-wiki bằng sync.py — đừng sửa ở đây. */\n"
 
 
@@ -55,6 +58,29 @@ def read(path):
 def main():
     check = "--kiem" in sys.argv
     bad = 0
+    vsrc = os.path.join(SRC, *VENDOR_DIR.split("/"))
+    vrels = sorted(os.path.relpath(os.path.join(dp, f), vsrc).replace(os.sep, "/") for dp, _, fs in os.walk(vsrc) for f in fs)
+    for rel in vrels:
+        a = os.path.join(vsrc, *rel.split("/")); b = os.path.join(HERE, *VENDOR_DIR.split("/"), *rel.split("/"))
+        want = open(a, "rb").read(); have = open(b, "rb").read() if os.path.exists(b) else None
+        if have == want:
+            continue
+        if check:
+            print("LỆCH: %s/%s" % (VENDOR_DIR, rel)); bad += 1
+        else:
+            os.makedirs(os.path.dirname(b), exist_ok=True)
+            with open(b, "wb") as f:
+                f.write(want)
+            print("chép %s/%s" % (VENDOR_DIR, rel))
+    if os.path.isdir(os.path.join(HERE, *VENDOR_DIR.split("/"))):                 # tệp thừa ở bản chép (nguồn đã bỏ)
+        for dp, _, fs in os.walk(os.path.join(HERE, *VENDOR_DIR.split("/"))):
+            for f in fs:
+                rel = os.path.relpath(os.path.join(dp, f), os.path.join(HERE, *VENDOR_DIR.split("/"))).replace(os.sep, "/")
+                if rel not in vrels:
+                    if check:
+                        print("THỪA: %s/%s" % (VENDOR_DIR, rel)); bad += 1
+                    else:
+                        os.remove(os.path.join(dp, f)); print("xoá %s/%s" % (VENDOR_DIR, rel))
     for rel, _ in FILES:
         want = transform(rel, read(os.path.join(SRC, *rel.split("/"))))
         dest = os.path.join(HERE, *rel.split("/"))

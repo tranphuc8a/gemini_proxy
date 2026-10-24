@@ -206,7 +206,7 @@
       // Xem / Sửa
       var view = h("div", { class: "md aic-md" }), edit = h("textarea", { class: "aic-ed", rows: 14, "aria-label": "Nội dung Markdown", hidden: true, spellcheck: "false", on: { input: function () { n.markdown = edit.value; } } });
       edit.value = n.markdown;
-      function drawView() { view.innerHTML = M.render(n.markdown, { highlight: W.highlight, noLinks: true, resolve: previewResolve }) || '<p class="faint">Trống.</p>'; }
+      function drawView() { view.innerHTML = M.render(n.markdown, { highlight: W.highlight, noLinks: true, resolve: previewResolve }) || '<p class="faint">Trống.</p>'; if (U.rich) U.rich.hydrate([view]); }
       var tabs = h("div", { class: "seg aic-tabs", role: "group", "aria-label": "Xem hoặc sửa" });
       [["view", "Xem"], ["edit", "Sửa"]].forEach(function (o) {
         tabs.append(h("button", { type: "button", "aria-pressed": String(o[0] === "view"), dataset: { tab: o[0] }, on: { click: function () {

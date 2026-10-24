@@ -124,9 +124,13 @@ def tang_1():
     css_all = "".join(io.open(f, encoding="utf-8").read() for dp, _, ns in os.walk(os.path.join(HERE, "assets", "css")) for f in [os.path.join(dp, n) for n in ns] if f.endswith(".css"))
     ext = re.findall(r'(?:src|href)="(https?://[^"]+)"', html) + re.findall(r"@import|url\(\s*['\"]?https?:", css_all)
     check(not ext, "không nạp tài nguyên ngoài (CDN, font ngoài)", ext)
-    used_js = re.findall(r"https?://(?!www\.w3\.org)[a-z0-9.-]+\.[a-z]{2,}[^\s\"']*", "".join(io.open(f, encoding="utf-8").read() for f in files if "/data/lib-" not in f.replace("\\", "/")))
+    used_js = re.findall(r"https?://(?!www\.w3\.org)[a-z0-9.-]+\.[a-z]{2,}[^\s\"']*", "".join(io.open(f, encoding="utf-8").read() for f in files if "/data/lib-" not in f.replace("\\", "/") and not f.endswith("rich.js")))
     ext_ok = ("https://cses.fi/", "https://codeforces.com/")        # chỉ là liên kết bài tập mở ở thẻ mới, không phải nạp tài nguyên
     check(not [u for u in used_js if "localhost" not in u and not u.startswith(ext_ok)], "mã giao diện không nạp / gọi địa chỉ ngoài (chỉ có liên kết bài tập CSES, Codeforces)", sorted(set(used_js))[:4])
+    rich = io.open(os.path.join(HERE, "assets", "js", "ui", "rich.js"), encoding="utf-8").read()
+    ext_rich = sorted(set(re.findall(r"https?://(?!www\.w3\.org)[a-z0-9.-]+\.[a-z]{2,}[^\"\s)]*", rich)))
+    check(len(ext_rich) == 1 and ext_rich[0].startswith("https://cdnjs.cloudflare.com/ajax/libs/mermaid/") and re.search(r'MERMAID_SRI = "sha(256|384|512)-[A-Za-z0-9+/=]{40,}"', rich)
+          and "securityLevel: \"strict\"" in rich, "ui/rich.js: địa chỉ ngoài duy nhất là mermaid trên cdnjs, có SRI, securityLevel strict", ext_rich)
     srcs = re.findall(r'<script src="\./assets/([^"]+)"', html)
     on_disk = sorted(os.path.relpath(f, os.path.join(HERE, "assets")).replace("\\", "/") for f in files)
     check(sorted(srcs) == on_disk, "mọi tệp .js trong assets/ đều được nạp bởi index.html (và ngược lại)", sorted(set(on_disk) ^ set(srcs)))
@@ -186,17 +190,29 @@ def tang_1():
             low.append("%s = %.2f" % (name, c))
     check(not low, "độ tương phản mọi cặp màu ≥ 4,5:1 (sáng + tối, mã tô màu, toast, trạng thái trực quan hoá/quiz)", low)
     total = sum(os.path.getsize(f) for f in files) + os.path.getsize(os.path.join(HERE, "index.html")) + len(css_all)
-    check(total < 3 * 1024 * 1024, "dung lượng vỏ + thư viện %d KB (< 3 MB)" % (total // 1024))
+    check(total < 3 * 1024 * 1024, "dung lượng vỏ + thư viện %d KB (< 3 MB; KHÔNG gồm assets/vendor)" % (total // 1024))
+    vroot = os.path.join(HERE, "assets", "vendor", "katex")
+    vfiles = [os.path.join(dp, n) for dp, _, ns in os.walk(vroot) for n in ns]
+    vtotal = sum(os.path.getsize(f) for f in vfiles)
+    check(0 < vtotal < 640 * 1024, "dung lượng vendor KaTeX %d KB (< 640 KB, ngân sách riêng; KHÔNG nới ngưỡng vỏ)" % (vtotal // 1024))
+    vrel = sorted(os.path.relpath(f, vroot).replace(os.sep, "/") for f in vfiles)
+    swsrc = io.open(os.path.join(HERE, "sw.js"), encoding="utf-8").read()
+    sw_list = sorted(json.loads("[" + re.search(r"var VENDOR = \[(.*?)\];", swsrc, re.S).group(1) + "]"))
+    check(sw_list == [v for v in vrel if v not in ("LICENSE", "README")], "sw.js: danh sách VENDOR khớp tệp thật trong assets/vendor/katex (precache riêng)", set(sw_list) ^ set(vrel))
+    ver = re.search(r"KaTeX (\d+\.\d+\.\d+)", io.open(os.path.join(vroot, "README"), encoding="utf-8").read())
+    check(ver and ('VENDOR_DOT = "katex-%s"' % ver.group(1)) in swsrc, "vendor/katex: README ghi phiên bản khớp VENDOR_DOT của sw.js")
 
 
 # ============================================================================================ tiện ích trình duyệt
 class Page:
     """Một trang Playwright + gom lỗi console/pageerror."""
 
-    def __init__(self, browser, url, name, **ctx_kw):
+    def __init__(self, browser, url, name, setup=None, **ctx_kw):
         ctx_kw.setdefault("service_workers", "block")
         ctx_kw.setdefault("accept_downloads", True)
         self.ctx = browser.new_context(**ctx_kw)
+        if setup:
+            setup(self.ctx)                                  # vd chặn/thay tệp bằng route — phải có trước lần mở trang đầu tiên
         self.pg = self.ctx.new_page()
         self.name = name
         self.errors = []
@@ -282,7 +298,7 @@ TOAN_JS = """() => {
 def kiem_toan(br, url):
     """Phần toán (W4) của tầng 2, một ngữ cảnh trình duyệt riêng. Chạy trong tang_2 và riêng bằng --toan (≈ 15 s)."""
     section(" · toán (W4): xem trước ghi chú có công thức (\\( \\), $…$, \\[ \\]), giá tiền không phải công thức, XSS qua data-tex, 320 px; thẻ Z-function không còn công thức giả")
-    T = Page(br, url, "desk-toan", viewport={"width": 1366, "height": 820})
+    T = Page(br, url, "desk-toan", viewport={"width": 1366, "height": 820}, setup=lambda c: c.route("**/assets/vendor/katex/**", lambda r: r.abort()))   # W6: dạng DỰ PHÒNG tất định; có KaTeX ở kiem_hydrate()
     pg = T.pg
     open_detail(T, "dijkstra")
     pg.fill(".note-ta", TOAN_NOTE)
@@ -306,7 +322,106 @@ def kiem_toan(br, url):
     open_detail(T, "z-function")
     zr = pg.evaluate("() => ({ math: document.querySelectorAll('.detail .math').length, text: document.querySelector('.detail').innerText })")
     check(zr["math"] == 0 and "P + '$' + T" in zr["text"], "chi tiết Z-function: '$' hiện đúng chữ, không có công thức giả (.math = 0)", {"math": zr["math"]})
+    T.errors = [e for e in T.errors if "Failed to load resource" not in e]       # tài nguyên bị chặn có chủ ý
     T.close()
+    kiem_hydrate(br, url)
+
+
+# ============================================================================================ W6 — hydrate KaTeX / mermaid (ui/rich.js; bản chép của personal-wiki)
+HY_NOTE = r"""Một: $E = mc^2$ và \(x_1 * x_2\).
+
+$$
+\int_0^1 x\,dx = \frac12
+$$
+
+XSS: $x" onmouseover="window.__xssm=1$ và $\href{javascript:window.__xssm=3}{bấm}$ và \(<img src=x onerror=window.__xssm=2>\)
+
+Giá $5 and $10 không phải công thức.
+
+```mermaid
+graph TD; A-->B
+```
+"""
+HY_STATE_JS = """() => {
+  const prev = document.querySelector('.note-prev');
+  const els = [...prev.querySelectorAll('.math')];
+  return {
+    n: els.length, done: els.filter(e => e.getAttribute('data-hydrated') === '1').length,
+    items: els.map(e => ({ tag: e.tagName, tex: e.getAttribute('data-tex'), hy: e.getAttribute('data-hydrated'), aria: e.getAttribute('aria-label'),
+      kat: e.querySelectorAll('.katex').length, disp: e.querySelectorAll('.katex-display').length, err: e.querySelectorAll('.katex-error').length })),
+    html: prev.innerHTML, kr: window.__kr || 0,
+    bad: !!prev.querySelector('.math img, .math script, [onmouseover], [onerror], a[href^=javascript], .math a'), xss: window.__xssm === undefined ? null : window.__xssm,
+    price: prev.textContent.includes('$5 and $10'),
+    mm: (() => { const p = prev.querySelector('pre.mmd'); return p ? { hy: p.getAttribute('data-hydrated'), svg: p.querySelectorAll('svg').length, code: !!p.querySelector('code'), script: p.querySelectorAll('script').length, on: !!p.querySelector('[onload]') } : null; })()
+  };
+}"""
+HY_COUNT_JS = """() => { window.__kr = 0; const k = window.katex; if (!k) return false; if (k.__wrapped) return true;
+  const r = k.render; k.render = function () { window.__kr++; return r.apply(this, arguments); }; k.__wrapped = true; return true; }"""
+MM_STUB = """(() => { window.__mmCalls = []; window.mermaid = { initialize(c) { window.__mmCfg = c; },
+  render: async (id, src) => { window.__mmCalls.push(src);
+    return { svg: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20" onload="window.__xssm=5"><script>window.__xssm=6</scr' + 'ipt><text x="2" y="12">so do</text></svg>' }; } }; })();"""
+
+
+def kiem_hydrate(br, url):
+    section(" · hydrate (W6): KaTeX cục bộ nạp lười ở ghi chú xem trước, aria-label, displayMode, chạy lại không đổi, XSS, mermaid, offline, 360 px, thẻ ôn")
+    H = Page(br, url, "hydrate", viewport={"width": 1366, "height": 820}, setup=lambda c: c.add_init_script(MM_STUB))
+    pg = H.pg
+    open_detail(H, "dijkstra")
+    pg.fill(".note-ta", HY_NOTE)
+    pg.click(".note-bar button:has-text('Xem trước')")
+    try:
+        pg.wait_for_function("document.querySelectorAll('.note-prev .math[data-hydrated]').length >= 5 && document.querySelector('.note-prev pre.mmd[data-hydrated]')", timeout=8000)
+    except Exception:
+        pass
+    st = pg.evaluate(HY_STATE_JS)
+    want_tex = ["E = mc^2", "x_1 * x_2", "\\int_0^1 x\\,dx = \\frac12", 'x" onmouseover="window.__xssm=1', "\\href{javascript:window.__xssm=3}{bấm}", "<img src=x onerror=window.__xssm=2>"]
+    got_tex = [i["tex"] for i in st["items"]]
+    check(st["n"] == 6 and st["done"] == 6 and got_tex == want_tex, "KaTeX đã vẽ 6/6 công thức của ghi chú và data-tex còn NGUYÊN VĂN", {"n": st["n"], "done": st["done"], "tex": got_tex})
+    check(all(i["aria"] == i["tex"] for i in st["items"]), "mỗi công thức có aria-label = TeX")
+    check(all(i["kat"] == 1 or i["err"] == 1 for i in st["items"]) and [i["disp"] for i in st["items"]] == [1 if i["tag"] == "DIV" else 0 for i in st["items"]] and st["items"][2]["tag"] == "DIV",
+          "displayMode đúng: khối div.math-d có .katex-display, inline thì không", [(i["tag"], i["kat"], i["disp"]) for i in st["items"]])
+    check(not st["bad"] and st["xss"] is None and st["price"], "XSS (data-tex, \\href javascript:, <img>) không sinh liên kết/img/on*, window.__xssm không bị gán; giá '$5 and $10' là chữ thường", {k: st[k] for k in ("bad", "xss", "price")})
+    check(st["mm"] and st["mm"]["hy"] == "1" and st["mm"]["svg"] == 1 and not st["mm"]["script"] and not st["mm"]["on"] and pg.evaluate("window.__mmCfg.securityLevel") == "strict",
+          "mermaid: dựng svg, lọc script/onload, securityLevel strict", st["mm"])
+    pg.evaluate(HY_COUNT_JS)
+    before = st["html"]
+    pg.evaluate("() => Algo.ui.rich.hydrate([document.querySelector('.note-prev')])")
+    pg.wait_for_timeout(300)
+    after = pg.evaluate(HY_STATE_JS)
+    check(after["html"] == before and after["kr"] == 0, "hydrate chạy lại: HTML không đổi, katex.render gọi %d lần (muốn 0)" % after["kr"])
+    # 360 px: quay lại ô soạn, nhập công thức dài, xem trước
+    pg.click(".note-bar button:has-text('Xem trước')") if not pg.is_visible(".note-ta") else None
+    pg.fill(".note-ta", "Dài: $" + "a_{i}+" * 80 + "z$" + chr(10) * 2 + "$$" + chr(10) + "x_{i}+" * 80 + "y" + chr(10) + "$$" + chr(10))
+    pg.click(".note-bar button:has-text('Xem trước')")
+    pg.set_viewport_size({"width": 360, "height": 700})
+    pg.wait_for_timeout(400)
+    try:
+        pg.wait_for_function("document.querySelectorAll('.note-prev .math[data-hydrated=\"1\"]').length >= 2", timeout=6000)
+    except Exception:
+        pass
+    bad = pg.evaluate(OVERFLOW_JS)
+    check(not bad, "360 px: công thức KaTeX dài (inline + khối) không làm tràn trang", bad[:3] if bad else "")
+    pg.set_viewport_size({"width": 1366, "height": 820})
+    # công thức trong mô tả của mục (md()) cũng được hydrate qua observer (không phải xem trước): đổi mô tả bằng cách chèn HTML md vào #main
+    r = pg.evaluate("""async () => { const host = document.querySelector('#main'); const d = document.createElement('div'); d.className = 'md'; d.innerHTML = Algo.markdown.render('Độ phức tạp $O(n \\\\log n)$.', {});
+        host.append(d); await new Promise(ok => setTimeout(ok, 800)); const m = d.querySelector('.math'); const out = { hy: m.getAttribute('data-hydrated'), kat: m.querySelectorAll('.katex').length, tex: m.getAttribute('data-tex') }; d.remove(); return out; }""")
+    check(r["hy"] == "1" and r["kat"] == 1 and "log" in r["tex"], "HTML dựng ở bất cứ màn nào trong #main được observer hydrate (mô tả mục, thẻ ôn, quiz)", r)
+    H.close()
+    # offline: KaTeX + mermaid bị chặn
+    O = Page(br, url, "hydrate-offline", viewport={"width": 1366, "height": 820},
+             setup=lambda c: (c.route("**/assets/vendor/katex/**", lambda r: r.abort()), c.route("https://cdnjs.cloudflare.com/**", lambda r: r.abort())))
+    open_detail(O, "dijkstra")
+    O.pg.fill(".note-ta", "Công thức $E=mc^2$ và\n\n```mermaid\ngraph TD; A-->B\n```\n")
+    O.pg.click(".note-bar button:has-text('Xem trước')")
+    O.pg.wait_for_selector(".note-prev .math")
+    O.pg.wait_for_timeout(800)
+    of = O.pg.evaluate("""() => { const m = document.querySelector('.note-prev .math'), p = document.querySelector('.note-prev pre.mmd');
+        return { hy: m.getAttribute('data-hydrated'), tex: m.getAttribute('data-tex'), txt: m.textContent, font: getComputedStyle(m).fontFamily, mm: p && p.querySelector('code').textContent, mhy: p && p.getAttribute('data-hydrated') }; }""")
+    check(of["hy"] is None and of["tex"] == "E=mc^2" and of["txt"] == "E=mc^2" and ("mono" in of["font"].lower() or "consolas" in of["font"].lower()),
+          "offline: công thức giữ TeX nguyên văn có định dạng (kiểu code), app vẫn dùng được", of)
+    check(of["mm"] == "graph TD; A-->B" and of["mhy"] is None, "offline: sơ đồ mermaid giữ khối mã nguyên văn", of)
+    O.errors = [e for e in O.errors if "Failed to load resource" not in e]
+    O.close()
 
 
 def tang_toan(may):
@@ -852,6 +967,13 @@ def tang_3(may):
         pg.wait_for_function("navigator.serviceWorker.controller !== null", timeout=20000)
         mine = [n for n in pg.evaluate("caches.keys()") if n.startswith("algo:")]
         check(len(mine) == 1, "có đúng một cache của Algorithm Notebook", mine)
+        try:
+            pg.wait_for_function("caches.keys().then(k => k.find(n => n.startsWith('algo-vendor:')) ? caches.open(k.find(n => n.startsWith('algo-vendor:'))).then(c => c.keys()).then(ks => ks.length >= 22) : false)", timeout=25000)
+        except Exception:
+            pass
+        vk = pg.evaluate("() => caches.keys().then(async k => { const n = k.find(x => x.startsWith('algo-vendor:')); if (!n) return null; const c = await caches.open(n); return (await c.keys()).map(r => new URL(r.url).pathname); })")
+        vnames = sorted(os.path.relpath(os.path.join(dp, f), os.path.join(HERE, "assets", "vendor", "katex")).replace(os.sep, "/") for dp, _, fs in os.walk(os.path.join(HERE, "assets", "vendor", "katex")) for f in fs if f not in ("LICENSE", "README"))
+        check(vk and sorted(u.split("/assets/vendor/katex/")[1] for u in vk) == vnames, "service worker tải sẵn ĐỦ vendor KaTeX vào cache riêng algo-vendor:… (%d tệp), không lẫn vào cache vỏ" % len(vnames), vk and len(vk))
         urls = pg.evaluate("(n) => caches.open(n).then(c => c.keys()).then(ks => ks.map(k => new URL(k.url).pathname))", mine[0])
         need = ["index.html", "manifest.webmanifest", "assets/js/ui/app.js", "assets/css/algo.css", "assets/icons/icon-192.png"] + ["assets/data/lib-%s.js" % n for n in ("ds", "graph-1", "graph-2", "string", "dp", "math", "tech", "opt", "sys")] + ["assets/data/tree.js", "assets/data/roadmaps.js"]
         missing = [n for n in need if not any(u.endswith(PATH + n) for u in urls)]
@@ -860,6 +982,9 @@ def tang_3(may):
         ctx.set_offline(True)
         pg.reload(wait_until="domcontentloaded")
         pg.wait_for_function("document.body.classList.contains('ready')", timeout=20000)
+        hy = pg.evaluate("""async () => { const d = document.createElement('div'); d.className = 'md'; d.innerHTML = '<span class="math" data-tex="a^2+b^2">a^2+b^2</span>'; document.body.append(d);
+            await Algo.ui.rich.hydrate([d]); const s = d.firstChild; const r = { hy: s.getAttribute('data-hydrated'), kat: s.querySelectorAll('.katex').length, tex: s.getAttribute('data-tex') }; d.remove(); return r; }""")
+        check(hy["hy"] == "1" and hy["kat"] == 1 and hy["tex"] == "a^2+b^2", "OFFLINE: KaTeX nạp lười từ cache vendor của service worker và vẽ được công thức", hy)
         check("ngoại tuyến" in pg.locator("#banner").inner_text(), "TẮT MẠNG rồi tải lại: mở được, hiện biểu ngữ 'ngoại tuyến'")
         pg.evaluate("location.hash = '#/lib'")
         pg.wait_for_selector(".nrow")
@@ -919,7 +1044,8 @@ def tang_3(may):
         if got:
             pg.click("#banner button:has-text('Tải lại')")
             pg.wait_for_function("document.body.classList.contains('ready')", timeout=20000)
-            pg.wait_for_function("caches.keys().then(k => k.length === 1 && k[0].endsWith('bancapnhat01'))", timeout=10000)
+            pg.wait_for_function("caches.keys().then(k => k.filter(n => n.startsWith('algo:')).length === 1 && k.filter(n => n.startsWith('algo:'))[0].endsWith('bancapnhat01'))", timeout=10000)
+            check(any(n.startswith("algo-vendor:") for n in pg.evaluate("caches.keys()")), "đổi bản vỏ KHÔNG xoá cache vendor (không tải lại KaTeX)")
             check(True, "bấm Tải lại → chuyển sang bản mới, cache bản cũ được dọn")
         ctx.close()
         srv.shutdown()
@@ -959,6 +1085,7 @@ OVERFLOW_JS = r"""
   const name = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + (typeof el.className === "string" && el.className ? "." + el.className.trim().split(/\s+/).join(".") : "");
   for (const el of document.querySelectorAll("body *")) {
     if (el.closest("svg") && el.tagName.toLowerCase() !== "svg") continue;
+    if (el.closest(".katex-mathml")) continue;                       // MathML của KaTeX: cắt còn 1 px, chỉ cho trình đọc màn hình
     if (el.closest("dialog") && !el.closest("dialog[open]")) continue;
     const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") continue;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;

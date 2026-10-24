@@ -2,7 +2,7 @@
  * Heading ids for a document rendered block by block.
  *
  * A block cannot know how many headings with the same text came before it, so in block mode `rehypeEnhance` marks each
- * heading with `data-slug` (the slug alone) and leaves `id` and the anchor's `href` out; `assignHeadingIds` then walks the
+ * heading with `data-slug` (the slug alone), leaves `id` out and gives its anchor the first-occurrence href; `assignHeadingIds` then walks the
  * rendered headings in document order and gives them the ids the outline panel and reading mode look up -- the same
  * `-n` suffix rule as `extractHeadings` and as `rehypeEnhance` uses on a whole document. React never owns `id`/`href`
  * (they are not props), so it does not overwrite them.

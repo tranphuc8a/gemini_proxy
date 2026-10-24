@@ -140,7 +140,7 @@
   var kc = { caoPx: 0, tiLe: 1 };
   var chonDong = -1;             /* dong that dang chon (hang to nen) */
   var nhayDong = -1;
-  var veCu = { tu: -1, den: -1, n: -1, ct: -1, nhay: -1, ve: 0 };
+  var veCu = { tu: -1, den: -1, n: -1, ct: -1, nhay: -1 };
   var bangChuThich = Object.create(null);   /* khoi -> {chu, tieuDe} */
   var choSauQuet = [];
 
@@ -288,19 +288,21 @@
     var ht = hangTuCuon(ct, kc.tiLe, LH), so = Math.ceil(cm / LH) + 1;
     var tu = Math.max(0, ht.h - DEM), den = Math.min(nHien, ht.h + so + DEM);
     var coDinh = kc.tiLe === 1;
-    var ok = !ep && coDinh && veCu.n === nHien && veCu.ct === chonDong && veCu.nhay === nhayDong && veCu.ve === veThu &&
+    var ok = !ep && coDinh && veCu.n === nHien && veCu.ct === chonDong && veCu.nhay === nhayDong &&
       veCu.tu >= 0 && ht.h - 2 >= veCu.tu && ht.h + so + 2 <= veCu.den;
     if (ok) return;
     var html = "";
     for (var h = tu; h < den; h++) html += htmlHang(dongCuaHang(dsHien, h));
     cua.style.top = (coDinh ? tu * LH : ct - ht.lech - (ht.h - tu) * LH) + "px";
     datHtmlCua(html);
-    veCu = { tu: tu, den: den, n: nHien, ct: chonDong, nhay: nhayDong, ve: veThu };
+    veCu = { tu: tu, den: den, n: nHien, ct: chonDong, nhay: nhayDong };
   }
-  var veThu = 0;                 /* tang khi can ve lai hang du cua so khong doi */
 
   /** Gan cac hang vao cua so. `html` do htmlHang dung: moi chuoi tu du lieu da qua toMauDong / thoat( truoc khi noi vao. */
-  function datHtmlCua(html) { cua.innerHTML = html; }
+  function datHtmlCua(html) {
+    /* `html` do htmlHang dung: moi chuoi tu du lieu da qua toMauDong / thoat( truoc khi toi day */
+    cua.innerHTML = html;
+  }
 
   /* ----------------------------------------------------- vao / ra / lam moi */
   function lamMoi(dongGiu) {
@@ -310,7 +312,7 @@
     quet = null; gap = null; dsHien = null; nHien = nDong;
     bangChuThich = Object.create(null);
     choSauQuet = [];
-    veCu = { tu: -1, den: -1, n: -1, ct: -1, nhay: -1, ve: 0 };
+    veCu = { tu: -1, den: -1, n: -1, ct: -1, nhay: -1 };
     tinhKhung();
     if (chonDong >= nDong) chonDong = -1;
     if (dongGiu !== undefined && dongGiu >= 0) cuonToiDong(Math.min(dongGiu, nDong - 1));

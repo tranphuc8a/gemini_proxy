@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import MermaidDiagram, { resetMermaidCache } from '../components/MermaidDiagram'
+import MermaidDiagram from '../components/MermaidDiagram'
+import { resetMermaidCache } from '../lib/mermaidRender'
 import { withFullRender } from '../lib/previewController'
 
 const mermaid = vi.hoisted(() => ({

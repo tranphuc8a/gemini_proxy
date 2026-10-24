@@ -20,7 +20,9 @@
     function done() { if (cleaned) return; cleaned = true; area.remove(); body.classList.remove("printing"); root.removeEventListener("afterprint", done); }
     root.addEventListener("afterprint", done);
     body.append(area); body.classList.add("printing");
-    setTimeout(function () { try { root.print(); } catch (e) { done(); ctx.toast("Trình duyệt này không mở được hộp thoại in."); } }, 60);
+    // công thức/sơ đồ (W6): hydrate bản in rồi mới in (tối đa ~3 s chờ thư viện; chưa tải được thì in TeX nguyên văn)
+    var hy = U.rich ? Promise.race([U.rich.hydrate([area]), new Promise(function (ok) { setTimeout(ok, 3000); })]) : Promise.resolve();
+    hy.then(function () { return new Promise(function (ok) { setTimeout(ok, 60); }); }).then(function () { try { root.print(); } catch (e) { done(); ctx.toast("Trình duyệt này không mở được hộp thoại in."); } });
     setTimeout(done, 180000);                                             // iOS không phát afterprint
     ctx.toast("Chọn “Lưu thành PDF” trong hộp thoại in", { ms: 5000 });
   }
@@ -41,7 +43,7 @@
       if (t === "BR") { out.push({ br: true }); return; }
       if (t === "STRONG" || t === "B") f.bold = true; else if (t === "EM" || t === "I") f.italic = true; else if (t === "CODE") f.code = true; else if (t === "DEL") f.strike = true;
       else if (t === "A" || (t === "SPAN" && c.classList.contains("wl"))) f.link = true;
-      else if (t === "SPAN" && c.classList.contains("math")) f.code = true;                    // công thức (W4): vẽ TeX nguyên văn như đoạn code; W6 vẽ KaTeX
+      else if (t === "SPAN" && c.classList.contains("math")) f.code = true;                    // công thức (W4): vẽ TeX nguyên văn như đoạn code (PNG chạy trên HTML CHƯA hydrate nên luôn có chữ TeX; không vẽ KaTeX lên canvas — lệch thiết kế, xem dot/W6.md)
       else if (t === "IMG") { out.push(Object.assign({ text: "[ảnh: " + (c.getAttribute("alt") || "") + "]" }, fmt, { italic: true })); return; }
       else if (t === "INPUT") { out.push(Object.assign({ text: c.checked ? "☑ " : "☐ " }, fmt)); return; }
       else if (t === "UL" || t === "OL") return;

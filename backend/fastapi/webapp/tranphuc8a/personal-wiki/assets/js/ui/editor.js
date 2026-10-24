@@ -242,6 +242,7 @@
       if (fresh.length !== insEnd - p) {                                               // không xảy ra (mỗi khối đúng một <div>) — phòng hờ: về cách dựng cả note, lần sau thử lại theo khối
         prev.innerHTML = M.render(st.cur.content, { highlight: W.highlight, resolve: resolveTitle });
         pv.keys = []; pv.els = [];
+        if (U.rich) U.rich.hydrate([prev]);
         return;
       }
       for (k = 0; k < fresh.length; k++) fresh[k]._hh = ent[k];

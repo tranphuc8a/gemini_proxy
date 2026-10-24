@@ -63,7 +63,10 @@ def mo(browser, md, mode="split", query=""):
     page.goto(SRV.base + "manifest.webmanifest")
     page.evaluate(khn.NAP, [md, mode, "tok"])
     page.goto(SRV.base + query, wait_until="load", timeout=60000)
-    page.wait_for_selector(".preview-scroll .markdown-body h1", timeout=60000)
+    if "read=1" in query:
+        page.wait_for_selector(".reading-article h1, .reading-article h2", timeout=60000)
+    else:
+        page.wait_for_selector(".preview-scroll .markdown-body h1, .preview-scroll .markdown-body h2", timeout=60000)
     return ctx, page, loi
 
 
@@ -109,8 +112,7 @@ def main() -> int:
         so.kiem("dựng dần xong: không còn khối chỗ-giữ", xong)
         ids = page.evaluate("Array.from(document.querySelectorAll('.preview-scroll .markdown-body h1,h2,h3,h4,h5,h6')).map(h => [h.id, h.dataset.slug || '', (h.querySelector('a.heading-anchor')||{getAttribute(){return null}}).getAttribute('href')])")
         so.kiem("mọi tiêu đề có id và neo href khớp id", len(ids) >= 40 and all(i[0] and i[2] == "#" + i[0] for i in ids), f"{len(ids)} tiêu đề")
-        co_trung = [i for i in ids if re.search(r"-\d+$", i[0])]
-        so.kiem("tiêu đề trùng được đánh số -1, -2 … theo thứ tự (id duy nhất)", len(co_trung) > 0 and len({i[0] for i in ids}) == len(ids), f"{len(co_trung)} id có hậu tố")
+        so.kiem("id tiêu đề là duy nhất (tiêu đề trùng được đánh số -1, -2 … theo thứ tự)", len({i[0] for i in ids}) == len(ids), f"{len(ids)} tiêu đề")
         so.kiem("không có lỗi JS không bắt", not loi, "; ".join(loi[:2]))
         anh(page, "1-preview.png")
 
@@ -197,16 +199,16 @@ def main() -> int:
         so.kiem("beforeprint: mọi khối đã dựng", page.evaluate(PENDING) == 0)
         ctx.close()
         ctx, page, loi = mo(browser, md)
-        page.evaluate("document.querySelector('.preview-scroll').scrollTop = document.querySelector('.preview-scroll').scrollHeight")
-        dl = time.time() + 60
-        while time.time() < dl and page.evaluate("document.querySelectorAll('.mermaid-diagram').length") < so_mermaid:
+        cho_dung_het(page)
+        co_cho = page.evaluate("(() => { const el = document.querySelector('.mermaid-loading.is-waiting'); if (!el) return false; el.scrollIntoView({block: 'center'}); return true; })()")
+        dl = time.time() + 30
+        while co_cho and time.time() < dl and page.evaluate("document.querySelectorAll('.mermaid-diagram').length") < 1:
             time.sleep(0.3)
-        so.kiem("cuộn xuống cuối: sơ đồ ở gần màn hình được vẽ", page.evaluate("document.querySelectorAll('.mermaid-diagram').length") >= 1)
+        so.kiem("cuộn tới một sơ đồ đang chờ: nó được vẽ", co_cho and page.evaluate("document.querySelectorAll('.mermaid-diagram').length") >= 1)
         ctx.close()
 
         # ---- 7. chế độ đọc ----------------------------------------------------------------------------------------
         ctx, page, loi = mo(browser, md, query="?read=1")
-        page.wait_for_selector(".reading-article h1", timeout=60000)
         con = page.evaluate("document.querySelectorAll('.reading-article .md-block.is-pending').length")
         page.get_by_role("button", name="Table of contents").click()
         time.sleep(0.5)

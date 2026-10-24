@@ -15,7 +15,7 @@
    API (JE.chayNen):
      chay(loai, {du, schema}, tuyChon, hanMs) -> Promise<{
          kq?, loi?:{phan:"du"|"schema"|"he-thong", thongBao}, hetGio?, hanMs?, huy?, luongChinh? }>
-        loai: "kiem" (bienDich + kiem) | "lint" (chi bienDich) | "sinh" (sinh du lieu mau theo schema: tuyChon = tuy chon cua schemaSinh.sinhMau)
+        loai: "dinh-dang" ({du: van ban}, tuyChon {thut} -> kq.vanBan: JSON.stringify(parse(du), null, thut); dot J5) | "kiem" (bienDich + kiem) | "lint" (chi bienDich) | "sinh" (sinh du lieu mau theo schema: tuyChon = tuy chon cua schemaSinh.sinhMau)
               | "suy" (suy schema tu du lieu: {du} khong can schema; tuyChon = tuy chon cua schemaSuy.suySchema)
         Lenh moi toi khi lenh cu dang chay: lenh cu bi huy ({huy:true}) va Worker bi terminate.
      cauHinh {han, nganLuongChinh, soLoiToiDa}, thongKe {soWorker, soLuongChinh, soHetGio, soHuy}
@@ -38,7 +38,15 @@
     var dongHo = function () { return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now(); };
     var t0 = dongHo(), du, sc;
     if (tin.loai === "ping") return { kq: { ok: true } };
-    if (tin.loai !== "kiem" && tin.loai !== "lint" && tin.loai !== "sinh" && tin.loai !== "suy") return { loi: { phan: "he-thong", thongBao: "Lệnh nền lạ: " + tin.loai } };
+    if (tin.loai !== "kiem" && tin.loai !== "lint" && tin.loai !== "sinh" && tin.loai !== "suy" && tin.loai !== "dinh-dang") return { loi: { phan: "he-thong", thongBao: "Lệnh nền lạ: " + tin.loai } };
+    if (tin.loai === "dinh-dang") {                         /* Dinh dang / Nen van ban LON ngoai luong chinh: tuyChon.thut (so | "\t" | 0 = nen) */
+      try { du = JSON.parse(tin.du); }
+      catch (e5) { return { loi: { phan: "du", thongBao: String(e5 && e5.message || e5) } }; }
+      try {
+        var thut = tin.tuyChon && tin.tuyChon.thut !== undefined ? tin.tuyChon.thut : 2;
+        return { kq: { vanBan: JSON.stringify(du, null, thut), thoiGianMs: Math.round((dongHo() - t0) * 10) / 10 } };
+      } catch (e6) { return { loi: { phan: "he-thong", thongBao: String(e6 && e6.message || e6) } }; }
+    }
     if (tin.loai === "suy") {                               /* suy schema tu DU LIEU (khong can schema) */
       try { du = JSON.parse(tin.du); }
       catch (e0) { return { loi: { phan: "du", thongBao: String(e0 && e0.message || e0) } }; }

@@ -405,6 +405,12 @@ button.chip:hover { background: var(--s2); }
 .md .math { font: 0.92em var(--mono); padding: 1px 5px; border-radius: 6px; background: var(--sunk); white-space: pre-wrap; overflow-wrap: anywhere; }
 .md div.math-d, .md span.math-d { display: block; padding: 8px 12px; margin: 0 0 0.9em; text-align: center; overflow-x: auto; }
 .md span.math-d { margin: 0.4em 0; }
+/* hydrate (W6, ui/rich.js): KaTeX/mermaid đã vẽ → bỏ kiểu dự phòng (code). Nút giữ data-tex; chưa hydrate thì vẫn là TeX nguyên văn ở trên. */
+.md .math[data-hydrated] { font: inherit; padding: 0; background: none; white-space: normal; overflow-wrap: normal; }
+.md div.math[data-hydrated="1"], .md span.math-d[data-hydrated="1"] { padding: 6px 0; overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+.md .math .katex-display { margin: 0; }
+.md pre.mmd.mmd-done { background: none; padding: 0; text-align: center; overflow-x: auto; }
+.md pre.mmd .mmd-fig svg { max-width: 100%; height: auto; }
 .md .tbl { overflow-x: auto; }
 .md table { border-collapse: collapse; min-width: 50%; }
 .md th, .md td { padding: 6px 12px; border: 1px solid var(--border); text-align: left; }

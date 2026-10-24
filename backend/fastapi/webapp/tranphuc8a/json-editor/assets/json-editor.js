@@ -78,7 +78,10 @@
     DONG_DAI_TOI_DA: 5000,               /* Xem cat dong dai hon, hien "… (+N ky tu)" */
     DONG_DAI_MAU: 20000,                 /* soan ao: dong dai hon nay ve tro tron (khong to mau) */
     XEM_MAX_PX: 15000000,                /* chieu cao toi da cua khung cuon ao (qua nua thi doi ti le cuon) */
-    DEBOUNCE_NHAP_LON: 1000              /* ghi IndexedDB tre 1 s sau lan sua cuoi */
+    DEBOUNCE_NHAP_LON: 1000,             /* ghi IndexedDB tre 1 s sau lan sua cuoi */
+    DEBOUNCE_DOC: 180,                   /* go phim: doc() + ve cay + luu nhap tre 180 ms sau phim cuoi */
+    DEBOUNCE_DOC_LON: 700,               /* ... nhung van ban > NGUONG_DEBOUNCE_LON thi 700 ms: parse + luu 1 MB (~50 ms) khong chen giua luc dang go */
+    NGUONG_DEBOUNCE_LON: 400 * 1024
   };
 
   var duLieu = null;         /* ket qua parse gan nhat */
@@ -394,14 +397,41 @@
     return chayCoBao(nhan.toLowerCase(), lam);
   }
 
+  /** Dinh dang / Nen. Van ban LON (> 1 MB) chay trong WORKER (parse + stringify 10 MB mat ~0,25 s va treo ca trang
+      neu chay o luong chinh): chan trang hien "Đang …", trang van cuon / bam duoc. Worker khong dung duoc, bi huy,
+      het gio, hay van ban hong (can thong bao loi co dong / cot) thi roi ve duong dong bo cu — cho ra dung thong bao.
+      Neu trong luc cho nguoi dung doi van ban thi bo ket qua (khong dap len thay doi moi). */
+  function bienDoiNen(nhan, thut, hamDongBo) {
+    var s0 = layVb();
+    if (s0.length <= BAN_NGUONG || !JE.chayNen || !JE.chayNen.coWorker || !JE.chayNen.coWorker()) {
+      return bienDoi(nhan, hamDongBo, true);
+    }
+    datTrangThai("Đang " + nhan.toLowerCase() + " " + coChu(s0.length) + "…");
+    den.className = "den";
+    document.body.classList.add("dang-xu-ly");
+    JE.chayNen.chay("dinh-dang", { du: s0 }, { thut: thut }, 60000).then(function (r) {
+      document.body.classList.remove("dang-xu-ly");
+      if (layVb() !== s0) {                                  /* da sua / mo tep khac trong luc cho */
+        thongBao(nhan + " bị bỏ — văn bản đã đổi trong lúc chờ");
+        return;
+      }
+      if (r && r.kq && typeof r.kq.vanBan === "string") {
+        datVanBan(r.kq.vanBan, { nhan: nhan });
+        phat("dinh-dang-nen", { nhan: nhan, noi: "worker", ms: r.kq.thoiGianMs });
+        return;
+      }
+      bienDoi(nhan, hamDongBo, true);                        /* worker khong cho duoc ket qua: duong dong bo */
+    });
+    return true;
+  }
+
   function dinhDang(thut) {
-    return bienDoi("Định dạng", function (d) {
-      return JSON.stringify(d, null, thut === undefined ? 2 : thut);
-    }, true);
+    var t = thut === undefined ? 2 : thut;
+    return bienDoiNen("Định dạng", t, function (d) { return JSON.stringify(d, null, t); });
   }
 
   function nen() {
-    return bienDoi("Nén", function (d) { return JSON.stringify(d); }, true);
+    return bienDoiNen("Nén", 0, function (d) { return JSON.stringify(d); });
   }
 
   /** Sap khoa theo bang chu cai o moi cap. Mang GIU NGUYEN thu tu — thu tu
@@ -2649,6 +2679,7 @@
     maCua.setAttribute("data-tu", String(cs.tu));
     maCua.innerHTML = html;
     maVe = { s: s, tu: cs.tu, den: cs.den, loi: loi, lh: lh };
+    phat("ve-mau", { tu: cs.tu, den: cs.den });          /* cho ui-* (tim / thay) to them len cac hang vua ve */
   }
 
   /** Thanh "Tô màu đã tắt" o chan trang. */
@@ -2838,7 +2869,8 @@
   var hen = null;
   function khiNhap() {
     clearTimeout(hen);
-    hen = setTimeout(function () { doc(); veCay(); luuNhap(); }, 180);
+    var cho = vanBanDaDoc !== null && vanBanDaDoc.length > HS.NGUONG_DEBOUNCE_LON ? HS.DEBOUNCE_DOC_LON : HS.DEBOUNCE_DOC;
+    hen = setTimeout(function () { doc(); veCay(); luuNhap(); }, cho);
     henToMau();                        /* so dong + to mau ao: khung hinh ke tiep (khong dem dong trong su kien input) */
   }
   nhap.addEventListener("input", khiNhap);
@@ -3342,7 +3374,9 @@
     denDuong: denDuong,
     denViTri: denViTri,
     denDong: denDong,
-    /* su kien: "doi-du-lieu" (sau moi doc()), "doi-tab", "doi-chon", "doi-lich-su", "mo-tep" ({ten, vanBan}) */
+    /* su kien: "doi-du-lieu" (sau moi doc()), "doi-tab", "doi-chon", "doi-lich-su", "mo-tep" ({ten, vanBan}),
+       dot J5: "doi-che-do" ("sua" | "xem"), "ve-mau" ({tu, den}: lop mau ao vua ve cac dong [tu, den)), "nhap" ({luu, noi, n}),
+       "dinh-dang-nen" ({nhan, noi, ms}) */
     dangKy: dangKy,
     thongBao: thongBao,
     /* huy hieu loi tren cay: Map(JSON.stringify(duong) -> {a:[thongBao…], b:soLoiBenTrong}); null = xoa */

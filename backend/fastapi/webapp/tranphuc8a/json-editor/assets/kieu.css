@@ -675,3 +675,5 @@ select.o-nhap { width: auto; flex: 0 0 auto; }
   .xs { width: 44px; }
   .soan-thanh { padding: 6px 10px; }
 }
+body.dang-xu-ly, body.dang-xu-ly * { cursor: progress; }
+.soan-thanh .nut.nho, .soan-thanh .xem-cong-cu .nut.nho { min-height: 30px; min-width: 30px; }

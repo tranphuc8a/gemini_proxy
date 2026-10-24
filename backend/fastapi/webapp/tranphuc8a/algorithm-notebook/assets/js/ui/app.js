@@ -139,6 +139,7 @@
     U.loadPrefs(); U.applyPrefs();
     if (root.matchMedia) root.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", U.applyPrefs);
     mainEl = $("#main"); bannerEl = $("#banner");
+    if (U.rich) U.rich.observe(mainEl);                                  // công thức/sơ đồ (W6) ở mọi màn: chi tiết, ôn tập, ghi chú xem trước
     U.pwa.init();
     A.store.openBest("algorithm-notebook").then(function (store) { user = A.user.create(store); return user.open(); }).then(function () {
       U.list.attach(user);

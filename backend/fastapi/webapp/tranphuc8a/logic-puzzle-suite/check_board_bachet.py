@@ -362,7 +362,7 @@ def edge_p6a(P, check, section, tid):
         g = E.game()
         d = g["data"]
         N, M, m = d["N"], d["slots"], d["m"]
-        check(d["mode"] == "mot" and m == min_count(N, False) and "chỉ một đĩa" in pg.inner_text(".board-host .pz-bc-stats"), "cỡ một đĩa (N=%d): m* = %d = vòng lặp Python; nhãn 'chỉ một đĩa'" % (N, m))
+        check(d["mode"] == "mot" and m == min_count(N, False) and "chỉ đặt một đĩa" in pg.inner_text(".board-host .pz-bc-stats"), "cỡ một đĩa (N=%d): m* = %d = vòng lặp Python; nhãn 'chỉ đặt một đĩa'" % (N, m))
         ui_set(pg, 0, 1)
         ui_set(pg, 1, 2)
         W, _ = vals_of(E.game())
@@ -425,7 +425,7 @@ def edge_p6a(P, check, section, tid):
         pg.wait_for_function("/nhiều bộ/.test(document.querySelector('.cr-status').innerText)", timeout=20000)
         check("Tối thiểu 4 quả" in pg.inner_text(".pz-bc-edinfo") and "nhiều bộ" in pg.inner_text(".pz-bc-edinfo"), "N = 30: dòng kết quả ngay trong trình soạn nêu 'nhiều bộ tối ưu' (Python: m*=%d)" % min_count(30, True))
         pg.fill(".pz-bc-ed input[aria-label^='Khối lượng lớn nhất']", "0")
-        pg.wait_for_function("document.querySelector('.cr-status .cr-chip.bad') || /từ 1 đến/.test(document.querySelector('.cr-status').innerText)", timeout=20000)
+        pg.wait_for_function("/số nguyên/.test(document.querySelector('.cr-status').innerText) || document.querySelector('.cr-status .cr-chip.bad')", timeout=20000)
         check(pg.is_disabled("button:has-text('Chơi thử')"), "N = 0: vỏ báo lỗi, 'Chơi thử' bị khoá", pg.inner_text(".cr-status"))
         pg.click(".pz-bc-ed button:has-text('Luỹ thừa 2')")
         pg.wait_for_function("/Tối thiểu 4 quả/.test(document.querySelector('.cr-status').innerText)", timeout=20000)

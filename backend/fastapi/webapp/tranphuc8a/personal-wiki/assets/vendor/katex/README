@@ -1,0 +1,5 @@
+KaTeX 0.16.47 — giấy phép MIT (xem LICENSE), https://katex.org
+Nguồn: bản đã cài sẵn markdown-editor/node_modules/katex (dist/katex.min.js, dist/fonts/*.woff2, dist/katex.min.css). KHÔNG npm install thêm.
+Chỉnh sửa duy nhất: katex.min.css bỏ các nguồn font .woff và .ttf (chỉ giữ .woff2, mọi trình duyệt đang hỗ trợ) để nhẹ hơn ~2 KB và không có tệp thừa.
+Không có mhchem / copy-tex / auto-render (không dùng). Nạp lười bởi assets/js/ui/rich.js; service worker giữ trong bộ nhớ đệm riêng (không tính vào ngân sách vỏ).
+Nâng cấp: chép lại 3 nhóm tệp, đổi số phiên bản ở đây và ở VENDOR_DOT trong sw.js (tên cache), chạy tao-pwa.py và algorithm-notebook/sync.py.

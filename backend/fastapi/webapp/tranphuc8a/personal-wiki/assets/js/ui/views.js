@@ -104,6 +104,7 @@
       var c = st.queue[st.i], head = repo.head(c.note), pct = Math.round(st.done / Math.max(1, st.total + st.again) * 100);
       var q = h("div", { class: "md fc-face" }), a = h("div", { class: "md fc-face fc-back", hidden: !st.shown });
       q.innerHTML = mdInline(c.q, repo); a.innerHTML = mdInline(c.a, repo);
+      if (U.rich) U.rich.hydrate([q, a]);
       var actions = h("div", { class: "fc-actions" });
       if (!st.shown) actions.append(h("button", { type: "button", class: "btn btn-primary big", html: "<span>Hiện đáp án</span> <kbd>Space</kbd>", on: { click: reveal } }));
       else {

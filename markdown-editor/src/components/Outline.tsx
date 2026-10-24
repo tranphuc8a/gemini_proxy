@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useEditorStore } from '../store'
 import { extractHeadings } from '../lib/markdown'
 import { emitJump } from '../lib/paneSync'
+import { revealIn } from '../lib/previewController'
 import { useIdleValue } from '../hooks/useIdleValue'
 import { IconHash } from './Icons'
 import './Outline.css'
@@ -40,7 +41,23 @@ function Outline() {
             // In the small-screen drawer, the drawer is in the way of the jump.
             useEditorStore.getState().setDrawerOpen(false)
             emitJump({ line: heading.line, source: 'preview' })
-            document.getElementById(heading.slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            // The preview builds a long document in pieces: the heading's block is built first, so there is an element to go to.
+            const preview = document.querySelector<HTMLElement>('.preview-scroll .markdown-body')
+            if (preview) revealIn(preview, { line: heading.line })
+            const target = document.getElementById(heading.slug)
+            if (target) {
+              // Far away, the preview's height is still an estimate (blocks and content-visibility settle as they come into
+              // view), so a long glide would end short of the heading: go there at once, then again once layout has settled.
+              const scroller = target.closest<HTMLElement>('.preview-scroll')
+              const far = !scroller || Math.abs(target.getBoundingClientRect().top - scroller.getBoundingClientRect().top) > scroller.clientHeight * 3
+              target.scrollIntoView({ behavior: far ? 'auto' : 'smooth', block: 'start' })
+              if (far) {
+                requestAnimationFrame(() => {
+                  target.scrollIntoView({ behavior: 'auto', block: 'start' })
+                  requestAnimationFrame(() => target.scrollIntoView({ behavior: 'auto', block: 'start' }))
+                })
+              }
+            }
           }}
           title={heading.text}
         >

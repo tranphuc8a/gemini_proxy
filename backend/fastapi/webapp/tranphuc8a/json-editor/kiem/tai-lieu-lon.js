@@ -211,6 +211,22 @@ module.exports = function (C) {
     }
   }
 
+  /* ====================== Worker "dinh-dang" (xuLy chay nguyen mot tin nhu trong Worker) ====================== */
+  {
+    const xl = (du, thut) => JE.chayNen.xuLy(JE, { loai: "dinh-dang", du: du, tuyChon: thut === undefined ? {} : { thut: thut } });
+    const goc = { b: [1, { c: "tiếng Việt" }], a: null };
+    const d2 = JSON.stringify(goc, null, 2), d4 = JSON.stringify(goc, null, 4), dn = JSON.stringify(goc);
+    kiem("chay-nen · dinh-dang: thut 2 / 4 / tab / 0 (nen) / mac dinh 2 cho ra dung JSON.stringify",
+      xl(dn, 2).kq.vanBan === d2 && xl(d2, 4).kq.vanBan === d4 && xl(d2, 0).kq.vanBan === dn && xl(d2).kq.vanBan === d2 && xl(dn, "	").kq.vanBan === JSON.stringify(goc, null, "	"));
+    const hong = xl('{"a": [1, 2', 2);
+    kiem("chay-nen · dinh-dang: van ban hong → loi phan 'du' (giao dien roi ve duong dong bo de bao dong / cot)", hong.loi && hong.loi.phan === "du" && !hong.kq, JSON.stringify(hong));
+    const lon = JSON.stringify({ x: Array.from({ length: 200000 }, (_, i) => ({ i, s: "a" + i })) });
+    const t0 = process.hrtime.bigint();
+    const kq = xl(lon, 2);
+    const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+    kiem("chay-nen · dinh-dang: " + (lon.length / 1e6).toFixed(1) + " M ky tu dung " + ms.toFixed(0) + " ms (trong Worker thi khong chan luong chinh)", kq.kq && kq.kq.vanBan === JSON.stringify(JSON.parse(lon), null, 2), String(ms));
+  }
+
   /* ====================== Xem: dsHien / ti le cuon / khoi chua / gap toi cap ====================== */
   {
     const sinhVb = (d) => {

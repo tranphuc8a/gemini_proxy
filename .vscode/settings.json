@@ -5,5 +5,35 @@
         "./backend/fastapi",
         "./backend/fastapi/src"
     ],
-    "python-envs.defaultEnvManager": "ms-python.python:system"
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+
+    // Giảm tải VS Code khi có nhiều tệp đổi liên tục (các agent sửa hàng trăm tệp).
+    // Không ảnh hưởng chạy/kiểm thử; chỉ ngừng theo dõi và lập chỉ mục những thư mục sinh ra.
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/.venv/**": true,
+        "**/__pycache__/**": true,
+        "**/.codegraph/**": true,
+        "**/graphify-out/**": true,
+        "**/.git/objects/**": true,
+        "**/.pytest_cache/**": true,
+        "**/dist/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/.venv": true,
+        "**/.codegraph": true,
+        "**/graphify-out": true,
+        "**/webapp/tranphuc8a/markdown-editor-pro/assets": true,
+        "**/webapp/gemini-chat/assets": true
+    },
+    "python.analysis.exclude": [
+        "**/node_modules",
+        "**/.venv",
+        "**/webapp",
+        "**/data"
+    ],
+    "python.analysis.diagnosticMode": "openFilesOnly",
+    "typescript.disableAutomaticTypeAcquisition": true,
+    "git.autorefresh": false
 }

@@ -72,7 +72,7 @@ export function rehypePipeline(options: PipelineOptions = {}): NamedPlugin<Rehyp
   return [
     { name: 'raw', plugin: rehypeRaw },
     { name: 'styleGuard', plugin: rehypeStyleGuard },
-    { name: 'enhance', plugin: [rehypeEnhance, { idPrefix: options.idPrefix ?? '', blockMode: options.blockMode === true }] },
+    { name: 'enhance', plugin: [rehypeEnhance, options.blockMode ? { idPrefix: options.idPrefix ?? '', blockMode: true } : { idPrefix: options.idPrefix ?? '' }] },
     { name: 'sanitize', plugin: [rehypeSanitize, sanitizeSchema] },
     { name: 'katex', plugin: rehypeKatexFresh }
   ]

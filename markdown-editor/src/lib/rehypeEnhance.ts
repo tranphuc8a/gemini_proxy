@@ -73,8 +73,8 @@ export interface EnhanceOptions {
   idPrefix?: string
   /**
    * Render-by-block mode: the document is rendered one block at a time, so a heading cannot know its place among the
-   * repeats of its slug. It gets `data-slug` instead of `id`, and its anchor no `href`; `assignHeadingIds` (headingIds.ts)
-   * fills both in after the blocks are in the page. `data-line` stays relative to the block.
+   * repeats of its slug. It gets `data-slug` instead of `id`, and its anchor the href of the first heading with that slug; `assignHeadingIds`
+   * (headingIds.ts) sets the real id and href after the blocks are in the page. `data-line` stays relative to the block.
    */
   blockMode?: boolean
 }
@@ -128,9 +128,8 @@ export function rehypeEnhance(options: EnhanceOptions = {}) {
             {
               type: 'element',
               tagName: 'a',
-              properties: blockMode
-                ? { className: ['heading-anchor'], ariaHidden: 'true', tabIndex: -1 }
-                : { href: `#${id}`, className: ['heading-anchor'], ariaHidden: 'true', tabIndex: -1 },
+              // In block mode this is the id of the first heading with this slug; `assignHeadingIds` corrects repeats.
+              properties: { href: `#${id}`, className: ['heading-anchor'], ariaHidden: 'true', tabIndex: -1 },
               children: [{ type: 'text', value: '#' }]
             },
             ...(node.children ?? [])

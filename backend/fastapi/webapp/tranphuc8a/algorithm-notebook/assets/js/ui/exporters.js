@@ -13,7 +13,9 @@
     var prevTitle = root.document.title; if (title) root.document.title = title;
     root.addEventListener("afterprint", done);
     body.classList.add("printing");
-    setTimeout(function () { try { root.print(); } catch (e) { done(); ctx.toast("Trình duyệt này không mở được hộp thoại in."); } }, 60);
+    // công thức/sơ đồ (W6): hydrate bản in rồi mới in (tối đa ~3 s chờ thư viện; chưa tải được thì in TeX nguyên văn)
+    var hy = U.rich ? Promise.race([U.rich.hydrate([area]), new Promise(function (ok) { setTimeout(ok, 3000); })]) : Promise.resolve();
+    hy.then(function () { return new Promise(function (ok) { setTimeout(ok, 60); }); }).then(function () { try { root.print(); } catch (e) { done(); ctx.toast("Trình duyệt này không mở được hộp thoại in."); } });
     setTimeout(done, 180000);
     ctx.toast("Chọn “Lưu thành PDF” trong hộp thoại in", { ms: 5000 });
   }

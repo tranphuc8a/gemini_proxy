@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import { resolveTheme, useEditorStore } from '../store'
+import { useReadingStore } from '../readingStore'
+import { revealIn } from '../lib/previewController'
 import { toggleTaskAtIndex } from '../lib/editorCommands'
 import {
   collectPreviewAnchors,
@@ -29,13 +31,14 @@ function Preview() {
   const themePreference = useEditorStore((state) => state.theme)
   const isAdmin = useEditorStore((state) => state.isAdmin)
   const setContent = useEditorStore((state) => state.setContent)
+  // Reading mode covers the app and builds its own copy: the preview underneath waits.
+  const readingOpen = useReadingStore((state) => state.open)
 
   const theme = resolveTheme(themePreference)
   const scrollRef = useRef<HTMLDivElement>(null)
   const articleRef = useRef<HTMLElement>(null)
   const lockRef = useRef(createSyncLock())
   const anchorsRef = useRef<LineAnchor[]>([])
-  const anchorFrame = useRef(0)
 
   // null until a long document's first render, which waits for the first paint.
   const [built, setBuilt] = useState<{ done: number; total: number } | null>(null)
@@ -56,63 +59,65 @@ function Preview() {
         if (timer) clearTimeout(timer)
       }
     }
-    const timer = setTimeout(() => setDebounced(content), RENDER_DEBOUNCE_MS)
+    // A transition: React renders the update in short slices and lets a key press in between, instead of one long task.
+    const timer = setTimeout(() => startTransition(() => setDebounced(content)), RENDER_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [content, pending])
 
   /**
-   * Re-reads the line anchors at most once per frame. Every image that loads
-   * and every resize asks for it, and each read walks thousands of elements.
+   * The line anchors are read when a scroll needs them, not after every change: each read measures every block of the
+   * preview (a layout), and it used to run after each pause in typing. Anything that moves things (an edit, an image
+   * that loads, a diagram that finishes, more blocks built, a resize) only marks them stale.
    */
-  const scheduleAnchors = useCallback(() => {
-    if (anchorFrame.current) return
-    anchorFrame.current = requestAnimationFrame(() => {
-      anchorFrame.current = 0
-      if (scrollRef.current) anchorsRef.current = collectPreviewAnchors(scrollRef.current)
-    })
+  const anchorsStale = useRef(true)
+  const markAnchorsStale = useCallback(() => {
+    anchorsStale.current = true
+  }, [])
+  const getAnchors = useCallback((): LineAnchor[] => {
+    if (anchorsStale.current && scrollRef.current) {
+      anchorsRef.current = collectPreviewAnchors(scrollRef.current)
+      anchorsStale.current = false
+    }
+    return anchorsRef.current
   }, [])
 
-  // Anchors move as images load and diagrams finish rendering.
   useEffect(() => {
-    scheduleAnchors()
+    markAnchorsStale()
     const container = scrollRef.current
-    const cancel = () => {
-      cancelAnimationFrame(anchorFrame.current)
-      anchorFrame.current = 0
-    }
-    if (!container) return cancel
+    if (!container) return
 
-    const observer = new ResizeObserver(scheduleAnchors)
+    const observer = new ResizeObserver(markAnchorsStale)
     observer.observe(container)
-    container.addEventListener('load', scheduleAnchors, true)
+    container.addEventListener('load', markAnchorsStale, true)
 
     return () => {
-      cancel()
       observer.disconnect()
-      container.removeEventListener('load', scheduleAnchors, true)
+      container.removeEventListener('load', markAnchorsStale, true)
     }
-  }, [debounced, scheduleAnchors])
+  }, [debounced, markAnchorsStale])
 
   useEffect(() => {
     const offScroll = onScrollSync((event) => {
       if (event.source === 'preview' || !scrollSync || !scrollRef.current) return
       lockRef.current.engage()
-      scrollRef.current.scrollTo({ top: offsetForLine(anchorsRef.current, event.line) })
+      scrollRef.current.scrollTo({ top: offsetForLine(getAnchors(), event.line) })
     })
     const offJump = onJump((event) => {
       if (event.source === 'preview' || !scrollRef.current) return
-      scrollRef.current.scrollTo({ top: offsetForLine(anchorsRef.current, event.line), behavior: 'smooth' })
+      // The block holding the line may still be a placeholder: build it first, so the target has its real height.
+      if (articleRef.current && revealIn(articleRef.current, { line: event.line })) markAnchorsStale()
+      scrollRef.current.scrollTo({ top: offsetForLine(getAnchors(), event.line), behavior: 'smooth' })
     })
     return () => {
       offScroll()
       offJump()
     }
-  }, [scrollSync])
+  }, [scrollSync, getAnchors, markAnchorsStale])
 
   const onScroll = useCallback(() => {
     if (!scrollSync || lockRef.current.locked || !scrollRef.current) return
-    emitScrollSync({ line: lineForOffset(anchorsRef.current, scrollRef.current.scrollTop), source: 'preview' })
-  }, [scrollSync])
+    emitScrollSync({ line: lineForOffset(getAnchors(), scrollRef.current.scrollTop), source: 'preview' })
+  }, [scrollSync, getAnchors])
 
   /** Double-clicking a block moves the editor caret to the matching source line. */
   const onDoubleClick = useCallback((event: React.MouseEvent) => {
@@ -157,7 +162,7 @@ function Preview() {
             <p className="preview-empty">Rendering preview…</p>
           ) : (
             <>
-              <BlockedMarkdownView source={debounced} theme={theme} progressive onProgress={onProgress} onBuilt={scheduleAnchors} />
+              <BlockedMarkdownView source={debounced} theme={theme} progressive paused={readingOpen} onProgress={onProgress} onBuilt={markAnchorsStale} />
               {!debounced.trim() && <p className="preview-empty">Nothing to preview yet — start writing in the editor.</p>}
             </>
           )}
