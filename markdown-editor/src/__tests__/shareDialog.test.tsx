@@ -6,6 +6,7 @@ import ShareDialog from '../components/ShareDialog'
 import Header from '../components/Header'
 import CommandPalette from '../components/CommandPalette'
 import { useEditorStore } from '../store'
+import type { ReplaceInfo } from '../sync/engine'
 import { createShare, listShares, revokeShare, type ShareListing, type ShareSummary } from '../services/shareClient'
 import { SyncError } from '../services/markdownSync'
 
@@ -172,7 +173,7 @@ describe('ShareDialog', () => {
 
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Draft title in progress')
     expect((screen.getByLabelText('Expires') as HTMLSelectElement).value).toBe('30')
-  })
+  }, 20_000) // a long user-event script: 1.2 s alone, but over the 5 s default when the whole suite loads the machine
 
   it('after Update snapshot the title field shows what the server now holds; another document gets its own name', async () => {
     vi.mocked(listShares)
@@ -310,9 +311,9 @@ describe('wiring', () => {
   })
 
   it('a guest replacing from a public server confirms after the server answered', async () => {
-    const replaceFromServer = vi.fn(async (confirm?: (info: { documents: number; unsent: number }) => boolean | Promise<boolean>) => {
+    const replaceFromServer = vi.fn(async (confirm?: (info: ReplaceInfo) => boolean | Promise<boolean>) => {
       // The store asks the server first, then hands what it found to the person.
-      return (await confirm?.({ documents: 3, unsent: 0 })) ?? true
+      return (await confirm?.({ documents: 3, unsent: 0, refused: [] })) ?? true
     })
     useEditorStore.setState({ isAdmin: false, replaceFromServer })
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Chạy HẸP phần trình duyệt của MỘT loại puzzle trên máy chủ TĨNH (http.server) — không FastAPI, không backend, không database (an toàn với DB thật), ~30–60 s thay vì ~15 phút.
+r"""Chạy HẸP phần trình duyệt của MỘT loại puzzle trên máy chủ TĨNH (http.server) — không FastAPI, không backend, không database (an toàn với DB thật), ~30–60 s thay vì ~15 phút.
 
     backend\fastapi\.venv\Scripts\python.exe tasks\2610\261023\cai-tien-webapp\nhap\puzzle-lo-coin\chay-rieng.py <id loại> [vong-doi] [ban] [hoc] [di-dong]
         (không đối số tầng = vong-doi + ban + hoc + di-dong)
@@ -25,12 +25,19 @@ class Q(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+class Srv(http.server.ThreadingHTTPServer):
+    """http.server mặc định listen(5): trên Windows, khi nhiều kết nối mở cùng lúc (hai cửa sổ trình duyệt nạp ~40 tệp) hàng đợi đầy thì kết nối bị TỪ CHỐI
+    (net::ERR_CONNECTION_REFUSED vào console → chay-rieng báo "ERR" và exit 1 dù mọi phép kiểm đạt, lúc có lúc không). Hàng đợi lớn như máy chủ thật (uvicorn)."""
+    request_queue_size = 256
+    daemon_threads = True
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
         return 2
     tid, only = sys.argv[1], set(sys.argv[2:]) or {"vong-doi", "ban", "hoc", "di-dong"}
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Q, directory=HERE))
+    srv = Srv(("127.0.0.1", 0), functools.partial(Q, directory=HERE))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     url = "http://127.0.0.1:%d/index.html" % srv.server_address[1]
     from playwright.sync_api import sync_playwright

@@ -5,7 +5,8 @@
     backend\\fastapi\\.venv\\Scripts\\python.exe backend\\fastapi\\webapp\\tranphuc8a\\algorithm-notebook\\check.py            # tầng 1 + 2
     ... check.py --tinh          # tầng 1: tĩnh (cú pháp, kiem.js, thư viện, tham chiếu, icon, manifest, tương phản…)
     ... check.py --chuc-nang     # tầng 2: chức năng (Chromium máy tính + Pixel 5 + WebKit iPhone 13)
-    ... check.py --song-sot      # tầng 3: sập giữa chừng không mất chữ, offline qua service worker, cập nhật
+    ... check.py --toan          # chỉ phần toán của tầng 2 (≈ 15 s; đã nằm trong --chuc-nang): xem trước ghi chú có công thức, XSS qua data-tex, 320 px, thẻ Z-function không còn công thức giả
+    ... check.py --song-sot     # tầng 3: sập giữa chừng không mất chữ, offline qua service worker, cập nhật
     ... check.py --co-gian       # tầng 4: dữ liệu xấu nhất × nhiều bề rộng × 3 trình duyệt + XSS
     ... check.py --hieu-nang [N] # tầng 5: N mục của tôi (mặc định 10000) trong IndexedDB thật — IN SỐ ĐO THẬT
     ... check.py --ma            # tầng 6: biên dịch + chạy thử mọi mẫu code C++ bằng g++ (chậm: 10–30 phút)
@@ -247,6 +248,77 @@ def menu_click(P, label):
 def open_detail(P, id):
     P.go("#/a/" + id, 400)
     P.pg.wait_for_selector(".detail h1")
+
+
+# Ghi chú toán (W4). Chuỗi THÔ (r''') — đừng viết bằng heredoc: dấu \ sẽ mất. Thứ tự công thức trong xem trước = thứ tự dưới đây (6 cái, cái cuối là dải dài không dấu cách).
+TOAN_NOTE = r'''Năng lượng \( E = mc^2 \) và $x_1 * x_2$ ở đây.
+
+\[
+\int_0^1 x\,dx = \frac12
+\]
+
+Giá $5 and $10 không phải công thức.
+
+XSS: $x" onmouseover="window.__xssm=1$ và \(<img src=x onerror=window.__xssm=2>\)
+
+Dài: $''' + "a_{i}+" * 80 + "z$"
+TOAN_JS = """() => {
+  const prev = document.querySelector('.note-prev');
+  const els = [...prev.querySelectorAll('.math')];
+  const blk = prev.querySelector('div.math-d'), inl = prev.querySelector('span.math');
+  return {
+    n: els.length,
+    items: els.map(e => ({ tag: e.tagName, cls: e.className, tex: e.getAttribute('data-tex'), txt: e.textContent })),
+    em: prev.querySelectorAll('.math em, .math strong, .math a, .math code').length,
+    price: prev.textContent.includes('$5 and $10'),
+    xss: window.__xssm === undefined ? null : window.__xssm,
+    xssOk: !prev.querySelector('.math img, .math script, [onmouseover], [onerror]'),
+    center: blk ? getComputedStyle(blk).textAlign : '',
+    wrap: inl ? getComputedStyle(inl).whiteSpace : ''
+  };
+}"""
+
+
+def kiem_toan(br, url):
+    """Phần toán (W4) của tầng 2, một ngữ cảnh trình duyệt riêng. Chạy trong tang_2 và riêng bằng --toan (≈ 15 s)."""
+    section(" · toán (W4): xem trước ghi chú có công thức (\\( \\), $…$, \\[ \\]), giá tiền không phải công thức, XSS qua data-tex, 320 px; thẻ Z-function không còn công thức giả")
+    T = Page(br, url, "desk-toan", viewport={"width": 1366, "height": 820})
+    pg = T.pg
+    open_detail(T, "dijkstra")
+    pg.fill(".note-ta", TOAN_NOTE)
+    pg.click(".note-bar button:has-text('Xem trước')")
+    pg.wait_for_selector(".note-prev .math")
+    mt = pg.evaluate(TOAN_JS)
+    want = [("SPAN", "math", r"E = mc^2"), ("SPAN", "math", r"x_1 * x_2"), ("DIV", "math math-d", r"\int_0^1 x\,dx = \frac12"),
+            ("SPAN", "math", 'x" onmouseover="window.__xssm=1'), ("SPAN", "math", "<img src=x onerror=window.__xssm=2>")]
+    got = [(i["tag"], i["cls"], i["tex"]) for i in mt["items"][:len(want)]]
+    check(got == want and mt["n"] == len(want) + 1, "xem trước ghi chú: 6 công thức đúng loại (inline / khối) và TeX nguyên văn trong data-tex", {"có": got, "n": mt["n"]})
+    check(all(i["txt"] == i["tex"] for i in mt["items"]), "chữ dự phòng của mỗi công thức = đúng TeX (data-tex)", [i for i in mt["items"] if i["txt"] != i["tex"]][:2])
+    check(mt["em"] == 0 and mt["price"], "_ và * trong công thức không thành nghiêng/đậm; giá '$5 and $10' vẫn là chữ thường", mt)
+    check(mt["xssOk"] and mt["xss"] is None, "XSS qua data-tex: không onmouseover/img/script, window.__xssm không bị gán", mt)
+    check(mt["center"] == "center" and mt["wrap"] == "pre-wrap", "kiểu dự phòng: khối công thức căn giữa, công thức dài được phép xuống dòng (CSS của notebook)", {"căn": mt["center"], "wrap": mt["wrap"]})
+    pg.set_viewport_size({"width": 320, "height": 700})
+    pg.wait_for_timeout(300)
+    bad = pg.evaluate(OVERFLOW_JS)
+    check(not bad, "320 px: công thức dài (không dấu cách) tự xuống dòng, không tràn ngang", bad[:3] if bad else "")
+    pg.set_viewport_size({"width": 1366, "height": 820})
+    # Dữ liệu thư viện: thẻ Z-function từng có hai dấu $ trong một đoạn → công thức giả (lib-string.js, sửa W4: bọc code span)
+    open_detail(T, "z-function")
+    zr = pg.evaluate("() => ({ math: document.querySelectorAll('.detail .math').length, text: document.querySelector('.detail').innerText })")
+    check(zr["math"] == 0 and "P + '$' + T" in zr["text"], "chi tiết Z-function: '$' hiện đúng chữ, không có công thức giả (.math = 0)", {"math": zr["math"]})
+    T.close()
+
+
+def tang_toan(may):
+    section("TẦNG 2b — toán (chạy riêng, như phần toán của tầng 2)")
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        br = pw.chromium.launch()
+        kiem_toan(br, may.goc + PATH)
+        br.close()
+    if ERRORS:
+        section("LỖI CONSOLE / PAGEERROR")
+    check(not ERRORS, "không có lỗi console hay pageerror", ERRORS[:6])
 
 
 # ============================================================================================ tầng 2 — chức năng
@@ -662,6 +734,7 @@ def tang_2(may):
             check(not small, "vùng chạm ở màn cài đặt ≥ 32px", small)
             M.close()
             b2.close()
+        kiem_toan(br, url)
         br.close()
     if ERRORS:
         section("LỖI CONSOLE / PAGEERROR")
@@ -1070,9 +1143,11 @@ def main():
             n = int(args[i + 1])
     if tat_ca or default or "--tinh" in todo:
         tang_1()
-    if tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang"}:
+    if tat_ca or default or todo & {"--chuc-nang", "--song-sot", "--co-gian", "--hieu-nang", "--toan"}:
         may = K.MayChuThu([]).__enter__()
         try:
+            if "--toan" in todo and not (tat_ca or default or "--chuc-nang" in todo):
+                tang_toan(may)                                   # chỉ phần toán của tầng 2 (đã nằm trong --chuc-nang)
             if tat_ca or default or "--chuc-nang" in todo:
                 tang_2(may)
             if tat_ca or "--song-sot" in todo:

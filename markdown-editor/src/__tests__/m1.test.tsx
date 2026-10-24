@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEditorStore } from '../store'
+import type { ReplaceInfo } from '../sync/engine'
 import Header from '../components/Header'
 import StatusBar from '../components/StatusBar'
 import StorageBanner from '../components/StorageBanner'
@@ -75,7 +76,7 @@ describe('Sync menu (md-sync F8: no whole-tree save, no unasked replace)', () =>
   })
 
   it('"Replace this device\'s copy…" says what would be lost and a cancel changes nothing', async () => {
-    const replaceFromServer = vi.fn(async (confirm?: (info: { documents: number; unsent: number }) => boolean | Promise<boolean>) => (await confirm?.({ documents: 5, unsent: 2 })) ?? true)
+    const replaceFromServer = vi.fn(async (confirm?: (info: ReplaceInfo) => boolean | Promise<boolean>) => (await confirm?.({ documents: 5, unsent: 2, refused: [] })) ?? true)
     useEditorStore.setState({ replaceFromServer })
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     await openSync()
@@ -87,6 +88,21 @@ describe('Sync menu (md-sync F8: no whole-tree save, no unasked replace)', () =>
     expect(confirm.mock.calls[0][0]).toMatch(/cannot be undone/)
     expect(useEditorStore.getState().currentContent).toBe(DOC)
     expect(useEditorStore.getState().toasts).toEqual([])
+  })
+
+  it('"Replace this device\'s copy…" also names the documents the server refused: this device holds their only copy', async () => {
+    const replaceFromServer = vi.fn(async (confirm?: (info: ReplaceInfo) => boolean | Promise<boolean>) => (await confirm?.({ documents: 2, unsent: 0, refused: ['huge.md', 'b.md', 'c.md', 'd.md', 'e.md'] })) ?? true)
+    useEditorStore.setState({ replaceFromServer })
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    await openSync()
+    await userEvent.click(screen.getByRole('button', { name: /Replace this device/ }))
+
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    const message = confirm.mock.calls[0][0]
+    expect(message).toMatch(/5 documents the server refused/)
+    expect(message).toContain('“huge.md”, “b.md”, “c.md” and 2 more')
+    expect(message).toMatch(/exist only on this device and will be lost for good/)
+    expect(message).not.toMatch(/Nothing waiting to sync here is lost/)
   })
 
   it('"Sync now" runs a cycle of the engine', async () => {

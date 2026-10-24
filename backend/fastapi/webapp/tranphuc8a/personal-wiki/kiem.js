@@ -173,6 +173,9 @@ sec("markdown — toán");
     ["\\\\ trong công thức giữ nguyên (không thành \\)", raw`\(\begin{matrix} a \\ b \end{matrix}\)`, [raw`i:\begin{matrix} a \\ b \end{matrix}`]],
     ["[[0,1]] trong toán không phải liên kết; [[A]] ngoài toán vẫn là liên kết", raw`$[[0,1]]$ và [[A]]`, ["i:[[0,1]]"], function (h) { return (h.match(/<a /g) || []).length === 1 && has(h, ">A</a>"); }],
     ["tiêu đề liên kết có $5: liên kết thắng", raw`[[Giá $5]] và $6`, [], function (h) { return has(h, ">Giá $5</a>") && has(h, "và $6"); }],
+    ["[[…]] mà công thức bắt đầu trong liên kết và kết thúc SAU nó: toán thắng, không có liên kết (khớp parseLinks / đồ thị)", raw`[[Giá $5]] và 6$`, [raw`i:5]] và 6`], function (h) { return !has(h, "<a ") && has(h, "[[Giá "); }],
+    ["[[…]] chứa trọn một công thức bên trong vẫn là liên kết (khớp parseLinks)", raw`[[a $b$ c]] ok`, [], function (h) { return has(h, 'data-title="a $b$ c"') && !has(h, "data-tex"); }],
+    ["[[ + công thức chứa [[A]] + ]]: toán thắng, không liên kết nào (kể cả liên kết lồng trong toán)", raw`[[$[[A]]$]]x`, [raw`i:[[A]]`], function (h) { return !has(h, "<a "); }],
     ["công thức trong chữ đậm", raw`**đậm \(x\) đậm**`, ["i:x"], function (h) { return has(h, "<strong>đậm "); }],
     ["mhchem / macro không bị đụng", raw`\(\ce{H2O + CO2 -> H2CO3}\) và $\label{a}\eqref{a}$`, [raw`i:\ce{H2O + CO2 -> H2CO3}`, raw`i:\label{a}\eqref{a}`]],
     // không phải toán
@@ -249,6 +252,17 @@ sec("markdown — toán");
   kiem("notes.parseLinks bỏ qua toán (đồ thị/liên kết ngược khớp với trang): chỉ A và B, chỉ số trỏ đúng trên nội dung gốc", bang(PL.map(function (l) { return l.title; }), ["A", "B"]) && PL.every(function (l) { return "$[[0,1]]$ và [[A]] và `[[c]]` và \\([[z]]\\) cuối [[B|b]]".substr(l.index, l.raw.length) === l.raw; }));
   kiem("notes.rewriteLinks không đổi tên [[…]] nằm trong toán", N.rewriteLinks("$[[Cũ]]$ [[Cũ]]", "Cũ", "Mới") === "$[[Cũ]]$ [[Mới]]");
   kiem("notes.mathRanges: ranh giới đúng (trên chữ đã che code)", bang(N.mathRanges(N.maskCode("a $x$ b \\(y\\) `$z$` $$w$$")), [[2, 5], [8, 13], [20, 25]]), JSON.stringify(N.mathRanges(N.maskCode("a $x$ b \\(y\\) `$z$` $$w$$"))));
+  kiem("trang ⇔ đồ thị: 8.000 chuỗi MỘT dòng toàn dấu toán và [[…]] → số liên kết trên trang = số liên kết notes.parseLinks (toán thắng ở cả hai nơi; không có liên kết ma ở đồ thị, không có liên kết lọt vào toán)", (function () {
+    var a = 5, rnd = function () { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    var bits = ["$", "$$", "\\(", "\\)", "[[", "]]", "[[A]]", "[[B|b]]", "x", " ", "a", "1", "_", "\\$"];
+    for (var i = 0; i < 8000; i++) {
+      var s = "", len = 3 + Math.floor(rnd() * 14);
+      for (var k = 0; k < len; k++) s += bits[Math.floor(rnd() * bits.length)];
+      var pg = (R(s).match(/<a class="wl/g) || []).length, gr = N.parseLinks(s).length;
+      if (pg !== gr) { console.log("    mẫu: " + JSON.stringify(s) + " → trang " + pg + ", đồ thị " + gr); return false; }
+    }
+    return true;
+  })());
   kiem("mathBlocks (chuẩn bị W5: vùng chưa đóng): chỉ số dòng bắt đầu → kết thúc; rào code và đoạn không toán → null", (function () {
     var b = M.mathBlocks(["a", "", "$$", "x", "$$", "", "\\begin{align}", "y", "\\end{align}", "z"]);
     return !!b && bang(Object.keys(b), ["2", "6"]) && b[2].end === 4 && b[6].end === 8 && M.mathBlocks(["```", "$$", "x", "$$", "```"]) === null && M.mathBlocks(["chỉ chữ", "thường"]) === null && M.mathBlocks(["$$", "chưa đóng", "", "x"]) === null;

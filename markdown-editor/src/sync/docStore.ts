@@ -134,6 +134,8 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
   })
 }
 
+function noop(): void {}
+
 function finished(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
@@ -186,27 +188,39 @@ export class IdbDocStore implements DocStore {
     if (!names.length) return
     const tx = this.db.transaction(names, 'readwrite')
     const done = finished(tx)
-    if (change.docs) {
-      const store = tx.objectStore('docs')
-      for (const doc of change.docs.put ?? []) store.put(doc)
-      for (const id of change.docs.delete ?? []) store.delete(id)
-    }
-    if (change.shadows) {
-      const store = tx.objectStore('shadows')
-      for (const shadow of change.shadows.put ?? []) store.put(shadow)
-      for (const id of change.shadows.delete ?? []) store.delete(id)
-    }
-    if (change.outbox) {
-      const store = tx.objectStore('outbox')
-      for (const entry of change.outbox.put ?? []) store.put(entry)
-      for (const id of change.outbox.delete ?? []) store.delete(id)
-    }
-    if (change.meta) {
-      const store = tx.objectStore('meta')
-      for (const [key, value] of Object.entries(change.meta)) {
-        if (value === null || value === undefined) store.delete(key)
-        else store.put({ k: key, v: value })
+    try {
+      if (change.docs) {
+        const store = tx.objectStore('docs')
+        for (const doc of change.docs.put ?? []) store.put(doc)
+        for (const id of change.docs.delete ?? []) store.delete(id)
       }
+      if (change.shadows) {
+        const store = tx.objectStore('shadows')
+        for (const shadow of change.shadows.put ?? []) store.put(shadow)
+        for (const id of change.shadows.delete ?? []) store.delete(id)
+      }
+      if (change.outbox) {
+        const store = tx.objectStore('outbox')
+        for (const entry of change.outbox.put ?? []) store.put(entry)
+        for (const id of change.outbox.delete ?? []) store.delete(id)
+      }
+      if (change.meta) {
+        const store = tx.objectStore('meta')
+        for (const [key, value] of Object.entries(change.meta)) {
+          if (value === null || value === undefined) store.delete(key)
+          else store.put({ k: key, v: value })
+        }
+      }
+    } catch (error) {
+      // A write that throws (DataCloneError, a closed store...) must not leave the rest of the commit to land on its own, and the
+      // abort it causes is this same failure: reported once, by the rethrow, not again as a rejection nobody awaits.
+      done.catch(noop)
+      try {
+        tx.abort()
+      } catch {
+        /* already finished or aborted */
+      }
+      throw error
     }
     await done
   }
@@ -234,13 +248,20 @@ export function openIdbDocStore(name: string = DB_NAME): Promise<IdbDocStore> {
       reject(new Error('IndexedDB is not available'))
       return
     }
-    const timer = setTimeout(() => reject(new Error('IndexedDB did not answer')), OPEN_TIMEOUT_MS)
+    /** Once given up (blocked, too slow, failed) a connection that opens late is closed, not left open for the life of the page. */
+    let settled = false
+    const giveUp = (error: unknown) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      reject(error)
+    }
+    const timer = setTimeout(() => giveUp(new Error('IndexedDB did not answer')), OPEN_TIMEOUT_MS)
     let req: IDBOpenDBRequest
     try {
       req = indexedDB.open(name, DB_VERSION)
     } catch (error) {
-      clearTimeout(timer)
-      reject(error)
+      giveUp(error)
       return
     }
     req.onupgradeneeded = () => {
@@ -251,20 +272,19 @@ export function openIdbDocStore(name: string = DB_NAME): Promise<IdbDocStore> {
       db.createObjectStore('meta', { keyPath: 'k' })
     }
     req.onsuccess = () => {
-      clearTimeout(timer)
       const db = req.result
+      if (settled) {
+        db.close()
+        return
+      }
+      settled = true
+      clearTimeout(timer)
       // Another tab upgrading the schema must not be held up by this one.
       db.onversionchange = () => db.close()
       resolve(new IdbDocStore(db))
     }
-    req.onerror = () => {
-      clearTimeout(timer)
-      reject(req.error)
-    }
-    req.onblocked = () => {
-      clearTimeout(timer)
-      reject(new Error('IndexedDB is blocked by another tab'))
-    }
+    req.onerror = () => giveUp(req.error)
+    req.onblocked = () => giveUp(new Error('IndexedDB is blocked by another tab'))
   })
 }
 

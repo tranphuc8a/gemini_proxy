@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FILES_KEY, loadFiles } from '../../lib/persistence'
-import { FALLBACK_SHADOW_TEXT_MAX, LocalStorageDocStore, MemoryDocStore, SYNC_KEY, failureOf, openIdbDocStore, type DocStore } from '../docStore'
+import { FALLBACK_SHADOW_TEXT_MAX, IdbDocStore, LocalStorageDocStore, MemoryDocStore, SYNC_KEY, failureOf, openIdbDocStore, type DocStore } from '../docStore'
 import type { LocalDoc, OutboxEntry, Shadow } from '../records'
 
 const doc = (id: string, content = 'text', name = `${id}.md`, parentId: string | null = 'root'): LocalDoc => ({ id, kind: 'file', parentId, name, content, updatedAt: 1 })
@@ -142,5 +142,45 @@ describe('failureOf', () => {
 describe('openIdbDocStore', () => {
   it('rejects when the browser has no IndexedDB (jsdom): the editor then uses the fallback', async () => {
     await expect(openIdbDocStore()).rejects.toThrow(/not available/)
+  })
+})
+
+/** IndexedDB itself is checked in a real browser; these two edges need a browser that misbehaves, so a hand-made stand-in plays it. */
+describe('IndexedDB edges', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('closes the connection that opens late, after the open was given up as blocked', async () => {
+    const request: { onblocked?: () => void; onsuccess?: () => void; result?: { close(): void } } = {}
+    vi.stubGlobal('indexedDB', { open: () => request })
+    const opening = openIdbDocStore('edge-test')
+    request.onblocked?.()
+    await expect(opening).rejects.toThrow(/blocked/)
+    const close = vi.fn()
+    request.result = { close }
+    request.onsuccess?.() // the other tab let go afterwards
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('aborts the transaction when a write throws, so nothing of the commit lands, and leaves no rejection unhandled', async () => {
+    let aborted = false
+    const tx: { onabort: (() => void) | null; oncomplete: (() => void) | null; onerror: (() => void) | null; objectStore(): unknown; abort(): void } = {
+      onabort: null,
+      oncomplete: null,
+      onerror: null,
+      objectStore: () => ({
+        put: () => {
+          throw new DOMException('could not be cloned', 'DataCloneError')
+        },
+        delete: () => undefined
+      }),
+      abort: () => {
+        aborted = true
+        setTimeout(() => tx.onabort?.(), 0) // what a browser does after an abort
+      }
+    }
+    const store = new IdbDocStore({ transaction: () => tx } as unknown as IDBDatabase)
+    await expect(store.commit({ docs: { put: [doc('a')] } })).rejects.toThrow(/cloned/)
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(aborted).toBe(true)
   })
 })

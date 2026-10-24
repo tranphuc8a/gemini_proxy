@@ -176,7 +176,7 @@
   /** Mọi [[…]] ngoài code VÀ ngoài vùng toán → [{type, title, alias, raw, index}]. Tiền tố `kiểu::` chỉ được nhận khi kiểu hợp lệ.
       (Trước W4 toán chưa được che: `$[[0,1]]$` thành liên kết "0,1" trong đồ thị trong khi trang hiện công thức.) */
   function parseLinks(content) {
-    var masked = maskCode(content), out = [], m, rs = mathRanges(masked);
+    var masked = maskCode(content), base = masked, out = [], m, rs = mathRanges(masked);
     if (rs.length) {                                                         // vùng toán thành khoảng trắng cùng độ dài: chỉ số `index` vẫn đúng trên nội dung gốc
       var blanked = "", cur = 0;
       rs.forEach(function (r) { blanked += masked.slice(cur, r[0]) + " ".repeat(r[1] - r[0]); cur = r[1]; });
@@ -185,6 +185,7 @@
     LINK_RE.lastIndex = 0;
     while ((m = LINK_RE.exec(masked))) {
       var inner = String(content).slice(m.index + 2, m.index + m[0].length - 2), type = LINK, mt = /^\s*([a-z_]+)\s*::\s*([\s\S]*)$/i.exec(inner);
+      if (rs.length && /[\[\]\n]/.test(base.slice(m.index + 2, m.index + m[0].length - 2))) continue;   // `[[` + công thức chứa `[`/`]`/xuống dòng + `]]`: khoảng trắng thế chỗ toán làm regex khớp, nhưng TRANG (markdown.js, regex trên chữ gốc) không thấy liên kết → đồ thị cũng không (toán chỉ GỠ liên kết, không bao giờ tạo thêm)
       if (mt && REL_TYPES.indexOf(mt[1].toLowerCase()) !== -1) { type = mt[1].toLowerCase(); inner = mt[2]; }
       var bar = inner.indexOf("|"), title = (bar === -1 ? inner : inner.slice(0, bar)).trim(), alias = bar === -1 ? "" : inner.slice(bar + 1).trim();
       if (!title) continue;

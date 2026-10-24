@@ -4,7 +4,7 @@ import { WELCOME } from '../../lib/welcome'
 import { sha256HexSync } from '../../lib/hash'
 import { MemoryDocStore } from '../docStore'
 import { SyncEngine } from '../engine'
-import { Device, FakeServer } from './fakeServer'
+import { Device, FakeServer, requestWeight } from './fakeServer'
 
 /** Two devices and a server that follows the real one's rules; every cycle is driven by `sync()`, no timers. */
 function pair() {
@@ -447,6 +447,93 @@ describe('trouble', () => {
   })
 })
 
+/**
+ * The server refuses a push request WHOLE with 400 `md_push_too_large` when the UTF-8 bytes of its texts (+ 200 an op) pass 4 MB.
+ * A device that builds a request it can never get through would be stuck for good: every retry rebuilds the same batch.
+ */
+describe('the size of one push request', () => {
+  /** Vietnamese-looking text: 1-byte letters mixed with 3-byte ones, about 1.45 bytes a character. */
+  const viet = (seed: number, chars: number) => `${seed} ${'Tiếng Việt có dấu, rất nhiều ệ ở đây. '.repeat(Math.ceil(chars / 38))}`.slice(0, chars)
+  const bytesOf = (text: string) => new TextEncoder().encode(text).length
+  const inChunksUnderTheLimit = (server: FakeServer) => server.pushes.every((push) => requestWeight(push.ops) <= server.maxPushBytes)
+
+  it('fits documents of a megabyte each into requests the server takes, instead of sticking on the last one', async () => {
+    const { server, a } = pair()
+    for (let i = 0; i < 4; i += 1) a.addFile('root', `big${i}.md`, `${i}`.repeat(1_100_000), `big${i}`)
+    const state = await a.sync()
+    expect(server.refusedPushes).toEqual([])
+    expect(state.phase).toBe('idle')
+    expect(state.pending).toBe(0)
+    for (let i = 0; i < 4; i += 1) expect(server.text(`big${i}`)).toHaveLength(1_100_000)
+    expect(server.pushes.length).toBeGreaterThanOrEqual(2)
+    expect(inChunksUnderTheLimit(server)).toBe(true)
+  }, 30_000)
+
+  it('counts UTF-8 bytes, not characters: text with accents is heavier than its length says', async () => {
+    const { server, a } = pair()
+    const texts = Array.from({ length: 8 }, (_, i) => viet(i, 450_000))
+    // 8 x 450,000 characters is 3.6 M characters (under the 3.5 M budget per request, nearly) but more than 5 MB on the wire.
+    expect(texts.reduce((sum, text) => sum + bytesOf(text), 0)).toBeGreaterThan(5_000_000)
+    texts.forEach((text, i) => a.addFile('root', `v${i}.md`, text, `v${i}`))
+    const state = await a.sync()
+    expect(server.refusedPushes).toEqual([])
+    expect(state.phase).toBe('idle')
+    expect(state.pending).toBe(0)
+    texts.forEach((text, i) => expect(server.text(`v${i}`)).toBe(text))
+    expect(inChunksUnderTheLimit(server)).toBe(true)
+  }, 60_000)
+
+  it('does not let the last document of a request take it over the budget', async () => {
+    const { server, a } = pair()
+    // 3 documents of 1.4 MB: two fit under 3.5 MB (2.8 MB), the third would make 4.2 MB, so it goes in the next request.
+    for (let i = 0; i < 3; i += 1) a.addFile('root', `m${i}.md`, `${i}`.repeat(1_400_000), `m${i}`)
+    await a.sync()
+    expect(server.refusedPushes).toEqual([])
+    expect(server.pushes.length).toBeGreaterThanOrEqual(2)
+    expect(Math.max(...server.pushes.map((push) => requestWeight(push.ops)))).toBeLessThanOrEqual(3_500_000)
+    for (let i = 0; i < 3; i += 1) expect(server.text(`m${i}`)).toHaveLength(1_400_000)
+  }, 30_000)
+
+  it('halves a request the server still refuses (its limit is lower than assumed) and remembers the lesson', async () => {
+    const { server, a } = pair()
+    server.maxPushBytes = 1_000_000
+    for (let i = 0; i < 6; i += 1) a.addFile('root', `s${i}.md`, String.fromCharCode(97 + i).repeat(300_000), `s${i}`)
+    const state = await a.sync()
+    expect(state.phase).toBe('idle')
+    expect(state.pending).toBe(0)
+    expect(state.blocked).toEqual([])
+    expect(server.refusedPushes.length).toBeGreaterThanOrEqual(1)
+    for (let i = 0; i < 6; i += 1) expect(server.text(`s${i}`)).toHaveLength(300_000)
+
+    // The next batch of documents goes straight in small enough requests: no more refusals.
+    const refused = server.refusedPushes.length
+    for (let i = 6; i < 12; i += 1) a.addFile('root', `s${i}.md`, String.fromCharCode(97 + i).repeat(300_000), `s${i}`)
+    await a.sync()
+    expect(server.refusedPushes.length).toBe(refused)
+    for (let i = 6; i < 12; i += 1) expect(server.text(`s${i}`)).toHaveLength(300_000)
+  }, 30_000)
+
+  it('blocks only the document that cannot go even alone, and the rest still goes', async () => {
+    const { server, a } = pair()
+    server.maxPushBytes = 100_000
+    a.addFile('root', 'wide.md', 'w'.repeat(200_000), 'wide')
+    a.addFile('root', 'small1.md', 'one', 'small1')
+    a.addFile('root', 'small2.md', 'two', 'small2')
+    const state = await a.sync()
+    expect(state.blocked).toMatchObject([{ id: 'wide', code: 'md_push_too_large' }])
+    expect(state.phase).toBe('idle')
+    expect(server.text('small1')).toBe('one')
+    expect(server.text('small2')).toBe('two')
+    expect(server.records.has('wide')).toBe(false)
+    // "Try again" lets it go once the server takes it.
+    server.maxPushBytes = 4_000_000
+    await a.engine.retryBlocked()
+    await a.sync()
+    expect(server.text('wide')).toHaveLength(200_000)
+    expect(a.engine.state.blocked).toEqual([])
+  }, 30_000)
+})
+
 describe('first meeting with a server (reconcile)', () => {
   it('uploads what is only here, downloads what is only there, and leaves equal documents alone', async () => {
     const server = new FakeServer()
@@ -564,6 +651,10 @@ describe('first meeting with a server (reconcile)', () => {
     expect(a.has('gone')).toBe(false)
     expect(a.text('keep')).toBe('keep, but edited here')
     expect(server.text('keep')).toBe('keep, but edited here')
+    // What was removed is said, not done in silence.
+    expect(a.notes.filter((note) => /removed from this device/.test(note))).toHaveLength(1)
+    expect(a.notes.find((note) => /removed from this device/.test(note))).toContain('gone.md')
+    expect(a.notes.find((note) => /removed from this device/.test(note))).not.toContain('keep.md')
   })
 
   it('cancelling the question switches sync off', async () => {
@@ -605,6 +696,27 @@ describe('replace this device\'s copy with the server\'s', () => {
     expect(b.text('only-a')).toBe('a')
     expect(b.has('unsent')).toBe(false)
     expect(b.engine.state.pending).toBe(0)
+  })
+
+  it('tells what the server never took (refused documents) as well as what is merely waiting, before anything is lost', async () => {
+    const { server, a } = pair()
+    a.addFile('root', 'huge.md', 'x'.repeat(3_600_000), 'huge') // refused for good: this is its only copy
+    a.addFile('root', 'fine.md', 'fine', 'fine')
+    await a.sync()
+    expect(a.engine.state.blocked).toMatchObject([{ id: 'huge' }])
+    a.edit('fine', 'fine, edited and not synced')
+    let seen: { documents: number; unsent: number; refused: string[] } | null = null
+    const replaced = await a.engine.replaceFromServer((info) => {
+      seen = info
+      return false
+    })
+    expect(replaced).toBe(false)
+    expect(seen).toEqual({ documents: 1, unsent: 1, refused: ['huge.md'] })
+    expect(a.has('huge')).toBe(true) // declined: nothing changed
+    expect(server.records.has('huge')).toBe(false)
+
+    await a.engine.replaceFromServer(() => true)
+    expect(a.has('huge')).toBe(false)
   })
 })
 
@@ -689,6 +801,23 @@ describe('what the server did not echo', () => {
     expect(server.text('doc')).toBe('one\ntwo\nthree\nfour\nfive\nsix\nseven\nnew last line') // the other device's text is intact
   })
 
+  it('a rename pushed on top of a text edit made elsewhere does not hide that text: the renaming device still receives it', async () => {
+    const { server, a, b } = await withSharedDoc()
+    const base = 'one\ntwo\nthree\nfour\nfive\nsix\nseven'
+    b.edit('doc', `${base}\nwritten on B`)
+    await b.sync()
+    a.rename('doc', 'renamed.md') // A has not pulled B's text; the server takes the rename and answers with B's content revision
+    await a.sync()
+    expect(server.records.get('doc')?.name).toBe('renamed.md')
+    expect(a.text('doc')).toBe(`${base}\nwritten on B`)
+    expect(a.name('doc')).toBe('renamed.md')
+    // A's next edit is made on the right base: it lands as written, with no clash and no refused patch
+    a.edit('doc', `${base}\nwritten on B\nand on A`)
+    const state = await a.sync()
+    expect(state.conflicts).toEqual([])
+    expect(server.text('doc')).toBe(`${base}\nwritten on B\nand on A`)
+  })
+
   it('two renames of one node: the later push wins and both devices end up with that name', async () => {
     const { server, a, b } = await withSharedDoc()
     a.rename('doc', 'from-a.md')
@@ -740,6 +869,34 @@ describe('the cursor and echoes', () => {
     expect(a.text('doc')).toBe('edit whose answer is lost')
   })
 
+  it('an edit made while a push is in flight is still sent afterwards (the entry is only cleared at the version that was sent)', async () => {
+    const { server, a } = await withSharedDoc()
+    a.edit('doc', 'first edit')
+    server.duringPush = () => {
+      server.duringPush = null
+      a.edit('doc', 'second edit, typed while the first was on its way')
+    }
+    await a.sync()
+    expect(server.text('doc')).toBe('second edit, typed while the first was on its way')
+    expect(a.engine.state.pending).toBe(0)
+    expect(a.text('doc')).toBe('second edit, typed while the first was on its way')
+  })
+
+  it('a node edited while its push was being refused is not marked refused: the new version is tried', async () => {
+    const { server, a } = await withSharedDoc()
+    a.now = server.clock + 200_000_000 // a clock far ahead: the server answers md_bad_clock
+    a.edit('doc', 'edited with a wrong clock')
+    server.duringPush = () => {
+      server.duringPush = null
+      a.now = 5_000_000 // fixed, and the person edits again
+      a.edit('doc', 'edited again, with a right clock')
+    }
+    await a.sync()
+    expect(a.engine.state.blocked).toEqual([])
+    expect(server.text('doc')).toBe('edited again, with a right clock')
+    expect(a.engine.state.pending).toBe(0)
+  })
+
   it('hashes what it sends the way the server does (SHA-256 of the UTF-8 text)', async () => {
     const { server, a } = pair()
     a.addFile('root', 'u.md', 'Việt ệ — 😀\n', 'u')
@@ -756,5 +913,21 @@ describe('the cursor and echoes', () => {
     server.pushes.length = 0
     await a.sync()
     expect(server.pushes).toEqual([]) // clean: nothing is sent again for it
+  })
+})
+
+describe('memory', () => {
+  it('remembers the hashes of only a few texts: each key is a whole document, up to 3.5 MB', async () => {
+    const server = new FakeServer()
+    const device = new Device(server, { deviceId: 'dev-a' })
+    const hash = vi.fn(async (text: string) => sha256HexSync(text))
+    const engine = new SyncEngine({ api: server, ws: device.ws, backend: 'x', deviceId: 'dev-z', canWrite: () => true, hash, manual: true })
+    const hashOf = (text: string) => (engine as unknown as { hashOf(text: string): Promise<string> }).hashOf(text)
+    for (let i = 0; i < 10; i += 1) await hashOf(`text ${i}`)
+    expect(hash).toHaveBeenCalledTimes(10)
+    await hashOf('text 9')
+    expect(hash).toHaveBeenCalledTimes(10) // the latest is remembered
+    await hashOf('text 0')
+    expect(hash).toHaveBeenCalledTimes(11) // an old one was let go
   })
 })

@@ -205,8 +205,9 @@
       }
       rest = src.slice(i);
       if (c === "[" && rest.charAt(1) === "[" && (m = /^\[\[([^\[\]\n]{1,300})\]\]/.exec(rest))) {
-        var l = N.parseLinks(m[0])[0];
-        if (l) { out += hold(wikiLink(l, ctx)); i += m[0].length; continue; }
+        var l = N.parseLinks(m[0])[0], lend = i + m[0].length;
+        for (var sk = si; l && sk < ns && spans[sk].a < lend; sk++) if (spans[sk].b > lend) l = null;      // công thức bắt đầu trong liên kết nhưng KẾT THÚC sau nó (`[[Giá $5]] và 6$`): toán thắng, như parseLinks (đồ thị) — trang và đồ thị phải thấy cùng một tập liên kết
+        if (l) { out += hold(wikiLink(l, ctx)); i = lend; continue; }
       }
       if (c === "!" && rest.charAt(1) === "[" && (m = /^!\[([^\]\n]*)\]\(\s*([^\s)]+)(?:\s+"[^"\n]*")?\s*\)/.exec(rest))) {
         var img = safeImg(m[2]);
@@ -285,7 +286,7 @@
   }
 
   function renderBlocks(lines, ctx, depth, state) {
-    var html = "", i = 0, m, mb = mathBlocks(lines);
+    var html = "", i = 0, m, mb = mathBlocks(lines), own = false;                              // own: `lines` đã là bản chép riêng (chữ sau \end{ENV} ghi đè dòng — không được sửa mảng của người gọi, W5 sẽ truyền mảng dùng lại)
     while (i < lines.length) {
       var line = lines[i];
       if (/^\s*$/.test(line)) { i++; continue; }
@@ -304,7 +305,7 @@
         var mbk = mb[i];
         mb[i] = null;
         html += mathHtml(mbk.tex, true, true);
-        if (mbk.rest && notBlank(mbk.rest)) { lines[mbk.end] = mbk.rest; i = mbk.end; } else i = mbk.end + 1;     // chữ còn lại sau \end{ENV} trên cùng dòng tiếp tục như đoạn văn
+        if (mbk.rest && notBlank(mbk.rest)) { if (!own) { lines = lines.slice(); own = true; } lines[mbk.end] = mbk.rest; i = mbk.end; } else i = mbk.end + 1;     // chữ còn lại sau \end{ENV} trên cùng dòng tiếp tục như đoạn văn
         continue;
       }
       if ((m = headingOf(line))) {

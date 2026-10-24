@@ -285,7 +285,7 @@
   }
 
   function renderBlocks(lines, ctx, depth, state) {
-    var html = "", i = 0, m, mb = mathBlocks(lines);
+    var html = "", i = 0, m, mb = mathBlocks(lines), own = false;                              // own: `lines` đã là bản chép riêng (chữ sau \end{ENV} ghi đè dòng — không được sửa mảng của người gọi, W5 sẽ truyền mảng dùng lại)
     while (i < lines.length) {
       var line = lines[i];
       if (/^\s*$/.test(line)) { i++; continue; }
@@ -304,7 +304,7 @@
         var mbk = mb[i];
         mb[i] = null;
         html += mathHtml(mbk.tex, true, true);
-        if (mbk.rest && notBlank(mbk.rest)) { lines[mbk.end] = mbk.rest; i = mbk.end; } else i = mbk.end + 1;     // chữ còn lại sau \end{ENV} trên cùng dòng tiếp tục như đoạn văn
+        if (mbk.rest && notBlank(mbk.rest)) { if (!own) { lines = lines.slice(); own = true; } lines[mbk.end] = mbk.rest; i = mbk.end; } else i = mbk.end + 1;     // chữ còn lại sau \end{ENV} trên cùng dòng tiếp tục như đoạn văn
         continue;
       }
       if ((m = headingOf(line))) {

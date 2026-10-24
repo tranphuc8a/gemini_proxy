@@ -202,15 +202,22 @@ function Header({ onOpenHelp, onOpenInstall, onOpenPalette, onOpenAuth, onOpenSh
   const replaceDevice = async () => {
     setBusy('replace')
     try {
-      await replaceFromServer(({ documents, unsent }) =>
-        window.confirm(
+      await replaceFromServer(({ documents, unsent, refused }) => {
+        const lost: string[] = []
+        if (unsent > 0) lost.push(`${unsent === 1 ? '1 change' : `${unsent} changes`} made here and not synced yet will be lost.`)
+        if (refused.length > 0) {
+          const names = refused.slice(0, 3).map((name) => `“${name}”`).join(', ') + (refused.length > 3 ? ` and ${refused.length - 3} more` : '')
+          lost.push(
+            `${refused.length === 1 ? '1 document' : `${refused.length} documents`} the server refused (${names}) ` +
+              `${refused.length === 1 ? 'exists' : 'exist'} only on this device and will be lost for good.`
+          )
+        }
+        return window.confirm(
           `Replace this device's copy with the server's?\n\nThis browser will hold exactly the ${documents === 1 ? '1 document' : `${documents} documents`} on the server. ` +
-            (unsent > 0
-              ? `${unsent === 1 ? '1 change' : `${unsent} changes`} made here and not synced yet will be lost.`
-              : 'Nothing waiting to sync here is lost.') +
+            (lost.length > 0 ? lost.join(' ') : 'Nothing waiting to sync here is lost.') +
             ' This cannot be undone.'
         )
-      )
+      })
     } catch (error) {
       if (error instanceof SyncError && error.code === 'markdown_private') {
         pushToast("This server's documents are private. Unlock admin mode to load them.", 'error')

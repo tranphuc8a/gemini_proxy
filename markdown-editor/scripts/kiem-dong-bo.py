@@ -15,9 +15,12 @@ chuyển đổi lười, CAS). Không chạm database thật; không gọi Gemin
   6. client cũ   PUT /markdown/files (bản app cũ) → 409 md_legacy_client; GET /markdown/files dựng lại cây từ kho mới
   7. chuyển kho  workspace v2 (localStorage) → IndexedDB không mất chữ nào, khoá v2 thay bằng ảnh khởi động v3, tải lại vẫn đủ
   8. dự phòng    không có IndexedDB (cửa sổ riêng tư) → vẫn lưu ở khoá v2 như trước, sống qua tải lại
+  4b. lô lớn    kho tiếng Việt 8 × 450.000 ký tự (3,6 triệu KÝ TỰ nhưng ≈ 5 MB BYTE) đồng bộ lần đầu → bộ gom lô chia theo byte UTF-8 như máy chủ
+                đếm: không 400 md_push_too_large, mọi tài liệu lên đúng SHA-256, mỗi yêu cầu ≤ 4.000.000 (bản cũ đếm ký tự nên kẹt vĩnh viễn)
   9. toàn cục    không có yêu cầu PUT /markdown/files nào từ app mới; không pageerror
 
-Dùng: `PYTHONUTF8=1 backend/fastapi/.venv/Scripts/python.exe markdown-editor/scripts/kiem-dong-bo.py [--anh <thư-mục>]`
+Dùng: `PYTHONUTF8=1 backend/fastapi/.venv/Scripts/python.exe markdown-editor/scripts/kiem-dong-bo.py [--anh <thư-mục>] [--chi-lo-lon]`
+(`--chi-lo-lon`: chỉ chạy bước 4b, cho nhanh khi sửa bộ gom lô.)
 Exit code 0 khi mọi phép đạt.
 """
 from __future__ import annotations
@@ -245,8 +248,65 @@ def doc_idb(page) -> dict:
     return page.evaluate(READ_IDB_JS)
 
 
-def chay(browser, srv, so: SoKiem, ses: Sesion, shots: str | None):
+def van_ban_viet(i: int, so_ky_tu: int) -> str:
+    """Chữ tiếng Việt đúng `so_ky_tu` ký tự (≈ 1,3 byte UTF-8 mỗi ký tự), mỗi tài liệu một dấu vết riêng."""
+    dong = f"Tiếng Việt có dấu, rất nhiều chữ ệ ở đây (tài liệu {i}).\n"
+    return (dong * (so_ky_tu // len(dong) + 1))[:so_ky_tu]
+
+
+def trong_luong_push(body: str) -> int:
+    """Cách máy chủ thật tính cỡ một yêu cầu push: byte UTF-8 của chữ (hoặc của các dòng bản vá) + 200 mỗi op."""
+    tong = 0
+    for op in json.loads(body)["ops"]:
+        tong += 200
+        if op.get("content") is not None:
+            tong += len(op["content"].encode("utf-8"))
+        elif op.get("patch"):
+            for _o, _d, dong in op["patch"]["h"]:
+                tong += 16 + sum(len(x.encode("utf-8")) + 4 for x in dong)
+    return tong
+
+
+def buoc_lo_lon_viet(browser, srv, so: SoKiem, ses: Sesion, token: str):
+    """4b. Lần đồng bộ đầu của một kho tiếng Việt nặng: 8 tài liệu × 450.000 ký tự = 3,6 triệu KÝ TỰ (bộ gom lô cũ đếm ký tự và
+    chỉ kiểm trần TRƯỚC khi thêm tài liệu, nên gom hết vào một lô) nhưng ≈ 5 MB BYTE UTF-8 — máy chủ từ chối cả yêu cầu 400 `md_push_too_large` nếu > 4.000.000.
+    Bộ gom lô cũ dựng đúng lô đó mãi nên không tài liệu nào lên được; bản đúng chia lô theo BYTE và mọi tài liệu lên máy chủ."""
+    print("· 4b. kho tiếng Việt ≈ 5 MB (3,6 triệu ký tự) đồng bộ lần đầu: chia lô theo byte UTF-8")
+    viet = [(f"vn{i}", f"viet-{i}.md", van_ban_viet(i, 450_000)) for i in range(8)]
+    ky_tu = sum(len(t) for _, _, t in viet)
+    byte = sum(len(t.encode("utf-8")) for _, _, t in viet)
+    so.kiem(f"dữ liệu thử đúng ý đồ: {ky_tu} ký tự (bộ đếm ký tự cũ vẫn gom hết vào một lô) nhưng {byte} byte (> 4 triệu: máy chủ từ chối)", ky_tu < 3_700_000 and byte > 4_100_000, f"{ky_tu} ký tự, {byte} byte")
+    v2 = json.dumps({"version": 2, "currentFileId": "vn0", "expandedFolders": ["root"], "files": [
+        {"id": "root", "name": "Docs", "type": "folder", "children": [
+            {"id": i, "name": n, "type": "file", "parentId": "root", "content": t} for i, n, t in viet]}]}, ensure_ascii=False)
+    ctx = mo_ngu_canh(browser, srv, token=token, v2=v2)
+    h = mo_app(ctx, srv, ses, "H")
+    mark = ses.marca(h)
+    want = {i: sha(t) for i, _, t in viet}
+    def da_len_may_chu() -> bool:
+        da_co = server_docs(srv)
+        return all(da_co.get(i, {}).get("hash") == want[i] for i in want)
+
+    len_ok = poll(da_len_may_chu, timeout=150, step=4.0)
+    so.kiem("mọi tài liệu tiếng Việt lên máy chủ đúng SHA-256 (không kẹt ở 400 md_push_too_large)", bool(len_ok))
+    try:
+        cho_dong_bo(h, timeout=60000)
+    except Exception:  # noqa: BLE001 - phép kiểm bên dưới ghi lại trạng thái thật
+        pass
+    so.kiem("thanh trạng thái báo 'Synced', không 'error' / 'queued'", trang_thai(h).startswith(("Synced", "Up to date")), trang_thai(h))
+    ses.marca(h)
+    pushes = [p for p in ses.push_cua("H", mark) if p["body"]]
+    nang = [trong_luong_push(p["body"]) for p in pushes]
+    so.kiem(f"nhiều hơn một yêu cầu push (chia lô), và mỗi yêu cầu ≤ 4.000.000 theo cách đếm của máy chủ ({nang})", len(pushes) >= 2 and max(nang) <= 4_000_000, str(nang))
+    ctx.close()
+
+
+def chay(browser, srv, so: SoKiem, ses: Sesion, shots: str | None, chi_lo_lon: bool = False):
     token = srv.phien_quan_tri()
+    if chi_lo_lon:
+        buoc_lo_lon_viet(browser, srv, so, ses, token)
+        so.kiem("không pageerror", not ses.page_errors, " | ".join(ses.page_errors[:3]))
+        return
 
     def snap(page, ten):
         if shots:
@@ -506,6 +566,9 @@ def chay(browser, srv, so: SoKiem, ses: Sesion, shots: str | None):
     so.kiem("không có IndexedDB: tải lại vẫn còn bản sửa", soan(g) == "sửa khi không có IndexedDB ✓")
     ctx_g.close()
 
+    # ------------------------------------------------------------------ 4b. lô lớn tiếng Việt (đặt sau cùng cho khỏi kéo dài các bước trước)
+    buoc_lo_lon_viet(browser, srv, so, ses, token)
+
     # ------------------------------------------------------------------ 9. toàn cục
     puts = [r for r in ses.requests if r["method"] == "PUT" and "/markdown/files" in r["url"]]
     so.kiem("app mới KHÔNG gọi PUT /markdown/files lần nào (cả phiên kiểm)", not puts, str(len(puts)))
@@ -540,7 +603,7 @@ def main() -> int:
                 return 2
             print(f"Trình duyệt: {kenh}")
             try:
-                chay(browser, srv, so, ses, shots)
+                chay(browser, srv, so, ses, shots, chi_lo_lon="--chi-lo-lon" in sys.argv)
             finally:
                 browser.close()
     except Exception as exc:  # noqa: BLE001

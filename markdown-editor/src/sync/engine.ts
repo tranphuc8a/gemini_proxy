@@ -1,5 +1,6 @@
 import { sha256Hex } from '../lib/hash'
 import { createId } from '../lib/id'
+import { utf8Bytes } from '../lib/share'
 import { KNOWN_WELCOME_SHA256 } from '../lib/welcome'
 import { SyncError, type PushOp, type PushResult, type SyncApi } from '../services/markdownSync'
 import { PATCH_MIN_CHARS, makePatch, merge3 } from './lineDiff'
@@ -49,6 +50,16 @@ export interface ReconcilePlan {
   differ: { id: string; name: string }[]
 }
 
+/** What "Replace this device's copy" is about to throw away, shown before the person confirms. */
+export interface ReplaceInfo {
+  /** Documents the server holds (what this device will have). */
+  documents: number
+  /** Changes made here that are still waiting to be sent. */
+  unsent: number
+  /** Names of documents the server refused: they exist only here. */
+  refused: string[]
+}
+
 export type ReconcileChoice = { differ: 'both' | 'server' | 'local'; deleteServerOnly: boolean } | 'cancel'
 
 export interface SyncState {
@@ -90,7 +101,16 @@ const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,80}$/
 const MAX_NAME = 255
 /** Nodes per push: a far database costs a few round trips per op, and a serverless function has a time limit. */
 const MAX_OPS = 50
+/**
+ * What one push request may weigh, in the server's own measure (`opWeight`: UTF-8 bytes of the texts + 200 an op). The server
+ * refuses a request over 4 MB WHOLE, so this stays below it; one op may exceed it only when it is alone (<= MAX_DOC_BYTES + 200).
+ */
 const MAX_PUSH_BYTES = 3_500_000
+/** Whatever else the server charges for an op, and the least a learned budget shrinks to (see `pushBatch`). */
+const OP_OVERHEAD = 200
+const MIN_PUSH_BUDGET = 64 * 1024
+/** Texts whose hash is remembered: each is a whole document, up to 3.5 MB. */
+const HASH_CACHE_SIZE = 4
 const MAX_DOC_BYTES = 3_500_000
 const MAX_ROUNDS = 40
 const MAX_PAGES = 1000
@@ -185,6 +205,24 @@ function badName(name: string): boolean {
   return !name.trim() || name.length > MAX_NAME || name.includes('/') || /[\u0000-\u001f\u007f]/.test(name)
 }
 
+/**
+ * What the server charges for one op (`MarkdownDocsUseCase._op_weight` + 200): the UTF-8 BYTES of the text (a character of
+ * Vietnamese is 1 to 3 of them, a CJK character or an emoji 3 to 4), or of the lines of a patch (+4 each, +16 a hunk).
+ * Counting UTF-16 units instead would under-count every accented text.
+ */
+export function opWeight(op: PushOp): number {
+  let weight = OP_OVERHEAD
+  if (op.content !== undefined) {
+    weight += utf8Bytes(op.content)
+  } else if (op.patch) {
+    for (const [, , lines] of op.patch.h) {
+      weight += 16
+      for (const line of lines) weight += utf8Bytes(line) + 4
+    }
+  }
+  return weight
+}
+
 /** "notes (this device).md" for "notes.md" -- the copy a first meeting or a conflict keeps beside the server's version. */
 export function copyName(name: string, label: string): string {
   const match = /^(.*?)(\.[^.]+)?$/.exec(name)
@@ -208,6 +246,8 @@ export class SyncEngine {
   private failures = 0
   private reconcileAnswer: ((choice: ReconcileChoice) => void) | null = null
   private cache = new Map<string, string>()
+  /** The request weight this device builds towards: MAX_PUSH_BYTES until a server refuses a request for its size. */
+  private pushBudget = MAX_PUSH_BYTES
   private listeners: (() => void)[] = []
 
   constructor(deps: EngineDeps) {
@@ -382,7 +422,7 @@ export class SyncEngine {
     const known = this.cache.get(clean)
     if (known) return known
     const hash = await this.hashText(clean)
-    if (this.cache.size > 24) this.cache.clear()
+    if (this.cache.size >= HASH_CACHE_SIZE) this.cache.delete(this.cache.keys().next().value as string)
     this.cache.set(clean, hash)
     return hash
   }
@@ -404,7 +444,7 @@ export class SyncEngine {
 
   /** Pushes the outbox, a batch at a time, until nothing is left that can go. */
   private async pushAll(): Promise<void> {
-    const { ws, deps } = this
+    const { ws } = this
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       ws.capture()
       const entries = ws.outboxEntries().filter((entry) => !entry.conflict && !entry.blocked)
@@ -413,9 +453,10 @@ export class SyncEngine {
       const shadows = await this.shadowsOf(entries.map((entry) => entry.id))
       const batch = await this.buildOps(entries, shadows)
       if (batch.drop.length || batch.block.length) {
+        // Hashing and building took a while: a node the person edited meanwhile keeps its newer entry (and is looked at again).
         await ws.apply(
           { outbox: { delete: batch.drop.map((entry) => entry.id), put: batch.block.map(({ entry, code }) => ({ ...entry, blocked: code })) } },
-          new Map(batch.drop.map((entry) => [entry.id, entry.version]))
+          new Map([...batch.drop, ...batch.block.map(({ entry }) => entry)].map((entry) => [entry.id, entry.version]))
         )
       }
       if (!batch.ops.length) {
@@ -423,8 +464,7 @@ export class SyncEngine {
         return
       }
 
-      const response = await deps.api.push({ device: deps.deviceId, ops: batch.ops.map((sent) => sent.op) })
-      const results = response.results
+      const results = await this.pushBatch(batch.ops)
       const shadowPut: Shadow[] = []
       const outboxDelete: string[] = []
       const versions = new Map<string, number>()
@@ -444,9 +484,11 @@ export class SyncEngine {
         } else if (result.code === 'md_patch_mismatch' || result.code === 'md_hash_mismatch') {
           // The base moved under us (or a patch misfired): the whole text, next time.
           outboxPut.push({ ...sent.entry, forceFull: true })
+          versions.set(sent.entry.id, sent.entry.version)
           resend = true
         } else {
           outboxPut.push({ ...sent.entry, blocked: result.code })
+          versions.set(sent.entry.id, sent.entry.version)
         }
       })
       if (shadowPut.length || outboxDelete.length || outboxPut.length) {
@@ -455,6 +497,27 @@ export class SyncEngine {
       if (conflicted.length) await this.applyRecords(conflicted)
       this.refreshCounts()
       if (!resend && !batch.more && !conflicted.length) return
+    }
+  }
+
+  /**
+   * Sends the ops of one batch and returns their results, in order. A request the server refuses whole for its size (400
+   * `md_push_too_large`: our reckoning and its own disagree, or its limit is lower than assumed) is halved and sent again,
+   * and the budget of the next batches follows; an op that is too much even alone comes back `rejected` -- it is blocked on its
+   * own instead of holding up every other document, as a retry of the same batch would for ever.
+   */
+  private async pushBatch(sent: SentOp[]): Promise<PushResult[]> {
+    try {
+      const response = await this.deps.api.push({ device: this.deps.deviceId, ops: sent.map((item) => item.op) })
+      return response.results
+    } catch (error) {
+      if (!(error instanceof SyncError) || error.code !== 'md_push_too_large') throw error
+      if (sent.length === 1) return [{ id: sent[0].op.id, status: 'rejected', code: 'md_push_too_large', message: error.message }]
+      const weight = sent.reduce((sum, item) => sum + item.weight, 0)
+      this.pushBudget = Math.min(this.pushBudget, Math.max(MIN_PUSH_BUDGET, Math.floor(weight / 2)))
+      const middle = Math.ceil(sent.length / 2)
+      const first = await this.pushBatch(sent.slice(0, middle))
+      return [...first, ...(await this.pushBatch(sent.slice(middle)))]
     }
   }
 
@@ -493,8 +556,22 @@ export class SyncEngine {
     const { ws } = this
     const built: BuiltOps = { ops: [], drop: [], block: [], more: false }
     let bytes = 0
+    /**
+     * Adds an op unless it would take the request over the budget (then the rest waits for the next request). The weight is
+     * checked AFTER the op is known, so the last op of a request can never push it over; an op alone always goes, whatever it weighs.
+     */
+    const add = (sent: Omit<SentOp, 'weight'>): boolean => {
+      const weight = opWeight(sent.op)
+      if (built.ops.length > 0 && bytes + weight > this.pushBudget) {
+        built.more = true
+        return false
+      }
+      bytes += weight
+      built.ops.push({ ...sent, weight })
+      return true
+    }
     for (const entry of entries) {
-      if (built.ops.length >= MAX_OPS || bytes >= MAX_PUSH_BYTES) {
+      if (built.ops.length >= MAX_OPS) {
         built.more = true
         break
       }
@@ -507,10 +584,7 @@ export class SyncEngine {
           built.drop.push(entry)
           continue
         }
-        built.ops.push({
-          op: { id: entry.id, kind: shadow.kind, baseRev: shadow.contentRev, deleted: true, updatedAt: this.now() },
-          entry, doc: null, shadow, text: null, hash: '', deleting: true
-        })
+        if (!add({ op: { id: entry.id, kind: shadow.kind, baseRev: shadow.contentRev, deleted: true, updatedAt: this.now() }, entry, doc: null, shadow, text: null, hash: '', deleting: true })) break
         continue
       }
 
@@ -548,7 +622,6 @@ export class SyncEngine {
             op.content = text
           }
           op.hash = hash
-          bytes += patch ? JSON.stringify(patch).length : text.length
         }
       }
       if (revive) op.deleted = false
@@ -562,7 +635,7 @@ export class SyncEngine {
       // The server judges the text against `contentRev` and the name/place against `metaRev`: say how far we know each,
       // for the parts this op touches (an unrelated change on the server then merges instead of clashing).
       if (shadow) op.baseRev = Math.max(changesText || revive ? shadow.contentRev : 0, changesMeta ? shadow.metaRev : 0)
-      built.ops.push({ op, entry, doc, shadow, text, hash, deleting: false })
+      if (!add({ op, entry, doc, shadow, text, hash, deleting: false })) break
     }
     return built
   }
@@ -974,6 +1047,11 @@ export class SyncEngine {
       )
       if (committed) {
         this.publish({ reconcile: null })
+        if (plan.docsDelete.size) {
+          const names = [...plan.docsDelete].map((id) => `“${local.get(id)?.name ?? id}”`)
+          const shown = names.slice(0, 3).join(', ') + (names.length > 3 ? ` and ${names.length - 3} more` : '')
+          deps.notify?.(`${names.length} document${names.length === 1 ? '' : 's'} that the server no longer has ${names.length === 1 ? 'was' : 'were'} removed from this device: ${shown}.`, 'info')
+        }
         if (differ.length && choice.differ === 'both') {
           deps.notify?.(`${differ.length} document${differ.length === 1 ? '' : 's'} differed from the server's copy: both were kept (yours is named “… (this device)”).`, 'info')
         }
@@ -1004,9 +1082,11 @@ export class SyncEngine {
   /**
    * "Replace this device's copy with the server's": the server's documents become the workspace, everything here that the
    * server does not have -- unsent edits included -- is gone, the outbox is emptied. The server is asked first, and
-   * `confirm` sees what would be lost before anything changes (false = do nothing). Works for a viewer too.
+   * `confirm` sees what would be lost before anything changes (false = do nothing): the changes still waiting (`unsent`) and
+   * the documents the server REFUSED (`refused`, by name) -- those never went up, so this device holds their only copy.
+   * Works for a viewer too.
    */
-  async replaceFromServer(confirm?: (info: { documents: number; unsent: number }) => boolean | Promise<boolean>): Promise<boolean> {
+  async replaceFromServer(confirm?: (info: ReplaceInfo) => boolean | Promise<boolean>): Promise<boolean> {
     const { ws, deps } = this
     const before = this.current.phase
     this.publish({ phase: 'syncing', error: null })
@@ -1014,8 +1094,10 @@ export class SyncEngine {
       const { records, cursor } = await this.pullEverything()
       ws.capture()
       await ws.drain()
-      const unsent = ws.outboxEntries().filter((entry) => !entry.blocked).length
-      if (confirm && !(await confirm({ documents: records.filter((record) => record.kind === 'file').length, unsent }))) {
+      const entries = ws.outboxEntries()
+      const unsent = entries.filter((entry) => !entry.blocked).length
+      const refused = entries.filter((entry) => entry.blocked && ws.docs.has(entry.id)).map((entry) => ws.docs.get(entry.id)?.name ?? entry.id)
+      if (confirm && !(await confirm({ documents: records.filter((record) => record.kind === 'file').length, unsent, refused }))) {
         this.publish({ phase: before === 'syncing' ? 'idle' : before })
         return false
       }
@@ -1060,6 +1142,8 @@ interface SentOp {
   text: string | null
   hash: string
   deleting: boolean
+  /** What the server will charge for it (`opWeight`). */
+  weight: number
 }
 
 interface BuiltOps {
@@ -1080,6 +1164,8 @@ function blockedMessage(code: string): string {
       return 'The server does not accept this name (empty, over 255 characters, or containing “/”).'
     case 'md_doc_too_large':
       return 'This document is too large to sync (limit 3.5 MB).'
+    case 'md_push_too_large':
+      return 'This document is bigger than a single request the server accepts.'
     case 'md_space_full':
       return 'The server is full (too many documents).'
     case 'md_bad_clock':

@@ -111,6 +111,21 @@ describe('commitRemote', () => {
     expect(store.outbox.has('b')).toBe(false)
   })
 
+  it('does not put a mark (refused, send whole) on an entry that was edited since the version it was made for', async () => {
+    const { ws, store, state } = setup(treeOf(file('a', 'a.md', 'A'), file('b', 'b.md', 'B')))
+    ws.capture()
+    await ws.drain()
+    const sentVersion = new Map([['a', ws.outboxEntry('a')!.version], ['b', ws.outboxEntry('b')!.version]])
+    state.files = treeOf(file('a', 'a.md', 'A edited after the push'), file('b', 'b.md', 'B'))
+    await ws.apply(
+      { outbox: { put: [{ id: 'a', version: sentVersion.get('a')!, blocked: 'md_bad_clock' }, { id: 'b', version: sentVersion.get('b')!, forceFull: true }] } },
+      sentVersion
+    )
+    expect(store.outbox.get('a')).toEqual({ id: 'a', version: 2 }) // the newer entry is untouched: its text was never judged
+    expect(store.outbox.get('b')).toEqual({ id: 'b', version: 1, forceFull: true })
+    expect(ws.outboxEntry('a')).toEqual({ id: 'a', version: 2 })
+  })
+
   it('counts every remote write in the sequence number stored with the documents', async () => {
     const { ws, store } = setup(treeOf(file('a', 'a.md', 'A')))
     ws.capture()

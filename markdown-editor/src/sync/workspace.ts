@@ -127,18 +127,20 @@ export class Workspace {
   }
 
   /**
-   * An outbox / shadow / meta change from the sync engine (no document changes). `ifVersion`: the outbox entries named in
-   * `change.outbox.delete` are only deleted when their version still is the one the engine sent -- a node edited since stays marked.
+   * An outbox / shadow / meta change from the sync engine (no document changes). `ifVersion`: an outbox entry named there --
+   * whether in `change.outbox.delete` (it was sent) or in `change.outbox.put` (it was judged: refused, or to be sent whole) --
+   * is only touched when its version still is the one the engine looked at. A node edited since stays as the edit left it: its
+   * mark must not be cleared, nor a verdict on the OLD text hung on the new one.
    */
   async apply(change: DocCommit, ifVersion?: ReadonlyMap<string, number>): Promise<void> {
     this.capture()
     const outbox = change.outbox ? { ...change.outbox } : undefined
-    if (outbox?.delete) {
-      outbox.delete = outbox.delete.filter((id) => {
-        const wanted = ifVersion?.get(id)
-        return wanted === undefined || this.outbox.get(id)?.version === wanted
-      })
+    const unchanged = (id: string) => {
+      const wanted = ifVersion?.get(id)
+      return wanted === undefined || this.outbox.get(id)?.version === wanted
     }
+    if (outbox?.delete) outbox.delete = outbox.delete.filter(unchanged)
+    if (outbox?.put) outbox.put = outbox.put.filter((entry) => unchanged(entry.id))
     for (const entry of outbox?.put ?? []) this.outbox.set(entry.id, entry)
     for (const id of outbox?.delete ?? []) this.outbox.delete(id)
     await this.enqueue({ ...change, ...(outbox ? { outbox } : {}) })

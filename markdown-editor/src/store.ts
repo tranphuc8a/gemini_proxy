@@ -33,7 +33,7 @@ import {
   type StorageFailure
 } from './lib/persistence'
 import { LocalStorageDocStore, openIdbDocStore, type DocStore } from './sync/docStore'
-import { SyncEngine, type ConflictInfo, type ReconcileChoice, type SyncState } from './sync/engine'
+import { SyncEngine, type ConflictInfo, type ReconcileChoice, type ReplaceInfo, type SyncState } from './sync/engine'
 import { buildTree, treeToDocs, type LocalDoc, type OutboxEntry } from './sync/records'
 import { Workspace, reconcileBoot, type WorkspaceHost } from './sync/workspace'
 import type { InboxDocument } from './lib/inbox'
@@ -104,7 +104,7 @@ interface StoreState extends EditorState {
   resolveReconcile: (choice: ReconcileChoice) => void
   retryBlocked: (id?: string) => Promise<void>
   /** "Replace this device's copy with the server's": the server's documents become the workspace (unsent edits are lost). */
-  replaceFromServer: (confirm?: (info: { documents: number; unsent: number }) => boolean | Promise<boolean>) => Promise<boolean>
+  replaceFromServer: (confirm?: (info: ReplaceInfo) => boolean | Promise<boolean>) => Promise<boolean>
 
   /** Settles once the stored admin session has been re-checked. */
   hydrate: () => Promise<void>

@@ -303,7 +303,7 @@ describe('storage and the session', () => {
       expect(await store().replaceFromServer(confirm)).toBe(true)
     })
     // Two documents on the server (the one sent earlier and the one made there); one change waits here.
-    expect(confirm).toHaveBeenCalledWith({ documents: 2, unsent: 1 })
+    expect(confirm).toHaveBeenCalledWith({ documents: 2, unsent: 1, refused: [] })
     expect(findNode(store().files, 'there')?.content).toBe('server text')
     expect(store().currentContent).toBe('unsent') // the text the server holds: the edit made after the sync is gone
   })

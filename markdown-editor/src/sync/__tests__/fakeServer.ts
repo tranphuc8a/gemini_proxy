@@ -14,6 +14,22 @@ import { Workspace, type WorkspaceHost } from '../workspace'
  * Plus the switches a test needs: offline, a response budget, a reset horizon.
  */
 
+const encoder = new TextEncoder()
+const utf8Bytes = (text: string) => encoder.encode(text).length
+
+/**
+ * What the real server counts for one op (`MarkdownDocsUseCase._op_weight`): the UTF-8 bytes of the text, or of the lines of a
+ * patch (+4 each, +16 a hunk). Every op is then charged 200 more (`push`).
+ */
+export function opWeight(op: PushOp): number {
+  if (op.content !== undefined && op.content !== null) return utf8Bytes(op.content)
+  if (op.patch) return op.patch.h.reduce((sum, [, , lines]) => sum + 16 + lines.reduce((inner, line) => inner + utf8Bytes(line) + 4, 0), 0)
+  return 0
+}
+
+/** The size the real server judges a push request by: the weights of its ops plus 200 bytes an op. */
+export const requestWeight = (ops: PushOp[]): number => ops.reduce((sum, op) => sum + opWeight(op) + 200, 0)
+
 export class FakeServer implements SyncApi {
   records = new Map<string, ServerRecord>()
   private counter = 0
@@ -22,6 +38,12 @@ export class FakeServer implements SyncApi {
   /** The next push answers with this error instead. */
   failNext: SyncError | null = null
   horizon = 0
+  /** The real server's `MARKDOWN_PUSH_MAX_BYTES`: a request weighing more is refused whole with 400 `md_push_too_large`. */
+  maxPushBytes = 4_000_000
+  /** Requests the server refused for their size (op count and weight), in order. */
+  refusedPushes: { ops: number; weight: number }[] = []
+  /** Runs while a push is "in flight": after the server wrote it, before the answer is back (a person typing meanwhile). */
+  duringPush: (() => void | Promise<void>) | null = null
   /** Texts of conflicts in one push answer: this many characters, then `contentOmitted` (the real server's PAGE_BYTES). */
   conflictTextBudget = Infinity
   pushes: { device: string; ops: PushOp[]; bytes: number }[] = []
@@ -84,12 +106,18 @@ export class FakeServer implements SyncApi {
       this.failNext = null
       throw error
     }
+    const weight = requestWeight(ops)
+    if (weight > this.maxPushBytes) {
+      this.refusedPushes.push({ ops: ops.length, weight })
+      throw new SyncError('The changes were too large for one request.', { status: 400, code: 'md_push_too_large' })
+    }
     this.pushes.push({ device, ops, bytes: JSON.stringify(ops).length })
     let budget = this.conflictTextBudget
     const results: PushResult[] = ops.map((op) => this.one(op, device, () => {
       const room = budget
       return { take: (size: number) => { if (size + 400 > room) return false; budget -= size + 400; return true } }
     }))
+    await this.duringPush?.()
     return { results, serverTime: this.clock }
   }
 

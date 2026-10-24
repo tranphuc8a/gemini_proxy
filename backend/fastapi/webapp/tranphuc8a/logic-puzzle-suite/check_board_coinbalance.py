@@ -376,8 +376,10 @@ def edge_p3(P, check, section, tid):
           while (g.status === 'playing' && n < 12) { const h = g.hint(3); if (!h || h.none || !h.action) return { n: -1 }; const r = g.applyHint(h); if (!r.ok) return { n: -2 }; n++; }
           return { n: n, status: g.status }; }""")
         check(res["status"] == "solved" and res["n"] <= 4, "đối thủ nhất quán: lặp gợi ý mức 3 vẫn giải xong ván trong ≤ 4 bước (%s)" % res, res)
+        # hộp thoại 'Đã giải' mở BẤT ĐỒNG BỘ (sau khi ghi lịch sử): phải CHỜ nó hiện rồi mới đóng — Escape + chờ 200 ms cố định thua khi máy bận (hộp thoại mở sau đó, che 'Puzzle mới')
+        pg.wait_for_selector("dialog[open] h2:has-text('Đã giải')", timeout=15000)
         pg.keyboard.press("Escape")
-        pg.wait_for_timeout(200)
+        pg.wait_for_selector("dialog[open]", state="detached", timeout=5000)
 
         # ---- trang Puzzle mới: phiên bản + options + liên kết seed
         pg.evaluate("location.hash = '#/new/coinbalance'")

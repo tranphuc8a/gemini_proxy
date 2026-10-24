@@ -901,6 +901,9 @@ def kiem_toan(br, url, tmp):
     check(not bad, "320 px: công thức dài (không dấu cách) tự xuống dòng, không tràn ngang", bad[:3] if bad else "")
     T3.pg.set_viewport_size({"width": 1366, "height": 820})
     T3.pg.wait_for_timeout(300)
+    if T3.pg.locator(".modes button[data-mode=split]").count() and T3.pg.is_visible(".modes button[data-mode=split]"):     # chế độ "Xem" được nhớ làm cài đặt: ghi chú mới kế tiếp phải có lại ô soạn (.ed-ta) để điền
+        T3.pg.click(".modes button[data-mode=split]")
+        T3.pg.wait_for_timeout(300)
     # Xuất ảnh PNG vẽ lại HTML bằng canvas: khối .math (div không có phần tử con) không được rơi mất. So với cùng ghi chú đã bỏ 3 khối + rào ```math:
     # có nhánh vẽ khối công thức thì ảnh cao hơn hẳn; không có nhánh đó thì hai ảnh cao bằng nhau (khối bị bỏ qua im lặng).
     from PIL import Image

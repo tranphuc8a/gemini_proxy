@@ -36,7 +36,7 @@ function Question({ plan }: { plan: ReconcilePlan }) {
           </span>
           <div>
             <h2 id="reconcile-title">{plan.reason === 'reset' ? 'Sync again with the server' : 'First sync with this server'}</h2>
-            <p>This device and the server do not hold the same documents. Nothing is deleted without your say-so.</p>
+            <p>This device and the server do not hold the same documents. Choose what to keep; a document that was deleted on the server is removed here too, and you are told which.</p>
           </div>
         </div>
 
