@@ -2272,7 +2272,8 @@ def tang_5(may, n):
         ok = new_note(P, "Ghi chú mới giữa kho lớn", "nội dung thử độ trễ lưu với %s ghi chú" % format(n, ","), ["perf"])
         dt = (time.time() - t) * 1000
         print("    tạo + lưu một ghi chú mới giữa %s ghi chú: %.0f ms (gồm thao tác nhập của Playwright)" % (format(n, ","), dt))
-        check(ok and dt < 3000, "lưu một ghi chú giữa kho lớn < 3 s (%.0f ms)" % dt)
+        slack_l = max(1.0, float(os.environ.get("PW_PERF_SLACK", "1") or 1))
+        check(ok and dt < 3000 * slack_l, "lưu một ghi chú giữa kho lớn < %g s (%.0f ms%s)" % (3 * slack_l, dt, (", PW_PERF_SLACK=%g" % slack_l) if slack_l > 1 else ""))
         P.close()
         br.close()
 
