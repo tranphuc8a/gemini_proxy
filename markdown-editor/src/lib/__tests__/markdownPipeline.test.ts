@@ -15,6 +15,11 @@ import {
 } from '../markdownPipeline'
 import { prepareMarkdown } from '../prepareMarkdown'
 import remarkMathPromote from '../remarkMathPromote'
+import remarkAlerts from '../remarkAlerts'
+import remarkLlmCitations from '../remarkLlmCitations'
+import remarkHighlight from '../remarkHighlight'
+import rehypeCodeMeta from '../rehypeCodeMeta'
+import rehypeSvgImage from '../rehypeSvgImage'
 import rehypeStyleGuard from '../rehypeStyleGuard'
 import { rehypeEnhance, sanitizeSchema } from '../rehypeEnhance'
 
@@ -35,18 +40,23 @@ const first = (entry: unknown) => (Array.isArray(entry) ? entry[0] : entry)
 describe('markdownPipeline: fixed plugin order (ke-hoach §1.1)', () => {
   it('the planned order is the agreed one', () => {
     expect(PLANNED_REMARK_ORDER).toEqual(['gfm', 'math', 'mathPromote', 'alerts', 'citations', 'highlight'])
-    expect(PLANNED_REHYPE_ORDER).toEqual(['raw', 'styleGuard', 'svgImage', 'enhance', 'sanitize', 'katex'])
+    // M6 added codeMeta in front of raw (raw drops the `data.meta` it copies); a deliberate change of the pinned order.
+    expect(PLANNED_REHYPE_ORDER).toEqual(['codeMeta', 'raw', 'styleGuard', 'svgImage', 'enhance', 'sanitize', 'katex'])
   })
 
-  it('remark today: gfm → math → mathPromote, in planned order', () => {
+  it('remark: gfm → math → mathPromote → alerts → citations → highlight (all of the planned order)', () => {
     const names = remarkPipeline(prepared).map((entry) => entry.name)
-    expect(names).toEqual(['gfm', 'math', 'mathPromote'])
+    expect(names).toEqual(['gfm', 'math', 'mathPromote', 'alerts', 'citations', 'highlight'])
     expect(isSubsequence(names, PLANNED_REMARK_ORDER)).toBe(true)
   })
 
-  it('rehype today: raw → styleGuard → enhance → sanitize → katex, in planned order', () => {
+  it('rehype: codeMeta → raw → styleGuard → svgImage → enhance → sanitize → katex (all of the planned order)', () => {
     const names = rehypePipeline().map((entry) => entry.name)
-    expect(names).toEqual(['raw', 'styleGuard', 'enhance', 'sanitize', 'katex'])
+    expect(names).toEqual(['codeMeta', 'raw', 'styleGuard', 'svgImage', 'enhance', 'sanitize', 'katex'])
+    // codeMeta reads `data.meta`, which raw discards; svgImage cuts the raw SVG out of the source and must precede the sanitiser.
+    expect(names.indexOf('codeMeta')).toBeLessThan(names.indexOf('raw'))
+    expect(names.indexOf('svgImage')).toBeGreaterThan(names.indexOf('raw'))
+    expect(names.indexOf('svgImage')).toBeLessThan(names.indexOf('sanitize'))
     expect(isSubsequence(names, PLANNED_REHYPE_ORDER)).toBe(true)
     // The guards read raw HTML and must run before the sanitiser; KaTeX's trusted markup comes last.
     expect(names.indexOf('styleGuard')).toBeGreaterThan(names.indexOf('raw'))
@@ -57,13 +67,15 @@ describe('markdownPipeline: fixed plugin order (ke-hoach §1.1)', () => {
 
   it('each name is the plugin it says, and the lists handed to react-markdown follow the same order', () => {
     const remark = remarkPipeline(prepared)
-    expect(remark.map((entry) => first(entry.plugin))).toEqual([remarkGfm, remarkMath, remarkMathPromote])
-    expect(remarkPlugins(prepared)?.map(first)).toEqual([remarkGfm, remarkMath, remarkMathPromote])
+    const remarkList = [remarkGfm, remarkMath, remarkMathPromote, remarkAlerts, remarkLlmCitations, remarkHighlight]
+    expect(remark.map((entry) => first(entry.plugin))).toEqual(remarkList)
+    expect(remarkPlugins(prepared)?.map(first)).toEqual(remarkList)
     const rehype = rehypePipeline({ idPrefix: 'r-' })
-    expect(rehype.slice(0, 4).map((entry) => first(entry.plugin))).toEqual([rehypeRaw, rehypeStyleGuard, rehypeEnhance, rehypeSanitize])
-    expect(rehypePlugins({ idPrefix: 'r-' })?.map(first).slice(0, 4)).toEqual([rehypeRaw, rehypeStyleGuard, rehypeEnhance, rehypeSanitize])
-    expect((rehype[2].plugin as unknown[])[1]).toEqual({ idPrefix: 'r-' })
-    expect((rehype[3].plugin as unknown[])[1]).toBe(sanitizeSchema)
+    const rehypeList = [rehypeCodeMeta, rehypeRaw, rehypeStyleGuard, rehypeSvgImage, rehypeEnhance, rehypeSanitize]
+    expect(rehype.slice(0, 6).map((entry) => first(entry.plugin))).toEqual(rehypeList)
+    expect(rehypePlugins({ idPrefix: 'r-' })?.map(first).slice(0, 6)).toEqual(rehypeList)
+    expect((rehype[4].plugin as unknown[])[1]).toEqual({ idPrefix: 'r-' })
+    expect((rehype[5].plugin as unknown[])[1]).toBe(sanitizeSchema)
   })
 
   it('mathPromote gets what prepareMarkdown found', () => {

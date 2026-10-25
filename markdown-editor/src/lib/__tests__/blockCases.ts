@@ -34,3 +34,19 @@ export const CASES: Array<[string, string]> = [
   ['crlf line endings', 'a\r\n\r\n```js\r\nx\r\n\r\ny\r\n```\r\n\r\nb'],
   ['leading and trailing blank lines', '\n\nfirst\n\nsecond\n\n']
 ]
+
+/**
+ * Cases of the LLM formats (md-render 4–8, batch M6). Kept apart from CASES so the seeded random assemblies of CASES keep
+ * the sequence they always had; blocks.test.tsx runs these alone and assembled among themselves.
+ */
+export const LLM_CASES: Array<[string, string]> = [
+  ['alert with a blank line after it', '> [!NOTE]\n> a\n\n> [!tip]- folded\n> b\n\nafter'],
+  ['alert with markdown and a list', '> [!WARNING] Mind the **gap**\n> - one\n> - two\n>\n> text\n\nafter'],
+  ['citations around code', 'claim [cite: 1, 2] and 【4:0†source】\n\n`[cite: 3]` and ⟦7⟧\n\n```\n[cite: 9]\n```'],
+  ['highlights', 'a ==hi== b\n\n==two\nlines== and `==x==`\n\n$a==b$'],
+  ['front matter then a fence with a title', '---\ntitle: x\ntags: [a]\n---\n\n```python title="main.py"\nprint(1)\n\nprint(2)\n```\n\nafter'],
+  ['a later block that looks like front matter', 'first\n\n---\ntitle: x\n---\n\nlast'],
+  ['mmd fence with a blank line', '```mmd\ngraph TD\n  A --> B\n\n  B --> C\n```\n\nafter'],
+  ['svg fence', 'before\n\n```svg\n<svg viewBox="0 0 4 4"><circle r="1"/></svg>\n```\n\nafter'],
+  ['raw svg with a blank line inside', 'before\n\n<svg viewBox="0 0 4 4">\n  <circle r="1"/>\n\n  <rect width="2" height="2"/>\n</svg>\n\nafter']
+]

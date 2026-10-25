@@ -1,0 +1,223 @@
+/* ==========================================================================
+   LLM formatting: alerts / callouts, citation marks, ==highlight==, SVG figures, code-file names, front matter.
+   Loaded by the Markdown pipeline (lib/markdownPipeline.ts), so the preview, reading mode, shared pages and exports
+   all get it. Alert colours are pinned to WCAG AA by lib/__tests__/alerts.test.ts: it reads the --alert-* values below
+   and checks title text (4.5:1) and body text (4.5:1) on each tint, in both themes. Change a colour, run that test.
+   ========================================================================== */
+
+:root {
+  --alert-note-bar: #0969da;
+  --alert-note-title: #0550ae;
+  --alert-note-bg: #ddf4ff;
+  --alert-tip-bar: #1a7f37;
+  --alert-tip-title: #116329;
+  --alert-tip-bg: #dafbe1;
+  --alert-important-bar: #8250df;
+  --alert-important-title: #6639ba;
+  --alert-important-bg: #fbefff;
+  --alert-warning-bar: #9a6700;
+  --alert-warning-title: #7d4e00;
+  --alert-warning-bg: #fff8c5;
+  --alert-caution-bar: #cf222e;
+  --alert-caution-title: #a40e26;
+  --alert-caution-bg: #ffebe9;
+  --alert-body: #1f2328;
+  --mark-bg: #fff3a3;
+  --mark-text: #1f2328;
+}
+
+:root[data-theme='dark'] {
+  --alert-note-bar: #388bfd;
+  --alert-note-title: #79c0ff;
+  --alert-note-bg: #10233a;
+  --alert-tip-bar: #3fb950;
+  --alert-tip-title: #7ee787;
+  --alert-tip-bg: #0f2a1a;
+  --alert-important-bar: #a371f7;
+  --alert-important-title: #d2a8ff;
+  --alert-important-bg: #241a3a;
+  --alert-warning-bar: #d29922;
+  --alert-warning-title: #e3b341;
+  --alert-warning-bg: #2e2410;
+  --alert-caution-bar: #f85149;
+  --alert-caution-title: #ff9492;
+  --alert-caution-bg: #331519;
+  --alert-body: #e6edf3;
+  --mark-bg: #6b5b00;
+  --mark-text: #fff8dc;
+}
+
+.markdown-body .markdown-alert {
+  --alert-bar: var(--alert-note-bar);
+  --alert-title: var(--alert-note-title);
+  --alert-bg: var(--alert-note-bg);
+  padding: 0.6em 1em;
+  color: var(--alert-body);
+  background-color: var(--alert-bg);
+  border-left: 0.25em solid var(--alert-bar);
+  border-radius: 0 var(--radius-sm, 4px) var(--alert-radius-end, var(--radius-sm, 4px)) 0;
+}
+
+.markdown-body .markdown-alert-tip {
+  --alert-bar: var(--alert-tip-bar);
+  --alert-title: var(--alert-tip-title);
+  --alert-bg: var(--alert-tip-bg);
+}
+
+.markdown-body .markdown-alert-important {
+  --alert-bar: var(--alert-important-bar);
+  --alert-title: var(--alert-important-title);
+  --alert-bg: var(--alert-important-bg);
+}
+
+.markdown-body .markdown-alert-warning {
+  --alert-bar: var(--alert-warning-bar);
+  --alert-title: var(--alert-warning-title);
+  --alert-bg: var(--alert-warning-bg);
+}
+
+.markdown-body .markdown-alert-caution {
+  --alert-bar: var(--alert-caution-bar);
+  --alert-title: var(--alert-caution-title);
+  --alert-bg: var(--alert-caution-bg);
+}
+
+.markdown-body .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0 0 0.4em;
+  font-weight: 600;
+  color: var(--alert-title);
+}
+
+.markdown-body .markdown-alert-title::before {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  content: '';
+  background-color: currentcolor;
+  -webkit-mask: var(--alert-icon) center / contain no-repeat;
+  mask: var(--alert-icon) center / contain no-repeat;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8 1a7 7 0 100 14A7 7 0 008 1zM7.25 4h1.5v1.5h-1.5V4zm0 3h1.5v5h-1.5V7z'/%3E%3C/svg%3E");
+}
+
+.markdown-body .markdown-alert-tip .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1a5 5 0 00-2.5 9.3V12h5v-1.7A5 5 0 008 1zM6 13h4v1.5H6z'/%3E%3C/svg%3E");
+}
+
+.markdown-body .markdown-alert-important .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M2 2h12v9H9l-3 3v-3H2V2zm5.25 2.5v3h1.5v-3h-1.5zm0 4v1.25h1.5V8.5h-1.5z'/%3E%3C/svg%3E");
+}
+
+.markdown-body .markdown-alert-warning .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8 1.5l7 12.5H1L8 1.5zM7.25 6v3.5h1.5V6h-1.5zm0 4.5V12h1.5v-1.5h-1.5z'/%3E%3C/svg%3E");
+}
+
+.markdown-body .markdown-alert-caution .markdown-alert-title::before {
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M5 1h6l4 4v6l-4 4H5l-4-4V5l4-4zM7.25 4.5v4h1.5v-4h-1.5zm0 5V11h1.5V9.5h-1.5z'/%3E%3C/svg%3E");
+}
+
+/* A folding callout (`[!faq]-`, `[!tip]+`) is a <details>; the title is its <summary>. */
+.markdown-body details.markdown-alert > summary.markdown-alert-title {
+  cursor: pointer;
+  list-style: none;
+}
+
+.markdown-body details.markdown-alert > summary.markdown-alert-title::-webkit-details-marker {
+  display: none;
+}
+
+.markdown-body details.markdown-alert > summary.markdown-alert-title::after {
+  margin-left: auto;
+  font-size: 0.8em;
+  content: '▸';
+  transition: transform 0.15s;
+}
+
+.markdown-body details.markdown-alert[open] > summary.markdown-alert-title::after {
+  transform: rotate(90deg);
+}
+
+.markdown-body details.markdown-alert[open] > summary.markdown-alert-title {
+  margin-bottom: 0.4em;
+}
+
+.markdown-body details.markdown-alert:not([open]) > summary.markdown-alert-title {
+  margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Citation marks, highlights
+   -------------------------------------------------------------------------- */
+
+.markdown-body sup.llm-cite {
+  margin-left: 0.1em;
+  font-size: 0.7em;
+  font-weight: 500;
+  color: var(--accent-text, #4038b8);
+}
+
+.markdown-body mark {
+  padding: 0.05em 0.2em;
+  color: var(--mark-text);
+  background-color: var(--mark-bg);
+  border-radius: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Code-block file name, front matter, SVG figures
+   -------------------------------------------------------------------------- */
+
+.code-block-file {
+  margin-left: 10px;
+  max-width: 50%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.markdown-body details.md-front-matter {
+  margin-bottom: 16px;
+}
+
+.markdown-body details.md-front-matter > summary {
+  cursor: pointer;
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.markdown-body details.md-front-matter > .code-block {
+  margin-top: 8px;
+}
+
+.markdown-body .md-svg-figure {
+  margin-bottom: 16px;
+}
+
+.markdown-body .md-svg-figure > img.md-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background-color: #fff;
+}
+
+.markdown-body .md-svg-figure > details.md-svg-source > summary {
+  margin-top: 6px;
+  cursor: pointer;
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+
+.markdown-body .md-svg-blocked {
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--text-muted);
+}

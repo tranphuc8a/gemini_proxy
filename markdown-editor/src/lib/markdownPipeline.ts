@@ -14,9 +14,16 @@ import { classifyHref } from './share'
 import { rehypeEnhance, sanitizeSchema } from './rehypeEnhance'
 import rehypeStyleGuard from './rehypeStyleGuard'
 import remarkMathPromote from './remarkMathPromote'
+import remarkAlerts from './remarkAlerts'
+import remarkLlmCitations from './remarkLlmCitations'
+import remarkHighlight from './remarkHighlight'
+import rehypeCodeMeta, { fileNameOf } from './rehypeCodeMeta'
+import rehypeSvgImage from './rehypeSvgImage'
 import type { PreparedMarkdown } from './prepareMarkdown'
 import MermaidDiagram from '../components/MermaidDiagram'
 import CodeBlock from '../components/CodeBlock'
+// Alerts, LLM citation marks, highlights, SVG figures: their look is not part of any one pane's stylesheet.
+import '../components/Alerts.css'
 
 /**
  * THE Markdown pipeline. The preview, reading mode, the Smart-format preview and the exports (which copy the
@@ -26,13 +33,14 @@ import CodeBlock from '../components/CodeBlock'
  * Order (ke-hoach §1.1, asserted by markdownPipeline.test.ts):
  *   source → prepareMarkdown (line-preserving rewrites; see prepareMarkdown.ts)
  *   remark: gfm → math → mathPromote → alerts → citations → highlight
- *   rehype: raw → styleGuard → svgImage → enhance → sanitize → katex
+ *   rehype: codeMeta → raw → styleGuard → svgImage → enhance → sanitize → katex
+ * codeMeta must precede `raw`, which drops the `data.meta` it copies (a fence's file name, `front-matter`).
  * styleGuard and svgImage read raw HTML, so they sit between `raw` and `sanitize`; `enhance` adds the classes and
  * `data-line` anchors the sanitiser keeps; KaTeX runs last because its markup is trusted and would not survive the
  * sanitiser.
  */
 export const PLANNED_REMARK_ORDER = ['gfm', 'math', 'mathPromote', 'alerts', 'citations', 'highlight'] as const
-export const PLANNED_REHYPE_ORDER = ['raw', 'styleGuard', 'svgImage', 'enhance', 'sanitize', 'katex'] as const
+export const PLANNED_REHYPE_ORDER = ['codeMeta', 'raw', 'styleGuard', 'svgImage', 'enhance', 'sanitize', 'katex'] as const
 
 type RemarkName = (typeof PLANNED_REMARK_ORDER)[number]
 type RehypeName = (typeof PLANNED_REHYPE_ORDER)[number]
@@ -63,15 +71,20 @@ export function remarkPipeline(prepared: PreparedMarkdown): NamedPlugin<RemarkNa
   return [
     { name: 'gfm', plugin: remarkGfm },
     { name: 'math', plugin: remarkMath },
-    { name: 'mathPromote', plugin: [remarkMathPromote, { display: prepared.display, generated: prepared.generated, text: prepared.text }] }
+    { name: 'mathPromote', plugin: [remarkMathPromote, { display: prepared.display, generated: prepared.generated, text: prepared.text }] },
+    { name: 'alerts', plugin: remarkAlerts },
+    { name: 'citations', plugin: remarkLlmCitations },
+    { name: 'highlight', plugin: remarkHighlight }
   ]
 }
 
 /** The rehype plugins, in order. */
 export function rehypePipeline(options: PipelineOptions = {}): NamedPlugin<RehypeName>[] {
   return [
+    { name: 'codeMeta', plugin: rehypeCodeMeta },
     { name: 'raw', plugin: rehypeRaw },
     { name: 'styleGuard', plugin: rehypeStyleGuard },
+    { name: 'svgImage', plugin: rehypeSvgImage },
     { name: 'enhance', plugin: [rehypeEnhance, options.blockMode ? { idPrefix: options.idPrefix ?? '', blockMode: true } : { idPrefix: options.idPrefix ?? '' }] },
     { name: 'sanitize', plugin: [rehypeSanitize, sanitizeSchema] },
     { name: 'katex', plugin: rehypeKatexFresh }
@@ -146,8 +159,13 @@ export function markdownComponents({ theme, codeBackground, links = 'app' }: Com
       const language = fenceLanguage(className)
       const code = String(children).replace(/\n$/, '')
       if (!language) return createElement('code', { className, ...props }, children)
-      if (language === 'mermaid') return createElement(MermaidDiagram, { source: code, theme })
-      return createElement(CodeBlock, { language, source: code, theme, contrastBackground: codeBackground })
+      // `mmd` is the short name some LLMs and editors give a Mermaid fence.
+      if (language === 'mermaid' || language === 'mmd') return createElement(MermaidDiagram, { source: code, theme })
+      const meta = typeof props['data-meta'] === 'string' ? (props['data-meta'] as string) : ''
+      const frontMatter = language === 'yaml' && meta === 'front-matter'
+      const fileName = frontMatter ? '' : fileNameOf(meta, /language-(\S+)/.exec(className ?? '')?.[1])
+      const block = createElement(CodeBlock, { language, source: code, theme, contrastBackground: codeBackground, fileName })
+      return frontMatter ? createElement('details', { className: 'md-front-matter' }, createElement('summary', null, 'Front matter'), block) : block
     },
     // The highlighter brings its own wrapper, so the default <pre> would
     // nest a second scroll container around it.

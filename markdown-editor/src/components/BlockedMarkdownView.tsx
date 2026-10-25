@@ -56,6 +56,8 @@ export interface BlockedMarkdownViewProps {
 
 interface BlockProps {
   text: string
+  /** The block opens the document: the only one that may hold front matter. */
+  first: boolean
   remark: ReturnType<typeof remarkPlugins>
   rehype: ReturnType<typeof rehypePlugins>
   components: ReturnType<typeof markdownComponents>
@@ -64,24 +66,25 @@ interface BlockProps {
 
 /** One block through the one pipeline; re-rendered only when its text (or the theme, …) changes. */
 const MarkdownBlock = memo(
-  function MarkdownBlock({ text, remark, rehype, components, report }: BlockProps) {
+  function MarkdownBlock({ text, first, remark, rehype, components, report }: BlockProps) {
     report.current?.(text)
     return (
       <ReactMarkdown remarkPlugins={remark} rehypePlugins={rehype} components={components} urlTransform={markdownUrlTransform}>
-        {prepareBlock(text).text}
+        {prepareBlock(text, first).text}
       </ReactMarkdown>
     )
   },
-  (a, b) => a.text === b.text && a.remark === b.remark && a.rehype === b.rehype && a.components === b.components
+  (a, b) => a.text === b.text && a.first === b.first && a.remark === b.remark && a.rehype === b.rehype && a.components === b.components
 )
 
 /** The remark plugins of a block: they carry the block's own `display`/`generated` offsets, so one per text. */
 const remarkCache = new Map<string, ReturnType<typeof remarkPlugins>>()
-function remarkFor(text: string): ReturnType<typeof remarkPlugins> {
-  let plugins = remarkCache.get(text)
+function remarkFor(text: string, first: boolean): ReturnType<typeof remarkPlugins> {
+  const key = first ? `1|${text}` : `0|${text}`
+  let plugins = remarkCache.get(key)
   if (!plugins) {
-    plugins = remarkPlugins(prepareBlock(text))
-    remarkCache.set(text, plugins)
+    plugins = remarkPlugins(prepareBlock(text, first))
+    remarkCache.set(key, plugins)
     if (remarkCache.size > 4000) {
       let drop = 1000
       for (const key of remarkCache.keys()) {
@@ -350,7 +353,7 @@ function Blocks({ split, theme, codeBackground, idPrefix = '', links = 'app', pr
         const text = block.needsDefs && defs ? blockSource(block, defs) : block.text
         return (
           <div key={block.key} className="md-block" data-block-line={block.start}>
-            <MarkdownBlock text={text} remark={remarkFor(text)} rehype={rehype} components={components} report={report} />
+            <MarkdownBlock text={text} first={block.start === 1 && text.startsWith('---')} remark={remarkFor(text, block.start === 1 && text.startsWith('---'))} rehype={rehype} components={components} report={report} />
           </div>
         )
       })}

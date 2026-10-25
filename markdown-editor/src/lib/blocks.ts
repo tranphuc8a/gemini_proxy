@@ -45,7 +45,7 @@ export interface SplitResult {
   lineCount: number
 }
 
-const CONTAINERS = 'details|div|section|table|figure|blockquote|ul|ol|dl|center|article|aside|nav|header|footer|main|picture|video|audio'
+const CONTAINERS = 'svg|details|div|section|table|figure|blockquote|ul|ol|dl|center|article|aside|nav|header|footer|main|picture|video|audio'
 const OPEN_TAG = new RegExp(`<(?:${CONTAINERS})(?=[\\s>/])[^>]*>`, 'gi')
 const CLOSE_TAG = new RegExp(`</(?:${CONTAINERS})\\s*>`, 'gi')
 
@@ -284,11 +284,12 @@ const MAX_MERGE_STEPS = 24
 
 /** Whether a block's prepared text ends inside an open fence, remembered by the block's text (it is asked per block per edit). */
 const openCache = new Map<string, boolean>()
-function endsOpen(text: string): boolean {
-  let open = openCache.get(text)
+function endsOpen(text: string, first: boolean): boolean {
+  const memo = first ? `1|${text}` : `0|${text}`
+  let open = openCache.get(memo)
   if (open === undefined) {
-    open = scan(prepareBlock(text).text.split('\n')).openAtEnd
-    openCache.set(text, open)
+    open = scan(prepareBlock(text, first).text.split('\n')).openAtEnd
+    openCache.set(memo, open)
     if (openCache.size > 4000) {
       let drop = 1000
       for (const key of openCache.keys()) {
@@ -317,7 +318,7 @@ export function splitBlocks(source: string): SplitResult {
   for (let at = 0; at < cuts.length; ) {
     let last = at
     let text = slice(at, at)
-    for (let steps = 0; last + 1 < cuts.length && endsOpen(text); steps++) {
+    for (let steps = 0; last + 1 < cuts.length && endsOpen(text, at === 0 && text.startsWith('---')); steps++) {
       last = steps >= MAX_MERGE_STEPS ? cuts.length - 1 : last + 1
       text = slice(at, last)
     }

@@ -6,7 +6,7 @@ import { markdownComponents, rehypePlugins, remarkPlugins } from '../markdownPip
 import { prepareBlock, prepareMarkdown } from '../prepareMarkdown'
 import { markdownUrlTransform } from '../rehypeEnhance'
 import { longDoc } from '../../test/longDoc'
-import { CASES } from './blockCases'
+import { CASES, LLM_CASES } from './blockCases'
 import { NORMALIZE_VECTORS, RENDER_VECTORS, STREAM_ANSWERS } from './mathVectors'
 
 /**
@@ -19,8 +19,8 @@ import { NORMALIZE_VECTORS, RENDER_VECTORS, STREAM_ANSWERS } from './mathVectors
 
 const R = String.raw
 
-function html(text: string): string {
-  const prepared = text === '' ? prepareMarkdown('') : prepareMarkdown(text)
+function html(text: string, atStart = true): string {
+  const prepared = text === '' ? prepareMarkdown('') : prepareMarkdown(text, atStart)
   return renderToStaticMarkup(
     <ReactMarkdown
       remarkPlugins={remarkPlugins(prepared)}
@@ -38,7 +38,7 @@ const squash = (markup: string) => markup.replace(/href="#[^"]*"( class="heading
 
 /** A block's markup with `data-line` made absolute, as the whole document renders it. */
 function blockHtml(text: string, start: number): string {
-  return html(text).replace(/data-line="(\d+)"/g, (_m, n: string) => `data-line="${Number(n) + start - 1}"`)
+  return html(text, start === 1).replace(/data-line="(\d+)"/g, (_m, n: string) => `data-line="${Number(n) + start - 1}"`)
 }
 
 function renderedByBlocks(source: string): { whole: string; blocks: string; needsWhole: boolean } {
@@ -52,7 +52,7 @@ function expectSame(source: string) {
   expect(split.blocks.map((block) => block.text).join('\n')).toBe(source)
   if (split.needsWhole) return
   // 1. preparation
-  const preparedByBlocks = split.blocks.map((block) => prepareBlock(block.text).text).join('\n')
+  const preparedByBlocks = split.blocks.map((block) => prepareBlock(block.text, block.start === 1).text).join('\n')
   const preparedWhole = prepareMarkdown(source).text
   if (preparedByBlocks !== preparedWhole) {
     let at = 0
@@ -162,6 +162,27 @@ describe('render by block == render of the whole document', () => {
   for (const [name, source] of CASES) {
     it(name, () => expectSame(source))
   }
+
+  for (const [name, source] of LLM_CASES) {
+    it(`LLM format: ${name}`, () => expectSame(source))
+  }
+
+  it('random assemblies of the LLM-format cases among themselves and with plain paragraphs', () => {
+    const pieces = [...LLM_CASES.map(([, source]) => source), 'plain paragraph', '# Heading\n\ntext', '- a\n- b', '| a |\n|---|\n| 1 |']
+    let seed = 777
+    const next = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296
+    for (let round = 0; round < 200; round++) {
+      const count = 2 + Math.floor(next() * 5)
+      const chosen: string[] = []
+      for (let at = 0; at < count; at++) chosen.push(pieces[Math.floor(next() * pieces.length)])
+      const source = chosen.map((piece, at) => piece + (at < chosen.length - 1 ? '\n'.repeat(1 + Math.floor(next() * 3)) : '')).join('')
+      try {
+        expectSame(source)
+      } catch (error) {
+        throw new Error(`round ${round} differs for:\n${JSON.stringify(source)}\n${(error as Error).message.slice(0, 600)}`)
+      }
+    }
+  }, 300_000)
 
   it('the maths vectors of md-render (as one document and each alone)', () => {
     for (const vector of RENDER_VECTORS) expectSame(vector.md)

@@ -190,7 +190,8 @@ export const sanitizeSchema = {
     // which would strip the heading anchors added above.
     a: [...(defaultSchema.attributes?.a ?? []).filter((entry) => !Array.isArray(entry) || entry[0] !== 'className'), ...ANY_CLASS],
     // remark-math marks formulas with these; rehype-katex picks display or inline style from them.
-    code: [['className', /^language-./, 'math-inline', 'math-display']],
+    // `dataMeta` is what rehype-raw makes of the `data-meta` that rehypeCodeMeta wrote (a fence's file name).
+    code: [['className', /^language-./, 'math-inline', 'math-display'], 'dataMeta', 'data-meta'],
     // KaTeX and the highlighter both key off classes on these.
     span: [...ANY_CLASS, 'style', 'ariaHidden'],
     div: [...ANY_CLASS, 'style', 'data-line'],
@@ -203,7 +204,7 @@ export const sanitizeSchema = {
     video: ['src', 'controls', 'width', 'height', 'poster', 'loop', 'muted'],
     audio: ['src', 'controls', 'loop', 'muted'],
     source: ['src', 'srcSet', 'type', 'media'],
-    details: ['open']
+    details: ['open', ...ANY_CLASS]
   },
   // Relative and fragment URLs carry no protocol and stay allowed; this list
   // only constrains absolute ones.

@@ -18,6 +18,8 @@ interface CodeBlockProps {
    * 4.5:1 against it (reading mode); without it the stock theme is used as is.
    */
   contrastBackground?: string
+  /** File name announced by the fence (```` ```python title="main.py" ````), shown next to the language. */
+  fileName?: string
 }
 
 /** One sheet per theme and background, shared by every block. */
@@ -48,7 +50,7 @@ const CUSTOM_STYLE = { margin: 0, background: 'transparent', padding: '14px 16px
  * lib/prismCss) -- inline styles cost ~0.3 ms per token to compute.
  * Memoised: a preview render re-highlights only the blocks whose code changed.
  */
-function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockProps) {
+function CodeBlock({ language, source, theme, contrastBackground, fileName }: CodeBlockProps) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
   const sheet = sheetFor(theme, contrastBackground)
 
@@ -62,6 +64,7 @@ function CodeBlock({ language, source, theme, contrastBackground }: CodeBlockPro
     <div className="code-block">
       <div className="code-block-bar">
         <span className="code-block-lang">{language}</span>
+        {fileName ? <span className="code-block-file" title={fileName}>{fileName}</span> : null}
         <button
           type="button"
           className={`code-copy${copied === 'ok' ? ' is-ok' : ''}${copied === 'fail' ? ' is-fail' : ''}`}
