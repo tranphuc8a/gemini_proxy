@@ -126,9 +126,11 @@ async function runBatch(b) {
   if (!impl) { log(b.ma + ': agent cài không trả kết quả'); return { ma: b.ma, ten: b.ten, trang_thai: 'loi_cai' } }
   const fixes = []
   let ver = null
+  let nullRetry = 0
   for (let round = 0; round < 3; round++) {
     ver = await agent(verifyPrompt(b, fixes.length ? { ...impl, sua: fixes } : impl), { label: b.ma + ' · kiểm' + (round ? ' #' + (round + 1) : ''), phase: 'JSON', schema: VERIFY })
-    if (!ver || ver.dat || !ver.blocking.length || round === 2) break
+    if (!ver) { if (nullRetry++ < 2) { log(b.ma + ': người kiểm bị lỗi dịch vụ, chạy lại lần ' + nullRetry); round--; continue } break }
+    if (ver.dat || !ver.blocking.length || round === 2) break
     const fix = await agent(fixPrompt(b, ver), { label: b.ma + ' · sửa #' + (round + 1), phase: 'JSON', schema: IMPL })
     if (fix) fixes.push(fix)
   }

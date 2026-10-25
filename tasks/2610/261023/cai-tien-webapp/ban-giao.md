@@ -147,3 +147,11 @@ doc-10k p95 89 ms > 50 ms **chưa đạt**, chuyển M5. JSON thô ở `%TEMP%/m
 - Cái có thể bị ghi nếu kết nối thành công: bảng `rate_limit_hits (limiter, subject, bucket, hits, expires_at)` — `CREATE TABLE IF NOT EXISTS` + `INSERT … ON DUPLICATE KEY UPDATE hits = hits + 1` (`adapter/output/ratelimit/database_rate_limiter.py`). Không có bảng markdown/wiki nào bị chạm bởi script đó.
 - **Chủ dự án nên tự kiểm (chỉ đọc):** trên Aiven chạy `SELECT limiter, subject, COUNT(*) FROM rate_limit_hits GROUP BY limiter, subject ORDER BY 3 DESC LIMIT 20;` và xem có hàng nào có `limiter` liên quan markdown (tên có chữ `markdown`/`share`/`admin`) với `expires_at` quanh 24/10 01:05–01:42 (giờ máy dev) hay không. Có thì bảng chỉ chứa bộ đếm tạm, tự hết hạn; không có thì script chưa ghi gì.
 - Đã khắc phục cho phần còn lại của đợt 2: mọi prompt agent (cài, kiểm, sửa, kiểm tổng) nay có mục **BẢO VỆ DATABASE THẬT** bắt buộc đặt `DB_URL=sqlite…`, `MONGO_URI=`, `RATE_LIMIT_BACKEND=memory`, `AI_ENABLED=false`, `*_STORAGE_BACKEND=json` cho MỌI tiến trình import mã backend, kể cả script nháp. Đề xuất thêm: sửa `build_rate_limiter(auto)` để không chọn `database` khi đang chạy dưới pytest/không có cờ rõ ràng (chủ dự án quyết).
+
+## Làn Wiki (24/10) — kết quả
+- W1–W6 xong; kiểm tổng 25/10: wiki `kiem.js` 388/388, `check.py --tat-ca` 451 đạt + 2 đỏ thời gian do máy bận (chạy lại đúng phép: 0 sai); notebook `kiem.js` 71, `kiem-lib` hợp lệ, `check.py` 0 sai (gồm 115 mẫu C++), `sync.py --kiem` khớp.
+- Sửa nhỏ: phép "lưu ghi chú giữa kho lớn" trong `personal-wiki/check.py` nay theo `PW_PERF_SLACK`.
+- Còn lại: mermaid thật/SRI chưa thử có mạng; hydrate note 400k chậm (~12 s); PNG không vẽ KaTeX. Chủ dự án tự thử điện thoại, Safari, offline thật. Chi tiết: `dot/WIKI-tong.md`, `dot/W6.md`.
+
+## M6 — Định dạng của LLM (25/10)
+Xong: alerts/callout, dấu trích dẫn LLM, ==mark==, ```mmd, tên tệp khối mã, front matter, SVG thành img data:, xuất HTML font tuyệt đối. Kiểm: type-check/lint/build/--check sạch; kiem-dinh-dang 31/0, kiem-pwa 59/0; vitest đủ trừ 1 ca hết giờ do máy bận (chạy riêng đạt). Chi tiết: dot/M6.md.
