@@ -1,0 +1,14 @@
+cỡ × cấu hình có par ước lượng: 46 / 630
+cross|torus|5 5 10
+x|torus|3 10 10/few
+x|torus|5 5 6 10 6/few 10/few
+king|flat|3 8
+king|flat|5 5 8 8/few 8/some
+king|torus|2 6 9 9/few 9/some
+king|torus|3 6 7 8 9 10 6/few 9/few 10/few 6/some 9/some
+king|torus|5 6 9 6/few 9/few 6/some 9/some
+knight|torus|2 9 9/few
+knight|torus|3 9 10 9/few 10/few
+plus2|flat|5 10
+plus2|torus|3 9 9/few
+plus2|torus|5 10 10/few 10/some

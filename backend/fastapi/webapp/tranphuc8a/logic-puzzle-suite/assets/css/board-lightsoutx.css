@@ -1,0 +1,45 @@
+/* board-lightsoutx.css — phần RIÊNG của bàn Lights Out biến thể (assets/js/ui/boards/lightsoutx.js). Bàn dùng lại lớp .pz-lo-* và token --pz-lo-* của board-lightsout.css
+   (đèn k = 2, khung, xem trước, gợi ý, replay, công tắc, trình soạn); ở đây chỉ thêm: k mức (vòng cung + chữ số), ô khoá, xuyến, nhãn "+n" của xem trước, khung cuộn bàn rộng, hàng tuỳ chọn của trình soạn.
+   Màu: chỉ token có sẵn; k mức giữ nền ô TỐI cố định (chữ số sáng trên nền tối ≥ 4,5:1 — đo trong check_board_lightsoutx.py), cung sáng = hổ phách --pz-lo-on. */
+
+/* ---- k mức: nền tối, vòng k−1 cung, i cung sáng = mức i, chữ số ở giữa */
+.pz-lox-multi .pz-lo-cell { color: var(--pz-lo-off-ink); }
+.pz-lox-multi .pz-lo-cell.on { background: var(--pz-lo-off); color: var(--pz-lo-off-ink); border-color: var(--pz-lo-on); box-shadow: 0 0 calc(var(--gap) * 2.2 * var(--lvf, 1)) calc(var(--gap) * 0.3 * var(--lvf, 1)) var(--pz-lo-glow); }
+.pz-lox-multi .pz-lo-cell svg { width: 88%; height: 88%; }
+.pz-lox-multi .seg { fill: none; stroke: currentColor; stroke-width: 9; stroke-linecap: round; opacity: 0.32; transition: opacity 180ms, stroke 180ms; }
+.pz-lox-multi .seg.f { stroke: var(--pz-lo-on); opacity: 1; }
+.pz-lox-multi .num { fill: currentColor; font: 700 34px/1 var(--font, system-ui, sans-serif); font-variant-numeric: tabular-nums; }
+.pz-lox-multi .pz-lo-cell:not(.on) .num { opacity: 0.7; }
+
+/* ---- nhãn "+n" khi xem trước nước bấm */
+.pz-lox-add { position: absolute; right: 6%; bottom: 3%; z-index: 3; font: 700 clamp(9px, 2.6cqw, 14px)/1 var(--font, system-ui, sans-serif); color: #fff; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; }
+.pz-lox-add:empty { display: none; }
+
+/* ---- ô khoá: nền sọc chéo + viền đứt, không tương tác */
+.pz-lo-cell.lock {
+  cursor: not-allowed; border-style: dashed; border-color: var(--pz-line-strong);
+  background: repeating-linear-gradient(45deg, var(--pz-lo-panel) 0 6px, var(--pz-lo-off-edge) 6px 8px); box-shadow: none; color: var(--pz-lo-off-ink);
+}
+.pz-lo-cell.lock::before, .pz-lo-cell.lock::after { display: none; }
+
+/* ---- xuyến: khung viền ĐỨT (khác khung liền của bàn có mép) */
+.pz-lo-grid.torus { border-style: dashed; }
+.pz-lox-note { font-size: 13.5px; text-align: center; overflow-wrap: anywhere; margin: 0; }
+.pz-lox-spec { white-space: normal; text-align: center; }
+
+/* ---- bàn rộng (> 12 cột): khung cuộn ngang, ô không nhỏ hơn 30 px */
+.pz-lox-scroll { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.pz-lox-wide { min-width: calc(var(--w) * 30px + (var(--w) + 1) * 2px + 6px); max-width: none; }
+
+/* ---- trình soạn: hàng tuỳ chọn */
+.pz-lox-optrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pz-lox-opt .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pz-lox-opt .chip { min-height: 44px; padding: 0 14px; font-size: 14px; }
+.pz-lox-opt .chip.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.pz-lox-opt .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .pz-lox-multi .seg { transition: none; } }
+@media (forced-colors: active) {
+  .pz-lox-multi .seg.f { stroke: Highlight; }
+  .pz-lo-cell.lock { background: Canvas; border-color: GrayText; }
+}
