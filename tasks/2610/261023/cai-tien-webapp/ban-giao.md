@@ -1,9 +1,6 @@
 # Bàn giao — đợt cải tiến web app (22–23/10/2026)
 
-**Trạng thái: xong đợt 1 thi công (M0, M1, M2, M2b ∥ W1, W2, J1, P1, P2). Kiểm tổng 23/10 tối: cả 20 lệnh kiểm đều xanh. Lỗi
-blocking cuối của M2 (`normalizeMath` bậc hai với `<?`, `<!X`, `<![CDATA[` không đóng) đã sửa ở M2 phiên 5, kèm 5 đường bậc hai
-cùng mẫu. Không còn blocking đã biết. Còn 1 ngưỡng hiệu năng để M5 làm. M2 phiên 2–5 + M2b chưa commit. Việc kế tiếp: đợt 2
-(ke-hoach.md §7).** Q1–Q8 đã chốt theo đề xuất (ke-hoach.md §6).
+**Trạng thái (25/10): đợt 1 xong và đã commit. Đợt 2 thi công xong (M3, M3V, M4a, M4b, M5, W3, W4, W5, J2, J3 + M6/W6/J5 đã làm sớm), kiểm tổng đợt 2 chạy xong ở mức đạt: không có lỗi thật nào, mọi phép đỏ đều là phép đo thời gian bị máy quá tải (CPU 100 % suốt buổi, có phiên khác chạy song song) và đã đạt khi chạy lại. Còn tồn: 3 chỉ tiêu hiệu năng M5 chưa đạt, chưa đo lại được trên máy rảnh. Việc kế tiếp: đợt 3.** Q1–Q8 đã chốt theo đề xuất (ke-hoach.md §6).
 
 ## Yêu cầu gốc (tóm tắt)
 - Markdown Editor Pro: toán `\[ \]`; link chia sẻ chỉ đọc cho người ẩn danh; PlantUML; thêm định dạng toán/ký hiệu/sơ đồ của Gemini/Claude/ChatGPT; version + đồng bộ chỉ gửi phần đổi.
@@ -155,3 +152,71 @@ doc-10k p95 89 ms > 50 ms **chưa đạt**, chuyển M5. JSON thô ở `%TEMP%/m
 
 ## M6 — Định dạng của LLM (25/10)
 Xong: alerts/callout, dấu trích dẫn LLM, ==mark==, ```mmd, tên tệp khối mã, front matter, SVG thành img data:, xuất HTML font tuyệt đối. Kiểm: type-check/lint/build/--check sạch; kiem-dinh-dang 31/0, kiem-pwa 59/0; vitest đủ trừ 1 ca hết giờ do máy bận (chạy riêng đạt). Chi tiết: dot/M6.md.
+
+## Đợt 2 (thi công) — kết quả (kiểm tổng 25/10)
+
+Cây làm việc = HEAD `9da89c8` (chủ dự án đã commit M5/J5/W6 giữa chừng). Không commit, không lệnh git đổi cây. Mọi tiến trình import mã backend đều đặt `DB_URL=sqlite…`, `MONGO_URI=`, `RATE_LIMIT_BACKEND=memory`, `*_STORAGE_BACKEND=json`; không chạm DB thật.
+
+### Đợt con
+| Đợt | Trạng thái | Ghi chú |
+| --- | --- | --- |
+| M3 + M3V | đạt | Liên kết chia sẻ chỉ đọc cho người ẩn danh (backend + trang xem); M3V sửa số đo `scanDocumentRefs`. |
+| M4a | đạt | Backend đồng bộ delta + lịch sử phiên bản; đã sửa 2 lỗi blocking sau kiểm (`make_delta` bậc hai, phản hồi push). |
+| M4b | đạt, không còn tồn | Frontend đồng bộ delta + IndexedDB (kiểm độc lập xong). |
+| M5 | đạt kèm 3 chỉ tiêu chưa đạt | Render theo khối + sơ đồ lười. doc-10k chia đôi: gõ p95 192 ms (> 150), long task 162 ms (> 150), cuộn preview 16 % khung > 50 ms (> 10 %); chế độ đọc dựng nền 40,6 s (mốc +10 % SAI, không ảnh hưởng khung đầu). |
+| W3 | đạt | `/ai/wiki` soạn note từ dữ liệu thô + liên kết tới chủ đề có sẵn. |
+| W4 | đạt, 3 chỗ lệch dị dạng | Toán cho Wiki/Notebook không thư viện; sửa dữ liệu Notebook. Lệch ở `\[[B|b]]`, công thức mở/đóng qua khối danh sách, `[[]](url)`. |
+| W5 | đạt | Render theo khối ở Wiki: gõ giữa note 9.000 dòng p95 656 → ≈ 103 ms. |
+| J2 / J3 | đạt | Xem trước khi gập; JSON Schema kiểm. |
+
+### Bộ kiểm tổng (một lượt, PYTHONUTF8=1; máy đông nên nhiều phép phải chạy lại hẹp)
+| Lệnh | Kết quả |
+| --- | --- |
+| `backend/fastapi: pytest -q` | lượt đầy đủ: **2425 passed, 3 failed, 4 skipped** (19 phút 24 s). 3 ca đỏ đều là phép thời gian/biên dịch lúc máy 100 % CPU: `test_markdown_docs_history::…runs_off_the_event_loop` ×2 (vòng lặp đứng 0,29–0,48 s > 0,25 s) và `test_run_controller::test_real_wiring_local_cpp_end_to_end` (g++ thật). Chạy lại riêng vẫn đỏ vì máy vẫn đông. **Chưa xác nhận xanh; cần chạy lại khi máy rảnh.** Không phải lỗi logic (không ca nào khác đỏ). |
+| `markdown-editor: npm test` | lượt đầy đủ 4 đỏ / 1043 đạt (đều hết giờ 5 s của vitest ở `readingMode` ×2, `responsive` ×1 và phép tuyến tính `llmFormats`). Chạy lại: `readingMode` + `responsive` đạt; `llmFormats` đạt 125/125 với `MD_PERF_SLACK=4`. `type-check` xanh, `lint` 0 cảnh báo. |
+| `frontend: npm test · type-check · lint` | exit 0 — 17 tệp / **353 test** |
+| `node scripts/sync-math.mjs --kiem` | exit 0 — 4 bản sao khớp |
+| `node scripts/build-webapps.mjs --check` | exit 0 — 7 app ok |
+| `kiem-tat.js` | exit 1 — 3 app đỏ: json-editor, logic-puzzle-suite, personal-wiki; cả ba là phép thời gian lúc quá tải, chạy riêng từng app (bên dưới) |
+| `personal-wiki/kiem.js` | **388/388** (exit 0, `PW_PERF_SLACK=3`) |
+| `algorithm-notebook/kiem.js` | **71/71** |
+| `logic-puzzle-suite/kiem.js` | **1740 phép đạt** (`PUZ_PERF_SLACK=3`); tiến trình in "Đạt" nhưng không thoát trong thời hạn (exit 124), cần xem có tay cầm còn mở không |
+| `json-editor/kiem.js` | 1900 đạt, 3 SAI đều là phép thời gian tuyến tính/quét 10 MB lúc quá tải (`tuyen tinh theo kich thuoc`, `ghepTaiCho 11,8 M ký tự`, `quet khoi 10 MB`); mặc định `JE_PERF_SLACK=3` vẫn đỏ. **Cần chạy lại khi máy rảnh.** |
+| `kiem-pwa.py` | **Đạt 59 · SAI 0** (543 s) |
+| `kiem-chia-se.py` · `kiem-dong-bo.py` · `kiem-toan-edge.py` · 5 × `check.py --tinh` | XEM_BANG_CUOI |
+| `algorithm-notebook/sync.py --kiem` | chưa chạy xong (chuỗi bị dừng khi sửa cách chạy) |
+| `kiem-hieu-nang.py --chi doc-2k,doc-10k` | **không chạy**: CPU 100 % suốt buổi và có phiên khác chạy Edge/check song song, số đo sẽ vô nghĩa; dùng số của M5/W5 bên dưới. |
+
+Lỗi sửa trong lượt kiểm tổng: không có (không phép đỏ nào có nguyên nhân do mã).
+
+### Hiệu năng (Edge 155, 1440×900; số của đợt con tương ứng, máy bận ±35 %)
+Markdown Editor, doc-10k chia đôi:
+| Chỉ số | M0 | sau đợt 1 | sau đợt 2 (M5) |
+| --- | --- | --- | --- |
+| gõ p50 / p95 | 9.992 / 12.120 ms | 2.672 / 4.272 ms | **104 / 192 ms** (trần p95 150: SAI) |
+| long task lớn nhất khi gõ | 5.030 ms | 3.780 ms | **162 ms** (trần 150: SAI) |
+| preview cập nhật sau phím cuối | 23,9 s | 5,52 s | **370 ms** (≤ 400 đạt) |
+| khung đầu có preview | 5,46 s | 5,26 s | **2,3 s** (≤ 2,5 đạt) |
+| cuộn preview, khung > 50 ms | 59,8 % | 51,4 % | **16 %** (trần 10 %: SAI) |
+| chế độ đọc: khung đầu | 11,8 s | 6,59 s | **2,2 s** |
+| chế độ đọc: cuộn p95 | 2.774 ms | 89 ms | **33,5 ms** (≤ 50 đạt) |
+| chế độ đọc: dựng xong | 75,2 s | 14,9 s | 40,6 s (dựng nền dài hơn; không ảnh hưởng khung đầu) |
+
+Personal Wiki, gõ giữa note 9.000 dòng (chia đôi): p95 **656 ms** (thiết kế) → **≈ 103 ms** (W5); long task 350–580 ms → 57 ms; `M.blocks(400k)` ≈ 10 ms. Chế độ chỉ-Sửa (sàn textarea) p95 ≈ 78 ms nên ngưỡng 120 ms sát sàn.
+
+### Còn tồn (không blocking)
+1. M5: 3 chỉ tiêu doc-10k chia đôi chưa đạt (trên); đo lại khi máy rảnh, nếu vẫn đỏ thu nhỏ lát dựng hoặc tối ưu khối vừa sửa. `doc-2k.editor.gõ` 103 > 50 ms (có thể nhiễu). `audit-webapps.mjs` chưa chạy (thiếu Playwright Node). `hieu-nang-moc.json` chưa ghi mốc sau M5.
+2. W4: 3 chỗ dị dạng Wiki lệch đồ thị; thẻ ôn Notebook chưa có phép trình duyệt nhìn thẻ.
+3. W5: không có phép đo cuộn note dài; Safari < 18 không có `content-visibility`; chưa có đột biến `PW_HOAN_NGUYEN` cho khối.
+4. Phép thời gian đỏ khi máy đông (pytest ×3, json-editor kiem.js ×3, vitest hết giờ 5 s): nên có biến nới chung (`*_PERF_SLACK`) cho cả pytest; `logic-puzzle-suite/kiem.js` không thoát sau khi in Đạt.
+5. Thư mục tạm `%TEMP%/pwdiag` (ngoài repo) chưa xoá được.
+6. Không có sự cố chạm DB thật trong đợt kiểm tổng này; sự cố 24/10 (rate_limit_hits) vẫn chờ chủ dự án tự kiểm bằng SELECT ở mục trên.
+
+### Việc chủ dự án cần tự làm
+- **Deploy theo thứ tự an toàn:** (1) đặt biến môi trường `MARKDOWN_ADMIN_KEY` thật, `MARKDOWN_PUBLIC_READ` đúng ý, kho `mysql` cho markdown/wiki (không dùng kho JSON trên Vercel) → (2) deploy backend (M3, M4a; kiểm `/markdown/backends`, `/wiki/backends`) → (3) xuất bản client (M4b, M5) sau cùng, vì client mới nói chuyện giao thức delta. Rồi kiểm production: mở một liên kết chia sẻ ở cửa sổ ẩn danh, sửa ở hai máy xem đồng bộ delta.
+- **Chạy lại khi máy rảnh:** `pytest -q`, `json-editor/kiem.js`, `kiem-hieu-nang.py --nguong --ghi-moc --chi doc-2k,doc-10k` (≈ 25 phút), và các `check.py` đầy đủ.
+- **Thử trên điện thoại/Safari/PWA đã cài:** liên kết chia sẻ ẩn danh, đồng bộ hai máy, mở/gõ/cuộn tài liệu dài (Markdown + Wiki), toán trong Wiki, AI soạn note Wiki, JSON gập/Schema.
+- **Quyết định:** commit phần còn lại; có chấp nhận 3 chỉ tiêu M5 chưa đạt hay giao thu nhỏ lát.
+
+### Đợt 3 (kế tiếp)
+M6 định dạng LLM (đã có bàn giao `dot/M6.md`), M7 PlantUML offline, W6 KaTeX/mermaid Wiki (đã làm sớm, `dot/W6.md`), J4 sinh mẫu + suy schema, J5–J6, P3–P8 puzzle mới, M9 quyết định CodeMirror.

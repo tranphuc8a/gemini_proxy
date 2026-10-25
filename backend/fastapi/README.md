@@ -80,20 +80,73 @@ Management: the web page `webapp/courses/quan-ly-khoa-hoc/`, the CLI
 request limit), and the `Courses` views in `/admin`. Bundles (file backups) are in
 `../course-content/`, outside the Vercel root directory.
 
-## AI features (`/ai`) and the Gemini quota
+## AI features (`/ai`) and model providers
 
-The chat (`/gemini/*`) and every AI feature spend one Gemini quota
-(`GEMINI_URL` + `GEMINI_API_KEY`), so they go through one door
+The chat (`/gemini/*`) and every AI feature spend the same guarded model quota.
+By default, they use the direct Gemini endpoint (`GEMINI_URL` + `GEMINI_API_KEY`).
+When `LITELLM_API_BASE` is set, both use the LiteLLM OpenAI-compatible API instead,
+authenticated server-to-server with `Authorization: Bearer <LITELLM_MASTER_KEY>`.
+`AI_MODEL` and `AI_MODELS` use the model aliases declared by the proxy, so the
+same API can route Gemini, OpenAI, Claude, DeepSeek, Hive, and other configured
+providers without changing app features. They go through one door
 (`src/application/usecases/ai_usecase.py`):
 
 | Rule | Setting |
 |---|---|
-| Kill switch — `false` stops every Gemini call, the chat included | `AI_ENABLED` |
+| Kill switch — `false` stops every model call, the chat included | `AI_ENABLED` |
 | Who may use the AI features: `admin` (default), `code` (anyone holding `AI_ACCESS_CODE`, exchanged for a token), `public`. The chat keeps its public access | `AI_ACCESS`, `AI_ACCESS_CODE`, `AI_SESSION_DAYS` |
 | Per client address, in-process (administrators are exempt) → 429 + `Retry-After` | `AI_RATE_PER_MINUTE`, `AI_RATE_PER_DAY` |
 | Per UTC day for the whole deployment, counted in the database (one conditional UPDATE shared by every instance) → 429 until midnight UTC | `AI_DAILY_REQUESTS`, `AI_DAILY_TOKENS` |
 | Default model of the AI features and the chat (a caller may pick another with `X-AI-Model`; see `GET /ai/models`) | `AI_MODEL` (default `gemini-3.5-flash`), `AI_TIMEOUT_SECONDS` |
-| Models a caller may pick: empty = the live `models.list` of Gemini (text models, newest first, cached `AI_MODELS_TTL_SECONDS`); a comma-separated list pins it. Pro models are administrators' only | `AI_MODELS`, `AI_MODELS_TTL_SECONDS` |
+| Models a caller may pick: empty = the configured provider's live model list (text models, cached `AI_MODELS_TTL_SECONDS`); a comma-separated list pins it | `AI_MODELS`, `AI_MODELS_TTL_SECONDS` |
+
+### LiteLLM proxy and Hive
+
+`litellm-hive.yaml` is a ready-to-run LiteLLM proxy config for the Hive
+DeepSeek model. Install LiteLLM in the proxy's own environment (`pip install
+"litellm[proxy]"`), then set `HIVE_API_KEY` and `LITELLM_MASTER_KEY` there and
+run from `backend/fastapi`:
+
+```powershell
+litellm --config litellm-hive.yaml --port 4000
+```
+
+The Studio's virtual-key manager requires a persistent LiteLLM database.
+Configure `LITELLM_DATABASE_URL` for the proxy (PostgreSQL is recommended)
+before starting it; LiteLLM uses this database to create and enforce virtual
+keys. Keep the proxy's database URL, `HIVE_API_KEY`, and master key on the
+server only.
+
+Set the matching values in the FastAPI environment:
+
+```dotenv
+LITELLM_API_BASE=http://127.0.0.1:4000/v1
+LITELLM_MASTER_KEY=<the same secret used by the LiteLLM proxy>
+AI_MODEL=hive-deepseek-v4.1-flash-1017
+```
+
+The proxy key is never sent to browsers. Keep it secret and configure FastAPI
+with the exact key configured as `general_settings.master_key`. To add another
+provider, add a model alias to LiteLLM's `model_list` and choose that alias as
+`AI_MODEL` or in `AI_MODELS`. Leaving `LITELLM_API_BASE` empty preserves the
+existing direct-Gemini behavior.
+
+### LiteLLM Studio and MCP
+
+Open **LiteLLM Studio** from the webapp portal to use a personal LiteLLM virtual
+key, select an allowed model, and chat. The key stays in the tab by default;
+the optional remember setting stores it in browser local storage. The
+administrator panel uses the existing `COURSE_ADMIN_KEY` login to issue keys
+restricted to selected models, duration, and optional budget. A newly issued
+key is displayed only once. Never put `LITELLM_MASTER_KEY` in a browser or MCP
+client.
+
+For an MCP client, use the backend endpoint `<API_BASE>/mcp` (for example,
+`https://api.example.com/api/v1/mcp`) and set `Authorization: Bearer
+<LITELLM_VIRTUAL_KEY>`. The endpoint implements MCP Streamable HTTP with
+`list_models` and `chat` tools; GET/SSE streaming is not enabled. Set
+`FRONTEND_ALLOWED_ORIGINS` to the exact browser origins that should be allowed
+to call the endpoint.
 
 Requests and tokens are booked per day and feature (table `ai_usage`; chat
 tokens are estimates), and answers that depend only on their inputs are cached
@@ -112,7 +165,7 @@ budget and the books are skipped with a warning; the per-address limits stay.
 | `POST /ai/sql` | `AI_ACCESS` + SQL admin `X-Session-Token` | a question → SQL for one database. The model reads that connection's tables, columns and foreign keys (never rows); every statement comes back classified `readOnly` (strict: `FOR UPDATE`, `INTO OUTFILE`, `WITH … DELETE` are not) and EXPLAINed on the user's connection — EXPLAIN never runs it; the first failure goes back to the model once with MySQL's error. The app runs reads on request and asks before anything else |
 | `POST /ai/mongo` | `AI_ACCESS` + Mongo admin `X-Session-Token` | a question → `find` (filter/projection/sort/limit) or an aggregation pipeline, as Extended JSON. The model sees field paths and types of a 30-document sample and only the values of short repeated strings; `writes` flags `$out`/`$merge`, `risky` flags `$where`/`$function`/`$accumulator` |
 | `POST /ai/http` | `AI_ACCESS` | Postman Lite: `explain` a response (summary, details, problems, next steps) or write `tests` for it (`pm.*` only — scripts naming network, timers, eval, globals or prototype tricks are refused). Credentials in headers, query strings and JSON bodies, and JWTs, are masked before the model sees them |
-| `GET /ai/models` | public | the Gemini models this caller may pick (`X-AI-Model` header on any AI call, or `model` in the chat body), newest first, each `allowed` for this caller; `source` is `api` (live list), `config` (`AI_MODELS`) or `fallback`. An unknown name is 400 `ai_model_unknown`, a Pro model for a non-administrator 403 `ai_model_admin_only` — the chat no longer falls back silently to 2.5 Flash |
+| `GET /ai/models` | public | the configured provider's models this caller may pick (`X-AI-Model` header on any AI call, or `model` in the chat body), each `allowed` for this caller; `source` is `api` (live list), `config` (`AI_MODELS`) or `fallback`. An unknown name is 400 `ai_model_unknown` |
 | `POST /ai/review` | `AI_ACCESS` | grade a learner's own answer to a review card against the card's answer: 0–5 (what SM-2 needs), verdict, feedback, what is missing. An empty answer is graded 0 without a model call |
 | `POST /ai/hint` | `AI_ACCESS` | a hint for a failing self-checked code exercise, level 1 (direction) / 2 (where it goes wrong) / 3 (steps) — never the finished code: long code blocks are cut at levels 1–2 |
 | `POST /ai/notes` | `AI_ACCESS` | a course notebook → a study summary or review cards, each pointing at its lesson; not cached (the learner's own writing) |

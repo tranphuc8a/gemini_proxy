@@ -356,7 +356,7 @@ describe('pathological inputs stay linear (256 KB)', () => {
   /** Synthetic trees: the parser's own cost on 256 KB is its business (and slow in the test build); the plugins are measured on the tree. */
   const quotes = (count: number, value: string) => ({ type: 'root', children: Array.from({ length: count }, () => ({ type: 'blockquote', children: [paragraph(text(value))] })) })
 
-  it.each(['[cite: ', '[cite: 1 1 1 1 ', '【1†', '⟦1 ', ':contentReference[oaicite:', 'cite', '[cite_start', '【', '⟦', '[cite:1,', '[cite: 1' + ' 1'.repeat(40)])('citations: a text of %j repeated', (unit) => {
+  it.each(['[cite: ', '[cite: 1 1 1 1 ', '【1†', '⟦1 ', ':contentReference[oaicite:', 'cite', '[cite_start', '【', '⟦', '[cite:1,', '[cite: 1' + ' 1'.repeat(40), '', 'citeturn0search1'])('citations: a text of %j repeated', (unit) => {
     expect(timed(() => splitCitations(big(unit)))).toBeLessThan(400 * SLACK)
   })
 

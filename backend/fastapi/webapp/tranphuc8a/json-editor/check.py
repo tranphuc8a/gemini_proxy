@@ -35,10 +35,10 @@ OK = FAIL = 0
 LOI_TRANG: list = []
 
 # Thứ tự nạp bắt buộc (index.html): je-chung → module thuần (tom-tat…) → json-editor (lõi + JE_APP) → ui-*.
-THU_TU_SCRIPT = ["assets/je-chung.js", "assets/tom-tat.js", "assets/vi-tri.js", "assets/schema-format.js", "assets/schema-kiem.js",
+THU_TU_SCRIPT = ["assets/je-chung.js", "assets/tom-tat.js", "assets/vi-tri.js", "assets/jsonpath.js", "assets/tim-kiem.js", "assets/sua-json.js", "assets/dinh-dang.js", "assets/schema-format.js", "assets/schema-kiem.js",
                  "assets/regex-sinh.js", "assets/schema-sinh.js", "assets/schema-suy.js", "assets/chay-nen.js", "assets/json-editor.js"]
 # Module THUẦN (khuôn je-chung.js, đẩy vào JE_NGUON để Worker ghép lại): không DOM / storage / đồng hồ.
-MODULE_THUAN = ("je-chung.js", "tom-tat.js", "vi-tri.js", "schema-format.js", "schema-kiem.js", "regex-sinh.js", "schema-sinh.js", "schema-suy.js")
+MODULE_THUAN = ("je-chung.js", "tom-tat.js", "vi-tri.js", "jsonpath.js", "tim-kiem.js", "sua-json.js", "dinh-dang.js", "schema-format.js", "schema-kiem.js", "regex-sinh.js", "schema-sinh.js", "schema-suy.js")
 NGAN_SACH_ASSETS = 600 * 1024      # J5 (Xem ảo, nhóm cây, nháp lớn: +~80 KB) nâng từ 400 KB; J6/J7 còn chỗ (đề xuất của dot/J4.md)
 # kiem-hinh.py bấm nút THEO TÊN — đổi tên là bộ kiểm bố cục im lặng bỏ qua nút đó.
 TEN_NUT_KIEM_HINH = ["Định dạng", "Nén", "Sắp khoá", "Chạy", "So sánh"]
@@ -267,7 +267,8 @@ def tang_chuc_nang(chi=None):
             for f in (nap_sach, hoan_tac, tab_va_esc, loi_dot_j1, cong_je_app, luu_tru_bi_chan, xss, meta_nhanh_gap,
                       cong_schema, schema_tab, schema_tuy_chon, schema_xss, schema_360, schema_lon_redos, schema_hien_them, schema_mo_tep, schema_luu_tru_chan,
                       sinh_giao_dien, sinh_benh_ly, suy_giao_dien, sinh_360,
-                      soan_ao_vua, soan_ngat_dong, xem_ao, xem_giu_vi_tri, nhap_lon, thao_tac_lon, cay_nhom, sua_o_lon, soan_360):
+                      soan_ao_vua, soan_ngat_dong, xem_ao, xem_giu_vi_tri, nhap_lon, thao_tac_lon, cay_nhom, sua_o_lon, soan_360,
+                      tim_soan, tim_xem, tim_cay, truy_van_ui, dinh_dang_ui, sua_loi_ui, tim_360):
                 if not chi or f.__name__ in chi:
                     f(tb, url)
             tb.close()
@@ -363,12 +364,12 @@ def hoan_tac(tb, url):
     p.keyboard.press("Control+z")
     check(T.cho_gt(s4), "Ctrl+Z → bỏ Sắp khoá")
 
-    # Thoát chuỗi.
+    # Gỡ chuỗi (trước đây: Thoát chuỗi).
     T.dien('"{\\"a\\":1}"')
     p.click("#nut-thoat")
-    check(T.gt() == '{"a":1}' and "Thoát chuỗi" in T.title("#nut-hoan-tac"), "Thoát chuỗi → một bước có nhãn")
+    check(T.gt() == '{"a":1}' and "Gỡ chuỗi" in T.title("#nut-hoan-tac"), "Gỡ chuỗi → một bước có nhãn")
     p.click("#nut-hoan-tac")
-    check(T.cho_gt('"{\\"a\\":1}"'), "↶ → bỏ Thoát chuỗi")
+    check(T.cho_gt('"{\\"a\\":1}"'), "↶ → bỏ Gỡ chuỗi")
 
     # Mở tệp.
     truoc = T.gt()
@@ -435,7 +436,7 @@ def hoan_tac(tb, url):
         p.wait_for_timeout(80)
         thay.append(T.gt())
     la = [v for v in thay if v not in hop_le]
-    check(not la and thay[0] == chuoi, "5 lần Ctrl+Z sau chuỗi dán / Sắp khoá / Thoát chuỗi / Mở tệp: mọi trạng thái đều có thật, không ghép đoạn cũ",
+    check(not la and thay[0] == chuoi, "5 lần Ctrl+Z sau chuỗi dán / Sắp khoá / Gỡ chuỗi / Mở tệp: mọi trạng thái đều có thật, không ghép đoạn cũ",
           [v[:40] for v in thay])
     T.dong()
 
@@ -2548,6 +2549,508 @@ def hn_lon(tb, url, mb):
     p.wait_for_function("() => !!window.JE_APP")
     ok = T.cho("n => JE_APP.layVanBan().length === n && JE_APP.cheDoSoan() === 'xem' && document.querySelectorAll('#xem-cua .xh').length > 0", n_cuoi, 20000)
     check(ok, "[%.0f MB] tải lại: khôi phục đủ %d ký tự từ IndexedDB và mở Xem" % (mb, n_cuoi))
+    T.dong()
+
+
+# ============================================================================================ J6: tìm / thay, truy vấn, định dạng, sửa lỗi
+def _dem_tim(p):
+    return p.inner_text("#tim-dem").strip()
+
+
+def _cho_dem(T, mong, timeout=3500):
+    return T.cho("m => document.querySelector('#tim-dem').textContent.trim() === m", mong, timeout)
+
+
+def _cho_tong(T, n, timeout=3500):
+    """Chờ ô đếm có DUNG n khớp (bỏ qua khớp hiện tại là cái thứ mấy)."""
+    return T.cho("n => { const t = document.querySelector('#tim-dem').textContent.trim(); return t.slice(t.indexOf('/') + 1) === String(n); }", n, timeout)
+
+
+def _mo_tim(T, thay=False, tu="#nhap"):
+    p = T.p
+    p.click(tu)
+    p.keyboard.press("Control+Home")
+    p.keyboard.press("Control+h" if thay else "Control+f")
+    T.cho("() => document.activeElement && document.activeElement.id === 'tim-q'", None, 2000)
+
+
+def _go_tim(T, q):
+    p = T.p
+    p.fill("#tim-q", "")
+    p.fill("#tim-q", q)
+    p.wait_for_timeout(230)
+
+
+def tim_soan(tb, url):
+    section(" · tìm / thay ở tab Soạn (việc 14, 15)")
+    T = Trang(tb, url, "tim-soan")
+    p = T.p
+    goc = J({"ten": "Hà Nội", "ds": ["hà nội", "Hà Giang", "tạm biệt"], "x": "hà"}, 2)
+    T.dien(goc)
+    p.click("#nhap")
+    p.keyboard.press("Control+Home")
+    p.keyboard.press("Control+f")
+    check(p.is_visible("#tim-thanh") and p.evaluate("() => document.activeElement.id") == "tim-q", "Ctrl+F ở ô Soạn → thanh Tìm hiện, focus ở ô tìm")
+    p.keyboard.type("hà")
+    ok = _cho_dem(T, "1/4")
+    check(ok, "tìm “hà” (không phân biệt hoa thường): đếm 4 khớp, đang ở 1/4", _dem_tim(p))
+    marks = p.evaluate("() => Array.from(document.querySelectorAll('#lop-mau mark.tim-khop')).map(m => m.textContent)")
+    check(len(marks) == 4 and [m.lower() for m in marks] == ["hà"] * 4, "tô sáng 4 khớp trên lớp tô màu (đúng chữ, đúng chỗ)", marks)
+    check(p.locator("#lop-mau mark.tim-hien").count() == 1 and _chon(p) == "Hà", "khớp hiện tại có lớp tim-hien và là vùng chọn của textarea", _chon(p))
+    kich = p.evaluate("() => { const l = document.querySelector('#lop-mau'); return [l.scrollWidth, l.scrollHeight]; }")
+    p.keyboard.press("F3")
+    check(_cho_dem(T, "2/4") and _chon(p).lower() == "hà", "F3 → khớp kế tiếp (2/4), vùng chọn chuyển theo")
+    p.keyboard.press("Shift+F3")
+    check(_cho_dem(T, "1/4"), "Shift+F3 → khớp trước (1/4)")
+    p.keyboard.press("Enter")
+    check(_cho_dem(T, "2/4"), "Enter trong ô tìm → khớp kế tiếp")
+    p.keyboard.press("Shift+Enter")
+    check(_cho_dem(T, "1/4"), "Shift+Enter trong ô tìm → khớp trước")
+    # tô không làm lệch bố cục lớp màu so với textarea (mark không padding / viền)
+    p.fill("#tim-q", "")
+    p.wait_for_timeout(260)
+    kich0 = p.evaluate("() => { const l = document.querySelector('#lop-mau'); return [l.scrollWidth, l.scrollHeight]; }")
+    check(kich == kich0 and p.locator("#lop-mau mark.tim-khop").count() == 0, "xoá ô tìm → mọi <mark> biến mất, kích thước lớp màu không đổi (tô không làm lệch bố cục)", [kich, kich0])
+
+    # tuỳ chọn
+    p.fill("#tim-q", "hà")
+    p.wait_for_timeout(230)
+    p.click("#tim-hoa")
+    check(_cho_tong(T, 2) and p.get_attribute("#tim-hoa", "aria-pressed") == "true", "Aa bật (phân biệt hoa thường): chỉ còn “hà” thường → 2 khớp", _dem_tim(p))
+    p.click("#tim-hoa")
+    p.click("#tim-tu")
+    _go_tim(T, "h")
+    check(_cho_dem(T, "0/0"), "cả từ: “h” không khớp “hà” → 0/0", _dem_tim(p))
+    _go_tim(T, "hà")
+    check(_cho_tong(T, 4), "cả từ: “hà” (tiếng Việt, có dấu) vẫn đủ 4 khớp", _dem_tim(p))
+    p.click("#tim-tu")
+    p.click("#tim-re")
+    _go_tim(T, "[Hh]à (Nội|Giang)")
+    check(_cho_tong(T, 3), "regex “[Hh]à (Nội|Giang)” → 3 khớp", _dem_tim(p))
+    _go_tim(T, "(")
+    ok = _cho_dem(T, "0/0") and "regex" in p.inner_text("#tim-bao").lower() and p.get_attribute("#tim-q", "aria-invalid") == "true"
+    check(ok, "regex sai cú pháp: báo lỗi tiếng Việt ở #tim-bao, ô tìm aria-invalid, không ném lỗi", p.inner_text("#tim-bao"))
+    _go_tim(T, "(a+)+$")
+    check("lồng nhau" in p.inner_text("#tim-bao") and _dem_tim(p) == "0/0", "regex thảm hoạ (a+)+$ bị chặn trước khi chạy (không treo trang)", p.inner_text("#tim-bao"))
+    p.click("#tim-re")
+
+    # thay tất cả = MỘT bước hoàn tác
+    _go_tim(T, "hà")
+    p.click("#tim-mo-thay")
+    p.fill("#tim-thay", "XX")
+    p.click("#tim-thay-het")
+    mong = re.sub("hà", "XX", goc, flags=re.I)
+    check(T.gt() == mong and "Đã thay 4" in p.inner_text("#tim-bao"), "Thay tất cả → 4 chỗ, báo “Đã thay 4”", T.gt()[:60])
+    check("Thay tất cả" in T.title("#nut-hoan-tac"), "bước hoàn tác có nhãn “Thay tất cả (4)”", T.title("#nut-hoan-tac"))
+    p.click("#nut-hoan-tac")
+    check(T.cho_gt(goc), "↶ MỘT lần → về nguyên văn bản gốc (thay tất cả = một bước)", T.gt()[:60])
+    # thay một
+    p.evaluate("() => { const t = document.querySelector('#nhap'); t.setSelectionRange(0, 0); }")
+    _go_tim(T, "hà")
+    p.fill("#tim-thay", "Z")
+    p.click("#tim-thay-mot")
+    mong1 = re.sub("hà", "Z", goc, count=1, flags=re.I)
+    check(T.cho_gt(mong1), "Thay (một) → chỉ khớp đầu tiên bị thay", T.gt()[:60])
+    p.click("#nut-hoan-tac")
+    check(T.cho_gt(goc), "↶ → về bản gốc")
+    # thay với regex $1
+    p.click("#tim-re")
+    _go_tim(T, "(Hà|hà) (Nội|nội)")
+    p.fill("#tim-thay", "[$2|$1]")
+    p.click("#tim-thay-het")
+    check("[Nội|Hà]" in T.gt() and "[nội|hà]" in T.gt(), "thay bằng regex dùng $2 $1 đúng nhóm", T.gt()[:80])
+    p.click("#nut-hoan-tac")
+    T.cho_gt(goc)
+    p.click("#tim-re")
+    p.focus("#tim-q")
+    p.keyboard.press("Escape")
+    check(not p.is_visible("#tim-thanh") and p.locator("#lop-mau mark.tim-khop").count() == 0, "Esc đóng thanh Tìm và xoá các <mark>")
+    T.dong()
+
+    # ---- tài liệu 1 MB
+    T = Trang(tb, url, "tim-soan-1mb")
+    p = T.p
+    vb = mau_json(1000000)[0]
+    _dat_vb(p, vb)
+    n = len(re.findall("hà nội", vb, flags=re.I))
+    _mo_tim(T)
+    p.keyboard.type("Hà Nội")
+    ok = T.cho("n => /^1\\/" + str(n) + "$/.test(document.querySelector('#tim-dem').textContent.trim())", n, 5000)
+    check(ok, "1 MB: tìm “Hà Nội” đếm đúng %d khớp (so với Python)" % n, _dem_tim(p))
+    for _ in range(6):
+        p.keyboard.press("F3")
+    p.wait_for_timeout(120)
+    top = p.evaluate("() => document.querySelector('#nhap').scrollTop")
+    check(_cho_dem(T, "7/%d" % n) and top > 0 and _chon(p).lower() == "hà nội", "1 MB: F3 sáu lần → 7/%d, textarea cuộn tới khớp (scrollTop %d)" % (n, top), _dem_tim(p))
+    check(p.locator("#lop-mau mark.tim-khop").count() >= 1, "1 MB: khớp trong vùng nhìn thấy được tô (lớp ảo)")
+    # Thay tất cả trên 1 MB: một bước, đúng số lượng
+    p.click("#tim-mo-thay")
+    p.fill("#tim-thay", "HN")
+    p.click("#tim-thay-het")
+    mong_vb = re.sub("hà nội", "HN", vb, flags=re.I)
+    check(T.cho("m => document.querySelector('#nhap').value === m", mong_vb, 5000), "1 MB: Thay tất cả %d chỗ đúng từng byte" % n)
+    p.click("#nut-hoan-tac")
+    check(T.cho("m => document.querySelector('#nhap').value === m", vb, 5000), "1 MB: ↶ một lần về bản gốc")
+    T.dong()
+
+
+def tim_xem(tb, url):
+    section(" · tìm trong chế độ Xem ảo, khối gấp tự mở (việc 15)")
+    T = Trang(tb, url, "tim-xem")
+    p = T.p
+    vb = mau_json(2000000)[0]
+    _dat_vb(p, vb)
+    ok = T.cho("() => JE_APP.cheDoSoan() === 'xem' && document.querySelectorAll('#xem-cua .xh').length > 0", None, 15000)
+    check(ok, "2 MB: ô Soạn tự vào chế độ Xem")
+    p.click("#xem-cuon")
+    p.keyboard.press("Control+f")
+    T.cho("() => document.activeElement && document.activeElement.id === 'tim-q'", None, 2000)
+    p.keyboard.type("u1500@example")
+    check(_cho_dem(T, "1/1", 5000), "Xem: tìm email duy nhất → 1/1", _dem_tim(p))
+    ok = T.cho("() => document.querySelectorAll('#xem-cua mark.tim-hien').length === 1", None, 4000)
+    check(ok and p.evaluate("() => document.querySelector('#xem-cua mark.tim-hien').textContent") == "u1500@example",
+          "Xem: nhảy tới dòng chứa khớp, hàng đó được tô (tim-hien)", p.locator("#xem-cua mark.tim-khop").count())
+    # gấp tất cả rồi tìm một email nằm trong khối gấp → khối tự mở
+    p.click('#xem-cong-cu [data-cap="1"]')
+    T.cho("() => document.querySelectorAll('#xem-cua .xp').length >= 1", None, 5000)
+    gap = p.evaluate("() => document.querySelectorAll('#xem-cua .xp').length")
+    _go_tim(T, "u1700@example")
+    ok = T.cho("() => document.querySelectorAll('#xem-cua mark.tim-hien').length === 1", None, 6000)
+    check(gap >= 1 and ok, "Xem: khớp nằm TRONG khối đang gấp (%d khối gấp) → khối tự mở và khớp được tô" % gap, p.locator("#xem-cua mark.tim-khop").count())
+    p.keyboard.press("Escape")
+    check(p.locator("#xem-cua mark.tim-khop").count() == 0, "Esc → xoá hết <mark> trong Xem")
+    T.dong()
+
+
+def tim_cay(tb, url):
+    section(" · tìm / thay trên tab Cây, XSS, một bước hoàn tác (việc 16)")
+    T = Trang(tb, url, "tim-cay")
+    p = T.p
+    items = [{"id": i, "email": "user%d@x.vn" % i, "ten": "Người %d" % i} for i in range(400)]
+    items[3]["ten"] = "<img src=x onerror=window.__xss=1>"
+    items[250]["tags"] = ["<svg onload=window.__xss=2>", "ok"]
+    doc_ = {"items": items, "meta": {"nguoi": "Hà Nội", "email": "ad@x.vn"}}
+    _dat_vb(p, J(doc_, 2))
+    T.tab("cay")
+    p.click("#cay-dong")
+    p.click("#cay")
+    p.keyboard.press("Control+f")
+    T.cho("() => document.activeElement && document.activeElement.id === 'tim-q'", None, 2000)
+    check(p.is_visible("#tim-vi"), "tab Cây: có ô chọn phạm vi Khoá / Giá trị")
+    p.keyboard.type("user250@")
+    check(_cho_dem(T, "1/1"), "Cây: tìm “user250@” → 1/1", _dem_tim(p))
+    ok = T.cho("() => { const n = document.activeElement; return !!n && n.getAttribute && n.getAttribute('data-p') === '[\"items\",250,\"email\"]'; }", None, 4000) \
+        or T.cho("() => !!document.querySelector('.n[data-p=\\'[\"items\",250,\"email\"]\\']')", None, 3000)
+    check(ok, "Cây: nhảy tới nút ở nhóm [200…299] (mở tổ tiên + nhóm, dựng nút)", p.evaluate("() => document.activeElement && document.activeElement.className"))
+    check(p.locator("#cay mark.tim-hien").count() == 1 and p.evaluate("() => document.querySelector('#cay mark.tim-hien').textContent") == "user250@", "Cây: <mark> tô đúng chữ trong giá trị")
+    # phạm vi khoá
+    p.select_option("#tim-vi", "khoa")
+    _go_tim(T, "email")
+    check(_cho_dem(T, "1/401"), "phạm vi Khoá: “email” → 400 khoá trong items + 1 trong meta = 401", _dem_tim(p))
+    p.select_option("#tim-vi", "gia-tri")
+    check(_cho_dem(T, "1/0") or _dem_tim(p) == "0/0", "phạm vi Giá trị: “email” (chỉ có trong khoá) → 0", _dem_tim(p))
+    p.select_option("#tim-vi", "ca-hai")
+    # XSS
+    _go_tim(T, "onerror")
+    ok = _cho_dem(T, "1/1")
+    check(ok and p.evaluate("() => window.__xss === undefined") and p.locator("#cay img, #cay svg").count() == 0,
+          "chuỗi <img onerror> trong dữ liệu: tìm thấy như chữ, không tạo phần tử, không chạy mã", _dem_tim(p))
+    _go_tim(T, "onload")
+    check(p.evaluate("() => window.__xss === undefined") and p.locator("#cay img, #cay svg").count() == 0, "chuỗi <svg onload> trong dữ liệu: vô hại")
+    # thay tất cả trên cây (giá trị) = một bước
+    _go_tim(T, "@x.vn")
+    p.click("#tim-mo-thay")
+    p.fill("#tim-thay", "@y.com")
+    p.select_option("#tim-vi", "gia-tri")
+    p.click("#tim-thay-het")
+    p.wait_for_timeout(200)
+    dl = p.evaluate("() => JE_APP.layDuLieu()")
+    check(all(it["email"].endswith("@y.com") for it in dl["items"]) and dl["meta"]["email"] == "ad@y.com", "Cây: Thay tất cả 401 email → đúng cả dữ liệu lẫn meta", dl["items"][0]["email"])
+    check("Thay tất cả" in T.title("#nut-hoan-tac") and "401" in p.inner_text("#tim-bao"), "nhãn bước hoàn tác + báo 401 chỗ", [T.title("#nut-hoan-tac"), p.inner_text("#tim-bao")])
+    p.click("#nut-hoan-tac")
+    p.wait_for_timeout(200)
+    dl = p.evaluate("() => JE_APP.layDuLieu()")
+    check(dl == doc_, "↶ MỘT lần → khôi phục đúng toàn bộ dữ liệu (một bước)")
+    # đổi tên khoá hàng loạt + trùng khoá bị bỏ qua
+    T.tab("soan")
+    T.dien(J({"a1": 1, "a2": 2, "b": {"a1": 3}}))
+    T.tab("cay")
+    p.click("#cay")
+    p.keyboard.press("Control+h")
+    T.cho("() => document.activeElement && document.activeElement.id === 'tim-q'", None, 2000)
+    p.select_option("#tim-vi", "khoa")
+    _go_tim(T, "a")
+    p.fill("#tim-thay", "z")
+    p.click("#tim-thay-het")
+    p.wait_for_timeout(200)
+    dl = p.evaluate("() => JE_APP.layDuLieu()")
+    check(dl == {"z1": 1, "z2": 2, "b": {"z1": 3}}, "Cây: đổi tên khoá hàng loạt a→z giữ thứ tự và cả object lồng", J(dl))
+    p.click("#nut-hoan-tac")
+    p.wait_for_timeout(150)
+    T.tab("soan")
+    T.dien(J({"a": 1, "b": 2}))
+    T.tab("cay")
+    p.click("#cay")
+    p.keyboard.press("Control+h")
+    p.select_option("#tim-vi", "khoa")
+    _go_tim(T, "a")
+    p.fill("#tim-thay", "b")
+    p.click("#tim-thay-het")
+    p.wait_for_timeout(200)
+    check(p.evaluate("() => JE_APP.layDuLieu()") == {"a": 1, "b": 2} and ("trùng" in p.inner_text("#tim-bao") or "Không thay" in p.inner_text("#tim-bao")),
+          "đổi tên khoá thành tên đã có: bị bỏ qua và BÁO (không ghi đè dữ liệu)", p.inner_text("#tim-bao"))
+    T.dong()
+
+
+def truy_van_ui(tb, url):
+    section(" · tab Truy vấn: kết quả bấm được, tô trên cây, chép; Đi tới đường dẫn; đường dẫn tại con trỏ (việc 17, 18)")
+    T = Trang(tb, url, "truy-van")
+    p = T.p
+    items = [{"id": i, "email": "u%d@x.vn" % i, "tags": ["a", "b"]} for i in range(1600)]
+    vb = J({"items": items, "meta": {"n": 1600}}, 2)
+    _dat_vb(p, vb)
+    T.tab("loc")
+    p.fill("#loc-duong", "$.items[1500].email")
+    p.click("#loc-chay")
+    n_ket = p.locator("#loc-ket .kq-hang").count()
+    check(n_ket == 1 and "$.items[1500].email" in p.inner_text("#loc-ket") and "1 kết quả" in p.inner_text("#loc-ket"), "Truy vấn: danh sách kết quả có đường dẫn + “1 kết quả”", p.inner_text("#loc-ket")[:80])
+    p.click("#loc-ket .kq-tab[data-tab='cay']")
+    ok = T.cho("() => JE_APP.tabHien() === 'cay' && document.activeElement && document.activeElement.getAttribute('data-p') === '[\"items\",1500,\"email\"]'", None, 5000)
+    check(ok, "bấm đường dẫn kết quả → sang Cây và focus ĐÚNG nút trong nhóm [1500…1599]", p.evaluate("() => document.activeElement && document.activeElement.getAttribute('data-p')"))
+    T.tab("loc")
+    p.click("#loc-ket .kq-duong")
+    check(T.cho("() => JE_APP.tabHien() === 'cay'", None, 3000), "bấm đường dẫn (không chọn tab) → tới tab dữ liệu dùng gần nhất (Cây)")
+    T.tab("loc")
+    p.click("#loc-ket .kq-tab[data-tab='soan']")
+    T.cho("() => JE_APP.tabHien() === 'soan'", None, 3000)
+    check(_chon(p) == '"u1500@x.vn"', "bấm [Văn bản] → ở tab Soạn chọn đúng đoạn giá trị", _chon(p))
+    T.tab("loc")
+    p.fill("#loc-duong", "$.items[?@.id >= 1590 && @.tags[0] == 'a'].id")
+    p.click("#loc-chay")
+    check(p.locator("#loc-ket .kq-hang").count() == 10 and "10 kết quả" in p.inner_text("#loc-ket"), "bộ lọc [?@.id >= 1590 && …] → 10 kết quả", p.inner_text("#loc-ket")[-60:])
+    p.click("#loc-chep")
+    p.click("#loc-to-cay")
+    ok = T.cho("() => JE_APP.tabHien() === 'cay' && document.querySelectorAll('#cay .n.to-tv').length >= 1", None, 5000)
+    check(ok, "“Tô trên cây”: sang Cây, các nút kết quả có lớp to-tv", p.locator("#cay .n.to-tv").count())
+    T.tab("loc")
+    p.fill("#loc-duong", "$..email")
+    p.click("#loc-chay")
+    check(p.locator("#loc-ket .kq-hang").count() == 300 and p.locator("#loc-ket .kq-them").count() == 1 and "1600 kết quả" in p.inner_text("#loc-ket"),
+          "1 600 kết quả: hiện 300 đầu + nút “Hiện thêm”", [p.locator("#loc-ket .kq-hang").count(), p.inner_text("#loc-ket")[-80:]])
+    p.click("#loc-ket .kq-them")
+    check(p.locator("#loc-ket .kq-hang").count() == 600, "Hiện thêm → 600 hàng")
+    p.fill("#loc-duong", "$[?@.a == ]")
+    p.click("#loc-chay")
+    tx = p.inner_text("#loc-ket")
+    check("Đường dẫn sai" in tx and "^" in tx and not T.loi, "đường dẫn sai: báo tiếng Việt + mũi tên ^ chỉ đúng cột", tx[:90])
+    p.fill("#loc-duong", "$.items[0:2]['id','email']")
+    p.click("#loc-chay")
+    check(p.locator("#loc-ket .kq-hang").count() == 4, "cắt lát + hợp khoá $.items[0:2]['id','email'] → 4 kết quả")
+
+    # Đi tới (Ctrl+G)
+    T.tab("soan")
+    p.click("#nhap")
+    p.keyboard.press("Control+g")
+    check(p.evaluate("() => document.activeElement.id") == "di-toi", "Ctrl+G → focus ô “Đi tới” ở chân trang")
+    p.keyboard.type("3")
+    p.keyboard.press("Enter")
+    p.wait_for_timeout(120)
+    dong3 = vb.split("\n")
+    pos3 = len("\n".join(dong3[:2])) + 1
+    check(p.evaluate("() => document.querySelector('#nhap').selectionStart") == pos3, "Đi tới “3” → con trỏ ở đầu dòng 3", p.evaluate("() => document.querySelector('#nhap').selectionStart"))
+    p.click("#nhap")
+    p.keyboard.press("Control+g")
+    p.keyboard.type("$.items[2].email")
+    p.keyboard.press("Enter")
+    p.wait_for_timeout(150)
+    check(_chon(p) == '"u2@x.vn"', "Đi tới JSONPath $.items[2].email (tab dữ liệu gần nhất = Soạn) → chọn đúng giá trị", _chon(p))
+    p.click("#nhap")
+    p.keyboard.press("Control+g")
+    p.keyboard.type("/items/7/id")
+    p.keyboard.press("Enter")
+    p.wait_for_timeout(150)
+    check(_chon(p) == "7", "Đi tới JSON Pointer /items/7/id → chọn 7", _chon(p))
+    p.click("#nhap")
+    p.keyboard.press("Control+g")
+    p.keyboard.type("/khong/co")
+    p.keyboard.press("Enter")
+    p.wait_for_timeout(150)
+    check("Không có nút nào" in p.inner_text("#trang-thai") or "Không có nút nào" in p.inner_text("#cay-bao"), "Đi tới đường dẫn không tồn tại → báo, không lỗi", p.inner_text("#trang-thai"))
+
+    # đường dẫn tại con trỏ
+    p.evaluate("""() => { const t = document.querySelector('#nhap'); const i = t.value.indexOf('"u3@x.vn"') + 3; t.focus(); t.setSelectionRange(i, i); }""")
+    p.keyboard.press("ArrowRight")
+    p.keyboard.press("ArrowLeft")
+    ok = T.cho("() => !document.querySelector('#duong-con-tro').hidden && document.querySelector('#duong-con-tro').textContent === '$.items[3].email'", None, 3000)
+    check(ok and p.is_visible("#duong-chep-ct") and p.is_visible("#duong-chep-jp"), "con trỏ trong giá trị → chân trang hiện $.items[3].email + nút chép Pointer / JSONPath", p.inner_text("#duong-con-tro"))
+    check("/items/3/email" in (p.get_attribute("#duong-con-tro", "title") or ""), "tooltip có JSON Pointer /items/3/email")
+    T.dong()
+
+
+def dinh_dang_ui(tb, url):
+    section(" · định dạng 2 / 4 / Tab, gỡ / đóng chuỗi trên vùng chọn, giải chuỗi lồng (việc 19)")
+    T = Trang(tb, url, "dinh-dang")
+    p = T.p
+    d = {"a": [1, {"b": 2}], "c": "x"}
+    T.dien(J(d))
+    p.select_option("#chon-thut", "4")
+    p.click("#nut-dinh-dang")
+    check(T.gt() == J(d, 4), "chọn 4 dấu cách → Định dạng thụt 4", T.gt()[:40])
+    p.select_option("#chon-thut", "tab")
+    p.click("#nut-dinh-dang")
+    check(T.gt() == json.dumps(d, ensure_ascii=False, indent="\t"), "chọn Tab → Định dạng thụt bằng tab", repr(T.gt()[:30]))
+    p.select_option("#chon-thut", "2")
+    p.click("#nhap")
+    p.keyboard.press("Control+Shift+f")
+    check(T.cho_gt(J(d, 2)), "Ctrl+Shift+F dùng lựa chọn hiện tại (2)", T.gt()[:30])
+    p.select_option("#chon-thut", "tab")
+    p.reload()
+    p.wait_for_function("() => !!window.JE_APP")
+    check(p.input_value("#chon-thut") == "tab", "lựa chọn thụt được nhớ sau khi tải lại")
+    # nút Sắp khoá giữ kiểu thụt
+    T.dien('{\n\t"b": 1,\n\t"a": 2\n}')
+    p.click("#nut-sap-khoa")
+    check(T.cho_gt('{\n\t"a": 2,\n\t"b": 1\n}'), "Sắp khoá giữ nguyên kiểu thụt tab", repr(T.gt()))
+    # đóng / gỡ chuỗi trên vùng chọn
+    T.dien('{"a": {"x": 1}, "b": 2}')
+    p.evaluate("() => { const t = document.querySelector('#nhap'); const i = t.value.indexOf('{\"x\"'); t.setSelectionRange(i, i + 8); t.focus(); }")
+    p.click("#nut-dong-chuoi")
+    mong = '{"a": ' + json.dumps('{"x": 1}', ensure_ascii=False) + ', "b": 2}'
+    check(T.cho_gt(mong), "Đóng thành chuỗi áp lên VÙNG CHỌN {\"x\": 1}", T.gt())
+    check("Đóng thành chuỗi" in T.title("#nut-hoan-tac"), "bước hoàn tác có nhãn", T.title("#nut-hoan-tac"))
+    i0 = p.evaluate("() => document.querySelector('#nhap').value.indexOf('\"{')")
+    p.evaluate("([a, b]) => { const t = document.querySelector('#nhap'); t.setSelectionRange(a, b); t.focus(); }", [i0, i0 + len(json.dumps('{"x": 1}')) ])
+    p.click("#nut-thoat")
+    check(T.cho_gt('{"a": {"x": 1}, "b": 2}'), "Gỡ chuỗi áp lên vùng chọn → về {\"x\": 1}", T.gt())
+    p.click("#nut-hoan-tac")
+    p.click("#nut-hoan-tac")
+    # đóng cả văn bản rồi gỡ = bản gốc
+    goc = '{"k":[1,2,{"q":"a\\"b"}]}'
+    T.dien(goc)
+    p.evaluate("() => { document.querySelector('#nhap').setSelectionRange(0, 0); }")
+    p.click("#nut-dong-chuoi")
+    check(T.cho_gt(json.dumps(goc, ensure_ascii=False)), "Đóng thành chuỗi (không chọn gì) → cả văn bản thành một chuỗi JSON", T.gt())
+    p.click("#nut-thoat")
+    check(T.cho_gt(goc), "Gỡ chuỗi → trở lại đúng bản gốc (đóng rồi gỡ = gốc)", T.gt())
+    # Gỡ chuỗi lấy từ log: nội dung thiếu nháy ngoài
+    T.dien('{\\"a\\":1}')
+    p.click("#nut-thoat")
+    check(T.cho_gt('{"a":1}'), "Gỡ chuỗi chép từ log ({\\\"a\\\":1} thiếu nháy ngoài) → {\"a\":1}", T.gt())
+    # cây: giải chuỗi lồng và đóng lại
+    T.dien(J({"cfg": '{"a":[1,2]}', "ok": True}, 2))
+    T.tab("cay")
+    p.click("#cay-mo")
+    nut = p.locator('#cay .n[data-p=\'["cfg"]\'] > .dong .nut-tt[data-hd="giai-long"]')
+    check(nut.count() == 1 and p.locator('#cay .n[data-p=\'["ok"]\'] > .dong .nut-tt[data-hd="giai-long"]').count() == 0, "nút “{ }” Giải chuỗi lồng chỉ có ở chuỗi trông như JSON")
+    p.hover('#cay .n[data-p=\x27["cfg"]\x27] > .dong')
+    nut.click()
+    p.wait_for_timeout(200)
+    check(p.evaluate("() => JE_APP.layDuLieu().cfg") == {"a": [1, 2]}, "bấm → chuỗi thành object thật", p.evaluate("() => JSON.stringify(JE_APP.layDuLieu().cfg)"))
+    p.hover('#cay .n[data-p=\x27["cfg"]\x27] > .dong')
+    p.click('#cay .n[data-p=\'["cfg"]\'] > .dong .nut-tt[data-hd="dong-chuoi"]')
+    p.wait_for_timeout(200)
+    check(p.evaluate("() => JE_APP.layDuLieu().cfg") == '{"a":[1,2]}', "nút “ ” Đóng thành chuỗi → trở lại chuỗi JSON nén")
+    p.click("#nut-hoan-tac")
+    p.click("#nut-hoan-tac")
+    check(p.evaluate("() => JE_APP.layDuLieu().cfg") == '{"a":[1,2]}' and "Giải chuỗi lồng" not in T.title("#nut-hoan-tac"), "mỗi thao tác một bước hoàn tác")
+    T.dong()
+
+
+def sua_loi_ui(tb, url):
+    section(" · nút Sửa lỗi + hộp xem trước (việc 20, 21)")
+    T = Trang(tb, url, "sua-loi")
+    p = T.p
+    check(not p.is_visible("#sua-loi-nut"), "không có nội dung: nút Sửa lỗi ẩn")
+    T.dien('{"a": 1}')
+    check(not p.is_visible("#sua-loi-nut"), "JSON hợp lệ: nút Sửa lỗi ẩn")
+    hong = '{\n  \'a\': 1, // một\n  b: [1 2,],\n  "c": None,\n}\n'
+    T.dien(hong)
+    check(p.is_visible("#sua-loi-nut"), "JSON hỏng: nút “🩹 Sửa lỗi” hiện ở chân trang")
+    p.click("#sua-loi-nut")
+    check(p.is_visible("#hop-sua") and p.locator("#hop-sua .sua-muc").count() >= 6, "hộp xem trước liệt kê các chỗ sửa (%d)" % p.locator("#hop-sua .sua-muc").count())
+    ds = p.evaluate("() => Array.from(document.querySelectorAll('#hop-sua .sua-toi')).map(b => b.textContent)")
+    check(any("dòng 2" in x and "nháy" in x for x in ds) and any("dòng 3" in x and "chú thích" in x.lower() or "phẩy" in x for x in ds), "mỗi mục ghi dòng / cột / việc sẽ làm", ds[:4])
+    check(p.locator("#hop-sua .sua-xem del").count() >= 1 and p.locator("#hop-sua .sua-xem ins").count() >= 1, "mỗi mục có xem trước trước → sau (del / ins)")
+    p.click("#hop-sua .sua-toi >> nth=0")
+    check(p.evaluate("() => JE_APP.tabHien()") == "soan", "bấm một mục → tới chỗ đó trong Soạn")
+    check("Sau khi sửa, JSON hợp lệ" in p.inner_text("#hop-sua-bao"), "hộp báo trước: sau khi sửa JSON hợp lệ", p.inner_text("#hop-sua-bao"))
+    p.click("#hop-sua-ap")
+    p.wait_for_timeout(200)
+    vb = T.gt()
+    try:
+        d = json.loads(vb)
+    except Exception:
+        d = None
+    check(d == {"a": 1, "b": [1, 2], "c": None}, "Áp dụng → JSON hợp lệ đúng giá trị", vb[:80])
+    check(vb.count("\n") == hong.count("\n") and vb.startswith("{\n  \"a\": 1, ") and "\n  \"c\": null,\n" not in vb or vb.count("\n") == hong.count("\n"), "bố cục người dùng giữ nguyên (cùng số dòng)", repr(vb))
+    check("Sửa JSON hỏng" in T.title("#nut-hoan-tac") and not p.is_visible("#sua-loi-nut") and not p.is_visible("#hop-sua"), "một bước hoàn tác có nhãn; nút và hộp ẩn")
+    p.click("#nut-hoan-tac")
+    check(T.cho_gt(hong), "↶ MỘT lần → về đúng bản hỏng ban đầu", repr(T.gt()))
+    # mơ hồ: dừng và báo
+    T.dien('{"a": 1,\n "b": hello}')
+    p.click("#sua-loi-nut")
+    check("không có nháy" in p.inner_text("#hop-sua-bao") and "dòng 2" in p.inner_text("#hop-sua-bao"), "giá trị không nháy (mơ hồ): hộp DỪNG và báo đúng dòng, không đoán", p.inner_text("#hop-sua-bao"))
+    p.click("#hop-sua-huy")
+    check(not p.is_visible("#hop-sua") and T.gt() == '{"a": 1,\n "b": hello}', "Huỷ → không đổi gì")
+    # nhiều giá trị gốc: tuỳ chọn gộp
+    T.dien('{"a":1}\n{"b":2}')
+    p.click("#sua-loi-nut")
+    check(p.is_visible("#hop-sua-gop") and "nhiều giá trị" in p.inner_text("#hop-sua-bao").lower(), "nhiều giá trị ở gốc: hộp báo + có ô “Gộp thành một mảng”", p.inner_text("#hop-sua-bao"))
+    p.check("#hop-sua-gop")
+    p.wait_for_timeout(100)
+    p.click("#hop-sua-ap")
+    p.wait_for_timeout(200)
+    check(json.loads(T.gt()) == [{"a": 1}, {"b": 2}], "gộp → mảng 2 phần tử", T.gt())
+    p.keyboard.press("Escape")
+    # Esc đóng hộp
+    T.dien("[1,2,]")
+    p.click("#sua-loi-nut")
+    p.keyboard.press("Escape")
+    check(not p.is_visible("#hop-sua"), "Esc đóng hộp sửa lỗi")
+    # 1 MB hỏng
+    dh = ",\n".join('{"id": %d, "ten": "muc %d", "tags": ["a", "b"],}' % (i, i) for i in range(12000))
+    T.dien("")
+    _dat_vb(p, "[\n" + dh + "\n")
+    ok = T.cho("() => !document.querySelector('#sua-loi-nut').hidden", None, 5000)
+    t0 = p.evaluate("() => performance.now()")
+    p.click("#sua-loi-nut")
+    ok2 = T.cho("() => document.querySelector('#hop-sua-tom').textContent.indexOf('chỗ sửa') > 0", None, 8000)
+    ms = p.evaluate("t0 => performance.now() - t0", t0)
+    info("Sửa lỗi trên ~%.1f MB hỏng (%s): mở hộp %.0f ms" % (len(dh) / 1e6, p.inner_text("#hop-sua-tom"), ms))
+    check(ok and ok2 and ms < 3000 and p.locator("#hop-sua .sua-muc").count() <= 301, "tài liệu ~0,7 MB hỏng: hộp mở < 3 s, chỉ vẽ ≤ 300 mục", ms)
+    p.click("#hop-sua-ap")
+    ok = T.cho("() => JE_APP.hopLe()", None, 8000)
+    check(ok and p.evaluate("() => JE_APP.layDuLieu().length") == 12000, "Áp dụng → 12 000 phần tử hợp lệ")
+    T.dong()
+
+
+def tim_360(tb, url):
+    section(" · 360 px: thanh Tìm, truy vấn, hộp sửa lỗi không tràn ngang (việc 15, 18, 21)")
+    T = Trang(tb, url, "tim-360", viewport={"width": 360, "height": 740}, color_scheme="dark")
+    p = T.p
+    T.dien('{\n  \'a\': 1,\n  b: [1 2,],\n}')
+    p.click("#nhap")
+    p.keyboard.press("Control+h")
+    T.cho("() => document.activeElement && document.activeElement.id === 'tim-q'", None, 2000)
+    p.keyboard.type("1")
+    p.wait_for_timeout(250)
+    tran = p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    pt = p.evaluate("""() => { const r = document.querySelector('#tim-thanh').getBoundingClientRect(); return [r.left, r.right]; }""")
+    check(tran <= 1 and pt[0] >= -1 and pt[1] <= 361, "thanh Tìm + Thay ở 360 px: không tràn ngang (%dpx), nằm trong khung" % tran, pt)
+    nho = p.evaluate("""() => ['#tim-hoa', '#tim-tu', '#tim-re', '#tim-truoc', '#tim-sau', '#tim-dong', '#tim-thay-mot', '#tim-thay-het'].filter(s => {
+        const r = document.querySelector(s).getBoundingClientRect(); return r.width < 30 || r.height < 30; })""")
+    check(not nho, "nút của thanh Tìm đủ lớn để chạm (≥ 30 px)", nho)
+    p.keyboard.press("Escape")
+    p.click("#sua-loi-nut")
+    r = p.evaluate("""() => { const e = document.querySelector('#hop-sua').getBoundingClientRect(); return [e.left, e.right, e.top, e.bottom, innerWidth, innerHeight]; }""")
+    tran = p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    check(tran <= 1 and r[0] >= -1 and r[1] <= r[4] + 1 and r[3] <= r[5] + 1, "hộp Sửa lỗi ở 360 px nằm gọn trong khung, không tràn ngang", r)
+    p.click("#hop-sua-huy")
+    T.tab("loc")
+    p.fill("#loc-duong", "$.*")
+    p.click("#loc-chay")
+    tran = p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    check(tran <= 1 and not T.loi, "tab Truy vấn có kết quả ở 360 px: không tràn ngang", T.loi[:1])
     T.dong()
 
 

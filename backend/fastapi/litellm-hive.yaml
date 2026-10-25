@@ -1,0 +1,11 @@
+model_list:
+  - model_name: hive-deepseek-v4.1-flash-1017
+    litellm_params:
+      model: custom_openai/deepseek-ai/deepseek-v4.1-flash-1017
+      api_base: https://api-cdn.thehive.ai/api/v3
+      api_key: os.environ/HIVE_API_KEY
+litellm_settings:
+  drop_params: true
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/LITELLM_DATABASE_URL

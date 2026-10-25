@@ -1,0 +1,7 @@
+{
+  "title": "LiteLLM Studio",
+  "description": "Giao diện chat đa model qua LiteLLM, dùng virtual key riêng, cấp khóa theo model/ngân sách và kết nối công cụ bằng MCP Streamable HTTP.",
+  "category": "AI",
+  "tags": ["litellm", "ai", "gemini", "openai", "claude", "deepseek", "mcp", "api-key", "chat"],
+  "icon": "✳"
+}

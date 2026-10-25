@@ -1,4 +1,6 @@
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import MarkdownView from '../../components/MarkdownView'
 import { SVG_MAX_BYTES, cleanSvg, svgDataUrl } from '../rehypeSvgImage'
 import { htmlOf, render } from './renderHelper'
 
@@ -141,5 +143,26 @@ describe('cleanSvg', () => {
     const started = performance.now()
     cleanSvg(input.slice(0, SVG_MAX_BYTES - 1))
     expect(performance.now() - started).toBeLessThan(500 * Number(process.env.MD_PERF_SLACK ?? 1))
+  })
+})
+
+describe('shared page (links="shared", dark theme)', () => {
+  const shared = (md: string) => {
+    const div = document.createElement('div')
+    div.innerHTML = renderToStaticMarkup(<MarkdownView source={md} theme="dark" links="shared" />)
+    return div
+  }
+  it('svg stays an image with "View source", and no svg element or handler is produced', () => {
+    const root = shared('```svg\n<svg onload="alert(1)" viewBox="0 0 4 4"><circle r="2"/></svg>\n```\n\n' + SVG)
+    expect(root.querySelectorAll('img[src^="data:image/svg+xml"]').length).toBe(2)
+    expect(root.querySelector('details.md-svg-source summary')!.textContent).toBe('View source')
+    expect(userSvgs(root)).toEqual([])
+    expect(root.querySelector('[onload]')).toBeNull()
+  })
+  it('a collapsible alert renders and a javascript: link in its title is dead', () => {
+    const root = shared('> [!NOTE]- [t](javascript:alert(1))\n> body')
+    expect(root.querySelector('details')).not.toBeNull()
+    expect(root.querySelector('a[href^="javascript"]')).toBeNull()
+    expect(root.querySelector('.md-dead-link')).not.toBeNull()
   })
 })

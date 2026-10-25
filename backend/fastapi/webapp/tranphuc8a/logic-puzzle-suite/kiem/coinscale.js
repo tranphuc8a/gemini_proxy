@@ -545,13 +545,13 @@ module.exports = function (t) {
   })();
 
   // ====================================================================== 14. nhãn, Daily, engine thuần
-  t.group("coinscale — CHƯA vào Daily (việc của P8)");
+  t.group("coinscale — vào Daily từ 2026-10-30 (P8)");
   (function () {
     var D = Puz.daily;
     if (!D) { t.ok("core/daily.js có trong ngữ cảnh kiểm", false); return; }
-    var types = Puz.types.all().map(function (d) { return d.id; }), bad = [], day = "2026-10-01", n = 0;
-    for (var i = 0; i < 800; i++) { var f = D.forDay(day, types); n++; if (!f || f.type === "coinscale") bad.push(day); day = Puz.util.addDays(day, 1); }
-    t.ok("Puz.daily.ORDER và mọi phiên bản SCHEDULE không có coinscale; 800 ngày liên tiếp không ngày nào ra coinscale (" + n + " ngày)", D.ORDER.indexOf("coinscale") < 0 && D.SCHEDULE.every(function (v) { return v.ids.indexOf("coinscale") < 0; }) && bad.length === 0, bad.slice(0, 2));
+    var types = Puz.types.all().map(function (d) { return d.id; }), bad = [], late = 0, day = "2026-10-01", n = 0;
+    for (var i = 0; i < 800; i++) { var f = D.forDay(day, types); n++; if (!f) bad.push(day); else if (f.type === "coinscale") { if (day < "2026-10-30") bad.push(day); else late++; } day = Puz.util.addDays(day, 1); }
+    t.ok("coinscale nằm trong Puz.daily.ORDER và đúng một phiên bản SCHEDULE (tu 2026-10-30, không phiên bản nào trước đó); {n} ngày từ 01/10: không ngày nào TRƯỚC 30/10 ra coinscale, từ 30/10 ra đều ({late} ngày)".replace("{n}", n).replace("{late}", late), D.ORDER.indexOf("coinscale") >= 0 && D.SCHEDULE.filter(function (v) { return v.ids.indexOf("coinscale") >= 0; }).map(function (v) { return v.tu; }).join() === "2026-10-30" && bad.length === 0 && late >= 50, bad.slice(0, 3));
   })();
   t.group("coinscale — nhãn HUD đúng với bộ đếm THẬT của vỏ + sizeText cho đề tự nhập");
   (function () {

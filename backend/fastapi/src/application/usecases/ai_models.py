@@ -1,9 +1,9 @@
-"""Which Gemini models a caller may pick, and how to ask each of them.
+"""Which configured-provider models a caller may pick, and how to ask them.
 
-* **Catalog** — the deployment's real list (Gemini `models.list`, through the
-  model port), cut down to text models that answer `generateContent`, newest
-  first. Kept `AI_MODELS_TTL_SECONDS` per instance; a failed listing falls back
-  to `FALLBACK` for a few minutes instead of failing every request. `AI_MODELS`
+* **Catalog** — the deployment's real list (Gemini `models.list` or the
+  LiteLLM `/v1/models` endpoint, through the model port), cut down to chat
+  models. Kept `AI_MODELS_TTL_SECONDS` per instance; a failed listing falls back
+  to a short-lived default model (or the Gemini `FALLBACK`) instead of failing every request. `AI_MODELS`
   (comma-separated) pins the list and skips the call.
 * **Who may pick what** — anyone allowed to use AI may pick a Flash / Flash-Lite
   model; Pro models are for administrators (they cost several times more and
@@ -32,10 +32,12 @@ FALLBACK: Tuple[str, ...] = (
     "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro",
 )
 
-#: Not chat/text models even though they answer generateContent: speech, images, video, robots…
-_NOT_TEXT = ("tts", "image", "banana", "omni", "transcribe", "robotics", "computer-use", "customtools", "live",
-             "embedding", "audio", "veo", "imagen", "aqa", "learnlm", "gemma")
-_ID_RE = re.compile(r"^[a-z0-9][a-z0-9.\-]{1,62}$")
+#: Models that do not answer chat-completion requests.
+_NOT_TEXT = ("embedding", "moderation", "tts", "speech", "image", "video", "transcribe", "robotics",
+             "computer-use", "live")
+_GEMINI_NOT_TEXT = ("tts", "image", "banana", "omni", "transcribe", "robotics", "computer-use", "customtools",
+                    "live", "embedding", "audio", "veo", "imagen", "aqa", "learnlm", "gemma")
+_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 _FAILED_TTL = 300
 
 _CACHE: Dict[str, Any] = {}
@@ -52,7 +54,9 @@ def valid_id(model: Optional[str]) -> bool:
 
 def is_text_model(model_id: str) -> bool:
     m = model_id.lower()
-    return m.startswith("gemini-") and not any(word in m for word in _NOT_TEXT)
+    if m.startswith("gemini-"):
+        return not any(word in m for word in _GEMINI_NOT_TEXT)
+    return not any(word in m for word in _NOT_TEXT)
 
 
 def tier(model_id: str) -> str:
@@ -140,6 +144,10 @@ async def catalog(port: Any) -> Tuple[List[Dict[str, Any]], str]:
                     models.append(_describe(mid, str(item.get("label") or "")))
             if models:
                 source, ttl = "api", int(getattr(settings, "AI_MODELS_TTL_SECONDS", 21600) or 21600)
+            elif settings.LITELLM_API_BASE:
+                default = str(settings.AI_MODEL or "")
+                models = [_describe(default)] if valid_id(default) else []
+                source, ttl = "fallback", _FAILED_TTL
             else:
                 models, source, ttl = [_describe(m) for m in FALLBACK], "fallback", _FAILED_TTL
             models.sort(key=lambda d: sort_key(d["id"]))

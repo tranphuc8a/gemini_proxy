@@ -43,6 +43,7 @@
   var coRieng = JE.chung.coRieng, catNgan = JE.chung.catNgan, moTaDuong = JE.chung.moTaDuong;
   var kieuCua = JE.chung.kieuCua;
   if (!JE.tomTat) throw new Error("json-editor.js cần nạp tom-tat.js trước");
+  if (!JE.dinhDang || !JE.jsonpath || !JE.timKiem) throw new Error("json-editor.js cần nạp jsonpath.js, tim-kiem.js, dinh-dang.js trước");
   var TT = JE.tomTat;
   var xemTruoc = TT.xemTruoc, truongNoiBat = TT.truongNoiBat;
   if (!JE.viTri) throw new Error("json-editor.js cần nạp vi-tri.js trước");
@@ -426,7 +427,7 @@
   }
 
   function dinhDang(thut) {
-    var t = thut === undefined ? 2 : thut;
+    var t = thut === undefined ? thutHienTai() : thut;
     return bienDoiNen("Định dạng", t, function (d) { return JSON.stringify(d, null, t); });
   }
 
@@ -469,23 +470,43 @@
     return vietTheoKieu(sapKhoa(v), cu);
   }
 
-  /** Nhieu API tra ve JSON DA BI DONG GOI THANH CHUOI. Nut nay go mot lop. */
+  /* --- kieu thut le khi Dinh dang (2 | 4 | Tab, nho o localStorage) --- */
+  var thutChon = "2";
+  function thutHienTai() { return JE.dinhDang.thutTu(thutChon); }
+  function datThutChon(kieu, luu) {
+    thutChon = kieu === "4" || kieu === "tab" ? kieu : "2";
+    var o = $("#chon-thut");
+    if (o) o.value = thutChon;
+    if (luu) lsDat("json-editor:thut", thutChon);
+  }
+
+  /** Vung chon trong o Soan (chi khi dang o tab Soan, che do Sua, van ban khong nam ngoai textarea) hoac null. */
+  function vungChon() {
+    if (vbNgoai !== null || cheDoSoan === "xem" || oHien !== "soan") return null;
+    var a = nhap.selectionStart, b = nhap.selectionEnd;
+    return typeof a === "number" && typeof b === "number" && a !== b ? [Math.min(a, b), Math.max(a, b)] : null;
+  }
+
+  /** Nhieu API tra ve JSON DA BI DONG GOI THANH CHUOI. Nut nay go mot lop — ap len VUNG CHON neu co. */
   function thoatChuoi() {
-    var s = layVb().trim();
-    if (!s) return;
-    var thu;
-    try {
-      thu = JSON.parse(s);
-    } catch (e) {
-      /* Chua phai JSON hop le — co the la chuoi thieu ngoac ngoai. */
-      try { thu = JSON.parse('"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'); }
-      catch (e2) { bao("Không gỡ được — nội dung không phải chuỗi JSON hợp lệ"); return; }
+    var vung = vungChon(), goc = layVb(), s = vung ? goc.slice(vung[0], vung[1]) : goc;
+    if (!s.trim()) return;
+    var r = JE.dinhDang.goChuoi(s);
+    if (!r.ok) { bao(r.loi); return; }
+    if (vung) {
+      datVanBan(goc.slice(0, vung[0]) + r.ketQua + goc.slice(vung[1]), { nhan: "Gỡ chuỗi (vùng chọn)", chon: [vung[0], vung[0] + r.ketQua.length] });
+    } else {
+      datVanBan(r.ketQua, { nhan: "Gỡ chuỗi" });
     }
-    if (typeof thu !== "string") {
-      bao("Nội dung không phải một chuỗi — không có lớp nào để gỡ");
-      return;
-    }
-    datVanBan(thu, { nhan: "Thoát chuỗi" });
+  }
+
+  /** Dong vung chon (hoac ca van ban) thanh MOT chuoi JSON: JSON.stringify(van ban). */
+  function dongChuoiVung() {
+    var vung = vungChon(), goc = layVb(), s = vung ? goc.slice(vung[0], vung[1]) : goc;
+    if (!s.length) return;
+    var moi = JE.dinhDang.dongChuoi(s);
+    if (vung) datVanBan(goc.slice(0, vung[0]) + moi + goc.slice(vung[1]), { nhan: "Đóng thành chuỗi (vùng chọn)", chon: [vung[0], vung[0] + moi.length] });
+    else datVanBan(moi, { nhan: "Đóng thành chuỗi" });
   }
 
   function bao(chu) {
@@ -506,6 +527,8 @@
   }
 
   function sauKhiDoi() {
+    toTruyVan = null; kqTruyVan = null;                 /* duong dan co the da doi: bo to / ket qua cu */
+    datNutTruyVan(false);
     doc();
     veCay();
     luuNhap();
@@ -692,12 +715,21 @@
       (tat ? " disabled" : "") + ">" + kyHieu + "</button>";
   }
 
+  /** Chuoi trong giong mot JSON object / mang long nhau? (kiem re bang ky tu dau / cuoi; parse that khi bam nut) */
+  function dangJsonLong(v) {
+    if (typeof v !== "string" || v.length < 2) return false;
+    var c = v.charAt(0), d = v.charAt(v.length - 1);
+    return (c === "{" && d === "}") || (c === "[" && d === "]");
+  }
+
   function htmlThaoTac(khoa, v, duong, soAnhEm) {
     var h = '<span class="thao-tac">';
     if (laNhanh(v)) {
       h += nutTT("them", "+", Array.isArray(v) ? "Thêm phần tử vào cuối mảng (Insert)" : "Thêm khoá mới (Insert)");
     }
     h += nutTT("sua", "✎", laNhanh(v) ? "Đổi kiểu" : "Sửa giá trị (Enter)");
+    if (laNhanh(v)) h += nutTT("dong-chuoi", "“ ”", "Đóng thành chuỗi (cả nhánh này thành một chuỗi JSON)");
+    else if (dangJsonLong(v)) h += nutTT("giai-long", "{ }", "Giải chuỗi lồng: biến chuỗi này thành object / mảng thật");
     if (typeof khoa === "number") {
       h += nutTT("len", "↑", "Chuyển lên (Alt+↑)", khoa === 0);
       h += nutTT("xuong", "↓", "Chuyển xuống (Alt+↓)", khoa >= soAnhEm - 1);
@@ -731,6 +763,7 @@
     n.setAttribute("aria-label", n._nhanGoc);
     n.setAttribute("data-p", kd);
     n.tabIndex = -1;
+    if (toTruyVan && toTruyVan.has(kd)) n.classList.add("to-tv");
     n._duong = duong; n._v = v; n._khoa = khoa; n._soAnhEm = soAnhEm;
     bangNut[kd] = n;
 
@@ -819,6 +852,7 @@
     }
     n._con.appendChild(ra);
     n._daVe = true;
+    phat("ve-cay", { nut: n });
   }
 
   /** Cac nut con that [bd, kt) cua nut that `cha`, them vao `ra`. */
@@ -879,6 +913,7 @@
     else veHangCon(cha, g.bd, g.kt, n._cap + 1, ra);
     n._con.appendChild(ra);
     n._daVe = true;
+    phat("ve-cay", { nut: n });
   }
 
   function veCay() {
@@ -910,6 +945,7 @@
     cayEl.scrollLeft = sl;
     cuonCay.top = cayEl.scrollTop; cuonCay.left = cayEl.scrollLeft;
     if (coFocus) focusNut(chon);
+    phat("ve-cay", { nut: null });
   }
 
   /** Nut theo duong dan; neu no nam trong nhanh dang gap (chua ve) thi lay
@@ -1489,6 +1525,24 @@
     else if (hd === "xoa") xoaNut(n);
     else if (hd === "len") doiCho(n, -1);
     else if (hd === "xuong") doiCho(n, 1);
+    else if (hd === "giai-long") giaiChuoiLongNut(n);
+    else if (hd === "dong-chuoi") dongChuoiNut(n);
+  }
+
+  /** Nut chuoi chua JSON object / mang -> thay bang gia tri that (MOT buoc hoan tac). */
+  function giaiChuoiLongNut(n) {
+    var v = JE.dinhDang.giaiChuoiLong(n._v);
+    if (v === undefined) { thongBaoCay("Chuỗi này không phải JSON object / mảng hợp lệ — không giải được"); return; }
+    var duong = n._duong;
+    apDungGoc(datTai(duLieu, duong, v), { loai: "thay", duong: duong }, duong, "Giải chuỗi lồng");
+  }
+
+  /** Nut nhanh (object / mang) -> mot chuoi chua JSON nen cua no. */
+  function dongChuoiNut(n) {
+    var duong = n._duong, chuoi;
+    try { chuoi = JE.dinhDang.dongGoiLong(n._v, 0); }
+    catch (e) { thongBaoCay("Không đóng thành chuỗi được — " + moTaLoiNem(e)); return; }
+    apDungGoc(datTai(duLieu, duong, chuoi), { loai: "thay", duong: duong }, duong, "Đóng thành chuỗi");
   }
 
   /* ==================================================================
@@ -1985,59 +2039,14 @@
   /* ==================================================================
      4. Truy van duong dan
 
-     Cu phap nho gon kieu JSONPath, chi phan hay dung:
-       $        goc
-       .khoa    vao khoa
-       [0]      phan tu thu 0
-       [*]      moi phan tu / moi gia tri
-       ..khoa   tim khoa do o MOI CAP, khong can biet nam sau bao nhieu
+     Ruot la assets/jsonpath.js (JSONPath tap con RFC 9535 + JSON Pointer, de lap, co ngan sach).
+     truyVan() la lop boc GIU kieu tra ve cu [{d: "$.a[0]", v}] va ngu phap cu (kieuCu: "o[0]" tren
+     object la khoa, "a.0" tren mang la phan tu). Loi phan tich van la Error co thongBao / cot.
      ================================================================== */
   function truyVan(goc, duong) {
-    duong = String(duong || "").trim();
-    if (!duong || duong === "$") return [{ d: "$", v: goc }];
-    if (duong[0] === "$") duong = duong.slice(1);
-
-    var ra = [{ d: "$", v: goc }];
-    var i = 0;
-    while (i < duong.length) {
-      var c = duong[i];
-      if (c === ".") {
-        if (duong[i + 1] === ".") {
-          /* Tim sau: gom moi nut co khoa nay, o bat ky cap nao. */
-          i += 2;
-          var ten = "";
-          while (i < duong.length && /[\w$-]/.test(duong[i])) ten += duong[i++];
-          var gom = [];
-          ra.forEach(function (n) { quetSau(n.v, n.d, ten, gom); });
-          ra = gom;
-        } else {
-          i++;
-          var t2 = "";
-          while (i < duong.length && /[\w$-]/.test(duong[i])) t2 += duong[i++];
-          ra = vaoKhoa(ra, t2);
-        }
-      } else if (c === "[") {
-        var dong2 = duong.indexOf("]", i);
-        if (dong2 < 0) throw new Error("thiếu dấu ] ");
-        var trong = duong.slice(i + 1, dong2).trim().replace(/^['"]|['"]$/g, "");
-        i = dong2 + 1;
-        if (trong === "*") {
-          var gom2 = [];
-          ra.forEach(function (n) {
-            if (Array.isArray(n.v)) {
-              n.v.forEach(function (x, k) { gom2.push({ d: n.d + "[" + k + "]", v: x }); });
-            } else if (n.v && typeof n.v === "object") {
-              Object.keys(n.v).forEach(function (k) { gom2.push({ d: n.d + "." + k, v: n.v[k] }); });
-            }
-          });
-          ra = gom2;
-        } else {
-          ra = vaoKhoa(ra, trong);
-        }
-      } else {
-        throw new Error("không hiểu ký tự “" + c + "”");
-      }
-    }
+    if (!JE.jsonpath) throw new Error("json-editor.js cần nạp jsonpath.js trước");
+    var kq = JE.jsonpath.chay(goc, String(duong || ""), undefined, { kieuCu: true }), ra = new Array(kq.length);
+    for (var i = 0; i < kq.length; i++) ra[i] = { d: kq[i].hien, v: kq[i].v };
     return ra;
   }
 
@@ -2048,32 +2057,6 @@
     if (!laNhanh(v)) return false;
     if (Array.isArray(v)) return /^(0|[1-9]\d*)$/.test(khoa) && +khoa < v.length;
     return coRieng(v, khoa);
-  }
-
-  function vaoKhoa(ds, khoa) {
-    var ra = [];
-    ds.forEach(function (n) {
-      if (coKhoaTruyVan(n.v, khoa)) {
-        ra.push({
-          d: n.d + (Array.isArray(n.v) ? "[" + khoa + "]" : "." + khoa),
-          v: n.v[khoa]
-        });
-      }
-    });
-    return ra;
-  }
-
-  function quetSau(v, duong, ten, gom) {
-    if (!v || typeof v !== "object") return;
-    if (Array.isArray(v)) {
-      v.forEach(function (x, k) { quetSau(x, duong + "[" + k + "]", ten, gom); });
-    } else {
-      Object.keys(v).forEach(function (k) {
-        var d2 = duong + "." + k;
-        if (k === ten) gom.push({ d: d2, v: v[k] });
-        quetSau(v[k], d2, ten, gom);
-      });
-    }
   }
 
   /** Gia tri cua mot ket qua truy van -> chu hien ra. KHONG BAO GIO nem
@@ -2094,22 +2077,124 @@
     return s === undefined ? String(v) : s;
   }
 
+  /* --- tab Truy van: danh sach ket qua BAM DUOC (toi Cay / Van ban), to tren cay, chep --- */
+  var kqTruyVan = null;                /* { ds: [KetQua], catBot } cua lan chay gan nhat */
+  var toTruyVan = null;                /* Set(khoaDuong) cac nut ket qua dang to tren cay */
+  var TRUY_VAN_TOI_DA = 5000;          /* ket qua toi da giu lai */
+  var TRUY_VAN_HIEN = 300;             /* hang hien moi dot ("Hiện thêm") */
+  var truyVanDaHien = 0;
+
+  function datNutTruyVan(co) {
+    var a = $("#loc-to-cay"), b = $("#loc-chep");
+    if (a) a.disabled = !co;
+    if (b) b.disabled = !co;
+  }
+
+  function hangTruyVan(i) {
+    var r = kqTruyVan.ds[i];
+    var hang = document.createElement("div");
+    hang.className = "kq-hang";
+    var nutDuong = document.createElement("button");
+    nutDuong.type = "button"; nutDuong.className = "kq-duong";
+    nutDuong.setAttribute("data-i", String(i)); nutDuong.setAttribute("data-tab", "tu-dong");
+    nutDuong.textContent = r.hien;
+    nutDuong.title = "Tới nút này (tab dữ liệu bạn vừa dùng): " + r.chuan;
+    var xem = document.createElement("span");
+    xem.className = "kq-xem";
+    xem.textContent = catNgan(chuoiGon(r.v), 160);
+    var cay = document.createElement("button");
+    cay.type = "button"; cay.className = "nut nho kq-tab"; cay.setAttribute("data-i", String(i)); cay.setAttribute("data-tab", "cay");
+    cay.textContent = "Cây"; cay.title = "Tới nút này trên tab Cây";
+    var vb = document.createElement("button");
+    vb.type = "button"; vb.className = "nut nho kq-tab"; vb.setAttribute("data-i", String(i)); vb.setAttribute("data-tab", "soan");
+    vb.textContent = "Văn bản"; vb.title = "Chọn đoạn văn bản của nút này ở tab Soạn";
+    hang.appendChild(nutDuong); hang.appendChild(xem); hang.appendChild(cay); hang.appendChild(vb);
+    return hang;
+  }
+
+  function veThemKetQua() {
+    var ra = $("#loc-ket"), ds = ra.querySelector ? ra.querySelector(".kq-ds") : null;
+    if (!kqTruyVan || !ds) return;
+    var den = Math.min(kqTruyVan.ds.length, truyVanDaHien + TRUY_VAN_HIEN);
+    for (var i = truyVanDaHien; i < den; i++) ds.appendChild(hangTruyVan(i));
+    truyVanDaHien = den;
+    var chan = ra.querySelector(".kq-chan");
+    if (chan) {
+      var con = kqTruyVan.ds.length - den;
+      chan.textContent = "— " + kqTruyVan.ds.length + " kết quả" + (kqTruyVan.catBot ? " (đã cắt ở " + TRUY_VAN_TOI_DA + " — thu hẹp đường dẫn)" : "") +
+        (con > 0 ? " · đang hiện " + den : "");
+      if (con > 0) {
+        var them = document.createElement("button");
+        them.type = "button"; them.className = "nut nho kq-them";
+        them.textContent = "Hiện thêm " + Math.min(con, TRUY_VAN_HIEN) + " (còn " + con + ")";
+        chan.appendChild(document.createTextNode(" "));
+        chan.appendChild(them);
+      }
+    }
+  }
+
   function chayTruyVan() {
     var ra = $("#loc-ket");
+    kqTruyVan = null; toTruyVan = null; datNutTruyVan(false);
     if (!doc()) { ra.textContent = "JSON chưa hợp lệ — sửa ở tab Soạn trước."; return; }
     var duong = $("#loc-duong").value, kq;
     try {
-      kq = truyVan(duLieu, duong);
+      kq = JE.jsonpath.chay(duLieu, duong, TRUY_VAN_TOI_DA, { kieuCu: true });
     } catch (e) {
-      ra.textContent = e && e.name === "RangeError"
-        ? "Không chạy được truy vấn — " + moTaLoiNem(e)
-        : "Đường dẫn sai: " + e.message;
+      if (e && e.name === "RangeError") { ra.textContent = "Không chạy được truy vấn — " + moTaLoiNem(e); return; }
+      var chiCot = e && typeof e.cot === "number" ? "\n" + duong + "\n" + new Array(Math.min(e.cot, 400) + 1).join(" ") + "^" : "";
+      ra.textContent = "Đường dẫn sai: " + e.message + chiCot;
       return;
     }
     if (!kq.length) { ra.textContent = "Không khớp nút nào."; return; }
-    ra.textContent = kq.map(function (n) {
-      return n.d + "\n  " + chuoiKetQua(n.v).split("\n").join("\n  ");
-    }).join("\n\n") + "\n\n— " + kq.length + " kết quả";
+    kqTruyVan = { ds: kq, catBot: !!kq.catBot };
+    truyVanDaHien = 0;
+    ra.textContent = "";
+    var ds = document.createElement("div"); ds.className = "kq-ds";
+    var chan = document.createElement("div"); chan.className = "kq-chan";
+    ra.appendChild(ds); ra.appendChild(chan);
+    veThemKetQua();
+    datNutTruyVan(true);
+  }
+
+  /** Bam mot hang ket qua / nut Hien them. */
+  function clickKetQua(e) {
+    var t = e.target && e.target.closest ? e.target.closest("[data-i], .kq-them") : null;
+    if (!t || !kqTruyVan) return;
+    if (t.classList.contains("kq-them")) { veThemKetQua(); return; }
+    var r = kqTruyVan.ds[+t.getAttribute("data-i")];
+    if (!r) return;
+    var tab = t.getAttribute("data-tab");
+    if (!denDuong(r.duong, { tab: tab, chon: "gia-tri" })) thongBao("Không tới được nút này (JSON đã đổi?)");
+  }
+
+  function toKetQuaTrenCay() {
+    if (!kqTruyVan || !dongBoDoc()) return;
+    toTruyVan = new Set();
+    var ds = kqTruyVan.ds, i;
+    for (i = 0; i < ds.length; i++) toTruyVan.add(khoaDuong(ds[i].duong));
+    for (i = 0; i < ds.length && i < 200; i++) moToTien(ds[i].duong, duLieu);       /* mo to tien cua 200 ket qua dau */
+    chuyenTab("cay");
+    veCay();
+    denDuong(ds[0].duong, { tab: "cay" });
+    thongBaoCay("Đã tô " + ds.length + " nút kết quả" + (ds.length > 200 ? " (mở sẵn 200 đầu)" : ""));
+  }
+
+  function chepVaoBoNho(chu, xong) {
+    var ok = function () { if (xong) xong(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(chu).then(ok, function () { try { document.execCommand("copy"); ok(); } catch (e) { /* khong chep duoc */ } });
+    } else {
+      try { document.execCommand("copy"); ok(); } catch (e) { /* khong chep duoc */ }
+    }
+  }
+
+  function chepKetQua() {
+    if (!kqTruyVan) return;
+    var chu;
+    try { chu = JSON.stringify(kqTruyVan.ds.map(function (r) { return r.v; }), null, 2); }
+    catch (e) { thongBao("Không chép được — " + moTaLoiNem(e)); return; }
+    chepVaoBoNho(chu, function () { thongBao("Đã chép " + kqTruyVan.ds.length + " giá trị (mảng JSON)"); });
   }
 
   /* ==================================================================
@@ -2736,6 +2821,7 @@
     }
     var dong = s.split("\n");
     capNhatHang(dong, haiChamSau(dong), ld, lc);
+    phat("ve-mau", { tu: 0, den: dong.length });         /* ngat dong: moi dong that = mot <span class="h"> theo thu tu */
     mauDaVeLoi = loi;
     dongBoKichThuoc();
     dongBoCuon();
@@ -3005,7 +3091,9 @@
     }
   });
 
-  $("#nut-dinh-dang").onclick = function () { dinhDang(2); };
+  $("#nut-dinh-dang").onclick = function () { dinhDang(); };
+  if ($("#chon-thut")) $("#chon-thut").onchange = function () { datThutChon(this.value, true); };
+  if ($("#nut-dong-chuoi")) $("#nut-dong-chuoi").onclick = dongChuoiVung;
   $("#nut-nen").onclick = nen;
   $("#nut-sap-khoa").onclick = function () {
     bienDoi("Sắp khoá", function (d) { return sapKhoaVanBan(d, layVb()); });
@@ -3199,6 +3287,9 @@
   if ($("#bang-lon-sua-tho")) $("#bang-lon-sua-tho").onclick = function () { suaTho = true; datCheDoSoan("sua"); };
 
   $("#loc-chay").onclick = chayTruyVan;
+  if ($("#loc-ket")) $("#loc-ket").addEventListener("click", clickKetQua);
+  if ($("#loc-to-cay")) $("#loc-to-cay").onclick = toKetQuaTrenCay;
+  if ($("#loc-chep")) $("#loc-chep").onclick = chepKetQua;
   $("#loc-duong").addEventListener("keydown", function (e) {
     if (e.key === "Enter") chayTruyVan();
   });
@@ -3240,7 +3331,7 @@
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
-      e.preventDefault(); dinhDang(2);
+      e.preventDefault(); dinhDang();
       return;
     }
     /* Hoan tac / lam lai cua app: o MOI tab, mien la KHONG go trong mot o
@@ -3387,7 +3478,11 @@
        dot J5: "doi-che-do" ("sua" | "xem"), "ve-mau" ({tu, den}: lop mau ao vua ve cac dong [tu, den)), "nhap" ({luu, noi, n}),
        "dinh-dang-nen" ({nhan, noi, ms}) */
     dangKy: dangKy,
+    phat: phat,                                          /* cho ui-xem.js phat "ve-xem" ({tu, den}: cac hang Xem vua ve) */
     thongBao: thongBao,
+    nutCay: function (duong) { return bangNut[khoaDuong(duong)] || null; },
+    thutHienTai: thutHienTai,
+    chepVaoBoNho: chepVaoBoNho,
     /* huy hieu loi tren cay: Map(JSON.stringify(duong) -> {a:[thongBao…], b:soLoiBenTrong}); null = xoa */
     datHuyHieuCay: datHuyHieuCay,
     /* dot J5: o soan Sua | Xem, tai lieu lon */
@@ -3430,6 +3525,7 @@
   nhap.value = docNhap();
   mayVuaGhi();
   datNgatDong(lsLay("json-editor:ngat-dong") === "1", false);
+  datThutChon(lsLay("json-editor:thut"), false);
   doc();
   veCay();
   veMau();

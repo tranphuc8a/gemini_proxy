@@ -285,7 +285,7 @@ grade(puzzle, state, counters) → { value, best, quality, stars, valueText, bes
 `core/daily.js` dùng `SCHEDULE = [{ tu: "1970-01-01", ids: [5 loại cũ] }, …]`: ngày d dùng phiên bản cuối có `tu ≤ d`, xoay vòng tính từ `tu`
 (phiên bản đầu bắt đầu ngày số 0 nên trùng hệt công thức cũ). Thêm loại vào Daily = thêm phiên bản mới ở cuối với `tu` **trong tương lai** và `ids` = danh sách cũ + id mới ở cuối.
 `kiem/personal.js` kiểm: lịch từ 2020-01-01 tới trước phiên bản thứ hai trùng hệt bản cũ, hôm nay không đổi, hình dạng SCHEDULE đúng quy tắc, phiên bản giả định không đổi các ngày trước `tu`.
-`Puz.daily.ORDER` = ids của phiên bản mới nhất (thứ tự hiển thị các loại). Đợt P1 CHƯA thêm loại nào vào Daily.
+`Puz.daily.ORDER` = ids của phiên bản mới nhất (thứ tự hiển thị các loại). Đợt P1 chưa thêm loại nào; đợt P8 thêm 6 loại (mục 11.15).
 
 ### 11.9 Ví dụ thật: `coinbalance` (đợt P3) — những quyết định đáng bắt chước
 
@@ -391,4 +391,21 @@ grade(puzzle, state, counters) → { value, best, quality, stars, valueText, bes
   bàn > 12 cột bọc khung cuộn ngang (ô ≥ 30 px). Trình soạn: chip luật/mép/mức, chế độ "Đặt mức" / "Khoá ô", ngẫu nhiên giải được, bất biến tô viền chấm (`type.lib.obstruction(spec, v)`).
 - **Kiểm**: `kiem/lightsoutx.js` — vét cạn k^n mọi bàn của 17 cấu hình nhỏ (cả xuyến 2×2 trùng ô, ô khoá, k = 2/3/5), nhân khớp OEIS A159257 + bộ khử thô viết riêng ở ~150 cấu hình, bất biến kiểm bằng mô phỏng + vét cạn mọi y, par 4×4 = vét cạn 2^16, bậc ≥ 90 % (`LOX_FULL=1` chạy 90 cấu hình × 7 cỡ), hint "min" đúng K nước + vẫn giải khi chèn nước sai, đuổi đèn mod k (≈ 200 bàn) + bảng kinh điển 5×5; `kiem/lightsoutx-vang.js` (80 puzzle + 5 bàn nhập); `check_board_lightsoutx.py`.
 - Bài học: (1) loại cộng-1-mod-k thì "huỷ một nước" ≠ "bấm lại"; sinh và par phải nghĩ theo x = số lần bấm mod k; (2) độ khó theo tham số ngoài (options) cần chuẩn hoá theo CẤU HÌNH (đo lại), không theo bảng cố định; (3) mọi cache theo cấu hình phải LRU có chặn; (4) hint phụ thuộc cache chỉ được phép ở nhánh "cận trên" (không duyệt hết được) và phải được kiểm là dừng.
-- `def.lib`: `makeSpec/specText/effect/effectSpec/obstruction/analyse/scoreOf/chaseOk/chaseStep/chaseTop/chaseDown/par/parStars/randomPresses`. CHƯA vào Daily (P8). HOÃN (Q8): trình soạn "soạn bằng bấm" (luôn giải được), zoom/ngân sách hint cho bàn 12–20 (D5–D6).
+- `def.lib`: `makeSpec/specText/effect/effectSpec/obstruction/analyse/scoreOf/chaseOk/chaseStep/chaseTop/chaseDown/par/parStars/randomPresses`. Vào Daily từ P8 (mục 11.15). HOÃN (Q8): trình soạn "soạn bằng bấm" (luôn giải được), zoom/ngân sách hint cho bàn 12–20 (D5–D6).
+
+### 11.15 Daily 11 loại và tổng hợp 6 loại mới (đợt P8, 25/10/2026)
+
+`SCHEDULE` có phiên bản thứ hai `tu: "2026-10-30"`, `ids` = 5 loại cũ + `coinbalance, bachet, coinscale, camel, motorbike, lightsoutx` (đúng thứ tự). Chọn ngày tương lai (không phải "hôm nay") để hôm nay và quá khứ giữ nguyên;
+từ 30/10 xoay vòng 11 loại (ngày đầu = sudoku, 11 ngày đi hết, bậc theo thứ trong tuần như cũ). Loại chưa đăng ký (vd `motorbike` khi trình duyệt không có BigInt) → Daily nhảy sang loại kế. Daily không truyền `options` ⇒ đề mặc định.
+`kiem/core-daily-p8.js` kiểm: lịch 2020-01-01..2026-10-29 trùng hệt lịch 5 loại, không ngày nào trước 30/10 ra loại mới, xoay vòng đều, 42 tổ hợp (6 loại × 7 thứ) sinh đúng bậc + lời giải solved + tất định, liên kết Notebook có thật, metadata.
+
+| Loại | kind | Làm gì | Kiểm độc lập bằng |
+| --- | --- | --- | --- |
+| `coinbalance` (CW1) | interactive | cân đĩa tìm xu giả, ngân sách lần cân, đối thủ thích nghi / xu cố định | vét cạn cây quyết định cỡ nhỏ, công thức (3^k−1)/2 |
+| `bachet` (CW2) | optimize | ít quả cân nhất cân mọi 1..N bằng hai đĩa | vét cạn bộ quả cân, cận đếm |
+| `coinscale` (CW3) | interactive | cân điện tử (chồng xu, hai loại khối lượng), lõi tập ứng viên | vét cạn tập ứng viên cỡ ≤ 6 |
+| `camel` (V1) | optimize | một lạc đà chở chuối: đi xa nhất / tới đích | BFS vét cạn trạng thái + công thức bậc thang |
+| `motorbike` | optimize | đi bộ & xe máy (cách hiểu A mặc định, B tuỳ chọn), số hữu tỉ BigInt | LP liệt kê đỉnh, BFS khử đối xứng, mô phỏng số thực |
+| `lightsoutx` | static | Lights Out tổng quát (luật, mép, k ∈ {2,3,5}, ô khoá), par | vét cạn k^n, OEIS A159257 |
+
+Nhãn CW1/CW2/CW3/V1 là CÁCH HIỂU ĐÃ CHỐT (Q7), không phải đề gốc duy nhất. Xe máy không chia hết: chưa biết tối ưu chính xác, chấm theo cận LP, không bao giờ 3★. Thêm loại tiếp: thêm phiên bản thứ ba ở cuối `SCHEDULE` (ngày tương lai), sửa `kiem/core-daily-p8.js` (danh sách 11 → n).

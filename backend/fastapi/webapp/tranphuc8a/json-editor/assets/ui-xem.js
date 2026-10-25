@@ -296,6 +296,7 @@
     cua.style.top = (coDinh ? tu * LH : ct - ht.lech - (ht.h - tu) * LH) + "px";
     datHtmlCua(html);
     veCu = { tu: tu, den: den, n: nHien, ct: chonDong, nhay: nhayDong };
+    if (APP.phat) APP.phat("ve-xem", { tu: tu, den: den });             /* ui-tim.js to them cac khop len cac hang .xh[data-l] vua ve */
   }
 
   /** Gan cac hang vao cua so. `html` do htmlHang dung: moi chuoi tu du lieu da qua toMauDong / thoat( truoc khi noi vao. */

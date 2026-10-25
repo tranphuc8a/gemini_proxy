@@ -37,6 +37,9 @@ class Settings(BaseSettings): # type: ignore
     GEMINI_URL: str | None = None
     GEMINI_API_KEY: str | None = None
     GEMINI_TIMEOUT_SECONDS: int = 300
+    # Optional OpenAI-compatible LiteLLM proxy. When set, it serves both /ai and /gemini.
+    LITELLM_API_BASE: str = ""
+    LITELLM_MASTER_KEY: str = ""
     # CORS
     # Comma-separated list of allowed origins, or '*' to allow all origins.
     # Example: "http://localhost:5173,http://127.0.0.1:5173"
@@ -272,8 +275,8 @@ class Settings(BaseSettings): # type: ignore
     COURSE_LOGIN_WINDOW_SECONDS: int = 300
 
     # AI features (/ai/*: tutor, flashcards, course drafting, OPIc scoring, NL→SQL…)
-    # and the chat (/gemini/*) spend the same Gemini quota (GEMINI_URL + key).
-    # A kill switch: False stops every Gemini call, the chat included.
+    # and the chat (/gemini/*) spend the same guarded model quota.
+    # A kill switch: False stops every model call, the chat included.
     AI_ENABLED: bool = True
     # Who may use the AI features (the chat keeps its own, public, access):
     #   "admin"  — a course administrator only (COURSE_ADMIN_KEY session); the default,
@@ -282,12 +285,10 @@ class Settings(BaseSettings): # type: ignore
     AI_ACCESS: str = "admin"
     AI_ACCESS_CODE: str = ""
     AI_SESSION_DAYS: int = 7
-    # The model the AI features and the chat ask for when the caller picks none (it
-    # replaces the model segment of GEMINI_URL). Since 2026 Google limits the 2.5
-    # models to accounts that already used them; 3.5 Flash answered the live checks.
+    # The model name (a Gemini model or a LiteLLM proxy model alias) used by default.
     AI_MODEL: str = "gemini-3.5-flash"
     # Models a caller may pick (header X-AI-Model / GET /ai/models). Empty = the
-    # live list from Gemini models.list (text models only), refreshed every
+    # live list from the configured provider (text models only), refreshed every
     # AI_MODELS_TTL_SECONDS; a comma-separated list pins it. Pro models are for
     # administrators either way.
     AI_MODELS: str = ""
@@ -297,7 +298,7 @@ class Settings(BaseSettings): # type: ignore
     AI_RATE_PER_MINUTE: int = 12
     AI_RATE_PER_DAY: int = 200
     # …and for the whole deployment per UTC day, counted in the database so every
-    # serverless instance shares it. Once either is spent every Gemini call answers
+    # serverless instance shares it. Once either is spent every model call answers
     # 429 until midnight UTC.
     AI_DAILY_REQUESTS: int = 500
     AI_DAILY_TOKENS: int = 3_000_000

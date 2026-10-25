@@ -20,7 +20,7 @@ interface MdNode {
 }
 
 const CITATION =
-  /\[cite_start\]|\[cite:[ \t]*(\d[\d \t,;–-]{0,80})\]|【[ \t]*(\d{1,4})(?::\d{1,4})?[ \t]*†[^】\n]{0,60}】|⟦[ \t]*(\d[\d \t,;–-]{0,80})(?:†[^⟧\n]{0,60})?[ \t]*⟧|:contentReference\[oaicite:\d{1,4}\]\{index=\d{1,4}\}|[^\n]{0,160}/g
+  /\[cite_start\]|\[cite:[ \t]*(\d[\d \t,;–-]{0,80})\]|【[ \t]*(\d{1,4})(?::\d{1,4})?[ \t]*†[^】\n]{0,60}】|⟦[ \t]*(\d[\d \t,;–-]{0,80})(?:†[^⟧\n]{0,60})?[ \t]*⟧|:contentReference\[oaicite:\d{1,4}\]\{index=\d{1,4}\}|[^\n]{0,60}/g
 
 export interface CitationOptions {
   /** Remove numbered citations too instead of showing them as superscripts. */

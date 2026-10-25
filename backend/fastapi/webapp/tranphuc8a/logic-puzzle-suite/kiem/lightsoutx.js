@@ -108,7 +108,7 @@ module.exports = function (t) {
   })();
   t.ok("algorithm 3–5 bước, rules, blurb, difficultyNote không rỗng/rác", T.algorithm.steps.length >= 3 && T.algorithm.steps.length <= 5 && T.algorithm.steps.every(function (s) { return !presetBad(s.title) && !presetBad(s.text); }) &&
     T.rules.every(function (s) { return !presetBad(s); }) && !presetBad(T.blurb) && !presetBad(T.difficultyNote));
-  t.ok("CHƯA vào Daily (P8 mới thêm)", Puz.daily && Puz.daily.ORDER.indexOf("lightsoutx") < 0 && Puz.daily.ORDER.indexOf("lightsout") >= 0, Puz.daily && Puz.daily.ORDER);
+  t.ok("vào Daily từ 2026-10-30 (P8): có trong ORDER, lightsout cổ điển vẫn ở vị trí cũ, đúng một phiên bản SCHEDULE; Daily không truyền options ⇒ đề mặc định (chữ thập)", Puz.daily && Puz.daily.ORDER.indexOf("lightsoutx") >= 0 && Puz.daily.ORDER.indexOf("lightsout") === 2 && Puz.daily.SCHEDULE.filter(function (v) { return v.ids.indexOf("lightsoutx") >= 0; }).map(function (v) { return v.tu; }).join() === "2026-10-30" && !Puz.daily.forDay("2026-11-04", Puz.types.all().map(function (d) { return d.id; })).options, Puz.daily && Puz.daily.ORDER);
   t.ok("Lights Out cổ điển vẫn là loại riêng, không đổi id", Puz.types.get("lightsout") && Puz.types.get("lightsout").id === "lightsout" && Puz.types.get("lightsout") !== T);
 
   // ------------------------------------------------------------ 2. vét cạn mọi bàn của 17 cấu hình nhỏ

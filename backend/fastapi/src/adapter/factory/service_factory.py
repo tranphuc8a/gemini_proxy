@@ -15,7 +15,9 @@ from src.application.usecases.conversation_usecase import ConversationUseCase
 from src.application.ports.input.gemini_input_port import GeminiInputPort
 from src.adapter.output.gemini.helper.gemini_client import GeminiClient
 from src.adapter.output.gemini.service.gemini_service import GeminiService
+from src.adapter.output.litellm.litellm_adapter import LiteLLMChatService
 from src.application.usecases.gemini_usecase import GeminiUseCase
+from src.application.config.config import settings
 
 
 def _make_repos_and_ports(db: AsyncSession) -> tuple[ConversationOutputPort, MessageOutputPort, ConversationInputPort, HealthInputPort]:
@@ -69,4 +71,6 @@ class ServiceFactory:
         db: AsyncSession = Depends(get_async_session_dependency)
     ) -> GeminiInputPort:
         conv_repo, msg_repo, _, _ = _make_repos_and_ports(db)
+        if settings.LITELLM_API_BASE:
+            return GeminiUseCase(LiteLLMChatService(), msg_repo, conv_repo)
         return _make_gemini_input_port(msg_repo, conv_repo)

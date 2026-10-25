@@ -263,11 +263,11 @@ module.exports = function (t) {
     var pa = T.generate(55, { sizeId: "std", tier: "easy" }), pa2 = T.generate(55, { sizeId: "std", tier: "easy", options: { interp: "A" } }), pb = T.generate(55, { sizeId: "std", tier: "easy", options: { interp: "B" } }), px = T.generate(55, { sizeId: "std", tier: "easy", options: { interp: "zzz", rác: 1 } });
     t.ok("options: mặc định tường minh ⇒ cùng puzzle như không truyền; puzzle.options gọn ({} hoặc {interp:'B'}); B khác id; lựa chọn lạ ⇒ mặc định", J(pa) === J(pa2) && J(pa.options) === "{}" && J(pb.options) === J({ interp: "B" }) && pb.id !== pa.id && pb.data.interp === "B" && J(px) === J(pa), [pa.options, pb.options]);
     t.ok("cùng seed, tier ⇒ B vẫn tất định và có lời giải solved; liên kết o=interp:B giải mã đúng", J(pb) === J(T.generate(55, { sizeId: "std", tier: "easy", options: { interp: "B" } })) && T.check(pb, { v: pb.solution.v, c: null }).solved && J(Puz.types.decodeOptions("interp:B")) === J({ interp: "B" }) && Puz.types.encodeOptions(T, { interp: "B" }) === "interp:B");
-    t.ok("Daily: motorbike CHƯA vào ORDER / SCHEDULE (việc của P8); 600 ngày không ngày nào ra motorbike", (function () {
+    t.ok("Daily: motorbike vào ORDER và đúng một phiên bản SCHEDULE (tu 2026-10-30); không ngày nào trước 30/10 ra motorbike, từ 30/10 ra đều", (function () {
       var D = Puz.daily; if (!D) return false;
-      var types = Puz.types.all().map(function (x) { return x.id; }), day = "2026-10-01", bad2 = 0;
-      for (var i = 0; i < 600; i++) { var f = D.forDay(day, types); if (!f || f.type === "motorbike") bad2++; day = Puz.util.addDays(day, 1); }
-      return D.ORDER.indexOf("motorbike") < 0 && D.SCHEDULE.every(function (v) { return v.ids.indexOf("motorbike") < 0; }) && bad2 === 0;
+      var types = Puz.types.all().map(function (x) { return x.id; }), day = "2026-10-01", bad2 = 0, late = 0;
+      for (var i = 0; i < 600; i++) { var f = D.forDay(day, types); if (!f) bad2++; else if (f.type === "motorbike") { if (day < "2026-10-30") bad2++; else late++; } day = Puz.util.addDays(day, 1); }
+      return D.ORDER.indexOf("motorbike") >= 0 && D.SCHEDULE.filter(function (v) { return v.ids.indexOf("motorbike") >= 0; }).map(function (v) { return v.tu; }).join() === "2026-10-30" && bad2 === 0 && late >= 40;
     })());
   })();
 

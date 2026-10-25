@@ -14,7 +14,9 @@
   "use strict";
   var P = root.Puz || (root.Puz = {});
   var SCHEDULE = [
-    { tu: "1970-01-01", ids: ["sudoku", "nqueens", "lightsout", "nonogram", "logicgrid"] }
+    { tu: "1970-01-01", ids: ["sudoku", "nqueens", "lightsout", "nonogram", "logicgrid"] },
+    // P8 (25/10/2026): thêm 6 loại mới từ 30/10/2026 (tương lai ⇒ hôm nay, ngày triển khai và quá khứ giữ nguyên). Xoay vòng 11 loại tính từ chính ngày này.
+    { tu: "2026-10-30", ids: ["sudoku", "nqueens", "lightsout", "nonogram", "logicgrid", "coinbalance", "bachet", "coinscale", "camel", "motorbike", "lightsoutx"] }
   ];
   var WEEKDAY_TIER = ["hard", "easy", "medium", "medium", "hard", "hard", "expert"];     // 0 = Chủ nhật … 6 = Thứ bảy
   var TIER_RANK = ["easy", "medium", "hard", "expert"];

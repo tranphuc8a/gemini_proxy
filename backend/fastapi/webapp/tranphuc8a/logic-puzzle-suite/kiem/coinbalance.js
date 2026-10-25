@@ -599,13 +599,13 @@ module.exports = function (t) {
     t.ok("xu chuẩn: isGiven + describeCell 'Xu chuẩn, chắc chắn thật'; xu thường không phải ô cho sẵn", (function () { var q = T.generate(2, { sizeId: "nnc3", tier: "easy" }); return T.isGiven(q, q.data.n) === true && T.isGiven(q, 0) === false && T.describeCell(q, T.newState(q), q.data.n) === "Xu chuẩn, chắc chắn thật" && T.isGiven(p, 0) === false; })());
   })();
 
-  t.group("coinbalance — CHƯA vào Daily (việc của P8)");
+  t.group("coinbalance — vào Daily từ 2026-10-30 (P8)");
   (function () {
     var D = Puz.daily;
     if (!D) { t.ok("core/daily.js có trong ngữ cảnh kiểm", false); return; }
-    var types = Puz.types.all().map(function (d) { return d.id; }), bad = [], day = "2026-10-01", n = 0;
-    for (var i = 0; i < 800; i++) { var f = D.forDay(day, types); n++; if (!f || f.type === "coinbalance") bad.push(day); day = Puz.util.addDays(day, 1); }
-    t.ok("Puz.daily.ORDER và mọi phiên bản SCHEDULE không có coinbalance; 800 ngày liên tiếp không ngày nào ra coinbalance (" + n + " ngày)", D.ORDER.indexOf("coinbalance") < 0 && D.SCHEDULE.every(function (v) { return v.ids.indexOf("coinbalance") < 0; }) && bad.length === 0, bad.slice(0, 3));
+    var types = Puz.types.all().map(function (d) { return d.id; }), bad = [], late = 0, day = "2026-10-01", n = 0;
+    for (var i = 0; i < 800; i++) { var f = D.forDay(day, types); n++; if (!f) bad.push(day); else if (f.type === "coinbalance") { if (day < "2026-10-30") bad.push(day); else late++; } day = Puz.util.addDays(day, 1); }
+    t.ok("coinbalance nằm trong Puz.daily.ORDER và đúng một phiên bản SCHEDULE (tu 2026-10-30, không phiên bản nào trước đó); {n} ngày từ 01/10: không ngày nào TRƯỚC 30/10 ra coinbalance, từ 30/10 ra đều ({late} ngày)".replace("{n}", n).replace("{late}", late), D.ORDER.indexOf("coinbalance") >= 0 && D.SCHEDULE.filter(function (v) { return v.ids.indexOf("coinbalance") >= 0; }).map(function (v) { return v.tu; }).join() === "2026-10-30" && bad.length === 0 && late >= 50, bad.slice(0, 3));
   })();
 
   // ====================================================================== 10. sửa sau kiểm độc lập (P3)

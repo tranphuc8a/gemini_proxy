@@ -19,10 +19,16 @@
     </div>
   </div>
   <div class="cong-cu">
-    <button class="nut" id="nut-dinh-dang" title="Ctrl+Shift+F">⇥ Định dạng</button>
+    <button class="nut" id="nut-dinh-dang" title="Định dạng lại theo kiểu thụt đã chọn (Ctrl+Shift+F)">⇥ Định dạng</button>
+    <select class="chon-nho" id="chon-thut" aria-label="Kiểu thụt lề khi định dạng" title="Kiểu thụt lề (nhớ lần chọn)">
+      <option value="2">2 dấu cách</option>
+      <option value="4">4 dấu cách</option>
+      <option value="tab">Tab</option>
+    </select>
     <button class="nut" id="nut-nen" title="Bỏ hết khoảng trắng">⇤ Nén</button>
     <button class="nut" id="nut-sap-khoa">↕ Sắp khoá</button>
-    <button class="nut" id="nut-thoat">⌫ Thoát chuỗi</button>
+    <button class="nut" id="nut-thoat" title="Gỡ một lớp “…” của chuỗi JSON (áp lên vùng chọn nếu có)">⌫ Gỡ chuỗi</button>
+    <button class="nut" id="nut-dong-chuoi" title="Đóng văn bản thành một chuỗi JSON “…” (áp lên vùng chọn nếu có)">⎘ Đóng thành chuỗi</button>
     <span class="vach"></span>
     <!-- Hoan tac chung cho moi tab (Ctrl+Z / Ctrl+Y). title doi theo buoc: "Hoàn tác: Định dạng (Ctrl+Z)". -->
     <button class="nut nut-bieu" id="nut-hoan-tac" aria-label="Hoàn tác" title="Hoàn tác (Ctrl+Z)" disabled>↶</button>
@@ -44,6 +50,34 @@
   <button class="tab-n" data-o="thongke" role="tab" aria-selected="false">📊 Thống kê</button>
   <button class="tab-n" data-o="schema" role="tab" aria-selected="false">✓ Schema</button>
 </nav>
+
+<!-- Thanh Tim / Thay dung chung cho tab Soan va Cay (ui-tim.js): Ctrl+F tim, Ctrl+H thay, F3 / Shift+F3, Esc dong. -->
+<div class="tim-thanh" id="tim-thanh" role="search" aria-label="Tìm và thay" hidden>
+  <div class="tim-hang">
+    <input type="text" id="tim-q" class="nhap-dong tim-o" spellcheck="false" autocomplete="off" aria-label="Tìm" placeholder="Tìm…  (Enter: kế tiếp, Shift+Enter: trước)">
+    <button class="nut nho tim-tg" id="tim-hoa" type="button" aria-pressed="false" title="Phân biệt hoa thường (Alt+C)" aria-label="Phân biệt hoa thường">Aa</button>
+    <button class="nut nho tim-tg" id="tim-tu" type="button" aria-pressed="false" title="Cả từ (Alt+W)" aria-label="Cả từ">ab|</button>
+    <button class="nut nho tim-tg" id="tim-re" type="button" aria-pressed="false" title="Biểu thức chính quy (Alt+R)" aria-label="Biểu thức chính quy">.*</button>
+    <label class="o-chon tim-vi" id="tim-vi-nhan" hidden>Tìm trong
+      <select id="tim-vi" class="chon-nho" aria-label="Phạm vi tìm trên cây">
+        <option value="ca-hai">Khoá + giá trị</option>
+        <option value="khoa">Khoá</option>
+        <option value="gia-tri">Giá trị</option>
+      </select>
+    </label>
+    <span class="tim-dem" id="tim-dem" role="status" aria-live="polite">0/0</span>
+    <button class="nut nho" id="tim-truoc" type="button" aria-label="Khớp trước" title="Khớp trước (Shift+F3)">↑</button>
+    <button class="nut nho" id="tim-sau" type="button" aria-label="Khớp kế tiếp" title="Khớp kế tiếp (F3)">↓</button>
+    <button class="nut nho" id="tim-mo-thay" type="button" aria-pressed="false" aria-label="Bật thay thế" title="Thay thế (Ctrl+H)">⇄</button>
+    <button class="nut nho" id="tim-dong" type="button" aria-label="Đóng thanh tìm" title="Đóng (Esc)">✕</button>
+  </div>
+  <div class="tim-hang" id="tim-hang-thay" hidden>
+    <input type="text" id="tim-thay" class="nhap-dong tim-o" spellcheck="false" autocomplete="off" aria-label="Thay bằng" placeholder="Thay bằng… (regex: $1 $& dùng được)">
+    <button class="nut nho" id="tim-thay-mot" type="button">Thay</button>
+    <button class="nut nho" id="tim-thay-het" type="button">Thay tất cả</button>
+  </div>
+  <div class="tim-bao" id="tim-bao" role="status" aria-live="polite"></div>
+</div>
 
 <!-- Goi y khi mo tep trong nhu mot JSON Schema (ui-schema.js). -->
 <!-- Ban nhap khong tu luu duoc / da khoi phuc tu IndexedDB (json-editor.js, muc 7). -->
@@ -145,12 +179,14 @@ Ví dụ:
       <input type="text" id="loc-duong" class="nhap-dong"
              placeholder="Đường dẫn, ví dụ: $.mang[0].ten   ·   $..ten   ·   $.mang[*]">
       <button class="nut nho" id="loc-chay">▶ Chạy</button>
+      <button class="nut nho" id="loc-to-cay" type="button" title="Mở và tô các nút kết quả trên tab Cây" disabled>🌳 Tô trên cây</button>
+      <button class="nut nho" id="loc-chep" type="button" title="Chép các giá trị kết quả thành một mảng JSON" disabled>📋 Chép kết quả</button>
     </div>
     <p class="mach" id="loc-mach">
       <code>$</code> gốc · <code>.khoa</code> vào khoá · <code>[0]</code> phần tử
       · <code>[*]</code> mọi phần tử · <code>..khoa</code> tìm sâu mọi cấp
     </p>
-    <pre class="ket" id="loc-ket"></pre>
+    <div class="ket ket-loc" id="loc-ket"></div>
   </section>
 
   <!-- ======================= SO SÁNH ======================= -->
@@ -254,12 +290,33 @@ Ví dụ:
 <footer class="chan">
   <span class="den" id="den"></span>
   <span id="trang-thai">Chưa có nội dung</span>
+  <button class="huy-hieu-chan sua-loi-nut" id="sua-loi-nut" type="button" hidden title="Xem trước và áp các chỗ sửa tự động cho JSON hỏng">🩹 Sửa lỗi</button>
   <span class="day"></span>
+  <span class="phu duong-con-tro" id="duong-con-tro" hidden></span>
+  <button class="nut nho" id="duong-chep-ct" type="button" hidden title="Chép JSON Pointer của vị trí con trỏ">Pointer</button>
+  <button class="nut nho" id="duong-chep-jp" type="button" hidden title="Chép JSONPath của vị trí con trỏ">JSONPath</button>
+  <input type="text" class="di-toi" id="di-toi" spellcheck="false" autocomplete="off" aria-label="Đi tới dòng hoặc đường dẫn" placeholder="Đi tới: 120 · $.a[0] · /a/0" title="Ctrl+G: số dòng (120 hoặc 120:5), JSONPath ($.a[0]) hoặc JSON Pointer (/a/0)">
   <span class="phu" id="vi-tri">dòng 1, cột 1</span>
   <span class="phu" id="co-tep"></span>
   <button class="huy-hieu-chan" id="sc-chan" type="button" hidden title="Mở tab Schema">Schema</button>
   <span class="phu" id="bao-mau" hidden>Tô màu đã tắt — nội dung trên 300 KB</span>
 </footer>
+
+<!-- Hop xem truoc "Sua loi" (ui-sua.js): liet ke cac cho sua, bam de toi cho, Ap dung = MOT buoc hoan tac. -->
+<div class="hop-sua" id="hop-sua" role="dialog" aria-modal="false" aria-labelledby="hop-sua-tieu-de" hidden>
+  <div class="hop-sua-dau">
+    <strong id="hop-sua-tieu-de">Sửa JSON hỏng</strong>
+    <span class="phu" id="hop-sua-tom"></span>
+    <button class="nut nho" id="hop-sua-dong" type="button" aria-label="Đóng hộp sửa lỗi">✕</button>
+  </div>
+  <label class="o-chon" id="hop-sua-gop-nhan" hidden><input type="checkbox" id="hop-sua-gop"> Gộp nhiều giá trị ở gốc thành một mảng</label>
+  <div class="hop-sua-bao" id="hop-sua-bao" role="status" aria-live="polite"></div>
+  <ol class="hop-sua-ds" id="hop-sua-ds"></ol>
+  <div class="hop-sua-chan">
+    <button class="nut" id="hop-sua-ap" type="button">Áp dụng</button>
+    <button class="nut" id="hop-sua-huy" type="button">Huỷ</button>
+  </div>
+</div>
 
 <input type="file" id="tep" accept=".json,.txt,application/json" hidden>
 
@@ -269,6 +326,10 @@ Ví dụ:
 <script src="assets/je-chung.js"></script>
 <script src="assets/tom-tat.js"></script>
 <script src="assets/vi-tri.js"></script>
+<script src="assets/jsonpath.js"></script>
+<script src="assets/tim-kiem.js"></script>
+<script src="assets/sua-json.js"></script>
+<script src="assets/dinh-dang.js"></script>
 <script src="assets/schema-format.js"></script>
 <script src="assets/schema-kiem.js"></script>
 <script src="assets/regex-sinh.js"></script>
@@ -278,5 +339,7 @@ Ví dụ:
 <script src="assets/json-editor.js"></script>
 <script src="assets/ui-xem.js"></script>
 <script src="assets/ui-schema.js"></script>
+<script src="assets/ui-tim.js"></script>
+<script src="assets/ui-sua.js"></script>
 </body>
 </html>

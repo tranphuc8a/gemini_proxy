@@ -8,6 +8,8 @@
  * type stays an ordinary blockquote (GitHub does the same).
  *
  * The tree is walked with an explicit stack: a document of 100,000 nested `>` must not overflow the call stack.
+ * That holds for this walk only: the whole render path (remark-rehype, parse5, React) still recurses, and a very deep
+ * nesting (tens of thousands of `>` or `<div>`) can throw RangeError there; that limit is inherited, not added by M6.
  */
 
 /** Minimal structural view of an mdast node; avoids a hard dependency on @types/mdast. */

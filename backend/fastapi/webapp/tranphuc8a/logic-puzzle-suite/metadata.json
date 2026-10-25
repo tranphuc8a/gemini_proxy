@@ -1,7 +1,31 @@
 {
   "title": "Logic Puzzle Suite",
-  "description": "Phòng tập tư duy logic + phòng thí nghiệm thuật toán nhỏ: Sudoku, N-Queens, Lights Out, Nonogram, Logic Grid. Mỗi puzzle sinh theo seed (cùng seed ra cùng puzzle) với điểm khó 0–10, gợi ý 3 mức có giải thích 'vì sao', bộ giải, replay lời giải, Constraint View, trực quan hoá bộ giải, trình soạn puzzle tự tạo (kiểm nghiệm duy nhất), Daily Puzzle, thống kê, streak, bộ sưu tập, nhập/xuất JSON/TXT/CSV, sao lưu. PWA offline, không backend, không thư viện ngoài.",
+  "description": "Phòng tập tư duy logic + phòng thí nghiệm thuật toán nhỏ: Sudoku, N-Queens, Lights Out (và biến thể), Nonogram, Logic Grid, cùng nhóm cân & vận chuyển: cân đĩa tìm xu giả, quả cân Bachet, cân điện tử, lạc đà chở chuối, đi bộ & xe máy. Mỗi puzzle sinh theo seed (cùng seed ra cùng puzzle) với điểm khó 0–10, gợi ý 3 mức có giải thích 'vì sao', bộ giải hoặc lời giải tối ưu, replay lời giải, Constraint View, trực quan hoá bộ giải, trình soạn puzzle tự tạo, Daily Puzzle (11 loại xoay vòng), thống kê, streak, bộ sưu tập, nhập/xuất JSON/TXT/CSV, sao lưu, liên kết sang Algorithm Notebook. PWA offline, không backend, không thư viện ngoài.",
   "category": "Ứng dụng",
-  "tags": ["tranphuc8a", "puzzle", "logic", "sudoku", "n-queens", "lights-out", "nonogram", "logic-grid", "csp", "solver", "daily", "streak", "offline", "pwa", "tieng-viet", "khong-thu-vien"],
+  "tags": [
+    "tranphuc8a",
+    "puzzle",
+    "logic",
+    "sudoku",
+    "n-queens",
+    "lights-out",
+    "nonogram",
+    "logic-grid",
+    "csp",
+    "solver",
+    "daily",
+    "streak",
+    "offline",
+    "pwa",
+    "tieng-viet",
+    "khong-thu-vien",
+    
+    "can-xu-gia",
+    "qua-can-bachet",
+    "can-dien-tu",
+    "lac-da",
+    "xe-may",
+    "toi-uu"
+  ],
   "icon": "🧩"
 }

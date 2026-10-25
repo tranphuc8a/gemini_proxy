@@ -548,9 +548,10 @@ const dongBang = (v) => {
     gt("$.mang.length").length === 0 && gt("$.mang['length']").length === 0);
   kiem("truyVan · khoa RIENG ten 'constructor' / '__proto__' van khop dung gia tri",
     bang(gt("$.constructor"), [5]) && bang(gt("$.__proto__"), [7]));
-  kiem("truyVan · chi so mang hop le van chay; '01', '-1', ngoai bien thi khong",
-    bang(gt("$.mang[2]"), [30]) && bang(gt("$.mang.0"), [10]) && gt("$.mang[01]").length === 0 &&
-    gt("$.mang[-1]").length === 0 && gt("$.mang[3]").length === 0);
+  /* J6: [-1] la PHAN TU CUOI (RFC 9535) va [01] la loi cu phap — truoc day ca hai chi la khoa chuoi khong khop. */
+  kiem("truyVan · chi so mang hop le van chay; [-1] la phan tu cuoi (RFC); [01] bao loi; ngoai bien khong khop",
+    bang(gt("$.mang[2]"), [30]) && bang(gt("$.mang.0"), [10]) && nemLoi(() => gt("$.mang[01]")) &&
+    bang(gt("$.mang[-1]"), [30]) && gt("$.mang[3]").length === 0 && gt("$.mang[-4]").length === 0);
   kiem("truyVan · object co khoa \"0\" van vao duoc bang [0]", bang(gt("$.o[0]"), ["khong"]));
   kiem("coKhoaTruyVan · mang chi nhan chi so, object chi nhan khoa rieng",
     T.coKhoaTruyVan([1], "0") && !T.coKhoaTruyVan([1], "length") && !T.coKhoaTruyVan({}, "toString") &&

@@ -401,13 +401,13 @@ module.exports = function (t) {
   t.time("fromInput N=400 hai đĩa, N=255 một đĩa, dat 8 quả 8 vật ≤ 1 s", 1000, function () { T.fromInput({ mode: "hai", N: 400 }); T.fromInput({ mode: "mot", N: 255 }); var W = [1, 3, 9, 27, 81, 243, 2, 5]; T.fromInput({ mode: "dat", W: W, X: [100, 200, 300, 400, 500, 600, 700, 301] }); });
   t.time("hint + mistakes liên tiếp trên đề chuyên gia (N=364, 6 quả) ≤ 1 s", 1000, function () { var p = T.fromInput({ mode: "hai", N: 364 }).puzzle, s = T.newState(p); for (var i = 0; i < 6; i++) { var h = T.hint(p, s, 3), df = T.moveFor(p, s, h.action); T.mistakes(p, s, df); G.applyDiff(s, df.d, false); } });
 
-  t.group("bachet — CHƯA vào Daily (việc của P8) và engine thuần");
+  t.group("bachet — vào Daily từ 2026-10-30 (P8) và engine thuần");
   (function () {
     var D = Puz.daily;
     if (!D) { t.ok("core/daily.js có trong ngữ cảnh kiểm", false); return; }
-    var types = Puz.types.all().map(function (d) { return d.id; }), bad = [], day = "2026-10-01", n = 0;
-    for (var i = 0; i < 800; i++) { var f = D.forDay(day, types); n++; if (!f || f.type === "bachet") bad.push(day); day = Puz.util.addDays(day, 1); }
-    t.ok("Puz.daily.ORDER và mọi phiên bản SCHEDULE không có bachet; 800 ngày liên tiếp không ngày nào ra bachet (" + n + " ngày)", D.ORDER.indexOf("bachet") < 0 && D.SCHEDULE.every(function (v) { return v.ids.indexOf("bachet") < 0; }) && bad.length === 0, bad.slice(0, 3));
+    var types = Puz.types.all().map(function (d) { return d.id; }), bad = [], late = 0, day = "2026-10-01", n = 0;
+    for (var i = 0; i < 800; i++) { var f = D.forDay(day, types); n++; if (!f) bad.push(day); else if (f.type === "bachet") { if (day < "2026-10-30") bad.push(day); else late++; } day = Puz.util.addDays(day, 1); }
+    t.ok("bachet nằm trong Puz.daily.ORDER và đúng một phiên bản SCHEDULE (tu 2026-10-30, không phiên bản nào trước đó); {n} ngày từ 01/10: không ngày nào TRƯỚC 30/10 ra bachet, từ 30/10 ra đều ({late} ngày)".replace("{n}", n).replace("{late}", late), D.ORDER.indexOf("bachet") >= 0 && D.SCHEDULE.filter(function (v) { return v.ids.indexOf("bachet") >= 0; }).map(function (v) { return v.tu; }).join() === "2026-10-30" && bad.length === 0 && late >= 50, bad.slice(0, 3));
     var src = fs.readFileSync(path.join(ROOT, "assets/js/puzzles/bachet.js"), "utf8");
     t.ok("không dùng Math.random / Date / performance.now / DOM / Puz.text / Puz.ui / localStorage trong engine", !/Math\.random|Date\.now|new Date|performance\.now|document\.|window\.|localStorage|Puz\.text|Puz\.ui|Puz\.stats/.test(src));
     t.ok("ES5: không class / mũi tên / template literal / BigInt", !/\bclass\s+\w|=>|`|BigInt|\b\d+n\b/.test(src));

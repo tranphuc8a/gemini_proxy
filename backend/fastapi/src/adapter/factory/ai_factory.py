@@ -2,6 +2,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.adapter.output.gemini.service.gemini_ai_model import GeminiAiModel
+from src.adapter.output.litellm.litellm_adapter import LiteLLMAiModel
 from src.adapter.output.mysql.db.base import get_async_session_dependency
 from src.adapter.factory.course_factory import get_course_usecase
 from src.adapter.factory.mongo_admin_factory import get_mongo_admin_input_port
@@ -23,11 +24,13 @@ from src.application.usecases.ai_study_usecase import AiStudyUseCase
 from src.application.usecases.ai_usecase import AiUseCase
 from src.application.usecases.ai_wiki_usecase import AiWikiUseCase
 from src.application.usecases.course_usecase import CourseUseCase
+from src.application.config.config import settings
 
 
 def get_ai_usecase(db: AsyncSession = Depends(get_async_session_dependency)) -> AiUseCase:
     """One use case per request, bound to that request's session."""
-    return AiUseCase(AiRepository(db), GeminiAiModel())
+    model = LiteLLMAiModel() if settings.LITELLM_API_BASE else GeminiAiModel()
+    return AiUseCase(AiRepository(db), model)
 
 
 def get_ai_course_usecase(ai: AiUseCase = Depends(get_ai_usecase),

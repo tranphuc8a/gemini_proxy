@@ -12,7 +12,7 @@ from src.adapter.output.gemini.service import gemini_ai_model
 from src.application.config.config import settings
 from src.application.exceptions.exceptions import AppException, BadGatewayError, BadRequestError
 from src.application.usecases import ai_models
-from src.application.usecases.ai_usecase import AiUseCase, cache_key, generation_config, text_turn
+from src.application.usecases.ai_usecase import AiUseCase, cache_key, configured, generation_config, text_turn
 from src.domain.models.ai_domain import AiCaller
 from tests.support.fake_ai import FakeModel, FakeStore
 
@@ -180,6 +180,22 @@ def test_text_model_filter():
     for other in ("gemini-3.8-flash-tts", "gemini-3-pro-image", "gemini-nano-banana-2.1", "gemini-omni-1.1-flash",
                   "gemini-3.5-transcribe", "gemini-robotics-er-2-preview", "gemini-3.1-pro-preview-customtools", "text-embedding-004"):
         assert not ai_models.is_text_model(other), other
+
+
+def test_litellm_provider_aliases_are_valid_catalog_entries():
+    alias = "hive-deepseek-v4.1-flash-1017"
+    assert ai_models.valid_id(alias)
+    assert ai_models.is_text_model(alias)
+    assert ai_models.valid_id("anthropic/claude-3.7-sonnet")
+    assert not ai_models.is_text_model("openai/text-embedding-3-small")
+
+
+def test_litellm_is_configured_only_when_proxy_url_and_master_key_are_set(monkeypatch):
+    monkeypatch.setattr(settings, "LITELLM_API_BASE", "http://litellm.test/v1")
+    monkeypatch.setattr(settings, "LITELLM_MASTER_KEY", "")
+    assert not configured()
+    monkeypatch.setattr(settings, "LITELLM_MASTER_KEY", "proxy-secret")
+    assert configured()
 
 
 # ---------------------------------------------------------------- the Gemini adapter

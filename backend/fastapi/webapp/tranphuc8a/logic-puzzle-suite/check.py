@@ -742,6 +742,42 @@ def hop_dong(pw, url):
     br.close()
 
 
+def daily_p8(br, url):
+    """P8: 6 loại mới vào Daily từ 2026-10-30 — thẻ Daily hiện đúng loại/bậc, "Chơi ngay" mở đúng ván (giả ngày bằng Puz.util.dayKey)."""
+    section(" · Daily 11 loại (P8): mỗi loại mới mở được từ thẻ Daily")
+    P = Page(br, url, "daily-p8", viewport={"width": 1100, "height": 800})
+    pg = P.pg
+    P.go("#/", 300)
+    now = pg.evaluate("Puz.daily.forDay(Puz.util.dayKey()).type")
+    check(now in ("sudoku", "nqueens", "lightsout", "nonogram", "logicgrid"), "Daily HÔM NAY vẫn là một trong 5 loại cũ (%s)" % now)
+    for tid in ("coinbalance", "bachet", "coinscale", "camel", "motorbike", "lightsoutx"):
+        day = pg.evaluate("(tid) => { let d = '2026-10-30'; for (let i = 0; i < 40; i++) { if (Puz.daily.forDay(d).type === tid) return d; d = Puz.util.addDays(d, 1); } return null; }", tid)
+        if not day:
+            check(False, "%s: tìm được ngày Daily" % tid)
+            continue
+        spec = pg.evaluate("(d) => Puz.daily.forDay(d)", day)
+        pg.evaluate("(d) => { window.__dk = Puz.util.dayKey; Puz.util.dayKey = function () { return d; }; }", day)
+        P.go("#/stats", 250)
+        P.go("#/", 450)
+        name = pg.evaluate("(tid) => Puz.types.get(tid).name", tid)
+        card = pg.inner_text(".daily-card")
+        check(name in card and pg.locator(".daily-card .btn").count() >= 1, "%s: thẻ Daily ngày %s hiện '%s'" % (tid, day, name), card[:120])
+        pg.click(".daily-card .btn")
+        try:
+            pg.wait_for_function("location.hash.indexOf('#/play/') === 0", timeout=20000)
+            pg.wait_for_selector(".pz-board, .board, [class*='pz-']", timeout=20000)
+        except Exception as e:
+            check(False, "%s: Chơi ngay mở màn chơi" % tid, str(e)[:120])
+        info = pg.evaluate("""() => { const m = location.hash.slice(7).split('?')[0]; if (!m) return null; const g = Puz.ui.app.ctx().getGame(decodeURIComponent(m)); return g ? { type: g.puzzle.type, seed: g.puzzle.seed, tier: g.puzzle.tier, src: g.source || (g.ctx && g.ctx.source) || null } : null; }""")
+        check(bool(info) and info["type"] == tid and info["seed"] == spec["seed"] and Puz_tier_ok(info["tier"], spec["tier"]), "%s: ván Daily đúng loại + seed (%s)" % (tid, json.dumps(info)))
+        pg.evaluate("() => { Puz.util.dayKey = window.__dk; }")
+    P.close()
+
+
+def Puz_tier_ok(got, want):
+    return got == want
+
+
 def tang_2(may):
     section("TẦNG 2 — chức năng (trình duyệt thật)")
     from playwright.sync_api import sync_playwright
@@ -792,6 +828,7 @@ def tang_2(may):
             hoc(P, tid)
         ca_nhan(P, br, url, types[0])
         P.close()
+        daily_p8(br, url)
         P = Page(br, url, "pixel5", **pw.devices["Pixel 5"])
         di_dong(P, types, "Pixel 5 (Chromium)")
         P.close()

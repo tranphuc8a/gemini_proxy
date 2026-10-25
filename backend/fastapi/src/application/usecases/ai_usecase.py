@@ -1,9 +1,9 @@
-"""The one door to the model: who may ask, how often, how much per day, at what cost.
+"""The one door to the configured model provider: access, rate, budget and accounting.
 
 Every AI feature goes through `AiUseCase.ask`, and the chat (`/gemini/*`) goes
 through `admit` + `account`, so the same rules hold everywhere:
 
-* **Kill switch** — `AI_ENABLED=false` stops every Gemini call.
+* **Kill switch** — `AI_ENABLED=false` stops every model call.
 * **Access** (features only; the chat keeps its public access) — `AI_ACCESS`:
   "admin" (default) a course administrator; "code" anyone holding a token issued
   for `AI_ACCESS_CODE`; "public" anyone.
@@ -76,6 +76,8 @@ def access_mode() -> str:
 
 
 def configured() -> bool:
+    if settings.LITELLM_API_BASE:
+        return bool(settings.LITELLM_MASTER_KEY)
     return bool(settings.GEMINI_URL) and bool(settings.GEMINI_API_KEY)
 
 
@@ -103,7 +105,7 @@ def _error(status: int, message: str, code: str, *, headers: Optional[Dict[str, 
 
 def generation_config(*, schema: Optional[Dict[str, Any]] = None, temperature: float = 0.5,
                       max_tokens: int = 2048, model: Optional[str] = None) -> Dict[str, Any]:
-    """Gemini `generationConfig`: JSON output when a schema is given.
+    """The generation config shared by the Gemini and LiteLLM adapters.
 
     Thinking is kept low or off: these are short, well-specified tasks where it
     adds seconds and output tokens but little else. Each model family takes a
@@ -280,7 +282,8 @@ class AiUseCase:
                   system: Optional[str] = None, config: Optional[Dict[str, Any]] = None,
                   cache: Optional[str] = None,
                   parse: Optional[Callable[[str], Any]] = None,
-                  model: Optional[str] = None) -> Tuple[Any, AiCompletion]:
+                  model: Optional[str] = None,
+                  provider_authenticated: bool = False) -> Tuple[Any, AiCompletion]:
         """One model call behind every rule above.
 
         `parse` turns the answer text into the feature's result and raises
@@ -289,11 +292,29 @@ class AiUseCase:
         X-AI-Model overrides `AI_MODEL`; either is vetted by resolve_model.
         Returns (result, completion).
         """
-        self.check_access(caller)
-        if not configured():
+        if not provider_authenticated:
+            self.check_access(caller)
+        if provider_authenticated:
+            if not settings.LITELLM_API_BASE:
+                raise _error(503, "LiteLLM chưa được cấu hình", "ai_unconfigured")
+        elif not configured():
+            if settings.LITELLM_API_BASE:
+                raise _error(503, "Máy chủ chưa cấu hình LiteLLM (LITELLM_API_BASE, LITELLM_MASTER_KEY)",
+                             "ai_unconfigured")
             raise _error(503, "Máy chủ chưa cấu hình Gemini (GEMINI_URL, GEMINI_API_KEY)", "ai_unconfigured")
         parse = parse or (lambda text: text)
-        model = await self.resolve_model(caller, model or caller.model)
+        if provider_authenticated:
+            wanted = (model or caller.model or "").strip()
+            if not ai_models.valid_id(wanted):
+                raise BadRequestError("Tên model không hợp lệ", payload={"code": "ai_model_invalid"})
+            available = await self.model.list_models()
+            if not any(str(item.get("id") or "") == wanted for item in available):
+                raise BadRequestError("Model này không được virtual key cho phép",
+                                      payload={"code": "ai_model_unknown",
+                                               "models": [str(item.get("id") or "") for item in available]})
+            model = wanted
+        else:
+            model = await self.resolve_model(caller, model or caller.model)
         config = ai_models.fit_config(config, model)
         if cache and model != settings.AI_MODEL:
             # cache_key() folded AI_MODEL in; an answer from another model is another answer.

@@ -19,6 +19,7 @@ os.environ.setdefault("TESTING", "1")
 
 from src.adapter.output.gemini.service.gemini_ai_model import GeminiAiModel
 from src.adapter.output.mysql.db.base import Base, get_async_engine, get_async_session
+from src.application.config.config import settings
 from src.application.usecases import ai_models, ai_usecase, arena_usecase
 
 
@@ -45,6 +46,8 @@ def _no_live_model_listing(monkeypatch):
     async def _unavailable(self):
         raise RuntimeError("models.list is not called from tests")
     monkeypatch.setattr(GeminiAiModel, "list_models", _unavailable)
+    monkeypatch.setattr(settings, "LITELLM_API_BASE", "")
+    monkeypatch.setattr(settings, "LITELLM_MASTER_KEY", "")
     ai_models.reset_catalog()
     yield
     ai_models.reset_catalog()
