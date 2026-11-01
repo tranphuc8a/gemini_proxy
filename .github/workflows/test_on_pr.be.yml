@@ -59,7 +59,7 @@ jobs:
         run: zip -r jacoco-report.zip target/site/jacoco
       
       - name: Upload jacoco report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco-report
           path: backend/gemini-proxy/jacoco-report.zip

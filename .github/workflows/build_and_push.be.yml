@@ -47,7 +47,7 @@ jobs:
         run: zip -r jacoco-report.zip target/site/jacoco
       
       - name: Upload jacoco report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco-report
           path: backend/gemini-proxy/jacoco-report.zip
@@ -73,7 +73,7 @@ jobs:
         run: mvn -B package -DskipTests
 
       - name: Upload jar artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gemini-proxy-jar
           path: backend/gemini-proxy/target/*.jar
@@ -103,7 +103,7 @@ jobs:
         working-directory: backend/gemini-proxy/.docker
         run: docker save gemini-proxy:latest -o gemini-proxy-image.tar
       
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gemini-proxy-image
           path: backend/gemini-proxy/.docker/gemini-proxy-image.tar
