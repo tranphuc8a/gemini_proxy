@@ -87,7 +87,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Download jar artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: gemini-proxy-jar
           path: backend/gemini-proxy/target
@@ -125,7 +125,7 @@ jobs:
         run: echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Download docker image artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: gemini-proxy-image
           path: backend/gemini-proxy/.docker
